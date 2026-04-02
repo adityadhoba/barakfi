@@ -14,22 +14,23 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn psycopg2-binary
 # Copy application code
 COPY app/ ./app/
 COPY fetch_data.py .
+COPY fetch_real_data.py .
+COPY real_stock_data.py .
 COPY scripts/ ./scripts/
+COPY templates/ ./templates/
+COPY static/ ./static/
 
-# Create data directory for SQLite (development)
+# Create data directory for SQLite fallback
 RUN mkdir -p /app/data
 
-# Expose port
-EXPOSE 8001
+# Render uses PORT env var (default 10000), not a fixed port
+ENV PORT=10000
+EXPOSE ${PORT}
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD python -c "import httpx; r = httpx.get('http://localhost:8001/health'); assert r.status_code == 200"
-
-# Run with gunicorn for production
-CMD ["gunicorn", "app.main:app", \
-     "--worker-class", "uvicorn.workers.UvicornWorker", \
-     "--workers", "2", \
-     "--bind", "0.0.0.0:8001", \
-     "--timeout", "120", \
-     "--access-logfile", "-"]
+# Run with gunicorn — Render sets $PORT automatically
+CMD gunicorn app.main:app \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --workers 2 \
+    --bind 0.0.0.0:${PORT} \
+    --timeout 120 \
+    --access-logfile -
