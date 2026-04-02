@@ -3,6 +3,8 @@ import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import { CompareTable } from "@/components/compare-table";
 import styles from "@/app/screener.module.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Compare Stocks — Barakfi",
   description:

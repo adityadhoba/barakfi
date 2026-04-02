@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { getStocks } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://barakfi.in";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -9,6 +9,8 @@ import { StockScreenerTable } from "@/components/stock-screener-table";
 import { ScreenerDataNote } from "@/components/screener-data-note";
 import { AdUnit } from "@/components/ad-unit";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Shariah Stock Screener — Barakfi",
   description:

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
+
 import pageStyles from "@/app/page.module.css";
 import styles from "@/app/screener.module.css";
 import { ResearchNoteForm } from "@/components/research-note-form";

@@ -9,6 +9,8 @@ import {
 } from "@/lib/api";
 import { WatchlistDashboard } from "@/components/watchlist-dashboard";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Watchlist — Barakfi",
   description: "Track your Shariah-compliant stock watchlist with live compliance status.",
