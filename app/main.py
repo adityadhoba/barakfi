@@ -84,6 +84,54 @@ def _auto_migrate_columns():
     logger.info("[auto-migrate] Schema check complete.")
 
 
+def _auto_seed_stocks():
+    """
+    Seed the database with stock data if it's empty.
+    Uses real Yahoo Finance data (real_stock_data.py) if available,
+    otherwise falls back to seed data (fetch_data.py).
+    """
+    from app.database import SessionLocal
+    from app.models import Stock, ComplianceRuleVersion
+
+    db = SessionLocal()
+    try:
+        stock_count = db.query(Stock).count()
+        if stock_count > 0:
+            logger.info("[auto-seed] Database has %d stocks, skipping seed.", stock_count)
+            return
+
+        logger.info("[auto-seed] Database is empty, seeding stocks...")
+
+        # Try real data first, fall back to seed data
+        try:
+            from real_stock_data import REAL_STOCKS
+            for payload in REAL_STOCKS:
+                db.add(Stock(**payload))
+            logger.info("[auto-seed] Loaded %d stocks from real Yahoo Finance data.", len(REAL_STOCKS))
+        except (ImportError, Exception) as exc:
+            logger.warning("[auto-seed] Real data not available (%s), using seed data...", exc)
+            from fetch_data import SEED_STOCKS
+            for payload in SEED_STOCKS:
+                db.add(Stock(**payload))
+            logger.info("[auto-seed] Loaded %d stocks from seed data.", len(SEED_STOCKS))
+
+        # Seed compliance rule versions if empty
+        rule_count = db.query(ComplianceRuleVersion).count()
+        if rule_count == 0:
+            from fetch_data import SEED_RULE_VERSIONS
+            for payload in SEED_RULE_VERSIONS:
+                db.add(ComplianceRuleVersion(**payload))
+            logger.info("[auto-seed] Loaded %d rule versions.", len(SEED_RULE_VERSIONS))
+
+        db.commit()
+
+    except Exception as exc:
+        db.rollback()
+        logger.error("[auto-seed] Failed to seed: %s", exc)
+    finally:
+        db.close()
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="utf-8")
 
@@ -91,6 +139,8 @@ APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="u
 Base.metadata.create_all(bind=engine)
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
+# 3. Auto-seed stocks if the database is empty
+_auto_seed_stocks()
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 if not DEBUG:
