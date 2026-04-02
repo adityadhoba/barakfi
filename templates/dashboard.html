@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ app_name }}</title>
+    <link rel="stylesheet" href="/static/app.css" />
+</head>
+<body>
+    <script>
+        window.HI_AUTH_CONFIG = {
+            provider: "{{ auth_provider }}",
+            googleEnabled: "{{ auth_google_enabled }}" === "true",
+            clerkPublishableKey: "{{ clerk_publishable_key }}",
+            clerkJsUrl: "{{ clerk_js_url }}"
+        };
+    </script>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-mark">HI</div>
+                <div>
+                    <p class="eyebrow">India-first halal wealth platform</p>
+                    <h1 class="sidebar-title">{{ app_name }}</h1>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#overview" class="sidebar-link active">Dashboard</a>
+                <a href="#stocks-section" class="sidebar-link">Explore</a>
+                <a href="#portfolio-section" class="sidebar-link">Portfolio</a>
+                <a href="#rulebook-section" class="sidebar-link">Compliance</a>
+                <a href="#logs-section" class="sidebar-link">Audit Trail</a>
+            </nav>
+
+            <div class="sidebar-card">
+                <span class="panel-label">Operating mode</span>
+                <strong>Strict single profile</strong>
+                <p class="muted">One source-backed screening engine with secondary verification instead of multiple user-facing profiles.</p>
+            </div>
+
+            <div class="sidebar-card">
+                <span class="panel-label">Authentication</span>
+                <strong id="auth-provider-label">Clerk + Google</strong>
+                <p id="auth-status-text" class="muted">Auth is not configured yet.</p>
+                <div id="auth-action-area" class="auth-action-area"></div>
+            </div>
+
+            <div class="sidebar-card">
+                <span class="panel-label">Next unlocks</span>
+                <ul class="list compact-list">
+                    <li>Auth and onboarding</li>
+                    <li>Portfolio alerts</li>
+                    <li>Scholar review workflow</li>
+                    <li>Broker execution layer</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="workspace">
+            <header class="workspace-header">
+                <div>
+                    <p class="eyebrow">Compliance-first investing for the next generation</p>
+                    <h2 class="workspace-title">Built for trust. Designed for modern investors.</h2>
+                </div>
+                <div class="workspace-actions">
+                    <div class="account-pill">
+                        <div class="account-avatar">A</div>
+                        <div>
+                            <strong id="account-name">Aditya</strong>
+                            <p id="account-plan" class="muted small-text">Founder mode</p>
+                        </div>
+                    </div>
+                    <input id="owner-input" class="owner-input" value="{{ default_owner }}" aria-label="Owner name" />
+                    <button id="refresh-button" class="primary-button">Refresh Workspace</button>
+                </div>
+            </header>
+
+            <section class="hero" id="overview">
+                <div class="hero-copy">
+                    <p class="hero-text">
+                        A sharper way to discover, verify, and manage Shariah-compliant Indian equities
+                        with one strict rulebook, source-backed screening, and a product experience
+                        that feels premium from day one.
+                    </p>
+                    <div class="hero-points">
+                        <span>Strict source-backed screening</span>
+                        <span>Young, clean investing experience</span>
+                        <span>Ready to scale into a full fintech stack</span>
+                    </div>
+                </div>
+
+                <div class="hero-side">
+                    <div class="hero-card hero-card-featured">
+                        <div class="metric-label">Product posture</div>
+                        <div class="metric-value">World-class trust layer</div>
+                        <div class="metric-subtext">One strict compliance profile with audit logs, governance metadata, and source-aware review states.</div>
+                        <div class="version-pill">v{{ app_version }}</div>
+                    </div>
+
+                    <div class="hero-mini-grid">
+                        <div class="mini-card">
+                            <span class="panel-label">Focus</span>
+                            <strong>Young investors</strong>
+                        </div>
+                        <div class="mini-card">
+                            <span class="panel-label">Positioning</span>
+                            <strong>Modern fintech</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="journey-grid">
+                <article class="panel onboarding-panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Start Here</p>
+                            <h2>Founder Workflow</h2>
+                        </div>
+                    </div>
+                    <div class="journey-steps">
+                        <div class="journey-step">
+                            <span class="step-index">01</span>
+                            <div>
+                                <strong>Verify the rulebook</strong>
+                                <p class="muted">Keep one strict compliance lens and review source-backed logic before scaling trust.</p>
+                            </div>
+                        </div>
+                        <div class="journey-step">
+                            <span class="step-index">02</span>
+                            <div>
+                                <strong>Track a clean universe</strong>
+                                <p class="muted">Surface halal candidates, watchlist names, and review cases in one place.</p>
+                            </div>
+                        </div>
+                        <div class="journey-step">
+                            <span class="step-index">03</span>
+                            <div>
+                                <strong>Grow into a real platform</strong>
+                                <p class="muted">Layer auth, payments, broker routing, and scholar approvals only after the core is trusted.</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="panel insight-panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Insights</p>
+                            <h2>Product Snapshot</h2>
+                        </div>
+                    </div>
+                    <div class="insight-grid">
+                        <div class="mini-stat">
+                            <span class="panel-label">Profile</span>
+                            <strong id="insight-profile">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Version</span>
+                            <strong id="insight-version">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Universe</span>
+                            <strong id="insight-universe">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Recent Logs</span>
+                            <strong id="insight-logs">-</strong>
+                        </div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="journey-grid">
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Onboarding</p>
+                            <h2>Getting Started Checklist</h2>
+                        </div>
+                    </div>
+                    <div id="onboarding-checklist" class="checklist-stack"></div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Account</p>
+                            <h2>Account Readiness</h2>
+                        </div>
+                    </div>
+                    <div id="account-readiness" class="stack"></div>
+                </article>
+            </section>
+
+            <section class="summary-grid">
+                <article class="panel stat-panel">
+                    <span class="panel-label">Portfolio Value</span>
+                    <strong id="portfolio-market-value">-</strong>
+                </article>
+                <article class="panel stat-panel">
+                    <span class="panel-label">Halal Holdings</span>
+                    <strong id="halal-holdings">-</strong>
+                </article>
+                <article class="panel stat-panel">
+                    <span class="panel-label">Watchlist</span>
+                    <strong id="watchlist-count">-</strong>
+                </article>
+                <article class="panel stat-panel">
+                    <span class="panel-label">Needs Review</span>
+                    <strong id="review-holdings">-</strong>
+                </article>
+            </section>
+
+            <section class="content-grid">
+                <article class="panel span-2" id="rulebook-section">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Core Logic</p>
+                            <h2>Compliance Trust Center</h2>
+                        </div>
+                        <span id="rulebook-code" class="tag">-</span>
+                    </div>
+                    <p id="rulebook-description" class="muted"></p>
+                    <div class="compliance-stats-grid">
+                        <div class="mini-stat">
+                            <span class="panel-label">Primary Sources</span>
+                            <strong id="compliance-source-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Review Queue</span>
+                            <strong id="compliance-review-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Automated Rules</span>
+                            <strong id="compliance-rule-count">-</strong>
+                        </div>
+                    </div>
+                    <div class="rule-columns">
+                        <div>
+                            <h3>Hard Rules</h3>
+                            <ul id="hard-rules" class="list"></ul>
+                        </div>
+                        <div>
+                            <h3>Secondary Verification</h3>
+                            <ul id="secondary-verification" class="list"></ul>
+                        </div>
+                    </div>
+                    <div class="panel-subsection">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">Source Anchors</p>
+                                <h3>Primary References</h3>
+                            </div>
+                        </div>
+                        <div id="primary-sources" class="source-grid"></div>
+                    </div>
+                    <div class="panel-subsection">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">Manual Oversight</p>
+                                <h3>Review Queue</h3>
+                            </div>
+                        </div>
+                        <div id="compliance-review-queue" class="stack"></div>
+                    </div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Control</p>
+                            <h2>Governance Timeline</h2>
+                        </div>
+                    </div>
+                    <div id="rule-version-card" class="governance-card"></div>
+                    <div class="panel-subsection">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">Coverage</p>
+                                <h3>Verification Notes</h3>
+                            </div>
+                        </div>
+                        <div id="compliance-notes" class="stack"></div>
+                    </div>
+                </article>
+
+                <article class="panel span-2" id="portfolio-section">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Capital</p>
+                            <h2>Portfolio Intelligence</h2>
+                        </div>
+                    </div>
+                    <div class="portfolio-stats-grid">
+                        <div class="mini-stat">
+                            <span class="panel-label">Total Holdings</span>
+                            <strong id="portfolio-holding-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Largest Position</span>
+                            <strong id="portfolio-largest-position">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Watchlist Adjacent</span>
+                            <strong id="portfolio-watchlist-adjacent">-</strong>
+                        </div>
+                    </div>
+                    <div id="portfolio-allocation-grid" class="portfolio-allocation-grid"></div>
+                    <div class="panel-subsection">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">Holding Health</p>
+                                <h3>Current Positions</h3>
+                            </div>
+                        </div>
+                        <div id="portfolio-list" class="stack"></div>
+                    </div>
+                    <div class="panel-subsection">
+                        <div class="panel-header">
+                            <div>
+                                <p class="section-kicker">Action Needed</p>
+                                <h3>Portfolio Alerts</h3>
+                            </div>
+                        </div>
+                        <div id="portfolio-alerts" class="stack"></div>
+                    </div>
+                </article>
+
+                <article class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Discovery</p>
+                            <h2>Watchlist</h2>
+                        </div>
+                    </div>
+                    <div id="watchlist" class="stack"></div>
+                </article>
+
+                <article class="panel span-3" id="stocks-section">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Market View</p>
+                            <h2>Explore</h2>
+                        </div>
+                        <div class="explore-controls">
+                            <input id="stock-search" class="search-input" type="search" placeholder="Search symbol or company" />
+                            <select id="status-filter" class="filter-select" aria-label="Filter by status">
+                                <option value="ALL">All statuses</option>
+                                <option value="HALAL">Halal</option>
+                                <option value="REQUIRES_REVIEW">Requires review</option>
+                                <option value="NON_COMPLIANT">Non-compliant</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="sector-chips" class="chip-row"></div>
+                    <div class="explore-stats-grid">
+                        <div class="mini-stat">
+                            <span class="panel-label">Visible Stocks</span>
+                            <strong id="visible-stock-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Halal Visible</span>
+                            <strong id="visible-halal-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Review Visible</span>
+                            <strong id="visible-review-count">-</strong>
+                        </div>
+                        <div class="mini-stat">
+                            <span class="panel-label">Non-Compliant Visible</span>
+                            <strong id="visible-non-compliant-count">-</strong>
+                        </div>
+                    </div>
+                    <div id="stock-grid" class="stock-grid"></div>
+                </article>
+
+                <article class="panel span-3" id="logs-section">
+                    <div class="panel-header">
+                        <div>
+                            <p class="section-kicker">Audit Trail</p>
+                            <h2>Latest Screening Logs</h2>
+                        </div>
+                    </div>
+                    <div id="screening-logs" class="stack"></div>
+                </article>
+            </section>
+        </main>
+    </div>
+
+    <aside id="stock-drawer" class="drawer hidden" aria-hidden="true">
+        <div class="drawer-backdrop" id="drawer-close"></div>
+        <div class="drawer-panel">
+            <button id="drawer-close-button" class="drawer-close-button" aria-label="Close details">×</button>
+            <div class="drawer-header">
+                <p class="section-kicker">Stock Detail</p>
+                <h2 id="drawer-title">Select a stock</h2>
+                <p id="drawer-subtitle" class="muted">Click any stock card to inspect its compliance profile.</p>
+            </div>
+            <div class="drawer-grid">
+                <div class="drawer-card">
+                    <span class="panel-label">Status</span>
+                    <div id="drawer-status"></div>
+                </div>
+                <div class="drawer-card">
+                    <span class="panel-label">Price</span>
+                    <strong id="drawer-price">-</strong>
+                </div>
+            </div>
+            <div class="drawer-section">
+                <h3>Why this result</h3>
+                <ul id="drawer-reasons" class="list"></ul>
+            </div>
+            <div class="drawer-section">
+                <h3>Manual review flags</h3>
+                <ul id="drawer-flags" class="list"></ul>
+            </div>
+            <div class="drawer-section">
+                <h3>Screening metrics</h3>
+                <div id="drawer-breakdown" class="breakdown-grid"></div>
+            </div>
+        </div>
+    </aside>
+
+    <script id="clerk-script-loader"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>

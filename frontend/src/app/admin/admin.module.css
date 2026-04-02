@@ -1,0 +1,43 @@
+.adminPageContainer {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.adminPageHeader {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.adminPageHeader h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.adminPageSubtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .adminPageContainer {
+    padding: 1rem;
+  }
+
+  .adminPageHeader {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+  }
+
+  .adminPageHeader h1 {
+    font-size: 1.5rem;
+  }
+
+  .adminPageSubtitle {
+    font-size: 0.9rem;
+  }
+}

@@ -1,0 +1,231 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MARKET TICKER RIBBON — Live market indices horizontal scrolling ticker
+   Sits at the VERY TOP of the website, above the topbar
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Ribbon Container ── */
+.tickerRibbon {
+  display: none;
+  width: 100%;
+  height: 36px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+  position: relative;
+  z-index: 101;
+}
+
+/* Show ticker on tablet and up */
+@media (min-width: 480px) {
+  .tickerRibbon {
+    display: block;
+  }
+}
+
+/* ── Main Container ── */
+.tickerContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 0 20px;
+  min-width: 100%;
+}
+
+/* ── Live Indicator ── */
+.liveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  flex-shrink: 0;
+  animation: tickerPulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--emerald-glow);
+}
+
+@keyframes tickerPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.liveLabel {
+  font-size: 0.70rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  text-transform: uppercase;
+  min-width: 32px;
+}
+
+/* ── Scrolling Content ── */
+.tickerScroll {
+  display: flex;
+  gap: 24px;
+  animation: tickerScroll 40s linear infinite;
+  animation-play-state: running;
+  flex-shrink: 0;
+  will-change: transform;
+}
+
+.tickerScroll:hover {
+  animation-play-state: paused;
+}
+
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ── Individual Ticker Item ── */
+.tickerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  min-width: fit-content;
+  padding: 0 4px;
+}
+
+.indexName {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  min-width: 90px;
+  text-transform: uppercase;
+}
+
+.indexValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
+  text-align: right;
+}
+
+.indexChange {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+  text-align: right;
+}
+
+.changePositive {
+  color: var(--emerald);
+}
+
+.changeNegative {
+  color: var(--red);
+}
+
+.indexPct {
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 45px;
+  text-align: right;
+}
+
+/* ── Dark Theme Support ── */
+[data-theme="dark"] .tickerRibbon {
+  background: var(--bg-elevated);
+  border-bottom-color: var(--line);
+}
+
+[data-theme="dark"] .liveDot {
+  background: var(--emerald);
+  box-shadow: 0 0 8px var(--emerald-glow);
+}
+
+[data-theme="dark"] .liveLabel {
+  color: var(--text-tertiary);
+}
+
+[data-theme="dark"] .indexName {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .indexValue {
+  color: var(--text);
+}
+
+[data-theme="dark"] .changePositive {
+  color: var(--emerald);
+}
+
+[data-theme="dark"] .changeNegative {
+  color: var(--red);
+}
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 479px) {
+  .tickerRibbon {
+    display: none !important;
+  }
+}
+
+/* ── Tablet and Desktop ── */
+@media (min-width: 480px) and (max-width: 1024px) {
+  .tickerContainer {
+    padding: 0 16px;
+  }
+
+  .indexName {
+    min-width: 80px;
+    font-size: 0.73rem;
+  }
+
+  .indexValue {
+    min-width: 60px;
+    font-size: 0.78rem;
+  }
+
+  .indexChange {
+    min-width: 45px;
+    font-size: 0.73rem;
+  }
+
+  .indexPct {
+    min-width: 42px;
+    font-size: 0.70rem;
+  }
+}
+
+/* ── Large Desktop ── */
+@media (min-width: 1024px) {
+  .tickerContainer {
+    padding: 0 24px;
+  }
+
+  .indexName {
+    min-width: 100px;
+    font-size: 0.76rem;
+  }
+
+  .indexValue {
+    min-width: 75px;
+    font-size: 0.82rem;
+  }
+
+  .indexChange {
+    min-width: 55px;
+    font-size: 0.76rem;
+  }
+
+  .indexPct {
+    min-width: 50px;
+    font-size: 0.73rem;
+  }
+}

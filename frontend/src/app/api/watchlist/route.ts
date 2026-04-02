@@ -1,0 +1,47 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { buildBackendHeaders } from "@/lib/backend-auth";
+
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+
+export async function POST(request: Request) {
+  const authState = await auth();
+  const clerkUser = await currentUser();
+  const token = await authState.getToken();
+
+  if (!token || !clerkUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
+      method: "POST",
+      headers: buildBackendHeaders({
+        token,
+        actor: { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress },
+        contentType: true,
+      }),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    const responseText = await response.text();
+    let responseBody: any;
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      console.error("[watchlist POST] Backend returned non-JSON:", response.status, responseText.slice(0, 500));
+      responseBody = { detail: responseText.slice(0, 200) || "Backend returned non-JSON" };
+    }
+
+    if (!response.ok) {
+      console.error("[watchlist POST] Backend error:", response.status, responseBody);
+    }
+
+    return NextResponse.json(responseBody, { status: response.status });
+  } catch (error) {
+    console.error("[watchlist POST] Proxy error:", error);
+    return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
+  }
+}

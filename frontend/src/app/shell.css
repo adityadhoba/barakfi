@@ -1,0 +1,555 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SHELL — Layout system, cards, typography, and shared patterns
+   Tickertape-inspired professional fintech layout
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Page Container ── */
+.shellPage {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
+  width: 100%;
+  min-height: calc(100vh - 56px);
+}
+
+@media (max-width: 768px) {
+  .shellPage {
+    padding: 16px 16px max(72px, calc(48px + env(safe-area-inset-bottom, 0px)));
+  }
+}
+
+/* ── Typography ── */
+.shellH1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  margin: 0;
+}
+
+.shellH2 {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+
+.shellH3 {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  margin: 0;
+}
+
+.shellSub {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 6px 0 0;
+  max-width: 44rem;
+}
+
+.shellKicker {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--emerald);
+  margin: 0 0 6px;
+}
+
+.shellBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--emerald);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
+}
+
+.shellBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 12px;
+  transition: color var(--transition-fast);
+}
+.shellBack:hover {
+  color: var(--emerald);
+}
+
+
+/* ── Hero Layouts ── */
+.shellHero {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 900px) {
+  .shellHero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shellHeroSingle {
+  display: block;
+  margin-bottom: 28px;
+}
+
+/* ── Card Base ── */
+.shellCard {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.shellCard:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.shellMetricCol {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+
+/* ── Sections ── */
+.shellSection {
+  margin-bottom: 28px;
+}
+
+.shellSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.shellSectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.015em;
+}
+
+.shellSeeAll {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--emerald);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity var(--transition-fast);
+}
+.shellSeeAll:hover {
+  opacity: 0.8;
+}
+
+.shellDivider {
+  height: 1px;
+  background: var(--line);
+  margin: 24px 0;
+  border: none;
+}
+
+
+/* ── Home Strip (stat cards row) ── */
+.shellStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .shellStrip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .shellStrip {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+}
+
+.shellStripCard {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+}
+.shellStripCard:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.shellStripLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.shellStripValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  line-height: 1.1;
+}
+.shellStripValueEmerald { color: var(--emerald); }
+.shellStripValueGold { color: var(--gold); }
+.shellStripValueRed { color: var(--red); }
+
+.shellStripSub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+
+/* ── Compliance Mood Card ── */
+.shellMood {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--emerald-border);
+  background: var(--emerald-bg);
+  margin-bottom: 24px;
+}
+
+.shellMoodIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: var(--emerald);
+  color: #fff;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.shellMoodBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.shellMoodLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.shellMoodTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 2px;
+}
+
+.shellMoodSub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.shellHello {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.shellHello strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+
+/* ── Pill Chips ── */
+.shellPillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.shellPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+.shellPill:hover {
+  border-color: var(--emerald);
+  color: var(--emerald);
+  background: var(--emerald-bg);
+}
+
+
+/* ── Tables ── */
+.shellTableWrap {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.shellTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.shellTable th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--line);
+}
+.shellTable th.shellTableNum {
+  text-align: right;
+}
+
+.shellTable td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.shellTable tr:last-child td {
+  border-bottom: none;
+}
+
+.shellTable tr:hover td {
+  background: var(--panel-hover);
+}
+
+.shellTable a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+.shellTable a:hover {
+  color: var(--emerald);
+}
+
+.shellTableMeta {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.shellTableNum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.shellTableSub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+
+/* ── Two-Column Grid ── */
+.shellGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 860px) {
+  .shellGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── Link List ── */
+.shellList {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.shellListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition-fast);
+}
+.shellListItem:last-child {
+  border-bottom: none;
+}
+.shellListItem:hover {
+  background: var(--panel-hover);
+}
+
+.shellListMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shellListTitle {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.shellListDesc {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.shellListChev {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+.shellListItem:hover .shellListChev {
+  color: var(--emerald);
+  transform: translateX(2px);
+}
+
+
+/* ── Stock Detail Hero ── */
+.shellStockHero {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shellStockTitle {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  color: var(--text);
+  margin: 8px 0 6px;
+}
+
+.shellStockActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+
+/* ── Page Header ── */
+.shellTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.shellPageHeader {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+
+/* ── Performance — content-visibility for off-screen sections ── */
+.shellSection {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+/* ── Animations ── */
+.shellCard {
+  animation: shellFadeIn 0.3s ease-out both;
+}
+
+.shellSection {
+  animation: shellFadeIn 0.35s ease-out both;
+}
+
+@keyframes shellFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover lift for interactive cards */
+.shellStripCard {
+  will-change: transform;
+}
+
+.shellListItem {
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+.shellListItem:active {
+  transform: scale(0.99);
+}

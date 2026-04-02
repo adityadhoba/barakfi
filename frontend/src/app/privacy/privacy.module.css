@@ -1,0 +1,281 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PRIVACY POLICY PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page {
+  min-height: calc(100vh - 56px);
+  background: var(--bg);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  animation: legalFadeIn 0.35s ease-out both;
+}
+
+@keyframes legalFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .container { padding: 16px 16px 80px; }
+}
+
+
+/* ── Hero ── */
+.hero {
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: color var(--transition-fast);
+}
+.backLink:hover { color: var(--emerald); }
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+}
+
+.effectiveDate {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+
+/* ── Sections ── */
+.section {
+  margin-bottom: 36px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+}
+
+.subSectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 16px 0 8px;
+}
+
+.prose {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.prose strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+
+/* ── Data Table ── */
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 0.82rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.dataTable th {
+  background: var(--bg-soft);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dataTable td {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.dataTable tr:last-child td {
+  border-bottom: none;
+}
+
+.dataTable tr:hover td {
+  background: var(--panel);
+}
+
+@media (max-width: 600px) {
+  .dataTable { font-size: 0.75rem; }
+  .dataTable th, .dataTable td { padding: 8px 10px; }
+}
+
+
+/* ── Lists ── */
+.legalList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legalList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.legalList li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
+
+/* ── Highlight Boxes ── */
+.warningBox {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gold-border);
+  background: var(--gold-bg);
+  margin: 16px 0;
+}
+
+.warningBox p {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.warningBox strong {
+  color: var(--gold);
+}
+
+.infoBox {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--emerald-border);
+  background: var(--emerald-bg);
+  margin: 16px 0;
+}
+
+.infoBox p {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.contactBox {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  margin: 16px 0;
+}
+
+.contactBox p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0 0 4px;
+}
+
+.contactBox a {
+  color: var(--emerald);
+  text-decoration: none;
+  font-weight: 600;
+}
+.contactBox a:hover {
+  text-decoration: underline;
+}
+
+
+/* ── Navigation between legal pages ── */
+.legalNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.legalNavLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  transition: all var(--transition-fast);
+}
+.legalNavLink:hover {
+  border-color: var(--emerald-border);
+  color: var(--emerald);
+}
+
+
+/* ── Mobile ── */
+@media (max-width: 390px) {
+  .title { font-size: 1.35rem; }
+  .legalNav { flex-direction: column; }
+  .legalNavLink { width: 100%; justify-content: center; }
+}

@@ -1,0 +1,56 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./barakfi.db")
+APP_NAME = os.getenv("APP_NAME", "Barakfi API")
+APP_ENV = os.getenv("APP_ENV", "development")
+APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+CORS_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+    if origin.strip()
+]
+AUTHORIZED_PARTIES = [
+    origin.strip()
+    for origin in os.getenv("AUTHORIZED_PARTIES", ",".join(CORS_ORIGINS)).split(",")
+    if origin.strip()
+]
+API_HOST = os.getenv("API_HOST", "127.0.0.1")
+API_PORT = int(os.getenv("API_PORT", "8000"))
+AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "clerk")
+AUTH_GOOGLE_ENABLED = os.getenv("AUTH_GOOGLE_ENABLED", "false").lower() == "true"
+CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY", "")
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
+CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "https://api.clerk.com/v1/jwks")
+CLERK_JS_URL = os.getenv("CLERK_JS_URL", "")
+INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
+if not INTERNAL_SERVICE_TOKEN and APP_ENV.lower() != "production":
+    INTERNAL_SERVICE_TOKEN = "dev-internal-token-change-me"
+
+ADMIN_AUTH_SUBJECTS = [
+    subject.strip()
+    for subject in os.getenv("ADMIN_AUTH_SUBJECTS", "").split(",")
+    if subject.strip()
+]
+ADMIN_EMAILS = [
+    email.strip().lower()
+    for email in os.getenv("ADMIN_EMAILS", "").split(",")
+    if email.strip()
+]
+MARKET_DATA_PROVIDER = os.getenv("MARKET_DATA_PROVIDER", "seed").strip().lower()
+FUNDAMENTALS_PROVIDER = os.getenv("FUNDAMENTALS_PROVIDER", "seed").strip().lower()
+GROWW_API_KEY = os.getenv("GROWW_API_KEY", "")
+GROWW_ACCESS_TOKEN = os.getenv("GROWW_ACCESS_TOKEN", "")
+KITE_API_KEY = os.getenv("KITE_API_KEY", "")
+KITE_ACCESS_TOKEN = os.getenv("KITE_ACCESS_TOKEN", "")
+UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN", "")
+SIGNALX_API_KEY = os.getenv("SIGNALX_API_KEY", "")
+XARO_API_KEY = os.getenv("XARO_API_KEY", "")
+
+
+
+def is_production() -> bool:
+    return APP_ENV.lower() == "production"

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+__pycache__
+*.pyc
+.env
+.env.local
+*.db
+*.sqlite3
+.DS_Store
+coverage
+.pytest_cache
+dist
+build

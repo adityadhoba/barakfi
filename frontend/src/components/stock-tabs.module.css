@@ -1,0 +1,69 @@
+/* ═══════════════════════════════════════════════════════════════════
+   STOCK DETAIL TABS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.tabContainer {
+  margin-bottom: 28px;
+}
+
+.tabBar {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex: 1;
+  justify-content: center;
+}
+
+.tab:hover {
+  color: var(--text);
+  background: var(--panel-hover);
+}
+
+.tabActive {
+  background: var(--panel) !important;
+  color: var(--emerald) !important;
+  box-shadow: var(--shadow-xs);
+}
+
+.tabIcon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.tabPanel {
+  animation: tabFadeIn 0.2s ease-out;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+  .tab {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+  }
+}

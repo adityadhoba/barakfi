@@ -1,0 +1,454 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PORTFOLIO DASHBOARD — Holdings table, P&L, sector allocation
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashboard {
+  display: grid;
+  gap: 20px;
+}
+
+/* ── Summary Row ── */
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.summaryCard {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition-fast);
+}
+.summaryCard:hover {
+  border-color: var(--line-strong);
+}
+
+.summaryLabel {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+
+.summaryValue {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.pnlPctBadge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--emerald-bg);
+}
+
+.positive { color: var(--emerald); }
+.negative { color: var(--red); }
+
+.positive .pnlPctBadge { background: var(--emerald-bg); color: var(--emerald); }
+.negative .pnlPctBadge { background: var(--red-bg); color: var(--red); }
+
+/* ── Compliance Mini ── */
+.complianceMini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.compGreen,
+.compRed,
+.compYellow {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.compGreen {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+.compRed {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+}
+.compYellow {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+/* ── Main Grid ── */
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+}
+
+/* ── Panel ── */
+.holdingsPanel,
+.sectorPanel {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kicker {
+  display: inline-block;
+  margin-bottom: 4px;
+  color: var(--emerald);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.panelTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--emerald-border);
+  border-radius: var(--radius-full);
+  color: var(--emerald);
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--emerald-bg);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+.addBtn:hover {
+  background: var(--emerald);
+  color: #fff;
+}
+
+/* ── Table ── */
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 -20px;
+  padding: 0 20px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.table th,
+.table td {
+  padding: 10px 8px;
+  white-space: nowrap;
+}
+
+.table thead tr {
+  border-bottom: 2px solid var(--line);
+}
+
+.table tbody tr {
+  border-bottom: 1px solid var(--line);
+  transition: background var(--transition-fast);
+}
+.table tbody tr:hover {
+  background: var(--bg-soft);
+}
+
+.table tfoot tr {
+  border-top: 2px solid var(--line);
+}
+
+.thLeft {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.thRight {
+  text-align: right;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.thCenter {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sortBtn {
+  all: unset;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.sortBtn:hover {
+  color: var(--text-secondary);
+}
+
+.row {}
+
+.tdStock {
+  min-width: 120px;
+}
+
+.stockLink {
+  display: grid;
+  gap: 1px;
+  text-decoration: none;
+  color: inherit;
+}
+.stockLink strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.stockLink:hover strong {
+  color: var(--emerald);
+}
+
+.stockName {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tdRight {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.tdCenter {
+  text-align: center;
+}
+
+.footRow td {
+  padding-top: 12px;
+}
+.footRow strong {
+  font-weight: 800;
+}
+
+/* ── Status Badges ── */
+.statusHalal,
+.statusNonCompliant,
+.statusReview {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.statusHalal {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+.statusNonCompliant {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+}
+.statusReview {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+/* ── Sector Allocation ── */
+.sectorBarStack {
+  display: grid;
+  gap: 10px;
+}
+
+.sectorRow {
+  display: grid;
+  grid-template-columns: 130px 1fr 48px;
+  gap: 10px;
+  align-items: center;
+}
+
+.sectorInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.sectorName {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sectorBarTrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.sectorBarFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sectorPct {
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-align: right;
+}
+
+/* ── Performers ── */
+.performersSection {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.performerTitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.performerCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+}
+.performerCard strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.performerSub {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.performerPnl {
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1100px) {
+  .mainGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .summaryRow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sectorRow {
+    grid-template-columns: 100px 1fr 44px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summaryRow {
+    grid-template-columns: 1fr;
+  }
+  .summaryCard {
+    padding: 14px;
+  }
+  .summaryValue {
+    font-size: 1.15rem;
+  }
+  .holdingsPanel,
+  .sectorPanel {
+    padding: 14px;
+  }
+  .tableWrap {
+    margin: 0 -14px;
+    padding: 0 14px;
+  }
+  .sectorRow {
+    grid-template-columns: 90px 1fr 40px;
+    gap: 6px;
+  }
+}

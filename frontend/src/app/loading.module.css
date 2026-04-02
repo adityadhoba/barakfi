@@ -1,0 +1,121 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LOADING SKELETONS — Smooth shimmer, consistent with design system
+   ═══════════════════════════════════════════════════════════════════ */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--shimmer-color, rgba(148, 163, 184, 0.06)) 40%,
+    var(--shimmer-peak, rgba(148, 163, 184, 0.1)) 50%,
+    var(--shimmer-color, rgba(148, 163, 184, 0.06)) 60%,
+    transparent 100%
+  );
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ── Page Containers ── */
+.loadingPage {
+  min-height: calc(100vh - 56px);
+  padding: 24px 24px 64px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.loadingShell {
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loadingSidebar {
+  composes: skeleton;
+  height: 80px;
+  border-radius: var(--radius-xl);
+}
+
+.loadingContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hero ── */
+.loadingHero {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 20px;
+}
+
+.loadingHeroMain {
+  composes: skeleton;
+  height: 200px;
+}
+
+.loadingHeroSide {
+  composes: skeleton;
+  height: 200px;
+}
+
+/* ── Metrics Row ── */
+.loadingMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.loadingMetric {
+  composes: skeleton;
+  height: 90px;
+}
+
+/* ── Grid ── */
+.loadingGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.loadingPanel {
+  composes: skeleton;
+  height: 220px;
+}
+
+.loadingPanelTall {
+  composes: skeleton;
+  height: 320px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 860px) {
+  .loadingHero { grid-template-columns: 1fr; }
+  .loadingMetrics { grid-template-columns: 1fr 1fr; }
+  .loadingGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .loadingMetrics { grid-template-columns: 1fr; }
+  .loadingPage { padding: 16px 16px 80px; }
+}

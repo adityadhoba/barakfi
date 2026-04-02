@@ -1,0 +1,373 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SHARIAH COMPLIANCE & METHODOLOGY PAGE
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page {
+  min-height: calc(100vh - 56px);
+  background: var(--bg);
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  animation: legalFadeIn 0.35s ease-out both;
+}
+
+@keyframes legalFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .container { padding: 16px 16px 80px; }
+}
+
+
+/* ── Hero ── */
+.hero {
+  margin-bottom: 40px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  margin-bottom: 16px;
+  transition: color var(--transition-fast);
+}
+.backLink:hover { color: var(--emerald); }
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+}
+
+.effectiveDate {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+
+/* ── Sections ── */
+.section {
+  margin-bottom: 36px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+}
+
+.subSectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 16px 0 8px;
+}
+
+.prose {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.prose strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+
+/* ── Certification Status Badge ── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-full);
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  color: var(--gold);
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+
+/* ── Criteria Cards ── */
+.criteriaGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.criteriaCard {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.criteriaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.criteriaName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.criteriaThreshold {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.criteriaDesc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+
+/* ── Outcome Cards ── */
+.outcomeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .outcomeGrid { grid-template-columns: 1fr; }
+}
+
+.outcomeCard {
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.outcomeCard p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 10px 0 0;
+}
+
+.outcomeBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.outcomeHalal .outcomeBadge { background: var(--emerald-bg); color: var(--emerald); }
+.outcomeReview .outcomeBadge { background: var(--gold-bg); color: var(--gold); }
+.outcomeFail .outcomeBadge { background: var(--red-bg); color: var(--red); }
+
+.outcomeHalal { border-left: 3px solid var(--emerald); }
+.outcomeReview { border-left: 3px solid var(--gold); }
+.outcomeFail { border-left: 3px solid var(--red); }
+
+
+/* ── Source Cards ── */
+.sourceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.sourceCard {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.sourceCard h3 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.sourceCard p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+/* ── Lists ── */
+.legalList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legalList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.legalList li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald);
+  flex-shrink: 0;
+  margin-top: 7px;
+}
+
+
+/* ── Warning Boxes ── */
+.warningBox {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gold-border);
+  background: var(--gold-bg);
+  margin: 16px 0;
+}
+
+.warningBox p {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.warningBox strong {
+  color: var(--gold);
+}
+
+.contactBox {
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  margin: 16px 0;
+}
+
+.contactBox p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0 0 4px;
+}
+
+.contactBox a {
+  color: var(--emerald);
+  text-decoration: none;
+  font-weight: 600;
+}
+.contactBox a:hover {
+  text-decoration: underline;
+}
+
+
+/* ── Navigation between legal pages ── */
+.legalNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.legalNavLink {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  transition: all var(--transition-fast);
+}
+.legalNavLink:hover {
+  border-color: var(--emerald-border);
+  color: var(--emerald);
+}
+
+
+/* ── Mobile ── */
+@media (max-width: 390px) {
+  .title { font-size: 1.35rem; }
+  .outcomeGrid { grid-template-columns: 1fr; }
+  .sourceGrid { grid-template-columns: 1fr; }
+  .legalNav { flex-direction: column; }
+  .legalNavLink { width: 100%; justify-content: center; }
+}

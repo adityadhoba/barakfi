@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+gunicorn
+sqlalchemy
+python-dotenv
+requests
+pydantic
+httpx
+pytest
+PyJWT
+cryptography
+psycopg2-binary
