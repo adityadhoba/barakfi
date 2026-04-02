@@ -2,6 +2,26 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "regions": ["bom1"],
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "barakfi.com" }],
+      "destination": "https://barakfi.in/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.barakfi.com" }],
+      "destination": "https://barakfi.in/:path",
+      "permanent": true
+    },
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.barakfi.in" }],
+      "destination": "https://barakfi.in/:path",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/icons/(.*)",

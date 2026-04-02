@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.clerk.com https://img.clerk.com https://www.googletagmanager.com",
-              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://api.barakfi.in https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com",
+              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://api.barakfi.in https://barakfi.com https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
               "worker-src 'self' blob:",
             ].join("; "),
