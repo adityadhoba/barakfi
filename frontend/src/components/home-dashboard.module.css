@@ -848,8 +848,6 @@
 }
 
 .trustIcon {
-  font-size: 1.3rem;
-  line-height: 1;
   flex-shrink: 0;
   width: 40px;
   height: 40px;
@@ -857,7 +855,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  background: var(--bg-soft);
+  background: var(--emerald-bg);
+  color: var(--emerald);
 }
 
 .trustText {

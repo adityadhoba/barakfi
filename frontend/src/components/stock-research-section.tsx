@@ -22,13 +22,13 @@ type Props = {
 
 const STATUS_BADGE: Record<string, string> = {
   HALAL: "badgeHalal",
-  REQUIRES_REVIEW: "badgeReview",
+  CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  REQUIRES_REVIEW: "Requires Review",
+  CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
 

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 export function GovernanceOverrideForm() {
   const router = useRouter();
   const [symbol, setSymbol] = useState("");
-  const [decidedStatus, setDecidedStatus] = useState("REQUIRES_REVIEW");
+  const [decidedStatus, setDecidedStatus] = useState("CAUTIOUS");
   const [rationale, setRationale] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState("");
@@ -37,7 +37,7 @@ export function GovernanceOverrideForm() {
 
       setStatus("Override saved.");
       setSymbol("");
-      setDecidedStatus("REQUIRES_REVIEW");
+      setDecidedStatus("CAUTIOUS");
       setRationale("");
       startTransition(() => {
         router.refresh();
@@ -68,7 +68,7 @@ export function GovernanceOverrideForm() {
           <span>Decision</span>
           <select onChange={(event) => setDecidedStatus(event.target.value)} value={decidedStatus}>
             <option value="HALAL">Halal</option>
-            <option value="REQUIRES_REVIEW">Requires review</option>
+            <option value="CAUTIOUS">Cautious</option>
             <option value="NON_COMPLIANT">Non-compliant</option>
           </select>
         </label>

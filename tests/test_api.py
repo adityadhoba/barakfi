@@ -101,7 +101,7 @@ def test_screen_stock():
     assert response.status_code == 200
     # TCS passes all hard rules (low debt, no forbidden sector) but may trigger
     # soft review flags (e.g., low fixed-assets ratio for IT companies).
-    assert response.json()["status"] in ("HALAL", "REQUIRES_REVIEW")
+    assert response.json()["status"] in ("HALAL", "CAUTIOUS")
     assert response.json()["active_review_case"] is None
 
 
@@ -230,7 +230,7 @@ def test_admin_override_changes_screening_result(mock_admin_auth):
             headers=AUTH_HEADER,
             json={
                 "symbol": "TCS",
-                "decided_status": "REQUIRES_REVIEW",
+                "decided_status": "CAUTIOUS",
                 "rationale": "Temporary founder override for governance console testing.",
             },
         )
@@ -238,7 +238,7 @@ def test_admin_override_changes_screening_result(mock_admin_auth):
 
         screen_response = client.get("/api/screen/TCS")
         assert screen_response.status_code == 200
-        assert screen_response.json()["status"] == "REQUIRES_REVIEW"
+        assert screen_response.json()["status"] == "CAUTIOUS"
         assert "Manual compliance override applied" in screen_response.json()["reasons"][0]
     finally:
         db = SessionLocal()

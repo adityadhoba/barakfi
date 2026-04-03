@@ -68,6 +68,9 @@ export default function SignUpPage() {
                 fontWeight: 800,
                 letterSpacing: "-0.02em",
               },
+              headerSubtitle: {
+                color: "var(--text-secondary)",
+              },
               formFieldInput: {
                 borderRadius: "10px",
                 background: "var(--bg-soft)",
@@ -83,6 +86,24 @@ export default function SignUpPage() {
               },
               footerActionLink: {
                 color: "var(--emerald)",
+              },
+              footer: {
+                "& > *:last-child": { display: "none" },
+              },
+              internal: {
+                display: "none",
+              },
+              badge: {
+                display: "none",
+              },
+              dividerLine: {
+                background: "var(--line)",
+              },
+              socialButtonsBlockButton: {
+                borderRadius: "10px",
+                border: "1px solid var(--line)",
+                background: "var(--bg-soft)",
+                transition: "all 150ms ease",
               },
             },
           }}

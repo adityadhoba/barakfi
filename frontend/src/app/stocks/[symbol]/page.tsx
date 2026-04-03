@@ -13,6 +13,7 @@ import {
   getAuthenticatedWorkspace,
   getBulkScreeningResults,
   getEquityQuote,
+  getMultiScreeningResult,
   getScreeningResult,
   getStock,
   getStocks,
@@ -24,6 +25,7 @@ import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
+import { MethodologyComparison } from "@/components/methodology-comparison";
 
 export async function generateMetadata({
   params,
@@ -39,17 +41,17 @@ export async function generateMetadata({
 
 const STATUS_BADGE: Record<string, string> = {
   HALAL: "badgeHalal",
-  REQUIRES_REVIEW: "badgeReview",
+  CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
 };
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  REQUIRES_REVIEW: "Requires Review",
+  CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
 const STATUS_HERO: Record<string, string> = {
   HALAL: "halal",
-  REQUIRES_REVIEW: "review",
+  CAUTIOUS: "review",
   NON_COMPLIANT: "fail",
 };
 
@@ -83,7 +85,7 @@ function buildTakeaway(status: string, reasons: string[], flags: string[]) {
   if (flags.length > 0) {
     return "We can't fully confirm this stock yet — it needs a manual check by a scholar or compliance expert.";
   }
-  return "This stock needs more review before we can say if it's halal or not.";
+  return "This stock is cautious: we can't yet fully confirm if it's halal or not.";
 }
 
 function calculateComplianceScore(
@@ -138,13 +140,14 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [stock, screening, watchlist, workspace, liveQuote, allStocks] = await Promise.all([
+  const [stock, screening, watchlist, workspace, liveQuote, allStocks, multiScreening] = await Promise.all([
     getStock(symbol),
     getScreeningResult(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
     getEquityQuote(symbol, "auto_india"),
     getStocks(),
+    getMultiScreeningResult(symbol).catch(() => null),
   ]);
 
   if (!stock || !screening) notFound();
@@ -246,7 +249,7 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: stock.name,
-    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Under Review"}`,
+    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Cautious"}`,
     url: `https://barakfi.in/stocks/${stock.symbol}`,
     provider: {
       "@type": "Organization",
@@ -257,7 +260,7 @@ export default async function StockDetailPage({
       {
         "@type": "PropertyValue",
         name: "Shariah Status",
-        value: STATUS_LABELS[screening.status] || "Under Review",
+        value: STATUS_LABELS[screening.status] || "Cautious",
       },
       {
         "@type": "PropertyValue",
@@ -345,7 +348,7 @@ export default async function StockDetailPage({
               <WatchlistActionButton symbol={stock.symbol} initialInWatchlist={isInWatchlist} />
               <ShareButton
                 title={`${stock.name} (${stock.symbol}) — Shariah Screening`}
-                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Under Review"}`}
+                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Cautious"}`}
               />
             </div>
           </div>
@@ -398,7 +401,7 @@ export default async function StockDetailPage({
         {/* Compliance Verdict Banner */}
         <div className={`${styles.verdictBanner} ${
           screening.status === "HALAL" ? styles.verdictHalal
-          : screening.status === "REQUIRES_REVIEW" ? styles.verdictReview
+          : screening.status === "CAUTIOUS" ? styles.verdictReview
           : styles.verdictFail
         }`}>
           <div className={styles.verdictLeft}>
@@ -568,6 +571,11 @@ export default async function StockDetailPage({
               )}
             </div>
           </div>
+        )}
+
+        {/* Multi-Methodology Comparison */}
+        {multiScreening && (
+          <MethodologyComparison data={multiScreening} />
         )}
 
         {/* Tabbed Content: Compliance | Financials | Actions */}

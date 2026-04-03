@@ -90,6 +90,7 @@ from app.schemas import (
 from app.services.halal_service import (
     PRIMARY_PROFILE,
     evaluate_stock,
+    evaluate_stock_multi,
     get_profile_version,
     get_rulebook,
 )
@@ -410,7 +411,7 @@ def screen_stocks_bulk(
     Evaluation runs in parallel on backend using asyncio.
 
     Request Body:
-        JSON array of stock symbols (max 100): ["INFY", "TCS", "WIPRO", ...]
+        JSON array of stock symbols (max 500): ["INFY", "TCS", "WIPRO", ...]
 
     Returns:
         List of ScreeningResult in same order as input
@@ -419,7 +420,7 @@ def screen_stocks_bulk(
     Performance:
         ~50-500ms for 100 stocks (vs 15+ seconds for 100 individual requests)
     """
-    upper_symbols = [s.upper() for s in symbols[:100]]
+    upper_symbols = [s.upper() for s in symbols[:500]]
     stocks = (
         db.query(Stock)
         .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
@@ -446,6 +447,87 @@ def screen_stocks_bulk(
             **result,
         })
     return results
+
+
+@router.get("/screen/{symbol}/multi")
+def screen_stock_multi(
+    symbol: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Evaluate a single stock against all three Shariah methodologies
+    (S&P, AAOIFI, FTSE/Maxis) and return comparative results.
+
+    Auth: None (public endpoint)
+    """
+    stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
+        .first()
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    stock_data = helpers.stock_to_dict(stock)
+    multi_result = evaluate_stock_multi(stock_data)
+
+    return {
+        "symbol": stock.symbol,
+        "name": stock.name,
+        **multi_result,
+    }
+
+
+@router.post("/screen/manual")
+def screen_stock_manual(
+    symbol: str = Body(..., embed=True),
+    db: Session = Depends(get_db),
+):
+    """
+    Manually screen any NSE stock by fetching live data from Yahoo Finance.
+
+    Auth: None (public, free for now)
+
+    Fetches real-time financial data and screens against all three methodologies.
+    Results are cached for 1 hour to reduce API calls.
+    """
+    from app.services.manual_screen_service import fetch_and_screen
+
+    clean_symbol = symbol.strip().upper().replace(".NS", "")
+
+    # Check if stock already exists in database
+    existing = (
+        db.query(Stock)
+        .filter(Stock.symbol == clean_symbol, Stock.is_active.is_(True))
+        .first()
+    )
+
+    if existing:
+        stock_data = helpers.stock_to_dict(existing)
+        multi_result = evaluate_stock_multi(stock_data)
+        primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        return {
+            "symbol": existing.symbol,
+            "name": existing.name,
+            "is_prescreened": True,
+            "screening": {**primary_result, "symbol": existing.symbol, "name": existing.name},
+            "multi": multi_result,
+        }
+
+    stock_data = fetch_and_screen(clean_symbol)
+    if not stock_data:
+        raise HTTPException(status_code=404, detail=f"Could not find or fetch data for symbol: {clean_symbol}")
+
+    multi_result = evaluate_stock_multi(stock_data)
+    primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+
+    return {
+        "symbol": stock_data["symbol"],
+        "name": stock_data["name"],
+        "is_prescreened": False,
+        "screening": {**primary_result, "symbol": stock_data["symbol"], "name": stock_data["name"]},
+        "multi": multi_result,
+    }
 
 
 @router.get("/rulebook", response_model=RulebookResponse)
@@ -526,7 +608,7 @@ def create_compliance_override(
         raise HTTPException(status_code=404, detail="Stock not found")
 
     decided_status = payload.decided_status.upper().strip()
-    if decided_status not in {"HALAL", "REQUIRES_REVIEW", "NON_COMPLIANT"}:
+    if decided_status not in {"HALAL", "CAUTIOUS", "NON_COMPLIANT"}:
         raise HTTPException(status_code=400, detail="Invalid override status")
 
     override = ComplianceOverride(
@@ -631,7 +713,7 @@ def update_review_case(
         raise HTTPException(status_code=400, detail="Priority must be low, normal, or high")
 
     review_outcome = payload.review_outcome.upper().strip() if payload.review_outcome else None
-    if review_outcome and review_outcome not in {"HALAL", "REQUIRES_REVIEW", "NON_COMPLIANT"}:
+    if review_outcome and review_outcome not in {"HALAL", "CAUTIOUS", "NON_COMPLIANT"}:
         raise HTTPException(status_code=400, detail="Invalid review outcome")
 
     review_case.assigned_to = payload.assigned_to.strip() if payload.assigned_to else review_case.assigned_to

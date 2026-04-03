@@ -8,7 +8,7 @@ async function fetchJson(url) {
 
 function statusClass(status) {
   if (status === "HALAL") return "status status-halal";
-  if (status === "REQUIRES_REVIEW") return "status status-review";
+  if (status === "CAUTIOUS") return "status status-review";
   return "status status-non-compliant";
 }
 
@@ -198,7 +198,7 @@ function updateExploreStats(items) {
   const visibleItems = items.filter((item) => item.visible);
   document.getElementById("visible-stock-count").textContent = visibleItems.length;
   document.getElementById("visible-halal-count").textContent = visibleItems.filter((item) => item.screening.status === "HALAL").length;
-  document.getElementById("visible-review-count").textContent = visibleItems.filter((item) => item.screening.status === "REQUIRES_REVIEW").length;
+  document.getElementById("visible-review-count").textContent = visibleItems.filter((item) => item.screening.status === "CAUTIOUS").length;
   document.getElementById("visible-non-compliant-count").textContent = visibleItems.filter((item) => item.screening.status === "NON_COMPLIANT").length;
 }
 
@@ -279,7 +279,7 @@ function buildPortfolioModule(portfolios, watchlist) {
             <strong>${holding.stock.symbol} · ${holding.stock.name}</strong>
             <p class="muted">${holding.portfolioName}</p>
           </div>
-          <span class="${statusClass(screening?.status || "REQUIRES_REVIEW")}">${(screening?.status || "REQUIRES_REVIEW").replaceAll("_", " ")}</span>
+          <span class="${statusClass(screening?.status || "CAUTIOUS")}">${(screening?.status || "CAUTIOUS").replaceAll("_", " ")}</span>
         </div>
         <div class="holding-grid">
           <div class="holding-metric">
@@ -304,7 +304,7 @@ function buildPortfolioModule(portfolios, watchlist) {
     if (!screening) return;
     if (screening.status === "NON_COMPLIANT") {
       alerts.push(`${holding.stock.symbol} is non-compliant and needs review before being held in a halal portfolio.`);
-    } else if (screening.status === "REQUIRES_REVIEW") {
+    } else if (screening.status === "CAUTIOUS") {
       alerts.push(`${holding.stock.symbol} needs manual review before it can be treated as fully clean.`);
     }
     if (holding.target_allocation_pct > 35) {
@@ -319,7 +319,7 @@ function buildPortfolioModule(portfolios, watchlist) {
 
 function buildComplianceModule(rulebook, version, screenedStocks) {
   const profile = rulebook.profiles[0];
-  const reviewQueue = screenedStocks.filter((item) => item.screening.status === "REQUIRES_REVIEW");
+  const reviewQueue = screenedStocks.filter((item) => item.screening.status === "CAUTIOUS");
 
   document.getElementById("compliance-source-count").textContent = profile.primary_sources.length;
   document.getElementById("compliance-review-count").textContent = reviewQueue.length;
@@ -351,7 +351,7 @@ function buildComplianceModule(rulebook, version, screenedStocks) {
 
 function buildAccountModule(owner, portfolios, watchlist, screenedStocks) {
   const readableName = owner.charAt(0).toUpperCase() + owner.slice(1);
-  const reviewCount = screenedStocks.filter((item) => item.screening.status === "REQUIRES_REVIEW").length;
+  const reviewCount = screenedStocks.filter((item) => item.screening.status === "CAUTIOUS").length;
   const onboardingItems = [
     {
       label: "Strict compliance profile is active",

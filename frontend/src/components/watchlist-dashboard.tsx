@@ -20,19 +20,19 @@ interface Props {
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
   HALAL: "badgeHalal",
-  REQUIRES_REVIEW: "badgeReview",
+  CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  REQUIRES_REVIEW: "Review",
+  CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Avoid",
 };
 
 const STATUS_ORDER: Record<string, number> = {
   HALAL: 0,
-  REQUIRES_REVIEW: 1,
+  CAUTIOUS: 1,
   NON_COMPLIANT: 2,
 };
 
@@ -60,7 +60,7 @@ export function WatchlistDashboard({ entries }: Props) {
   // Calculate compliance summary
   const summary = useMemo(() => {
     const halal = entries.filter((e) => e.screening?.status === "HALAL").length;
-    const review = entries.filter((e) => e.screening?.status === "REQUIRES_REVIEW").length;
+    const review = entries.filter((e) => e.screening?.status === "CAUTIOUS").length;
     const avoid = entries.filter((e) => e.screening?.status === "NON_COMPLIANT").length;
     return { halal, review, avoid };
   }, [entries]);
@@ -86,8 +86,8 @@ export function WatchlistDashboard({ entries }: Props) {
           break;
         }
         case "status":
-          aVal = STATUS_ORDER[a.screening?.status || "REQUIRES_REVIEW"] ?? 999;
-          bVal = STATUS_ORDER[b.screening?.status || "REQUIRES_REVIEW"] ?? 999;
+          aVal = STATUS_ORDER[a.screening?.status || "CAUTIOUS"] ?? 999;
+          bVal = STATUS_ORDER[b.screening?.status || "CAUTIOUS"] ?? 999;
           break;
         default:
           return 0;
@@ -140,7 +140,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--gold)" }}>⚠</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Review</div>
+            <div className={styles.summaryLabel}>Cautious</div>
             <div className={styles.summaryValue}>{summary.review}</div>
           </div>
         </div>
@@ -196,7 +196,7 @@ export function WatchlistDashboard({ entries }: Props) {
           </thead>
           <tbody>
             {sorted.map((entry) => {
-              const status = entry.screening?.status || "REQUIRES_REVIEW";
+              const status = entry.screening?.status || "CAUTIOUS";
               const badgeClass = STATUS_BADGE_CLASS[status] || "badgeReview";
               const badgeLabel = STATUS_LABELS[status] || status;
               const currentPrice = quotes[entry.stock.symbol]?.last_price ?? entry.stock.price;

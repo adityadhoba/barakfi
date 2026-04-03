@@ -230,7 +230,7 @@ class ComplianceOverride(Base):
 
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
-    decided_status = Column(String, nullable=False, default="REQUIRES_REVIEW")
+    decided_status = Column(String, nullable=False, default="CAUTIOUS")
     rationale = Column(Text, nullable=False, default="")
     decided_by = Column(String, nullable=False)
     created_at = Column(DateTime, nullable=False, default=utc_now)

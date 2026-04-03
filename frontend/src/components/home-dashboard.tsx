@@ -7,7 +7,7 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import styles from "./home-dashboard.module.css";
 
-const MAX_SCREEN_ON_HOME = 100;
+const MAX_SCREEN_ON_HOME = 500;
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -58,7 +58,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
   let fail = 0;
   for (const s of screened) {
     if (s.screening.status === "HALAL") halal++;
-    else if (s.screening.status === "REQUIRES_REVIEW") review++;
+    else if (s.screening.status === "CAUTIOUS") review++;
     else fail++;
   }
   const hasStats = screened.length > 0;
@@ -216,10 +216,10 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             <span className={styles.statSub}>{skippedFullStats ? "Open screener" : "Pass all rules"}</span>
           </div>
         </Link>
-        <Link href="/screener?status=REQUIRES_REVIEW" className={`${styles.statCard} ${styles.statCardReview}`}>
+        <Link href="/screener?status=CAUTIOUS" className={`${styles.statCard} ${styles.statCardReview}`}>
           <span className={`${styles.statIcon} ${styles.statIconReview}`}>?</span>
           <div className={styles.statBody}>
-            <span className={styles.statLabel}>Review</span>
+            <span className={styles.statLabel}>Cautious</span>
             <span className={`${styles.statValue} ${styles.valueReview}`}>{hasStats ? review : "\u2014"}</span>
             <span className={styles.statSub}>Need verification</span>
           </div>
@@ -266,7 +266,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                 ? "Many stocks pass the strict Shariah screen. Explore sectors in the screener."
                 : compliancePct >= 25
                   ? "Quality matters more than quantity \u2014 filter by compliance and sector."
-                  : "Most stocks need review. Use the screener to find compliant options."}
+                  : "Most stocks are cautious. Use the screener to find compliant options."}
             </span>
           </div>
           <Link href="/screener" className={styles.pulseCta}>
@@ -307,10 +307,10 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                   <div className={styles.stockStatus}>
                     <span className={`${styles.statusDot} ${
                       scr.screening.status === 'HALAL' ? styles.statusDotHalal
-                      : scr.screening.status === 'REQUIRES_REVIEW' ? styles.statusDotReview
+                      : scr.screening.status === 'CAUTIOUS' ? styles.statusDotReview
                       : styles.statusDotFail
                     }`} />
-                    {scr.screening.status === 'HALAL' ? 'Halal' : scr.screening.status === 'REQUIRES_REVIEW' ? 'Review' : 'Avoid'}
+                    {scr.screening.status === 'HALAL' ? 'Halal' : scr.screening.status === 'CAUTIOUS' ? 'Cautious' : 'Avoid'}
                   </div>
                 )}
               </Link>
@@ -398,28 +398,44 @@ export async function HomeDashboard({ isSignedIn }: Props) {
       {/* ── Trust & Methodology Bar ── */}
       <section className={styles.trustBar}>
         <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>&#x1F6E1;</span>
+          <span className={styles.trustIcon}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </span>
           <div className={styles.trustText}>
             <span className={styles.trustTitle}>S&amp;P Shariah Methodology</span>
             <span className={styles.trustDesc}>Industry-standard screening rules</span>
           </div>
         </div>
         <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>&#x1F512;</span>
+          <span className={styles.trustIcon}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </span>
           <div className={styles.trustText}>
             <span className={styles.trustTitle}>Secure &amp; Private</span>
             <span className={styles.trustDesc}>Your portfolio data stays yours</span>
           </div>
         </div>
         <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>&#x26A1;</span>
+          <span className={styles.trustIcon}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </span>
           <div className={styles.trustText}>
             <span className={styles.trustTitle}>Real-Time Data</span>
             <span className={styles.trustDesc}>Live prices from NSE &amp; Yahoo Finance</span>
           </div>
         </div>
         <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>&#x1F4F1;</span>
+          <span className={styles.trustIcon}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </span>
           <div className={styles.trustText}>
             <span className={styles.trustTitle}>Mobile-First PWA</span>
             <span className={styles.trustDesc}>Install on any device, works offline</span>

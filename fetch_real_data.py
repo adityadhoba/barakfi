@@ -1,5 +1,5 @@
 """
-Fetch REAL financial data for 100+ Indian NSE stocks from Yahoo Finance.
+Fetch REAL financial data for 200+ Indian NSE stocks from Yahoo Finance.
 
 Usage:
     python fetch_real_data.py              # Fetch data and write to DB + real_stock_data.py
@@ -7,6 +7,31 @@ Usage:
 
 Data source: Yahoo Finance via yfinance library.
 All financial values are converted to Crores INR (divide raw values by 1,00,00,000).
+
+=== WEEKLY STOCK ADDITION PROCESS ===
+
+Every week, add ~10 new pre-screened stocks with the following steps:
+
+1. ADD SYMBOLS: Add new NSE symbols to the STOCK_SYMBOLS list below.
+   Group them with a comment like "# Week N expansion (Month Year)".
+
+2. ADD LOGO MAPPINGS: For each new symbol, add a domain mapping to
+   frontend/src/components/stock-logo.tsx in the SYMBOL_TO_DOMAIN dict.
+   Find the company's website domain (e.g., SUZLON -> "suzlon.com").
+
+3. FETCH DATA: Run this script to pull financial data:
+   python fetch_real_data.py
+
+4. VERIFY: Check the output for any FAILED symbols.
+   Fix alternate tickers in TICKER_ALTERNATES if needed.
+
+5. DEPLOY: Push changes and redeploy backend (Render auto-deploys from main).
+   Frontend will pick up new stocks automatically via API.
+
+The screening happens automatically — the API evaluates each stock on request
+using the screening engine in app/services/halal_service.py.
+
+No cron jobs needed. This is a manual weekly process.
 """
 
 import argparse
@@ -293,6 +318,18 @@ STOCK_SYMBOLS = [
     "HINDPETRO", "BPCL", "IOC", "GAIL",
     "VEDL", "NMDC", "NATIONALUM",
     "BANDHANBNK", "AUBANK", "RBLBANK",
+    # Week 1 expansion (April 2026)
+    "DALBHARAT", "JSWENERGY", "ADANIGREEN", "ADANIPOWER", "ADANITRANS",
+    "POWERMECH", "SUZLON", "INOXWIND", "TTML", "IDEA",
+    # Week 2 expansion
+    "TITAN", "ZYDUSLIFE", "SUNPHARMA", "MANKIND", "LICI",
+    "PGHH", "NESTLEIND", "HINDUNILVR", "GODREJIND", "PATANJALI",
+    # Week 3 expansion
+    "CENTURYTEX", "GRINFRA", "KFINTECH", "CAMS", "BSOFT",
+    "HAPPSTMNDS", "TANLA", "LATENTVIEW", "MASTEK", "ZENSAR",
+    # Week 4 expansion
+    "CUB", "KARURVYSYA", "SOUTHBANK", "TMB", "EQUITASBNK",
+    "FINPIPE", "APLLTD", "JBCHEPHARM", "GLAXO", "PFIZER",
 ]
 
 # De-duplicate (BEL appears in both NIFTY NEXT 50 and Additional)

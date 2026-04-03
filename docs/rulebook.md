@@ -42,7 +42,7 @@ Why:
 - The ICIF article says companies may be screened out if they do not have at least 25% of capital in fixed assets.
 - The exact production formula is not defined clearly enough in the source page for us to automate with confidence.
 
-So the app marks this as `REQUIRES_REVIEW` rather than claiming a definitive result.
+So the app marks this as `CAUTIOUS` rather than claiming a definitive result.
 
 ## Important product policy
 
@@ -51,7 +51,7 @@ The app should only return `HALAL` when:
 - all automated hard rules pass, and
 - there are no unresolved manual review flags
 
-The app should return `REQUIRES_REVIEW` when:
+The app should return `CAUTIOUS` when:
 
 - the available data is insufficient, or
 - the source exists but the formula is too ambiguous for safe automation

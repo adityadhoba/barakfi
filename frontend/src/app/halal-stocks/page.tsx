@@ -55,7 +55,7 @@ export default async function HalalStocksPage() {
     .sort((a, b) => b.market_cap - a.market_cap);
 
   const reviewStocks = stocks
-    .filter((s) => screeningMap.get(s.symbol)?.status === "REQUIRES_REVIEW")
+    .filter((s) => screeningMap.get(s.symbol)?.status === "CAUTIOUS")
     .sort((a, b) => b.market_cap - a.market_cap);
 
   const sectorCounts: Record<string, number> = {};
@@ -100,7 +100,7 @@ export default async function HalalStocksPage() {
         <p className={styles.subtitle}>
           Complete list of {halalStocks.length} Shariah-compliant stocks on India&apos;s NSE.
           Screened using S&amp;P Shariah methodology with real-time financial data.
-          {reviewStocks.length > 0 && ` Plus ${reviewStocks.length} stocks pending review.`}
+          {reviewStocks.length > 0 && ` Plus ${reviewStocks.length} cautious stocks.`}
         </p>
         <div className={styles.ctas}>
           <Link href="/screener" className={styles.ctaPrimary}>Open Full Screener</Link>
@@ -116,7 +116,7 @@ export default async function HalalStocksPage() {
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>{reviewStocks.length}</span>
-          <span className={styles.statLabel}>Under Review</span>
+          <span className={styles.statLabel}>Cautious</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>{Object.keys(sectorCounts).length}</span>
@@ -234,7 +234,7 @@ export default async function HalalStocksPage() {
             <p>
               Currently, {halalStocks.length} out of {stocks.length} screened Indian stocks
               pass our Shariah compliance screening, with {reviewStocks.length} additional
-              stocks under review.
+              cautious stocks.
             </p>
           </div>
           <div className={styles.faqItem}>
@@ -273,7 +273,7 @@ export default async function HalalStocksPage() {
                 name: "How many halal stocks are available in India?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: `Currently, ${halalStocks.length} out of ${stocks.length} screened Indian stocks pass Shariah compliance screening, with ${reviewStocks.length} additional stocks under review.`,
+                  text: `Currently, ${halalStocks.length} out of ${stocks.length} screened Indian stocks pass Shariah compliance screening, with ${reviewStocks.length} additional cautious stocks.`,
                 },
               },
               {

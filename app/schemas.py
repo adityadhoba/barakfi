@@ -260,7 +260,7 @@ class AdminUsersListResponse(BaseModel):
 
 class ComplianceOverrideCreateRequest(BaseModel):
     symbol: str
-    decided_status: str = Field(default="REQUIRES_REVIEW")
+    decided_status: str = Field(default="CAUTIOUS")
     rationale: str = Field(min_length=8, max_length=500)
 
 

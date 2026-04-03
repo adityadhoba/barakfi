@@ -121,7 +121,7 @@ export function GovernanceReviewCaseUpdateForm({ cases }: Props) {
           <select onChange={(event) => setReviewOutcome(event.target.value)} value={reviewOutcome}>
             <option value="">No outcome yet</option>
             <option value="HALAL">Halal</option>
-            <option value="REQUIRES_REVIEW">Requires review</option>
+            <option value="CAUTIOUS">Cautious</option>
             <option value="NON_COMPLIANT">Non-compliant</option>
           </select>
         </label>

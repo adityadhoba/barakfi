@@ -37,7 +37,7 @@ function getMcapCategory(mcap: number): string {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  REQUIRES_REVIEW: "Needs Review",
+  CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
 
@@ -60,7 +60,7 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
 
   const b = stock.screening.breakdown;
   const statusCls = stock.screening.status === "HALAL" ? styles.statusHalal
-    : stock.screening.status === "REQUIRES_REVIEW" ? styles.statusReview
+    : stock.screening.status === "CAUTIOUS" ? styles.statusReview
     : styles.statusFail;
 
   return (

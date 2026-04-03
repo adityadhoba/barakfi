@@ -3,9 +3,9 @@ import Link from "next/link";
 import styles from "./shariah-compliance.module.css";
 
 export const metadata: Metadata = {
-  title: "Shariah Compliance & Certification — Barakfi",
+  title: "Shariah Screening Methodology — Barakfi",
   description:
-    "Understand our Shariah screening methodology, certification status, sources, and how we classify stocks as Halal, Requires Review, or Non-Compliant.",
+    "Understand our Shariah screening methodology, data sources, and how we classify stocks as Halal, Cautious, or Non-Compliant using S&P, AAOIFI, and FTSE/Maxis standards.",
 };
 
 const SCREENING_CRITERIA = [
@@ -65,43 +65,13 @@ export default function ShariahCompliancePage() {
           <Link href="/" className={styles.backLink}>
             &larr; Back to Home
           </Link>
-          <h1 className={styles.title}>Shariah Compliance &amp; Certification</h1>
+          <h1 className={styles.title}>Shariah Screening Methodology</h1>
           <p className={styles.subtitle}>
-            Transparency about our screening methodology, certification status, data sources,
+            Transparency about our screening methodology, data sources,
             and the limitations of automated Shariah screening.
           </p>
           <span className={styles.effectiveDate}>Last Updated: 1 April 2026</span>
         </header>
-
-        {/* Certification Status */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Certification Status</h2>
-          <div className={styles.statusBadge}>
-            <span className={styles.statusDot} />
-            Pending Formal Shariah Board Review
-          </div>
-          <p className={styles.prose}>
-            Barakfi&apos;s screening methodology is currently <strong>pending formal
-            review and certification by an independent Shariah advisory board</strong>. Our
-            screening criteria are derived from globally recognised standards (detailed below),
-            but have not yet been formally endorsed by a Shariah scholar or board.
-          </p>
-          <p className={styles.prose}>
-            We are actively pursuing formal Shariah board certification and intend to engage a
-            qualified panel of Islamic finance scholars with expertise in Indian equity markets.
-            Until such certification is obtained, our screening results should be treated as
-            <strong> preliminary assessments</strong> that require independent verification by
-            users with their preferred Shariah authority.
-          </p>
-          <div className={styles.warningBox}>
-            <p>
-              <strong>Important:</strong> The absence of formal Shariah board certification means
-              that our screening results do not carry the authority of a fatwa or certified
-              Shariah opinion. Users must exercise their own judgment and consult qualified
-              scholars.
-            </p>
-          </div>
-        </section>
 
         {/* Methodology Sources */}
         <section className={styles.section}>
@@ -163,12 +133,12 @@ export default function ShariahCompliancePage() {
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeReview}`}>
-              <span className={styles.outcomeBadge}>REQUIRES REVIEW</span>
+              <span className={styles.outcomeBadge}>CAUTIOUS</span>
               <p>
-                The stock passes automated checks but carries flags that require human
-                judgment: borderline ratios (within 5% of a threshold), mixed business
-                activities, data gaps in financial statements, or recent corporate actions
-                that may affect compliance. A qualified scholar&apos;s review is recommended.
+                The stock passes core screening rules but carries flags that need attention:
+                borderline ratios (within 5% of a threshold), mixed business activities,
+                data gaps in financial statements, or recent corporate actions that may
+                affect compliance. Users should review the specific flags before investing.
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeFail}`}>
@@ -223,41 +193,6 @@ export default function ShariahCompliancePage() {
               subsidiaries that are not fully reflected in consolidated financial statements.
             </li>
           </ul>
-        </section>
-
-        {/* Commitment to Certification */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Our Commitment to Formal Certification</h2>
-          <p className={styles.prose}>
-            We are committed to obtaining formal Shariah advisory board certification for our
-            screening methodology. Our roadmap includes:
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              Engaging an independent Shariah advisory board comprising scholars with expertise
-              in Islamic finance and familiarity with Indian capital markets.
-            </li>
-            <li>
-              Submitting our screening methodology, threshold values, sector classifications,
-              and data sourcing processes for formal review.
-            </li>
-            <li>
-              Implementing board recommendations and incorporating scholarly feedback into our
-              methodology.
-            </li>
-            <li>
-              Publishing the certification status, board composition, and any conditions or
-              qualifications attached to the certification.
-            </li>
-            <li>
-              Conducting periodic reviews (at minimum annually) to maintain certification as
-              methodologies and standards evolve.
-            </li>
-          </ul>
-          <p className={styles.prose}>
-            Users will be notified when formal certification is obtained. The certification
-            status on this page will be updated accordingly.
-          </p>
         </section>
 
         {/* Reporting Concerns */}

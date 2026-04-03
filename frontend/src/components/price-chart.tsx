@@ -101,19 +101,20 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
       chartRef.current = chart;
 
-      const candleSeries = chart.addCandlestickSeries({
-        upColor: emerald,
-        downColor: red,
-        borderUpColor: emerald,
-        borderDownColor: red,
-        wickUpColor: emerald,
-        wickDownColor: red,
+      const areaSeries = chart.addAreaSeries({
+        topColor: `${emerald}40`,
+        bottomColor: `${emerald}05`,
+        lineColor: emerald,
+        lineWidth: 2,
+        crosshairMarkerRadius: 4,
+        crosshairMarkerBorderColor: emerald,
+        crosshairMarkerBackgroundColor: "#fff",
       });
 
-      // Fetch initial data
       const candles = await fetchData(range);
       if (!disposed && candles.length > 0) {
-        candleSeries.setData(candles as never[]);
+        const lineData = candles.map((c) => ({ time: c.time, value: c.close }));
+        areaSeries.setData(lineData as never[]);
         chart.timeScale().fitContent();
       }
 
@@ -127,8 +128,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
       });
       resizeObserver.observe(containerRef.current);
 
-      // Store candleSeries for range changes
-      (containerRef.current as HTMLDivElement & { __series?: unknown }).__series = candleSeries;
+      (containerRef.current as HTMLDivElement & { __series?: unknown }).__series = areaSeries;
 
       return () => {
         resizeObserver.disconnect();
@@ -155,7 +155,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
     (async () => {
       const candles = await fetchData(range);
       if (candles.length > 0) {
-        series.setData(candles as never[]);
+        const lineData = candles.map((c: Candle) => ({ time: c.time, value: c.close }));
+        series.setData(lineData as never[]);
         chartRef.current?.timeScale().fitContent();
       }
     })();

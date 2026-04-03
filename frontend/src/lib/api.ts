@@ -607,6 +607,50 @@ export function getScreeningResult(symbol: string) {
   return apiFetch<ScreeningResult | null>(`/screen/${encodeURIComponent(symbol)}`, null);
 }
 
+export type MultiMethodologyResult = {
+  symbol: string;
+  name: string;
+  consensus_status: string;
+  methodologies: Record<string, ScreeningResult>;
+  summary: {
+    halal_count: number;
+    cautious_count: number;
+    non_compliant_count: number;
+    total: number;
+  };
+};
+
+export function getMultiScreeningResult(symbol: string) {
+  return apiFetch<MultiMethodologyResult | null>(`/screen/${encodeURIComponent(symbol)}/multi`, null);
+}
+
+export type ManualScreenResult = {
+  symbol: string;
+  name: string;
+  is_prescreened: boolean;
+  screening: ScreeningResult;
+  multi: MultiMethodologyResult;
+};
+
+export async function manualScreenStock(symbol: string): Promise<ManualScreenResult | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}/screen/manual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbol }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
 /**
  * Batch evaluate multiple stocks for Shariah compliance (much faster than N individual requests).
  * Evaluation runs in parallel on backend. Useful for screening 100+ stocks.
@@ -622,8 +666,8 @@ export function getScreeningResult(symbol: string) {
 export async function getBulkScreeningResults(symbols: string[]): Promise<ScreeningResult[]> {
   if (symbols.length === 0) return [];
 
-  // Chunk into batches of 200 to stay within backend limits
-  const CHUNK_SIZE = 200;
+  // Chunk into batches of 500 to stay within backend limits
+  const CHUNK_SIZE = 500;
   const chunks: string[][] = [];
   for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
     chunks.push(symbols.slice(i, i + CHUNK_SIZE));

@@ -221,7 +221,7 @@ SEED_REVIEW_CASES = [
         "assigned_to": "scholar-review@barakfi.in",
         "status": "in_progress",
         "priority": "normal",
-        "review_outcome": "REQUIRES_REVIEW",
+        "review_outcome": "CAUTIOUS",
         "summary": "Track an in-progress review workflow for a watchlist stock.",
         "notes": "Use this case to validate assignment and event history in the founder console.",
         "events": [

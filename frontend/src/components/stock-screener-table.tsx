@@ -15,12 +15,12 @@ type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
 type SortDir = "asc" | "desc";
 
-const STATUS_ORDER: Record<string, number> = { HALAL: 0, REQUIRES_REVIEW: 1, NON_COMPLIANT: 2 };
+const STATUS_ORDER: Record<string, number> = { HALAL: 0, CAUTIOUS: 1, NON_COMPLIANT: 2 };
 
 const STATUS_OPTIONS = [
   { key: "all", label: "All Stocks" },
   { key: "HALAL", label: "Halal" },
-  { key: "REQUIRES_REVIEW", label: "Needs Review" },
+  { key: "CAUTIOUS", label: "Cautious" },
   { key: "NON_COMPLIANT", label: "Non-Compliant" },
 ] as const;
 
@@ -33,7 +33,7 @@ const MCAP_OPTIONS = [
 
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   HALAL: { cls: "statusHalal", label: "Halal" },
-  REQUIRES_REVIEW: { cls: "statusReview", label: "Review" },
+  CAUTIOUS: { cls: "statusReview", label: "Cautious" },
   NON_COMPLIANT: { cls: "statusFail", label: "Avoid" },
 };
 
@@ -117,7 +117,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
     const st = searchParams.get("status");
-    if (st === "HALAL" || st === "REQUIRES_REVIEW" || st === "NON_COMPLIANT") setStatusFilter(st);
+    if (st === "HALAL" || st === "CAUTIOUS" || st === "NON_COMPLIANT") setStatusFilter(st);
     const sec = searchParams.get("sector");
     if (sec) {
       const decoded = decodeURIComponent(sec);
@@ -222,7 +222,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (!saveFilterName.trim()) return;
     setIsSavingFilter(true);
     try {
-      const statusMap: Record<string, string> = { all: "all", HALAL: "halal", REQUIRES_REVIEW: "requires_review", NON_COMPLIANT: "non_compliant" };
+      const statusMap: Record<string, string> = { all: "all", HALAL: "halal", CAUTIOUS: "cautious", NON_COMPLIANT: "non_compliant" };
       const response = await fetch("/api/saved-screeners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -424,7 +424,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             </thead>
             <tbody>
               {pageItems.map((s, idx) => {
-                const cfg = STATUS_CONFIG[s.screening.status] || STATUS_CONFIG.REQUIRES_REVIEW;
+                const cfg = STATUS_CONFIG[s.screening.status] || STATUS_CONFIG.CAUTIOUS;
                 const b = s.screening.breakdown;
                 const globalIdx = pageStart + idx + 1;
                 return (

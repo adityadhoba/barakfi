@@ -14,14 +14,14 @@ type Props = {
 export function MarketOverview({ screenedStocks, activeStatus, onStatusChange }: Props) {
   const total = screenedStocks.length;
   const halal = screenedStocks.filter((s) => s.screening.status === "HALAL").length;
-  const review = screenedStocks.filter((s) => s.screening.status === "REQUIRES_REVIEW").length;
+  const review = screenedStocks.filter((s) => s.screening.status === "CAUTIOUS").length;
   const fail = total - halal - review;
   const compliancePct = total > 0 ? Math.round((halal / total) * 100) : 0;
 
   const stats = [
     { key: "all", label: "All Stocks", value: total, sub: `${compliancePct}% compliant`, className: "" },
     { key: "HALAL", label: "Halal", value: halal, sub: "safe to invest", className: styles.statsChipHalal },
-    { key: "REQUIRES_REVIEW", label: "Review", value: review, sub: "needs checking", className: styles.statsChipReview },
+    { key: "CAUTIOUS", label: "Cautious", value: review, sub: "needs checking", className: styles.statsChipReview },
     { key: "NON_COMPLIANT", label: "Avoid", value: fail, sub: "non-compliant", className: styles.statsChipFail },
   ];
 

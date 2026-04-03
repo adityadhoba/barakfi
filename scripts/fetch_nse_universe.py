@@ -9,7 +9,7 @@ Usage:
 
 Fetches constituent lists from NSE India's public API and adds
 any missing stocks to the database with placeholder financials.
-Stocks with placeholder financials will show as REQUIRES_REVIEW
+Stocks with placeholder financials will show as CAUTIOUS
 until real balance sheet data is loaded.
 """
 
@@ -188,7 +188,7 @@ def main():
             sector = map_sector(industry)
             ltp = float(item.get("lastPrice", 0) or 0)
 
-            # Create with placeholder financials — will show as REQUIRES_REVIEW
+            # Create with placeholder financials — will show as CAUTIOUS
             stock = Stock(
                 symbol=sym,
                 name=name,

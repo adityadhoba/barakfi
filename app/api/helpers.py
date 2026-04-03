@@ -314,7 +314,7 @@ def build_alerts_payload(
         result = evaluate_stock(stock_to_dict(holding.stock), profile=PRIMARY_PROFILE)
         if result["status"] == "NON_COMPLIANT":
             alerts.append({"level": "critical", "title": f"{holding.stock.symbol} is non-compliant", "message": "This holding fails the active Shariah screening profile and needs review."})
-        elif result["status"] == "REQUIRES_REVIEW":
+        elif result["status"] == "CAUTIOUS":
             alerts.append({"level": "warning", "title": f"{holding.stock.symbol} needs manual review", "message": "The automated rules flagged this holding for deeper compliance validation."})
 
         if total_market_value > 0:
@@ -436,7 +436,7 @@ def build_compliance_queue(portfolios: list[Portfolio], watchlist_entries: list[
             ),
             "action_required": (
                 "Resolve the compliance ambiguity before moving this stock into active capital deployment."
-                if result["status"] == "REQUIRES_REVIEW"
+                if result["status"] == "CAUTIOUS"
                 else "Keep this name as a benchmark or remove it from active consideration."
             ),
         })
