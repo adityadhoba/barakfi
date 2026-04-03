@@ -186,6 +186,40 @@ body {
   transition: background-color var(--transition-base), color var(--transition-base);
 }
 
+/* ── Global Animation Classes ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Scroll-triggered animation */
+@keyframes revealUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Apply to sections for scroll reveal effect */
+.shellSection,
+.shellHero,
+.shellCard {
+  animation: revealUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -505,12 +539,13 @@ input, select, textarea, button {
 
 /* Nav links */
 .ghostLink {
-  padding: 6px 12px;
+  padding: 7px 14px;
   color: var(--text-secondary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition-fast), background var(--transition-fast);
+  border-radius: var(--radius-full);
+  transition: all 0.2s ease;
+  position: relative;
 }
 .ghostLink:hover {
   color: var(--text);
@@ -547,17 +582,19 @@ input, select, textarea, button {
 .ghostButtonLink {
   display: inline-flex;
   align-items: center;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.84rem;
-  transition: all var(--transition-fast);
+  border: 1px solid var(--line);
+  transition: all 0.2s ease;
 }
 .ghostButtonLink:hover {
   color: var(--text);
   background: var(--bg-soft);
+  border-color: var(--line-strong);
 }
 
 .solidButton {
@@ -572,18 +609,19 @@ input, select, textarea, button {
 .solidButtonLink {
   display: inline-flex;
   align-items: center;
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  background: var(--emerald);
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-emerald);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.84rem;
-  transition: all var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-emerald);
 }
 .solidButtonLink:hover {
-  background: var(--emerald-hover);
   box-shadow: var(--shadow-emerald-lg);
+  transform: translateY(-1px);
+  filter: brightness(1.08);
 }
 
 
