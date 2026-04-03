@@ -4,6 +4,7 @@ import { ResearchNotePanel } from "@/components/research-note-panel";
 import { ComplianceCheckPanel } from "@/components/compliance-check-panel";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { PortfolioDashboard } from "@/components/portfolio-dashboard";
+import { AddHoldingButton } from "@/components/add-holding-modal";
 import {
   bootstrapAuthenticatedUser,
   getAuthenticatedAlerts,
@@ -130,6 +131,9 @@ export async function WorkspaceShell() {
     : [];
   const screeningStatuses = screeningResults.map((r) => ({ symbol: r.symbol, status: r.status }));
 
+  const allStocks = await getStocks().catch(() => []);
+  const stockOptions = allStocks.map((s) => ({ symbol: s.symbol, name: s.name }));
+
   const urgentAlerts = alerts.filter((a) => a.level === "critical" || a.level === "warning");
   const firstName = user.display_name.split(" ")[0];
   const totalHoldings = dashboard.holding_count;
@@ -143,7 +147,8 @@ export async function WorkspaceShell() {
         <div className={ws.dashHeaderLeft}>
           <h1 className={ws.dashTitle}>{firstName}&apos;s Portfolio</h1>
           <div className={ws.dashActions}>
-            <Link href="/screener" className={ws.actionBtnPrimary}>
+            <AddHoldingButton stocks={stockOptions} />
+            <Link href="/screener" className={ws.actionBtn}>
               Screen stocks
             </Link>
             <Link href="/watchlist" className={ws.actionBtn}>
@@ -211,11 +216,14 @@ export async function WorkspaceShell() {
             <span className={ws.emptyIcon}>&#x1F4BC;</span>
             <h3 className={ws.emptyTitle}>No holdings yet</h3>
             <p className={ws.emptyDesc}>
-              Screen stocks for Shariah compliance, add them to your watchlist, then track your investments here.
+              Add stocks you own to track your portfolio&apos;s Shariah compliance and performance.
             </p>
-            <Link className={ws.actionBtnPrimary} href="/screener">
-              Find halal stocks &rarr;
-            </Link>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+              <AddHoldingButton stocks={stockOptions} />
+              <Link className={ws.actionBtn} href="/screener">
+                Browse screener
+              </Link>
+            </div>
           </div>
         </section>
       )}

@@ -457,6 +457,41 @@ export default async function StockDetailPage({
           </div>
         </div>
 
+        {/* Category Info Cards — like Tickertape */}
+        <div className={styles.categoryCards}>
+          <div className={styles.categoryCard}>
+            <span className={styles.categoryIcon} style={{ color: "var(--emerald)" }}>&#x2726;</span>
+            <div className={styles.categoryContent}>
+              <Link href={`/screener?sector=${encodeURIComponent(stock.sector)}`} className={styles.categoryTitle}>
+                {stock.sector} &rsaquo;
+              </Link>
+              <span className={styles.categorySub}>{stock.sector}</span>
+            </div>
+          </div>
+          <div className={styles.categoryCard}>
+            <span className={styles.categoryIcon} style={{ color: "#3b82f6" }}>&#x25B2;</span>
+            <div className={styles.categoryContent}>
+              <span className={styles.categoryTitle}>
+                {stock.market_cap >= 100000 ? "Large Cap" : stock.market_cap >= 20000 ? "Mid Cap" : "Small Cap"} &rsaquo;
+              </span>
+              <span className={styles.categorySub}>
+                Market cap of {formatMcap(stock.market_cap)}
+              </span>
+            </div>
+          </div>
+          <div className={styles.categoryCard}>
+            <span className={styles.categoryIcon} style={{ color: b.debt_to_36m_avg_market_cap_ratio <= 0.23 ? "var(--emerald)" : "var(--gold)" }}>&#x21C5;</span>
+            <div className={styles.categoryContent}>
+              <span className={styles.categoryTitle}>
+                {b.debt_to_36m_avg_market_cap_ratio <= 0.15 ? "Low Risk" : b.debt_to_36m_avg_market_cap_ratio <= 0.25 ? "Medium Risk" : "Higher Risk"} &rsaquo;
+              </span>
+              <span className={styles.categorySub}>
+                Debt ratio {formatRatio(b.debt_to_36m_avg_market_cap_ratio)}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Ad: below chart area */}
         <AdUnit format="rectangle" />
 

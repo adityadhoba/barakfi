@@ -82,6 +82,7 @@ from app.schemas import (
     UserSettingsUpdateRequest,
     UserProvisionRequest,
     UserRead,
+    HoldingCreateRequest,
     WatchlistEntryCreateRequest,
     WatchlistEntryRead,
     WorkspaceResponse,
@@ -1168,6 +1169,107 @@ def delete_current_watchlist_entry(
     db.delete(entry)
     db.commit()
     return {"ok": True, "message": "Watchlist entry deleted"}
+
+
+@router.post("/me/holdings", response_model=PortfolioRead)
+def create_holding(
+    payload: HoldingCreateRequest,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    user = helpers.get_current_user_from_claims(db, claims)
+
+    stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
+        .first()
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    portfolio = (
+        db.query(Portfolio)
+        .filter(Portfolio.user_id == user.id)
+        .order_by(Portfolio.created_at.asc())
+        .first()
+    )
+    if not portfolio:
+        owner_name = (user.display_name or user.email or "user").lower().replace(" ", "-")
+        portfolio = Portfolio(
+            user_id=user.id,
+            owner_name=owner_name,
+            name="My Portfolio",
+            base_currency="INR",
+            investment_objective="Long-term halal investing",
+        )
+        db.add(portfolio)
+        db.flush()
+
+    existing = (
+        db.query(PortfolioHolding)
+        .filter(PortfolioHolding.portfolio_id == portfolio.id, PortfolioHolding.stock_id == stock.id)
+        .first()
+    )
+    if existing:
+        total_qty = existing.quantity + payload.quantity
+        existing.average_buy_price = (
+            (existing.quantity * existing.average_buy_price + payload.quantity * payload.average_buy_price)
+            / total_qty
+        )
+        existing.quantity = total_qty
+        if payload.thesis.strip():
+            existing.thesis = payload.thesis.strip()
+    else:
+        holding = PortfolioHolding(
+            portfolio_id=portfolio.id,
+            stock_id=stock.id,
+            quantity=payload.quantity,
+            average_buy_price=payload.average_buy_price,
+            thesis=payload.thesis.strip() or "",
+        )
+        db.add(holding)
+
+    db.commit()
+    db.refresh(portfolio)
+    return portfolio
+
+
+@router.delete("/me/holdings/{symbol}", response_model=ActionResponse)
+def delete_holding(
+    symbol: str,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    user = helpers.get_current_user_from_claims(db, claims)
+
+    stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
+        .first()
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    portfolio = (
+        db.query(Portfolio)
+        .filter(Portfolio.user_id == user.id)
+        .order_by(Portfolio.created_at.asc())
+        .first()
+    )
+    if not portfolio:
+        raise HTTPException(status_code=404, detail="No portfolio found")
+
+    holding = (
+        db.query(PortfolioHolding)
+        .filter(PortfolioHolding.portfolio_id == portfolio.id, PortfolioHolding.stock_id == stock.id)
+        .first()
+    )
+    if not holding:
+        raise HTTPException(status_code=404, detail="Holding not found")
+
+    db.delete(holding)
+    db.commit()
+    return {"ok": True, "message": f"Holding for {symbol.upper()} removed"}
 
 
 @router.get("/users/{auth_subject}/saved-screeners", response_model=list[SavedScreenerRead])

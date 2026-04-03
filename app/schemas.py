@@ -380,6 +380,13 @@ class WatchlistEntryCreateRequest(BaseModel):
     notes: str = ""
 
 
+class HoldingCreateRequest(BaseModel):
+    symbol: str
+    quantity: float = Field(gt=0)
+    average_buy_price: float = Field(gt=0)
+    thesis: str = ""
+
+
 class ResearchNoteCreateRequest(BaseModel):
     symbol: str
     note_type: str = Field(default="WATCH")
