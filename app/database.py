@@ -19,13 +19,15 @@ if _is_sqlite:
     )
 else:
     # PostgreSQL / other production databases
+    # Render free tier drops idle connections aggressively —
+    # keep pool small, recycle fast, always pre-ping.
     engine = create_engine(
         DATABASE_URL,
-        pool_size=20,
-        max_overflow=30,
-        pool_timeout=60,
-        pool_recycle=1800,
-        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30,
+        pool_recycle=300,       # Recycle connections every 5 minutes
+        pool_pre_ping=True,     # Test connection before using it
     )
 
 # Enable WAL mode for SQLite (much better concurrency)
