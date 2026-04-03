@@ -117,6 +117,7 @@ export default async function RootLayout({
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
                       <TopbarLink href="/compare" label="Compare" />
+                      <TopbarLink href="/tools" label="Tools" />
                       <TopbarLink href="/watchlist" label="Watchlist" />
                       <TopbarLink href={portfolioHref} label="Portfolio" />
                     </nav>
@@ -133,6 +134,7 @@ export default async function RootLayout({
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
                       <TopbarLink href="/compare" label="Compare" />
+                      <TopbarLink href="/tools" label="Tools" />
                       <TopbarLink href="/watchlist" label="Watchlist" />
                       <TopbarLink href={portfolioHref} label="Portfolio" />
                       <AdminLink />

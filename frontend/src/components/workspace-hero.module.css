@@ -1,56 +1,46 @@
 /* ═══════════════════════════════════════════════════════════════════
-   WORKSPACE — Clean, modern portfolio dashboard
+   WORKSPACE — Compact, data-focused portfolio dashboard
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Hero Section ── */
-.heroSection {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 24px;
-  align-items: start;
-  padding: 32px 0 24px;
+/* ── Dashboard Header ── */
+.dashHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 0 20px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 24px;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 768px) {
-  .heroSection { grid-template-columns: 1fr; gap: 20px; }
-}
+.dashHeaderLeft { min-width: 0; }
 
-.heroLeft { min-width: 0; }
-
-.heroTitle {
+.dashTitle {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.6rem;
-  letter-spacing: -0.03em;
+  font-size: 1.35rem;
+  letter-spacing: -0.025em;
   color: var(--text);
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   line-height: 1.2;
 }
 
-.heroSub {
-  font-size: 0.88rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0 0 16px;
-}
-
-/* ── Quick Actions ── */
-.quickActions {
+.dashActions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
+/* ── Action Buttons ── */
 .actionBtn,
 .actionBtnPrimary {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 18px;
+  gap: 5px;
+  padding: 7px 14px;
   border-radius: var(--radius-full);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-decoration: none;
   transition: all 0.2s ease;
@@ -65,7 +55,6 @@
 }
 .actionBtn:hover {
   color: var(--text);
-  background: var(--bg-muted);
   border-color: var(--line-strong);
 }
 
@@ -73,130 +62,103 @@
   color: #fff;
   background: var(--emerald);
   border: 1px solid var(--emerald);
-  box-shadow: var(--shadow-emerald);
 }
 .actionBtnPrimary:hover {
   background: var(--emerald-hover);
-  box-shadow: var(--shadow-emerald-lg);
-  transform: translateY(-1px);
 }
 
-.actionIcon {
-  font-size: 0.9rem;
+/* ── Metrics Row (compact chips) ── */
+.metricsRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-/* ── Metrics Grid ── */
-.metricsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 10px;
-  min-width: 280px;
-}
-
-.metricCard {
-  padding: 14px 16px;
-  border-radius: var(--radius-lg);
+.metricChip {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  min-width: 80px;
 }
 
-.metricLabel {
-  font-size: 0.68rem;
+.metricChipAlert {
+  border-color: var(--red-border);
+  background: var(--red-bg);
+}
+
+.metricChipLabel {
+  font-size: 0.62rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-tertiary);
+  line-height: 1;
 }
 
-.metricValue {
+.metricChipValue {
   font-family: var(--font-display);
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 800;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .metricGood { color: var(--emerald); }
 .metricWarn { color: var(--gold); }
 .metricBad { color: var(--red); }
 
-/* Compliance mini bar */
-.complianceBar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--bg-soft);
-  overflow: hidden;
-  margin-top: 4px;
-}
-.complianceFill {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.6s ease;
-}
-.fillGood { background: var(--emerald); }
-.fillWarn { background: var(--gold); }
-.fillBad { background: var(--red); }
-
 /* ── Alerts ── */
 .alertsSection {
   display: grid;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .alertCard {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--line);
 }
 
 .alertCritical {
   background: var(--red-bg);
-  border-color: var(--red-border);
+  border: 1px solid var(--red-border);
 }
 .alertWarning {
   background: var(--gold-bg);
-  border-color: var(--gold-border);
+  border: 1px solid var(--gold-border);
 }
 
 .alertIcon {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   flex-shrink: 0;
 }
-.alertCritical .alertIcon {
-  background: var(--red);
-  color: #fff;
-}
-.alertWarning .alertIcon {
-  background: var(--gold);
-  color: #fff;
-}
+.alertCritical .alertIcon { background: var(--red); color: #fff; }
+.alertWarning .alertIcon { background: var(--gold); color: #fff; }
 
 .alertTitle {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text);
-  display: block;
 }
 .alertMsg {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.4;
   margin: 2px 0 0;
 }
 
@@ -210,7 +172,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 48px 24px;
+  padding: 40px 24px;
   border-radius: var(--radius-xl);
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -218,32 +180,31 @@
 }
 
 .emptyIcon {
-  font-size: 2.5rem;
-  margin-bottom: 12px;
+  font-size: 2rem;
+  margin-bottom: 10px;
   opacity: 0.5;
 }
 
 .emptyTitle {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text);
-  margin: 0 0 6px;
+  margin: 0 0 4px;
 }
 
 .emptyDesc {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   line-height: 1.5;
-  max-width: 400px;
-  margin: 0 0 20px;
+  max-width: 360px;
+  margin: 0 0 16px;
 }
 
 /* ── Responsive ── */
-@media (max-width: 480px) {
-  .heroTitle { font-size: 1.3rem; }
-  .metricsGrid { grid-template-columns: repeat(2, 1fr); min-width: auto; }
-  .metricValue { font-size: 1.05rem; }
-  .quickActions { flex-direction: column; }
-  .actionBtn, .actionBtnPrimary { justify-content: center; }
+@media (max-width: 640px) {
+  .dashHeader { flex-direction: column; }
+  .metricsRow { width: 100%; }
+  .metricChip { flex: 1; min-width: 70px; }
+  .dashTitle { font-size: 1.15rem; }
 }

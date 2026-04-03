@@ -393,6 +393,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
               <span className={styles.footerColTitle}>Resources</span>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
               <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
+              <Link href="/tools" className={styles.footerLink}>Calculators</Link>
               <Link href="/shariah-compliance" className={styles.footerLink}>Shariah Compliance</Link>
             </div>
             <div className={styles.footerCol}>
