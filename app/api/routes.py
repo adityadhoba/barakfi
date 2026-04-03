@@ -397,7 +397,7 @@ def screen_stock(
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])
 def screen_stocks_bulk(
-    symbols: list[str] = Body(..., max_length=100),
+    symbols: list[str] = Body(..., max_length=500),
     db: Session = Depends(get_db),
 ):
     """

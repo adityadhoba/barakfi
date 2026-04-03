@@ -621,15 +621,28 @@ export function getScreeningResult(symbol: string) {
  */
 export async function getBulkScreeningResults(symbols: string[]): Promise<ScreeningResult[]> {
   if (symbols.length === 0) return [];
+
+  // Chunk into batches of 200 to stay within backend limits
+  const CHUNK_SIZE = 200;
+  const chunks: string[][] = [];
+  for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+    chunks.push(symbols.slice(i, i + CHUNK_SIZE));
+  }
+
   try {
-    const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(symbols),
-      next: { revalidate: 30 },
-    });
-    if (!response.ok) return [];
-    return (await response.json()) as ScreeningResult[];
+    const results = await Promise.all(
+      chunks.map(async (chunk) => {
+        const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(chunk),
+          next: { revalidate: 60 },
+        });
+        if (!response.ok) return [];
+        return (await response.json()) as ScreeningResult[];
+      })
+    );
+    return results.flat();
   } catch {
     return [];
   }
