@@ -43,7 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
 export function StockPreviewPopup({ stock, price, changePct, children }: Props) {
   const [visible, setVisible] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const show = useCallback(() => {
     clearTimeout(timerRef.current);
