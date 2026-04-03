@@ -32,8 +32,12 @@ def verify_clerk_token(token: str) -> dict:
             algorithms=["RS256"],
             options={"require": ["exp", "iat", "nbf", "sub"]},
         )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session token expired")
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid session token: {type(exc).__name__}") from exc
     except Exception as exc:
-        raise HTTPException(status_code=401, detail="Invalid session token") from exc
+        raise HTTPException(status_code=401, detail=f"Token verification failed: {type(exc).__name__}") from exc
 
     authorized_party = claims.get("azp")
     if authorized_party and AUTHORIZED_PARTIES and authorized_party not in AUTHORIZED_PARTIES:
