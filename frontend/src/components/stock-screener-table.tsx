@@ -119,6 +119,27 @@ function getSortValue(s: ScreenedStock, key: SortKey): number | string {
   }
 }
 
+/** Mini compliance bar for stock cards — visual progress toward threshold */
+function MiniBar({ label, value, limit }: { label: string; value: number; limit: number }) {
+  const pct = Math.min((value / (limit * 1.5)) * 100, 100);
+  const color = value <= limit * 0.7 ? "Good" : value <= limit ? "Warn" : "Bad";
+  return (
+    <div className={styles.miniBar}>
+      <div className={styles.miniBarHeader}>
+        <span className={styles.miniBarLabel}>{label}</span>
+        <span className={`${styles.miniBarValue} ${styles[`miniBar${color}`]}`}>{formatPct(value)}</span>
+      </div>
+      <div className={styles.miniBarTrack}>
+        <div
+          className={`${styles.miniBarFill} ${styles[`miniBarFill${color}`]}`}
+          style={{ width: `${pct}%` }}
+        />
+        <div className={styles.miniBarThreshold} style={{ left: `${(limit / (limit * 1.5)) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
+
 type Props = {
   screenedStocks: ScreenedStock[];
 };
@@ -499,18 +520,18 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 data-stock-idx={idx}
               >
                 <div className={styles.stockCardInner}>
+                  {/* Header: Symbol + Badge */}
                   <div className={styles.stockCardTop}>
-                    <div className={styles.stockCardLeft}>
-                      <div className={styles.stockCardIdentity}>
-                        <span className={styles.stockCardSymbol}>{s.symbol}</span>
-                        <span className={styles.stockCardName}>{s.name}</span>
-                      </div>
+                    <div>
+                      <span className={styles.stockCardSymbol}>{s.symbol}</span>
+                      <span className={styles.stockCardName}>{s.name}</span>
                     </div>
                     <span className={`${styles.badge} ${styles[cfg.badge]}`}>
                       {cfg.label}
                     </span>
                   </div>
 
+                  {/* Price + Sector */}
                   <div className={styles.stockCardMiddle}>
                     <div className={styles.stockCardPrice}>
                       {formatPrice(quotes[s.symbol]?.last_price ?? s.price)}
@@ -525,40 +546,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                         </span>
                       )}
                     </div>
-                    <div className={styles.stockCardMcap}>Mcap {formatMcap(s.market_cap)}</div>
+                    <div className={styles.stockCardMeta}>
+                      <span className={styles.stockCardTag}>{s.sector}</span>
+                      <span className={styles.stockCardMcap}>{formatMcap(s.market_cap)}</span>
+                    </div>
                   </div>
 
-                  <div className={styles.stockCardFooter}>
-                    <span className={styles.stockCardTag}>{s.sector}</span>
-                    <div className={styles.stockCardRatioRow}>
-                      <div className={styles.stockCardRatioMini} title={`Debt: ${formatPct(b.debt_to_36m_avg_market_cap_ratio)} (limit <33%)`}>
-                        <span className={styles.stockCardRatioLabel}>Debt</span>
-                        <span className={`${styles.stockCardRatioDot} ${
-                          b.debt_to_36m_avg_market_cap_ratio <= 0.33 * 0.7 ? styles.stockCardRatioDotGood
-                          : b.debt_to_36m_avg_market_cap_ratio <= 0.33 ? styles.stockCardRatioDotWarn
-                          : styles.stockCardRatioDotBad
-                        }`} />
-                        <span className={styles.stockCardRatioLabel}>{formatPct(b.debt_to_36m_avg_market_cap_ratio)}</span>
-                      </div>
-                      <div className={styles.stockCardRatioMini} title={`Income purity: ${formatPct(b.non_permissible_income_ratio)} (limit <5%)`}>
-                        <span className={styles.stockCardRatioLabel}>Income</span>
-                        <span className={`${styles.stockCardRatioDot} ${
-                          b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.stockCardRatioDotGood
-                          : b.non_permissible_income_ratio <= 0.05 ? styles.stockCardRatioDotWarn
-                          : styles.stockCardRatioDotBad
-                        }`} />
-                        <span className={styles.stockCardRatioLabel}>{formatPct(b.non_permissible_income_ratio)}</span>
-                      </div>
-                      <div className={styles.stockCardRatioMini} title={`Receivables: ${formatPct(b.receivables_to_market_cap_ratio)} (limit <33%)`}>
-                        <span className={styles.stockCardRatioLabel}>Recv</span>
-                        <span className={`${styles.stockCardRatioDot} ${
-                          b.receivables_to_market_cap_ratio <= 0.33 * 0.7 ? styles.stockCardRatioDotGood
-                          : b.receivables_to_market_cap_ratio <= 0.33 ? styles.stockCardRatioDotWarn
-                          : styles.stockCardRatioDotBad
-                        }`} />
-                        <span className={styles.stockCardRatioLabel}>{formatPct(b.receivables_to_market_cap_ratio)}</span>
-                      </div>
-                    </div>
+                  {/* Compliance Bars */}
+                  <div className={styles.stockCardBars}>
+                    <MiniBar label="Debt" value={b.debt_to_36m_avg_market_cap_ratio} limit={0.33} />
+                    <MiniBar label="Income" value={b.non_permissible_income_ratio} limit={0.05} />
+                    <MiniBar label="Receivables" value={b.receivables_to_market_cap_ratio} limit={0.33} />
                   </div>
                 </div>
               </Link>

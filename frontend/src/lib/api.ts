@@ -439,7 +439,7 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
 
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
       signal: controller.signal,
     });
 

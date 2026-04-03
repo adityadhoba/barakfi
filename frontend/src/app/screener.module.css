@@ -781,8 +781,8 @@
 
 .stockCardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
 }
 
 .stockCardItem {
@@ -882,34 +882,77 @@
   color: var(--text-tertiary);
 }
 
-/* Row of mini ratio indicators on cards */
-.stockCardRatioRow {
+/* Card meta row */
+.stockCardMeta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.stockCardRatioMini {
+/* Mini compliance progress bars */
+.stockCardBars {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.miniBar {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.stockCardRatioLabel {
-  font-size: 0.64rem;
-  font-weight: 600;
+.miniBarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.miniBarLabel {
+  font-size: 0.65rem;
+  font-weight: 500;
   color: var(--text-tertiary);
 }
 
-.stockCardRatioDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.miniBarValue {
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
-.stockCardRatioDotGood { background: var(--emerald); }
-.stockCardRatioDotWarn { background: var(--gold); }
-.stockCardRatioDotBad { background: var(--red); }
+
+.miniBarGood { color: var(--emerald); }
+.miniBarWarn { color: var(--gold); }
+.miniBarBad { color: var(--red); }
+
+.miniBarTrack {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-soft);
+  position: relative;
+  overflow: visible;
+}
+
+.miniBarFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.miniBarFillGood { background: var(--emerald); }
+.miniBarFillWarn { background: var(--gold); }
+.miniBarFillBad { background: var(--red); }
+
+.miniBarThreshold {
+  position: absolute;
+  top: -1px;
+  width: 1.5px;
+  height: 6px;
+  background: var(--text-tertiary);
+  opacity: 0.4;
+  border-radius: 1px;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
