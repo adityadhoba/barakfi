@@ -1,0 +1,102 @@
+.wrapper {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font: inherit;
+}
+
+.chevron {
+  opacity: 0.5;
+  margin-top: 1px;
+  transition: transform 200ms ease, opacity 200ms ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  opacity: 0.8;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  z-index: 9999;
+  animation: dropdownFadeIn 150ms ease-out;
+}
+
+[data-theme="dark"] .menu {
+  background: var(--bg-elevated);
+  border-color: var(--line-strong);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: background 120ms ease, color 120ms ease;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+}
+
+.itemActive {
+  color: var(--emerald);
+  font-weight: 600;
+  background: var(--emerald-dim);
+}
+
+.itemIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.item:hover .itemIcon {
+  background: var(--emerald-dim);
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
