@@ -83,7 +83,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <span className={styles.heroBadgeDot} />
-            Global Shariah-Compliant Investing
+            Shariah-Compliant Indian Equities
           </div>
           <h1 className={styles.heroTitle}>
             {isSignedIn ? (
@@ -95,7 +95,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             )}
           </h1>
           <p className={styles.heroSub}>
-            Screen stocks across India, US &amp; UK using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
+            Screen Indian stocks using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
             Multi-methodology compliance, real-time data, zero cost.
           </p>
           <div className={styles.heroCtas}>
@@ -133,9 +133,9 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             <span className={styles.proofDivider} />
             <div className={styles.proofItem}>
               <span className={styles.proofValue}>
-                <AnimatedCounter end={3} />
+                <AnimatedCounter end={5} />
               </span>
-              <span className={styles.proofLabel}>Global Exchanges</span>
+              <span className={styles.proofLabel}>Compliance Ratios</span>
             </div>
             {compliancePct != null && (
               <>
