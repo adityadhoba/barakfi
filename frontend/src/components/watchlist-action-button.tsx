@@ -51,8 +51,8 @@ export function WatchlistActionButton({
         nextValue ? "success" : "info",
       );
       startTransition(() => { router.refresh(); });
-    } catch (err: any) {
-      toast(err?.message || "Could not update watchlist right now.", "error");
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Could not update watchlist right now.", "error");
     } finally {
       setIsSaving(false);
     }

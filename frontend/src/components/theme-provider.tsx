@@ -25,10 +25,6 @@ function getSystemTheme(): "dark" | "light" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function resolveTheme(theme: Theme): "dark" | "light" {
-  if (theme === "system") return getSystemTheme();
-  return theme;
-}
 
 export function ThemeProvider({ children, initialTheme = "light" }: {
   children: React.ReactNode;
