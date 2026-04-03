@@ -6,6 +6,8 @@ const config: CapacitorConfig = {
   webDir: "out",
   server: {
     androidScheme: "https",
+    url: "https://barakfi.in",
+    cleartext: false,
   },
   plugins: {
     SplashScreen: {
