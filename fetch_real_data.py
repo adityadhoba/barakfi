@@ -100,12 +100,61 @@ SYMBOL_SECTOR_MAP = {
     "PIIND": "Chemicals",
     # Real Estate
     "DLF": "Real Estate", "GODREJPROP": "Real Estate",
+    "OBEROIRLTY": "Real Estate", "PRESTIGE": "Real Estate",
+    "BRIGADE": "Real Estate", "PHOENIXLTD": "Real Estate",
     # Consumer Services
     "ZOMATO": "Consumer Services", "IRCTC": "Consumer Services",
     "INDIGO": "Aviation", "MCDOWELL-N": "Consumer Goods",
     # Electrical & Electronics
     "HAVELLS": "Consumer Durables", "VOLTAS": "Consumer Durables",
-    "POLYCAB": "Consumer Durables",
+    "POLYCAB": "Consumer Durables", "CROMPTON": "Consumer Durables",
+    "WHIRLPOOL": "Consumer Durables", "BLUESTARCO": "Consumer Durables",
+    "DIXON": "Consumer Durables", "KAYNES": "Consumer Durables",
+    # IT Midcap
+    "TATAELXSI": "Information Technology", "LTTS": "Information Technology",
+    "KPITTECH": "Information Technology", "TATACOMM": "Information Technology",
+    # Pharma additions
+    "ALKEM": "Pharmaceuticals", "LAURUSLABS": "Pharmaceuticals",
+    "IPCALAB": "Pharmaceuticals", "GLENMARK": "Pharmaceuticals",
+    "NATCOPHARM": "Pharmaceuticals", "AJANTPHARM": "Pharmaceuticals",
+    "GRANULES": "Pharmaceuticals", "SYNGENE": "Pharmaceuticals",
+    "MAXHEALTH": "Healthcare", "FORTIS": "Healthcare",
+    "LALPATHLAB": "Healthcare",
+    # Auto & Ancillary
+    "BOSCHLTD": "Automobile", "BHARATFORG": "Automobile",
+    "EXIDEIND": "Automobile", "BALKRISIND": "Automobile",
+    "TVSMOTOR": "Automobile", "ASHOKLEY": "Automobile", "ESCORTS": "Automobile",
+    # Chemicals
+    "UPL": "Chemicals", "SRF": "Chemicals", "ATUL": "Chemicals",
+    "NAVINFLUOR": "Chemicals", "CLEAN": "Chemicals",
+    # Consumer
+    "VBL": "Consumer Goods", "GODREJCP": "Consumer Goods",
+    "BATAINDIA": "Consumer Goods", "EMAMILTD": "Consumer Goods",
+    "INDIANHOTELS": "Consumer Services", "JUBLFOOD": "Consumer Services",
+    "DEVYANI": "Consumer Services",
+    # Infrastructure
+    "CUMMINSIND": "Industrials", "THERMAX": "Industrials",
+    "ASTRAL": "Industrials", "APLAPOLLO": "Industrials",
+    "SUPREMEIND": "Industrials", "CONCOR": "Infrastructure",
+    # Power & Energy
+    "NHPC": "Energy", "SJVN": "Energy", "IRFC": "Infrastructure",
+    "RECLTD": "Financial Services", "PFC": "Financial Services",
+    "IREDA": "Financial Services", "HINDPETRO": "Energy",
+    "BPCL": "Energy", "IOC": "Energy", "GAIL": "Energy",
+    # Financial Services
+    "LICHSGFIN": "Financial Services", "MANAPPURAM": "Financial Services",
+    "MUTHOOTFIN": "Financial Services", "ABCAPITAL": "Financial Services",
+    "CHOLAFIN": "Financial Services", "SHRIRAMFIN": "Financial Services",
+    "MFSL": "Financial Services", "JIOFIN": "Financial Services",
+    "NIACL": "Insurance", "STARHEALTH": "Insurance",
+    "BANDHANBNK": "Banking and Financial Services",
+    "AUBANK": "Banking and Financial Services",
+    "RBLBANK": "Banking and Financial Services",
+    # Cement
+    "AMBUJACEM": "Cement", "RAMCOCEM": "Cement", "JKCEMENT": "Cement",
+    # Metals
+    "VEDL": "Metals & Mining", "NMDC": "Metals & Mining",
+    "NATIONALUM": "Metals & Mining",
 }
 
 # Full name fallback map
@@ -222,6 +271,28 @@ STOCK_SYMBOLS = [
     # Additional popular stocks
     "HDFCLIFE", "POLYCAB", "DEEPAKNTR", "SBILIFE", "IDFCFIRSTB",
     "BANKBARODA", "PNB", "CANBK", "FEDERALBNK", "ICICIPRULI",
+    # NIFTY Midcap 100 additions
+    "TATAELXSI", "LTTS", "KPITTECH", "DIXON", "KAYNES",
+    "ALKEM", "LAURUSLABS", "IPCALAB", "GLENMARK", "NATCOPHARM",
+    "BOSCHLTD", "BHARATFORG", "EXIDEIND", "BALKRISIND",
+    "UPL", "SRF", "ATUL", "NAVINFLUOR", "CLEAN",
+    "VBL", "GODREJCP", "BATAINDIA", "EMAMILTD",
+    "CUMMINSIND", "THERMAX", "ASTRAL", "APLAPOLLO", "SUPREMEIND",
+    "OBEROIRLTY", "PRESTIGE", "BRIGADE", "PHOENIXLTD",
+    "IRFC", "JIOFIN", "TATACOMM",
+    "MAXHEALTH", "FORTIS", "LALPATHLAB",
+    "INDIANHOTELS", "JUBLFOOD", "DEVYANI",
+    "LICHSGFIN", "MANAPPURAM", "MUTHOOTFIN",
+    "CONCOR", "NHPC", "SJVN", "RECLTD", "PFC", "IREDA",
+    "SYNGENE", "AJANTPHARM", "GRANULES",
+    "CROMPTON", "WHIRLPOOL", "BLUESTARCO",
+    "ABCAPITAL", "CHOLAFIN", "SHRIRAMFIN",
+    "MFSL", "NIACL", "STARHEALTH",
+    "AMBUJACEM", "RAMCOCEM", "JKCEMENT",
+    "TVSMOTOR", "ASHOKLEY", "ESCORTS",
+    "HINDPETRO", "BPCL", "IOC", "GAIL",
+    "VEDL", "NMDC", "NATIONALUM",
+    "BANDHANBNK", "AUBANK", "RBLBANK",
 ]
 
 # De-duplicate (BEL appears in both NIFTY NEXT 50 and Additional)

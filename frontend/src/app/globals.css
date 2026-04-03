@@ -246,15 +246,7 @@ input, select, textarea, button {
   flex-shrink: 0;
 }
 
-.wordmark::before {
-  content: '';
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--emerald), var(--emerald-border));
-  flex-shrink: 0;
-}
+/* Removed ::before — Logo SVG component replaces it */
 
 .wordmark:hover { opacity: 0.8; }
 

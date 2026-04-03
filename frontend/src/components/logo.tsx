@@ -1,8 +1,8 @@
 /**
  * Barakfi Logo Component
  *
- * SVG logo with geometric "B" mark featuring a crescent accent.
- * Supports light/dark variants and optional wordmark.
+ * SVG logo with geometric "B" mark featuring a crescent accent
+ * and golden glossy highlight. Supports light/dark variants.
  */
 
 type LogoProps = {
@@ -18,12 +18,14 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
     variant === "dark" ? "#111827" :
     "var(--text)";
 
+  // Unique ID prefix to avoid SVG gradient conflicts when multiple logos render
+  const uid = `bk-${size}`;
+
   return (
     <span
       className={className}
       style={{ display: "inline-flex", alignItems: "center", gap: size * 0.25, textDecoration: "none" }}
     >
-      {/* Mark: Geometric B with crescent accent */}
       <svg
         width={size}
         height={size}
@@ -32,8 +34,11 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
       >
-        {/* Background circle */}
-        <rect width="40" height="40" rx="10" fill="url(#barakfi-grad)" />
+        {/* Background with emerald gradient */}
+        <rect width="40" height="40" rx="10" fill={`url(#${uid}-bg)`} />
+
+        {/* Glossy highlight overlay */}
+        <rect width="40" height="20" rx="10" fill={`url(#${uid}-gloss)`} />
 
         {/* Letter B */}
         <path
@@ -41,15 +46,27 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
           fill="rgba(255,255,255,0.95)"
         />
 
-        {/* Crescent accent */}
-        <circle cx="30" cy="9" r="5" fill="rgba(255,255,255,0.25)" />
-        <circle cx="32" cy="8" r="4" fill="url(#barakfi-grad)" />
+        {/* Golden crescent accent */}
+        <circle cx="31" cy="8" r="5.5" fill={`url(#${uid}-gold)`} />
+        <circle cx="33" cy="7" r="4.2" fill={`url(#${uid}-bg)`} />
+
+        {/* Tiny sparkle */}
+        <circle cx="28" cy="5" r="1" fill="rgba(251,191,36,0.6)" />
 
         <defs>
-          <linearGradient id="barakfi-grad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#059669" />
-            <stop offset="50%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#34d399" />
+          <linearGradient id={`${uid}-bg`} x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#047857" />
+            <stop offset="50%" stopColor="#059669" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+          <linearGradient id={`${uid}-gloss`} x1="20" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+          <linearGradient id={`${uid}-gold`} x1="26" y1="3" x2="36" y2="13" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="50%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#d97706" />
           </linearGradient>
         </defs>
       </svg>
