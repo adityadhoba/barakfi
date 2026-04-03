@@ -36,10 +36,19 @@ export function ThemeProvider({ children, initialTheme = "light" }: {
 }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const valid: Theme[] = ["dark", "light", "system"];
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("hi-theme") as Theme | null;
+        if (stored && valid.includes(stored)) return stored;
+      } catch {}
+    }
     if (valid.includes(initialTheme as Theme)) return initialTheme as Theme;
     return "light";
   });
-  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">(() => resolveTheme(theme));
+
+  const [systemTheme, setSystemTheme] = useState<"dark" | "light">(getSystemTheme);
+
+  const resolvedTheme = theme === "system" ? systemTheme : theme;
 
   const setTheme = useCallback((next: Theme) => {
     setThemeState(next);
@@ -47,31 +56,17 @@ export function ThemeProvider({ children, initialTheme = "light" }: {
   }, []);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("hi-theme") as Theme | null;
-      if (stored && ["dark", "light", "system"].includes(stored)) {
-        setThemeState(stored);
-      }
-    } catch {}
-  }, []);
+    document.documentElement.setAttribute("data-theme", resolvedTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
-    const resolved = resolveTheme(theme);
-    setResolvedTheme(resolved);
-    document.documentElement.setAttribute("data-theme", resolved);
-  }, [theme]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     function handler() {
-      const resolved = resolveTheme("system");
-      setResolvedTheme(resolved);
-      document.documentElement.setAttribute("data-theme", resolved);
+      setSystemTheme(mq.matches ? "dark" : "light");
     }
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme]);
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>

@@ -103,7 +103,7 @@ export function MarketOverview({ screenedStocks }: Props) {
         <div className={styles.universeStat}>
           <span className={styles.universeStatLabel}>Non-compliant</span>
           <span className={`${styles.universeStatValue} ${styles.nonCompliant}`}>{fail}</span>
-          <span className={styles.universeStatSub}>don't meet Shariah rules</span>
+          <span className={styles.universeStatSub}>don&apos;t meet Shariah rules</span>
         </div>
       </div>
 

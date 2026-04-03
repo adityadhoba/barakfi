@@ -21,12 +21,13 @@ interface AdminRole {
   level: number;
 }
 
-const ROLE_COLORS: Record<string, string> = {
+const _ROLE_COLORS: Record<string, string> = {
   admin: "purple",
   reviewer: "gold",
   developer: "blue",
   user: "gray",
 };
+void _ROLE_COLORS;
 
 const ROLE_ICONS: Record<string, string> = {
   admin: "👑",
@@ -110,6 +111,7 @@ export function AdminPanel({ currentUserEmail }: { currentUserEmail: string }) {
       setLoading(false);
     };
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleUpdateRole = (userId: number, userName: string, newRole: string) => {
@@ -171,9 +173,9 @@ export function AdminPanel({ currentUserEmail }: { currentUserEmail: string }) {
       const action = confirmDialog.action === "role" ? "role updated" : "status updated";
       showToast(`User ${confirmDialog.userName} ${action}`, "success");
       setConfirmDialog(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating user:", error);
-      showToast(error.message || "Failed to update user", "error");
+      showToast(error instanceof Error ? error.message : "Failed to update user", "error");
     } finally {
       setUpdatingUserId(null);
     }

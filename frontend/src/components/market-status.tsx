@@ -48,17 +48,14 @@ const STATE_CONFIG: Record<MarketState, { label: string; dotClass: string }> = {
 };
 
 export function MarketStatus() {
-  const [state, setState] = useState<MarketState>("closed");
-  const [time, setTime] = useState("");
+  const [state, setState] = useState<MarketState>(getMarketState);
+  const [time, setTime] = useState(formatIST);
 
   useEffect(() => {
-    setState(getMarketState());
-    setTime(formatIST());
-
     const interval = setInterval(() => {
       setState(getMarketState());
       setTime(formatIST());
-    }, 30000); // Update every 30s
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);

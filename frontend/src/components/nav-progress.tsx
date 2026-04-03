@@ -39,9 +39,9 @@ export function NavProgress() {
     }, 300);
   }, []);
 
-  // Detect navigation changes
+  // Detect navigation changes — completing the bar is a response to URL change (external system)
   useEffect(() => {
-    done();
+    done(); // eslint-disable-line react-hooks/set-state-in-effect
   }, [pathname, searchParams, done]);
 
   // Intercept link clicks to start the bar

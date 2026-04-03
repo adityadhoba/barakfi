@@ -124,9 +124,9 @@ export function TopbarSearch() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Reset focus when query changes
+  // Reset focus when query changes — syncing keyboard index with search input
   useEffect(() => {
-    setFocusIdx(-1);
+    setFocusIdx(-1); // eslint-disable-line react-hooks/set-state-in-effect
   }, [deferredValue]);
 
   // Cmd+K or / to focus search

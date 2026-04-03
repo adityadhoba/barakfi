@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     });
 
     const responseText = await response.text();
-    let responseBody: any;
+    let responseBody: Record<string, unknown>;
     try {
       responseBody = JSON.parse(responseText);
     } catch {
