@@ -155,8 +155,6 @@ export default async function StockDetailPage({
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;
   const reasons = screening.reasons.length > 0 ? screening.reasons : ["No hard-rule violations detected."];
-  const reviewFlags = screening.manual_review_flags.length > 0 ? screening.manual_review_flags : [];
-  const recentCases = screening.recent_review_cases || [];
   const b = screening.breakdown;
   const takeaway = buildTakeaway(screening.status, screening.reasons, screening.manual_review_flags);
 
@@ -654,22 +652,7 @@ export default async function StockDetailPage({
                 </div>
               </article>
 
-              <article className={pageStyles.featurePanel}>
-                <div className={pageStyles.sectionHeader}>
-                  <div>
-                    <p className={pageStyles.kicker}>Manual review</p>
-                    <h3>Open questions</h3>
-                  </div>
-                </div>
-                <div className={pageStyles.reasonList}>
-                  {(reviewFlags.length > 0 ? reviewFlags : ["No manual review flags on this snapshot."]).map((item) => (
-                    <div className={pageStyles.reasonItem} key={item}>
-                      <span className={pageStyles.reasonDotMuted} />
-                      <p>{item}</p>
-                    </div>
-                  ))}
-                </div>
-              </article>
+
             </div>
           </div>
 
@@ -710,54 +693,8 @@ export default async function StockDetailPage({
               </table>
             </div>
 
-            {/* Active Review Case */}
-            {screening.active_review_case && (
-              <div className={pageStyles.featurePanel} style={{ marginBottom: 28 }}>
-                <div className={pageStyles.sectionHeader}>
-                  <div>
-                    <p className={pageStyles.kicker}>Compliance review</p>
-                    <h3>Active review case</h3>
-                  </div>
-                </div>
-                <div className={pageStyles.simpleList}>
-                  <div className={pageStyles.simpleRow}>
-                    <div>
-                      <strong>Case #{screening.active_review_case.id}</strong>
-                      <span>
-                        {screening.active_review_case.status.replaceAll("_", " ")} · {screening.active_review_case.priority}
-                      </span>
-                    </div>
-                    <p>{screening.active_review_case.summary}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Past Review Cases */}
-            {recentCases.length > 0 && (
-              <div className={pageStyles.featurePanel}>
-                <div className={pageStyles.sectionHeader}>
-                  <div>
-                    <p className={pageStyles.kicker}>History</p>
-                    <h3>Past review cases</h3>
-                  </div>
-                </div>
-                <div className={pageStyles.simpleList}>
-                  {recentCases.map((item) => (
-                    <div className={pageStyles.simpleRow} key={item.id}>
-                      <div>
-                        <strong>Case #{item.id}</strong>
-                        <span>
-                          {item.status.replaceAll("_", " ")}
-                          {item.review_outcome ? ` · ${item.review_outcome.toLowerCase().replaceAll("_", " ")}` : ""}
-                        </span>
-                      </div>
-                      <p>{item.latest_note || item.summary}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Tab 3: Research */}

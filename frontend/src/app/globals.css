@@ -485,6 +485,19 @@ input, select, textarea, button {
   font-size: 0.68rem;
   color: var(--text-tertiary);
 }
+.searchDropdownSection {
+  padding: 8px 14px 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.searchDropdownSection:first-child {
+  border-top: none;
+}
 .searchDropdownEmpty {
   padding: 16px 12px;
   text-align: center;

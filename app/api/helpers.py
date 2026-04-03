@@ -307,9 +307,6 @@ def build_alerts_payload(
     if user.settings and not user.settings.notifications_enabled:
         alerts.append({"level": "info", "title": "Notifications are paused", "message": "Compliance and portfolio alerts are turned off in account settings."})
 
-    if not holdings:
-        alerts.append({"level": "warning", "title": "Portfolio not funded yet", "message": "Add your first holdings to start compliance monitoring and allocation alerts."})
-
     for holding in holdings:
         result = evaluate_stock(stock_to_dict(holding.stock), profile=PRIMARY_PROFILE)
         if result["status"] == "NON_COMPLIANT":

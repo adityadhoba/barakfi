@@ -3,8 +3,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .screenerPage {
-  min-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
   background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .screenerFallback {
@@ -45,7 +48,9 @@
 .screenerLayout {
   display: grid;
   grid-template-columns: 240px 1fr;
-  min-height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Left Sidebar ── */
@@ -56,9 +61,6 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  position: sticky;
-  top: 56px;
-  height: calc(100vh - 56px);
   overflow-y: auto;
   scrollbar-width: thin;
 }
@@ -178,8 +180,11 @@
 
 /* ── Main Content ── */
 .mainContent {
-  padding: 20px 24px 64px;
+  padding: 20px 24px 0;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Content Header */
@@ -341,7 +346,12 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .tableContainer {
-  overflow-x: auto;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
 }
 
 .table {
@@ -364,7 +374,7 @@
   transition: color var(--transition-fast);
   position: sticky;
   top: 0;
-  background: var(--bg);
+  background: var(--bg-card);
   z-index: 2;
 }
 .th:hover { color: var(--text-secondary); }
@@ -486,7 +496,8 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 20px 0;
+  padding: 16px 0 20px;
+  flex-shrink: 0;
 }
 
 .pageBtn {

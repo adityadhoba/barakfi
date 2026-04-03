@@ -462,8 +462,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
               <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
               <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
-              <Link href="/tools#purification" className={styles.footerLink}>Purification Calculator</Link>
-              <Link href="/tools#zakat" className={styles.footerLink}>Zakat Calculator</Link>
+              <Link href="/tools/purification" className={styles.footerLink}>Purification Calculator</Link>
+              <Link href="/tools/zakat" className={styles.footerLink}>Zakat Calculator</Link>
               <Link href="/shariah-compliance" className={styles.footerLink}>Shariah Compliance</Link>
             </div>
             <div className={styles.footerCol}>

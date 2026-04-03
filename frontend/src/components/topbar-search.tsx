@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef, useDeferredValue } from "react";
+import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo } from "react";
 import { StockLogo } from "@/components/stock-logo";
 
 type StockHit = {
@@ -9,7 +9,30 @@ type StockHit = {
   name: string;
   sector: string;
   price: number;
+  market_cap?: number;
 };
+
+const RECENT_KEY = "barakfi_recent_searches";
+const MAX_RECENT = 5;
+
+function getRecentSearches(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
+}
+
+function addRecentSearch(symbol: string) {
+  try {
+    const existing = getRecentSearches().filter((s) => s !== symbol);
+    existing.unshift(symbol);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(existing.slice(0, MAX_RECENT)));
+  } catch { /* silent */ }
+}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -29,7 +52,6 @@ export function TopbarSearch() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const deferredValue = useDeferredValue(value);
 
-  // Fetch stock list once on first focus
   const fetched = useRef(false);
   const fetchStocks = useCallback(async () => {
     if (fetched.current) return;
@@ -44,12 +66,11 @@ export function TopbarSearch() {
             name: s.name,
             sector: s.sector,
             price: s.price,
+            market_cap: (s as Record<string, unknown>).market_cap as number | undefined,
           }))
         );
       }
-    } catch {
-      /* silent */
-    }
+    } catch { /* silent */ }
   }, []);
 
   const q = deferredValue.trim().toLowerCase();
@@ -65,10 +86,31 @@ export function TopbarSearch() {
           .slice(0, 8)
       : [];
 
-  const showDropdown = open && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
+  const recentSymbols = useMemo(() => getRecentSearches(), [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentStocks = useMemo(() => {
+    if (!stocks.length) return [];
+    return recentSymbols
+      .map((sym) => stocks.find((s) => s.symbol === sym))
+      .filter((s): s is StockHit => s != null);
+  }, [recentSymbols, stocks]);
+
+  const trendingStocks = useMemo(() => {
+    if (!stocks.length) return [];
+    return [...stocks]
+      .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
+      .slice(0, 5);
+  }, [stocks]);
+
+  const showEmpty = open && q.length === 0 && stocks.length > 0;
+  const showResults = open && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
+  const showDropdown = showEmpty || showResults;
+
+  const displayItems = q.length > 0 ? filtered : [];
+  const allDropdownItems = q.length > 0 ? displayItems : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))];
 
   const navigate = useCallback(
     (symbol: string) => {
+      addRecentSearch(symbol);
       setValue("");
       setOpen(false);
       setFocusIdx(-1);
@@ -81,8 +123,8 @@ export function TopbarSearch() {
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (focusIdx >= 0 && focusIdx < filtered.length) {
-        navigate(filtered[focusIdx].symbol);
+      if (focusIdx >= 0 && focusIdx < allDropdownItems.length) {
+        navigate(allDropdownItems[focusIdx].symbol);
         return;
       }
       const trimmed = value.trim();
@@ -93,14 +135,14 @@ export function TopbarSearch() {
         router.push(`/screener?q=${encodeURIComponent(trimmed)}`);
       }
     },
-    [value, router, focusIdx, filtered, navigate]
+    [value, router, focusIdx, allDropdownItems, navigate]
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setFocusIdx((prev) => Math.min(prev + 1, filtered.length - 1));
+        setFocusIdx((prev) => Math.min(prev + 1, allDropdownItems.length - 1));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setFocusIdx((prev) => Math.max(prev - 1, -1));
@@ -110,10 +152,9 @@ export function TopbarSearch() {
         inputRef.current?.blur();
       }
     },
-    [filtered.length]
+    [allDropdownItems.length]
   );
 
-  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
@@ -125,34 +166,27 @@ export function TopbarSearch() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Reset focus when query changes — syncing keyboard index with search input
   useEffect(() => {
-    setFocusIdx(-1); // eslint-disable-line react-hooks/set-state-in-effect
+    setFocusIdx(-1);
   }, [deferredValue]);
 
-  // Cmd+K or / to focus search
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
-        if (e.key === "Escape") {
-          (e.target as HTMLElement).blur();
-        }
+        if (e.key === "Escape") (e.target as HTMLElement).blur();
         return;
       }
-
-      if (
-        e.key === "/" ||
-        ((e.metaKey || e.ctrlKey) && e.key === "k")
-      ) {
+      if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key === "k")) {
         e.preventDefault();
         inputRef.current?.focus();
       }
     }
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  let dropdownIdx = 0;
 
   return (
     <div ref={wrapRef} className="topbarSearch">
@@ -186,35 +220,95 @@ export function TopbarSearch() {
 
       {showDropdown && (
         <ul className="searchDropdown" id="search-listbox" role="listbox">
-          {filtered.length > 0 ? (
-            filtered.map((stock, i) => (
-              <li
-                key={stock.symbol}
-                id={`search-opt-${i}`}
-                role="option"
-                aria-selected={i === focusIdx}
-                className={`searchDropdownItem ${i === focusIdx ? "searchDropdownItemFocused" : ""}`}
-                onMouseEnter={() => setFocusIdx(i)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  navigate(stock.symbol);
-                }}
-              >
-                <StockLogo symbol={stock.symbol} size={28} />
-                <div className="searchDropdownLeft">
-                  <span className="searchDropdownSymbol">{stock.symbol}</span>
-                  <span className="searchDropdownName">{stock.name}</span>
-                </div>
-                <div className="searchDropdownRight">
-                  <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
-                  <span className="searchDropdownSector">{stock.sector}</span>
-                </div>
-              </li>
-            ))
+          {q.length > 0 ? (
+            <>
+              {filtered.length > 0 ? (
+                filtered.map((stock, i) => (
+                  <li
+                    key={stock.symbol}
+                    id={`search-opt-${i}`}
+                    role="option"
+                    aria-selected={i === focusIdx}
+                    className={`searchDropdownItem ${i === focusIdx ? "searchDropdownItemFocused" : ""}`}
+                    onMouseEnter={() => setFocusIdx(i)}
+                    onMouseDown={(e) => { e.preventDefault(); navigate(stock.symbol); }}
+                  >
+                    <StockLogo symbol={stock.symbol} size={28} />
+                    <div className="searchDropdownLeft">
+                      <span className="searchDropdownSymbol">{stock.symbol}</span>
+                      <span className="searchDropdownName">{stock.name}</span>
+                    </div>
+                    <div className="searchDropdownRight">
+                      <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                      <span className="searchDropdownSector">{stock.sector}</span>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li className="searchDropdownEmpty">
+                  No stocks match &ldquo;{value.trim()}&rdquo;
+                </li>
+              )}
+            </>
           ) : (
-            <li className="searchDropdownEmpty">
-              No stocks match &ldquo;{value.trim()}&rdquo;
-            </li>
+            <>
+              {recentStocks.length > 0 && (
+                <>
+                  <li className="searchDropdownSection">Recent</li>
+                  {recentStocks.map((stock) => {
+                    const idx = dropdownIdx++;
+                    return (
+                      <li
+                        key={`recent-${stock.symbol}`}
+                        id={`search-opt-${idx}`}
+                        role="option"
+                        aria-selected={idx === focusIdx}
+                        className={`searchDropdownItem ${idx === focusIdx ? "searchDropdownItemFocused" : ""}`}
+                        onMouseEnter={() => setFocusIdx(idx)}
+                        onMouseDown={(e) => { e.preventDefault(); navigate(stock.symbol); }}
+                      >
+                        <StockLogo symbol={stock.symbol} size={28} />
+                        <div className="searchDropdownLeft">
+                          <span className="searchDropdownSymbol">{stock.symbol}</span>
+                          <span className="searchDropdownName">{stock.name}</span>
+                        </div>
+                        <div className="searchDropdownRight">
+                          <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                          <span className="searchDropdownSector">{stock.sector}</span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </>
+              )}
+              <li className="searchDropdownSection">Trending</li>
+              {trendingStocks
+                .filter((t) => !recentSymbols.includes(t.symbol))
+                .map((stock) => {
+                  const idx = dropdownIdx++;
+                  return (
+                    <li
+                      key={`trending-${stock.symbol}`}
+                      id={`search-opt-${idx}`}
+                      role="option"
+                      aria-selected={idx === focusIdx}
+                      className={`searchDropdownItem ${idx === focusIdx ? "searchDropdownItemFocused" : ""}`}
+                      onMouseEnter={() => setFocusIdx(idx)}
+                      onMouseDown={(e) => { e.preventDefault(); navigate(stock.symbol); }}
+                    >
+                      <StockLogo symbol={stock.symbol} size={28} />
+                      <div className="searchDropdownLeft">
+                        <span className="searchDropdownSymbol">{stock.symbol}</span>
+                        <span className="searchDropdownName">{stock.name}</span>
+                      </div>
+                      <div className="searchDropdownRight">
+                        <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                        <span className="searchDropdownSector">{stock.sector}</span>
+                      </div>
+                    </li>
+                  );
+                })}
+            </>
           )}
           <li className="searchDropdownHint">
             <kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate &middot; <kbd>Enter</kbd> select &middot; <kbd>Esc</kbd> close

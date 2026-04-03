@@ -25,11 +25,11 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   DMART: "dmartindia.com",
   NESTLEIND: "nestle.in",
   ULTRACEMCO: "ultratechcement.com",
-  NTPC: "ntpc.co.in",
+  NTPC: "ntpclimited.com",
   WIPRO: "wipro.com",
   ADANIENT: "adani.com",
   ADANIPORTS: "adaniports.com",
-  POWERGRID: "powergrid.in",
+  POWERGRID: "powergridindia.com",
   TATAMOTORS: "tatamotors.com",
   BAJAJFINSV: "bajajfinserv.in",
   ONGC: "ongcindia.com",
@@ -73,6 +73,7 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   MCDOWELL: "diageo.com",
   MCDOWELL_N: "diageo.com",
   MCDOWNN: "diageo.com",
+  MCDOWELLN: "diageo.com",
   PEL: "piramal.com",
   SIEMENS: "siemens.co.in",
   ABB: "abb.com",
@@ -222,6 +223,9 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   JBCHEPHARM: "jbcpl.com",
   GLAXO: "gsk.com",
   PFIZER: "pfizer.com",
+  PATANJALI: "patanjaliayurved.net",
+  FINPIPE: "finpipe.com",
+  NTPCGREEN: "ntpc.co.in",
 };
 
 function normalizeSymbol(symbol: string): string {

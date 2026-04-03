@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./compare-table.module.css";
+import { StockLogo } from "./stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
@@ -49,6 +50,32 @@ function ratioClass(value: number, threshold: number): string {
   return styles.ratioBad;
 }
 
+function ratioColor(value: number, threshold: number): string {
+  if (value <= threshold * 0.7) return "var(--emerald)";
+  if (value <= threshold) return "var(--gold)";
+  return "var(--red)";
+}
+
+function RatioBar({ value, threshold, max }: { value: number; threshold: number; max: number }) {
+  const pct = Math.min((value / max) * 100, 100);
+  const color = ratioColor(value, threshold);
+  return (
+    <div className={styles.ratioBarWrap}>
+      <div className={styles.ratioBarTrack}>
+        <div
+          className={styles.ratioBarFill}
+          style={{ width: `${pct}%`, background: color }}
+        />
+        <div
+          className={styles.ratioBarThreshold}
+          style={{ left: `${(threshold / max) * 100}%` }}
+        />
+      </div>
+      <span className={ratioClass(value, threshold)}>{formatPct(value)}</span>
+    </div>
+  );
+}
+
 export function CompareTable({ compareStocks, allStocks }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -92,68 +119,46 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
     },
     { label: "Price", values: (s) => formatCurrency(s.price) },
     { label: "Market Cap", values: (s) => formatMcap(s.market_cap) },
-    { label: "Sector", values: (s) => s.sector },
-    { label: "Exchange", values: (s) => s.exchange },
+    { label: "Sector", values: (s) => <span className={styles.sectorBadge}>{s.sector}</span> },
     {
       label: "Debt Ratio",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.debt_to_36m_avg_market_cap_ratio, 0.33)}>
-          {formatPct(s.screening.breakdown.debt_to_36m_avg_market_cap_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.debt_to_36m_avg_market_cap_ratio} threshold={0.33} max={0.6} />
       ),
     },
     {
       label: "Current Debt Ratio",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.debt_to_market_cap_ratio, 0.33)}>
-          {formatPct(s.screening.breakdown.debt_to_market_cap_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.debt_to_market_cap_ratio} threshold={0.33} max={0.6} />
       ),
     },
     {
       label: "Non-Permissible Income",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.non_permissible_income_ratio, 0.05)}>
-          {formatPct(s.screening.breakdown.non_permissible_income_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.non_permissible_income_ratio} threshold={0.05} max={0.15} />
       ),
     },
     {
       label: "Interest Income",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.interest_income_ratio, 0.05)}>
-          {formatPct(s.screening.breakdown.interest_income_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.interest_income_ratio} threshold={0.05} max={0.15} />
       ),
     },
     {
       label: "Receivables Ratio",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.receivables_to_market_cap_ratio, 0.33)}>
-          {formatPct(s.screening.breakdown.receivables_to_market_cap_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.receivables_to_market_cap_ratio} threshold={0.33} max={0.6} />
       ),
     },
     {
       label: "Cash & IB / Assets",
       values: (s) => (
-        <span className={ratioClass(s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio, 0.33)}>
-          {formatPct(s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio)}
-        </span>
+        <RatioBar value={s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio} threshold={0.33} max={0.6} />
       ),
     },
-    {
-      label: "Revenue",
-      values: (s) => formatCurrency(s.revenue),
-    },
-    {
-      label: "Total Debt",
-      values: (s) => formatCurrency(s.debt),
-    },
-    {
-      label: "Total Assets",
-      values: (s) => formatCurrency(s.total_assets),
-    },
+    { label: "Revenue", values: (s) => formatCurrency(s.revenue) },
+    { label: "Total Debt", values: (s) => formatCurrency(s.debt) },
+    { label: "Total Assets", values: (s) => formatCurrency(s.total_assets) },
   ];
 
   return (
@@ -162,9 +167,12 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
       {currentSymbols.length < 4 && (
         <div className={styles.pickerWrap}>
           <div className={styles.pickerInput}>
+            <svg className={styles.pickerIcon} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
             <input
               type="search"
-              placeholder="Add a stock to compare..."
+              placeholder="Search stocks to compare..."
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -183,6 +191,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
                   className={styles.pickerItem}
                   onClick={() => addStock(s.symbol)}
                 >
+                  <StockLogo symbol={s.symbol} size={28} />
                   <span className={styles.pickerSymbol}>{s.symbol}</span>
                   <span className={styles.pickerName}>{s.name}</span>
                 </button>
@@ -195,15 +204,18 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
       {/* Empty state */}
       {compareStocks.length === 0 && (
         <div className={styles.emptyState}>
-          <span className={styles.emptyIcon}>⚖</span>
-          <h3 className={styles.emptyTitle}>No stocks selected</h3>
+          <div className={styles.emptyIconWrap}>
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="var(--emerald)" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+          </div>
+          <h3 className={styles.emptyTitle}>Compare stocks side by side</h3>
           <p className={styles.emptyDesc}>
-            Search above to add stocks, or{" "}
-            <Link href="/screener" className={styles.emptyLink}>
-              browse the screener
-            </Link>{" "}
-            to find stocks to compare.
+            Search above to add up to 4 stocks. Compare their Shariah compliance, financials, and key ratios at a glance.
           </p>
+          <Link href="/screener" className={styles.emptyBtn}>
+            Browse screener &rarr;
+          </Link>
         </div>
       )}
 
@@ -218,8 +230,11 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
                   <th key={s.symbol} className={styles.stockCol}>
                     <div className={styles.stockHeader}>
                       <Link href={`/stocks/${encodeURIComponent(s.symbol)}`} className={styles.stockLink}>
-                        <span className={styles.stockSymbol}>{s.symbol}</span>
-                        <span className={styles.stockName}>{s.name}</span>
+                        <StockLogo symbol={s.symbol} size={36} status={s.screening.status} />
+                        <div className={styles.stockMeta}>
+                          <span className={styles.stockSymbol}>{s.symbol}</span>
+                          <span className={styles.stockName}>{s.name}</span>
+                        </div>
                       </Link>
                       <button
                         type="button"

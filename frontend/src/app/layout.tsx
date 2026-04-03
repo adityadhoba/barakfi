@@ -158,8 +158,8 @@ export default async function RootLayout({
                         label="Tools"
                         basePath="/tools"
                         items={[
-                          { href: "/tools#purification", label: "Purification Calculator" },
-                          { href: "/tools#zakat", label: "Zakat Calculator" },
+                          { href: "/tools/purification", label: "Purification Calculator" },
+                          { href: "/tools/zakat", label: "Zakat Calculator" },
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />
@@ -182,8 +182,8 @@ export default async function RootLayout({
                         label="Tools"
                         basePath="/tools"
                         items={[
-                          { href: "/tools#purification", label: "Purification Calculator" },
-                          { href: "/tools#zakat", label: "Zakat Calculator" },
+                          { href: "/tools/purification", label: "Purification Calculator" },
+                          { href: "/tools/zakat", label: "Zakat Calculator" },
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />

@@ -1,8 +1,21 @@
 "use client";
 
-import styles from "@/app/page.module.css";
+import styles from "./research-notes.module.css";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const NOTE_TYPES = [
+  { value: "WATCH", label: "Watch", icon: "👀" },
+  { value: "ADD", label: "Add", icon: "📈" },
+  { value: "TRIM", label: "Trim", icon: "✂️" },
+  { value: "EXIT", label: "Exit", icon: "🚪" },
+];
+
+const CONVICTION_LEVELS = [
+  { value: "low", label: "Low", dots: 1 },
+  { value: "medium", label: "Medium", dots: 2 },
+  { value: "high", label: "High", dots: 3 },
+];
 
 type Props = {
   symbol: string;
@@ -58,59 +71,103 @@ export function ResearchNoteForm({ symbol, portfolioId }: Props) {
   }
 
   return (
-    <form className={styles.settingsForm} onSubmit={handleSubmit}>
-      <div className={styles.formGrid}>
-        <label className={styles.field}>
-          <span>Note Type</span>
-          <select onChange={(e) => setNoteType(e.target.value)} value={noteType}>
-            <option value="WATCH">Watch — keep researching</option>
-            <option value="ADD">Add — initiate position</option>
-            <option value="TRIM">Trim — reduce exposure</option>
-            <option value="EXIT">Exit — close position</option>
-          </select>
-        </label>
+    <form className={styles.formCard} onSubmit={handleSubmit}>
+      <div className={styles.formTitle}>
+        <span className={styles.formTitleIcon}>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+          </svg>
+        </span>
+        Add Research Note
+      </div>
 
-        <label className={styles.field}>
-          <span>Conviction level</span>
-          <select onChange={(e) => setConviction(e.target.value)} value={conviction}>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </label>
+      <div className={styles.chipGroup}>
+        <span className={styles.chipLabel}>Action</span>
+        <div className={styles.chipRow}>
+          {NOTE_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              className={noteType === t.value ? styles.chipActive : styles.chip}
+              onClick={() => setNoteType(t.value)}
+            >
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <label className={styles.fieldWide}>
-          <span>Summary</span>
-          <input
-            maxLength={160}
-            minLength={4}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="What is your current take on this stock?"
-            required
-            type="text"
-            value={summary}
-          />
-        </label>
+      <div className={styles.chipGroup}>
+        <span className={styles.chipLabel}>Conviction</span>
+        <div className={styles.chipRow}>
+          {CONVICTION_LEVELS.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              className={conviction === c.value ? styles.chipActive : styles.chip}
+              onClick={() => setConviction(c.value)}
+            >
+              {c.label}
+              <span style={{ marginLeft: 6, display: "inline-flex", gap: 2 }}>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 5,
+                      height: 5,
+                      borderRadius: "50%",
+                      background: i < c.dots ? "currentColor" : "var(--line)",
+                      display: "inline-block",
+                    }}
+                  />
+                ))}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <label className={styles.fieldTextarea}>
-          <span>Detailed reasoning</span>
+      <div className={styles.inputGroup}>
+        <label className={styles.inputLabel} htmlFor="rn-summary">Summary</label>
+        <input
+          id="rn-summary"
+          className={styles.summaryInput}
+          maxLength={160}
+          minLength={4}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="What is your current take on this stock?"
+          required
+          type="text"
+          value={summary}
+        />
+      </div>
+
+      <div className={styles.inputGroup}>
+        <label className={styles.inputLabel} htmlFor="rn-notes">Detailed reasoning</label>
+        <div className={styles.textareaWrap}>
           <textarea
+            id="rn-notes"
+            className={styles.textarea}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Capture your reasoning — this becomes part of your audit trail."
             rows={4}
+            maxLength={2000}
             value={notes}
           />
-        </label>
+          <span className={styles.charCount}>{notes.length}/2000</span>
+        </div>
       </div>
 
-      <div className={styles.formActions}>
-        <button className={styles.primaryCta} disabled={isSaving} type="submit">
-          {isSaving ? "Saving..." : "Add research note"}
+      <div className={styles.submitRow}>
+        <button
+          className={isSuccess ? styles.submitBtnSuccess : styles.submitBtn}
+          disabled={isSaving}
+          type="submit"
+        >
+          {isSaving ? "Saving…" : isSuccess ? "✓ Saved" : "Add research note"}
         </button>
-        {status && (
-          <p className={isSuccess ? styles.formStatusSuccess : styles.formStatus} role="status" aria-live="polite">
-            {status}
-          </p>
+        {status && !isSuccess && (
+          <span className={styles.statusMsg}>{status}</span>
         )}
       </div>
     </form>

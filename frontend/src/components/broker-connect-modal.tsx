@@ -1,39 +1,63 @@
 "use client";
 
 import { useState } from "react";
-import ws from "./workspace-hero.module.css";
+import styles from "./broker-connect-modal.module.css";
 
 const BROKERS = [
-  { id: "angel_one", name: "Angel One" },
-  { id: "upstox", name: "Upstox" },
-  { id: "groww", name: "Groww" },
-  { id: "zerodha", name: "Zerodha" },
-  { id: "hdfc_sky", name: "HDFC SKY" },
-  { id: "motilal", name: "Motilal Oswal" },
-  { id: "paytm", name: "Paytm Money" },
-  { id: "fivepaisa", name: "5paisa" },
+  { id: "zerodha", name: "Zerodha", domain: "zerodha.com", color: "#387ed1" },
+  { id: "groww", name: "Groww", domain: "groww.in", color: "#00d09c" },
+  { id: "angel_one", name: "Angel One", domain: "angelone.in", color: "#ff6b35" },
+  { id: "upstox", name: "Upstox", domain: "upstox.com", color: "#6c3bff" },
+  { id: "hdfc_sky", name: "HDFC SKY", domain: "hdfcsky.com", color: "#004c8f" },
+  { id: "motilal", name: "Motilal Oswal", domain: "motilaloswal.com", color: "#e31837" },
+  { id: "paytm", name: "Paytm Money", domain: "paytmmoney.com", color: "#00baf2" },
+  { id: "fivepaisa", name: "5paisa", domain: "5paisa.com", color: "#3f51b5" },
 ] as const;
 
 const STEPS = [
-  { icon: "\uD83D\uDD12", title: "Broker Login", desc: "You authorize read-only access to your holdings." },
-  { icon: "\uD83D\uDCE5", title: "Holdings Import", desc: "We securely pull your portfolio positions." },
-  { icon: "\u2714\uFE0F", title: "Shariah Screening", desc: "Each holding is instantly screened for compliance." },
+  {
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+      </svg>
+    ),
+    title: "Broker Login",
+    desc: "You authorize read-only access to your holdings.",
+  },
+  {
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+    ),
+    title: "Holdings Import",
+    desc: "We securely pull your portfolio positions.",
+  },
+  {
+    icon: (
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    title: "Shariah Screening",
+    desc: "Each holding is instantly screened for compliance.",
+  },
 ];
-
-function getInitials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-}
-
-const BROKER_COLORS: Record<string, string> = {
-  angel_one: "#ff6b35", upstox: "#6c3bff", groww: "#00d09c", zerodha: "#387ed1",
-  hdfc_sky: "#004c8f", motilal: "#e31837", paytm: "#00baf2", fivepaisa: "#3f51b5",
-};
 
 export function BrokerConnectButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className={ws.connectBtn} onClick={() => setOpen(true)}>Connect</button>
+      <button
+        type="button"
+        className={styles.connectTrigger}
+        onClick={() => setOpen(true)}
+      >
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.07a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364L4.343 8.07" />
+        </svg>
+        Connect Broker
+      </button>
       {open && <BrokerModal onClose={() => setOpen(false)} />}
     </>
   );
@@ -41,74 +65,162 @@ export function BrokerConnectButton() {
 
 function BrokerModal({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const selectedBroker = BROKERS.find((b) => b.id === selected);
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className={styles.header}>
           <div>
-            <p style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", margin: "0 0 2px" }}>Trade, track and manage investments on</p>
-            <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800 }}>Barakfi</h3>
+            <p className={styles.headerKicker}>Import your holdings on</p>
+            <h3 className={styles.headerTitle}>Barakfi</h3>
           </div>
-          <button type="button" onClick={onClose} style={closeBtnStyle}>&times;</button>
+          <button type="button" onClick={onClose} className={styles.closeBtn}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        {selected ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ width: 56, height: 56, borderRadius: 12, background: BROKER_COLORS[selected] || "var(--emerald)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>
-              {getInitials(BROKERS.find((b) => b.id === selected)?.name || "")}
+        {selected && selectedBroker ? (
+          <div className={styles.selectedView}>
+            {/* Broker logo */}
+            <div className={styles.selectedLogoWrap}>
+              <img
+                src={`https://cdn.brandfetch.io/${selectedBroker.domain}/w/256/h/256`}
+                alt={selectedBroker.name}
+                width={56}
+                height={56}
+                className={styles.selectedLogo}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (!img.dataset.fallback) {
+                    img.dataset.fallback = "1";
+                    img.src = `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${selectedBroker.domain}&size=64`;
+                  } else {
+                    img.style.display = "none";
+                  }
+                }}
+              />
             </div>
-            <h4 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>
-              {BROKERS.find((b) => b.id === selected)?.name}
-            </h4>
-            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "0 0 20px", lineHeight: 1.5 }}>
-              Broker integration is being activated. We&apos;ll notify you when it&apos;s ready to connect.
+            <h4 className={styles.selectedName}>{selectedBroker.name}</h4>
+
+            <div className={styles.comingSoonBadgeLg}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Coming Soon
+            </div>
+
+            <p className={styles.selectedDesc}>
+              We&apos;re working on integrating {selectedBroker.name}. Leave your email to get notified when it&apos;s ready.
             </p>
-            <div style={{ padding: "12px 16px", borderRadius: 10, background: "var(--gold-bg)", border: "1px solid var(--gold-border)", fontSize: "0.82rem", color: "var(--gold)", fontWeight: 600 }}>
-              Coming Soon &mdash; Expected in a few days
-            </div>
-            <button type="button" onClick={() => setSelected(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-secondary)", padding: "6px 12px", marginTop: 16 }}>
-              &larr; Back to brokers
+
+            {!submitted ? (
+              <div className={styles.notifyForm}>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={styles.notifyInput}
+                />
+                <button
+                  type="button"
+                  className={styles.notifyBtn}
+                  disabled={!email.includes("@")}
+                  onClick={() => setSubmitted(true)}
+                >
+                  Notify Me
+                </button>
+              </div>
+            ) : (
+              <div className={styles.notifySuccess}>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                We&apos;ll notify you at <strong>{email}</strong>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={styles.backBtn}
+              onClick={() => { setSelected(null); setEmail(""); setSubmitted(false); }}
+            >
+              &larr; All brokers
             </button>
           </div>
         ) : (
           <>
-            <h4 style={{ margin: "0 0 16px", fontSize: "0.95rem", fontWeight: 700, color: "var(--text)" }}>
-              Login with your broker
-            </h4>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+            <h4 className={styles.sectionTitle}>Select your broker</h4>
+            <div className={styles.brokerGrid}>
               {BROKERS.map((broker) => (
-                <button key={broker.id} type="button" onClick={() => setSelected(broker.id)} style={brokerCardStyle}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, background: BROKER_COLORS[broker.id], display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: "0.75rem", marginBottom: 6 }}>
-                    {getInitials(broker.name)}
+                <button
+                  key={broker.id}
+                  type="button"
+                  className={styles.brokerCard}
+                  onClick={() => setSelected(broker.id)}
+                >
+                  <div className={styles.brokerLogoWrap}>
+                    <img
+                      src={`https://cdn.brandfetch.io/${broker.domain}/w/256/h/256`}
+                      alt={broker.name}
+                      width={36}
+                      height={36}
+                      className={styles.brokerLogo}
+                      onError={(e) => {
+                        const img = e.currentTarget;
+                        if (!img.dataset.fallback) {
+                          img.dataset.fallback = "1";
+                          img.src = `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${broker.domain}&size=64`;
+                        } else {
+                          img.style.display = "none";
+                          const parent = img.parentElement;
+                          if (parent) {
+                            parent.style.background = broker.color;
+                            parent.style.color = "#fff";
+                            parent.textContent = broker.name.charAt(0);
+                          }
+                        }
+                      }}
+                    />
                   </div>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text)" }}>{broker.name}</span>
+                  <span className={styles.brokerName}>{broker.name}</span>
+                  <span className={styles.comingSoonBadge}>Coming Soon</span>
                 </button>
               ))}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0" }}>
-              <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-              <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>How does this work?</span>
-              <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+            <div className={styles.divider}>
+              <span>How does this work?</span>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className={styles.stepsList}>
               {STEPS.map((step, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--emerald-bg)", border: "1px solid var(--emerald-border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", flexShrink: 0 }}>{step.icon}</div>
+                <div key={i} className={styles.stepRow}>
+                  <div className={styles.stepIcon}>{step.icon}</div>
                   <div>
-                    <strong style={{ fontSize: "0.82rem", color: "var(--text)" }}>{step.title}</strong>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", margin: "2px 0 0", lineHeight: 1.4 }}>{step.desc}</p>
+                    <strong className={styles.stepTitle}>{step.title}</strong>
+                    <p className={styles.stepDesc}>{step.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div style={{ textAlign: "center", marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--line)" }}>
-              <p style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", margin: "0 0 8px" }}>Don&apos;t have a broker account?</p>
-              <a href="https://zerodha.com/open-account" target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--emerald)", textDecoration: "none" }}>
-                Open an account online
+            <div className={styles.footer}>
+              <p>Don&apos;t have a broker account?</p>
+              <a
+                href="https://zerodha.com/open-account"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.footerLink}
+              >
+                Open an account online &rarr;
               </a>
             </div>
           </>
@@ -117,8 +229,3 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, zIndex: 90, background: "rgba(0,0,0,0.35)", display: "grid", placeItems: "center", padding: 24 };
-const modalStyle: React.CSSProperties = { width: "100%", maxWidth: 460, padding: 28, borderRadius: 16, background: "var(--panel)", border: "1px solid var(--line)", boxShadow: "0 20px 40px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" };
-const closeBtnStyle: React.CSSProperties = { background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "var(--text-tertiary)", padding: "4px 8px", lineHeight: 1 };
-const brokerCardStyle: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "center", padding: "14px 8px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--bg)", cursor: "pointer" };
