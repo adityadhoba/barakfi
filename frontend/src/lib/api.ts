@@ -433,9 +433,14 @@ export type WorkspaceBundle = {
  * @internal
  */
 async function apiFetch<T>(path: string, fallback: T): Promise<T> {
+  // Render free tier cold starts can take 30-50s — use AbortController with generous timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
-      next: { revalidate: 30 },
+      next: { revalidate: 60 },
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -448,6 +453,8 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
   } catch (err) {
     console.error(`[api] Network error on GET ${path}:`, err);
     return fallback;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

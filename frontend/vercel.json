@@ -22,6 +22,12 @@
       "permanent": true
     }
   ],
+  "crons": [
+    {
+      "path": "/api/keep-alive",
+      "schedule": "*/14 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/icons/(.*)",
