@@ -95,25 +95,31 @@ def _auto_seed_stocks():
 
     db = SessionLocal()
     try:
-        stock_count = db.query(Stock).count()
-        if stock_count > 0:
-            logger.info("[auto-seed] Database has %d stocks, skipping seed.", stock_count)
-            return
-
-        logger.info("[auto-seed] Database is empty, seeding stocks...")
-
-        # Try real data first, fall back to seed data
+        # Upsert: add new stocks and update existing ones
         try:
             from real_stock_data import REAL_STOCKS
-            for payload in REAL_STOCKS:
-                db.add(Stock(**payload))
-            logger.info("[auto-seed] Loaded %d stocks from real Yahoo Finance data.", len(REAL_STOCKS))
-        except (ImportError, Exception) as exc:
-            logger.warning("[auto-seed] Real data not available (%s), using seed data...", exc)
+            stock_data = REAL_STOCKS
+            source = "real Yahoo Finance data"
+        except (ImportError, Exception):
             from fetch_data import SEED_STOCKS
-            for payload in SEED_STOCKS:
+            stock_data = SEED_STOCKS
+            source = "seed data"
+
+        existing_count = db.query(Stock).count()
+        added = 0
+        updated = 0
+        for payload in stock_data:
+            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+            if existing:
+                for key, value in payload.items():
+                    setattr(existing, key, value)
+                updated += 1
+            else:
                 db.add(Stock(**payload))
-            logger.info("[auto-seed] Loaded %d stocks from seed data.", len(SEED_STOCKS))
+                added += 1
+
+        logger.info("[auto-seed] %s: %d added, %d updated (was %d, now %d) from %s",
+                     "Stocks", added, updated, existing_count, existing_count + added, source)
 
         # Seed compliance rule versions if empty
         rule_count = db.query(ComplianceRuleVersion).count()
