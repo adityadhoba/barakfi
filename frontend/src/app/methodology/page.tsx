@@ -39,6 +39,12 @@ const RATIOS = [
     formula: "Accounts Receivable / Market Cap",
     desc: "Prevents investing in companies where the majority of value is tied up in receivables (which may represent interest-based transactions).",
   },
+  {
+    name: "Cash & Interest-Bearing Securities",
+    threshold: "< 33%",
+    formula: "(Cash + Short-Term Investments) / Total Assets",
+    desc: "AAOIFI standard: limits exposure to companies heavily invested in interest-bearing instruments like fixed deposits and bonds.",
+  },
 ];
 
 const SECTORS_EXCLUDED = [
@@ -49,6 +55,8 @@ const SECTORS_EXCLUDED = [
   "Pork-related products",
   "Gambling and casinos",
   "Adult entertainment",
+  "Cannabis production",
+  "Interest-based lending (NBFCs)",
   "Weapons and defense (controversial)",
 ];
 
@@ -67,6 +75,31 @@ export default function MethodologyPage() {
           </p>
         </header>
 
+        {/* Trust Badges */}
+        <div className={styles.trustBadges}>
+          <div className={styles.trustBadge}>
+            <span className={styles.trustBadgeIcon}>&#x1F6E1;</span>
+            <div>
+              <span className={styles.trustBadgeTitle}>S&amp;P Aligned</span>
+              <span className={styles.trustBadgeDesc}>S&amp;P Shariah Indices thresholds</span>
+            </div>
+          </div>
+          <div className={styles.trustBadge}>
+            <span className={styles.trustBadgeIcon}>&#x2696;</span>
+            <div>
+              <span className={styles.trustBadgeTitle}>AAOIFI Referenced</span>
+              <span className={styles.trustBadgeDesc}>Cash &amp; interest-bearing checks</span>
+            </div>
+          </div>
+          <div className={styles.trustBadge}>
+            <span className={styles.trustBadgeIcon}>&#x1F4CA;</span>
+            <div>
+              <span className={styles.trustBadgeTitle}>100+ Stocks</span>
+              <span className={styles.trustBadgeDesc}>Real NSE financial data</span>
+            </div>
+          </div>
+        </div>
+
         {/* Screening Flow Diagram */}
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Screening Pipeline</h2>
@@ -75,7 +108,7 @@ export default function MethodologyPage() {
               <div className={`${styles.flowIcon} ${styles.flowIconInput}`}>&#x25A3;</div>
               <div className={styles.flowStepBody}>
                 <span className={styles.flowStepTitle}>Stock Universe</span>
-                <span className={styles.flowStepDesc}>60+ Indian equities from NSE</span>
+                <span className={styles.flowStepDesc}>100+ Indian equities from NSE</span>
               </div>
             </div>
             <div className={styles.flowArrow}>&darr;</div>
@@ -90,7 +123,7 @@ export default function MethodologyPage() {
             <div className={styles.flowStep}>
               <div className={`${styles.flowIcon} ${styles.flowIconRatio}`}>&#x2696;</div>
               <div className={styles.flowStepBody}>
-                <span className={styles.flowStepTitle}>5 Financial Ratios</span>
+                <span className={styles.flowStepTitle}>7 Financial Rules</span>
                 <span className={styles.flowStepDesc}>Debt, income, receivables checks</span>
               </div>
             </div>

@@ -26,9 +26,57 @@
 
 /* ── Hero ── */
 .hero {
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--line);
+}
+
+/* ── Trust Badges ── */
+.trustBadges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+@media (max-width: 600px) {
+  .trustBadges { grid-template-columns: 1fr; }
+}
+.trustBadge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+}
+.trustBadge:hover {
+  border-color: var(--emerald-border);
+  box-shadow: var(--shadow-sm);
+}
+.trustBadgeIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--emerald-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.trustBadgeTitle {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.trustBadgeDesc {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
 }
 
 .backLink {
@@ -222,8 +270,14 @@
 .ratioCard {
   padding: 18px 20px;
   border: 1px solid var(--line);
+  border-left: 3px solid var(--emerald);
   border-radius: var(--radius-lg);
   background: var(--panel);
+  transition: all 0.2s ease;
+}
+.ratioCard:hover {
+  box-shadow: var(--shadow-sm);
+  border-left-color: var(--emerald-hover);
 }
 
 .ratioHeader {

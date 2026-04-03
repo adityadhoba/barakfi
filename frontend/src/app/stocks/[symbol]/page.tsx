@@ -396,6 +396,31 @@ export default async function StockDetailPage({
           </div>
         </div>
 
+        {/* Compliance Verdict Banner */}
+        <div className={`${styles.verdictBanner} ${
+          screening.status === "HALAL" ? styles.verdictHalal
+          : screening.status === "REQUIRES_REVIEW" ? styles.verdictReview
+          : styles.verdictFail
+        }`}>
+          <div className={styles.verdictLeft}>
+            <span className={styles.verdictScore}>{complianceScore}</span>
+            <span className={styles.verdictScoreSuffix}>/100</span>
+          </div>
+          <div className={styles.verdictBody}>
+            <div className={styles.verdictStatus}>
+              <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                {STATUS_LABELS[screening.status] || screening.status}
+              </span>
+              {screening.purification_ratio_pct != null && screening.status === "HALAL" && (
+                <span className={styles.verdictPurification}>
+                  Purification: {screening.purification_ratio_pct}%
+                </span>
+              )}
+            </div>
+            <p className={styles.verdictText}>{takeaway}</p>
+          </div>
+        </div>
+
         {/* Key Metrics Strip */}
         <div className={styles.keyMetricsStrip}>
           <div className={styles.keyMetricCard}>
@@ -573,12 +598,17 @@ export default async function StockDetailPage({
                   </div>
                 </div>
                 <div className={pageStyles.reasonList}>
-                  {reasons.map((reason) => (
-                    <div className={pageStyles.reasonItem} key={reason}>
-                      <span className={pageStyles.reasonDot} />
-                      <p>{reason}</p>
-                    </div>
-                  ))}
+                  {reasons.map((reason) => {
+                    const isPass = reason.toLowerCase().includes("passed all");
+                    return (
+                      <div className={pageStyles.reasonItem} key={reason}>
+                        <span className={isPass ? pageStyles.reasonDotPass : pageStyles.reasonDot}>
+                          {isPass ? "\u2713" : "\u2717"}
+                        </span>
+                        <p>{reason}</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </article>
 

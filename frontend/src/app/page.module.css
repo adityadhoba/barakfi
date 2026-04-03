@@ -735,16 +735,23 @@
 
 /* ── Reasons / Rules ── */
 .reasonList { display: grid; gap: 10px; margin-top: 10px; }
-.reasonItem { display: grid; grid-template-columns: 8px 1fr; gap: 12px; align-items: start; }
-.reasonItem p { color: var(--text-secondary); line-height: 1.55; font-size: 0.88rem; }
-.reasonDot, .reasonDotMuted {
-  width: 8px;
-  height: 8px;
+.reasonItem { display: flex; gap: 10px; align-items: flex-start; }
+.reasonItem p { color: var(--text-secondary); line-height: 1.55; font-size: 0.85rem; margin: 0; }
+.reasonDot, .reasonDotMuted, .reasonDotPass {
+  width: 20px;
+  height: 20px;
   border-radius: var(--radius-full);
-  margin-top: 7px;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
-.reasonDot { background: var(--emerald); }
-.reasonDotMuted { background: var(--text-tertiary); }
+.reasonDot { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.reasonDotPass { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-border); }
+.reasonDotMuted { background: var(--bg-soft); color: var(--text-tertiary); border: 1px solid var(--line); }
 
 
 /* ── Watchlist / Order Cards ── */

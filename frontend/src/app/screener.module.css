@@ -944,6 +944,69 @@
 .complianceHeroStatus.fail { color: var(--red); }
 .complianceHeroSummary { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45; }
 
+/* ── Compliance Verdict Banner ── */
+.verdictBanner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  border-radius: var(--radius-xl);
+  margin-bottom: 20px;
+  animation: fadeInUp 0.35s ease-out both;
+}
+.verdictHalal { background: var(--emerald-bg); border: 1px solid var(--emerald-border); }
+.verdictReview { background: var(--gold-bg); border: 1px solid var(--gold-border); }
+.verdictFail { background: var(--red-bg); border: 1px solid var(--red-border); }
+
+.verdictLeft {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.verdictScore {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.verdictHalal .verdictScore { color: var(--emerald); }
+.verdictReview .verdictScore { color: var(--gold); }
+.verdictFail .verdictScore { color: var(--red); }
+
+.verdictScoreSuffix {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.verdictBody { flex: 1; min-width: 0; }
+.verdictStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.verdictPurification {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--emerald);
+  background: var(--emerald-dim);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+.verdictText {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .verdictBanner { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+  .verdictScore { font-size: 1.8rem; }
+}
+
 /* ── Key Metrics Strip ── */
 .keyMetricsStrip {
   display: grid;
