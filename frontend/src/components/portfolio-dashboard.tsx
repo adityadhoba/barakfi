@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import pd from "./portfolio-dashboard.module.css";
+import { StockLogo } from "@/components/stock-logo";
 
 type HoldingStock = {
   symbol: string;
@@ -91,6 +92,18 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
       }))
       .sort((a, b) => b.value - a.value);
   }, [enriched, totalCurrent]);
+
+  // Diversification score (0–100) using Herfindahl-Hirschman Index
+  const diversificationScore = useMemo(() => {
+    if (enriched.length <= 1) return 0;
+    const weights = enriched.map((h) => (totalCurrent > 0 ? h.currentValue / totalCurrent : 0));
+    const hhi = weights.reduce((sum, w) => sum + w * w, 0);
+    const minHHI = 1 / enriched.length;
+    const maxHHI = 1;
+    const normalized = maxHHI === minHHI ? 100 : ((maxHHI - hhi) / (maxHHI - minHHI)) * 100;
+    const sectorBonus = Math.min(sectorAlloc.length * 5, 20);
+    return Math.min(100, Math.round(normalized + sectorBonus));
+  }, [enriched, totalCurrent, sectorAlloc.length]);
 
   // Sorted holdings
   const sorted = useMemo(() => {
@@ -202,8 +215,11 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
                   <tr key={h.id} className={pd.row}>
                     <td className={pd.tdStock}>
                       <Link href={`/stocks/${encodeURIComponent(h.stock.symbol)}`} className={pd.stockLink}>
-                        <strong>{h.stock.symbol}</strong>
-                        <span className={pd.stockName}>{h.stock.name}</span>
+                        <StockLogo symbol={h.stock.symbol} size={28} status={h.complianceStatus} />
+                        <div className={pd.stockInfo}>
+                          <strong>{h.stock.symbol}</strong>
+                          <span className={pd.stockName}>{h.stock.name}</span>
+                        </div>
                       </Link>
                     </td>
                     <td className={pd.tdRight}>{h.quantity}</td>
@@ -256,12 +272,63 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
           </div>
         </div>
 
-        {/* Sector Allocation */}
+        {/* Sector Allocation + Diversification */}
         <div className={pd.sectorPanel}>
+          {/* Diversification Score Gauge */}
+          <div className={pd.diversificationGauge}>
+            <div className={pd.gaugeVisual}>
+              <svg viewBox="0 0 36 36" className={pd.gaugeSvg} role="img" aria-label={`Diversification score: ${diversificationScore}`}>
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="var(--line)"
+                  strokeWidth="3"
+                />
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke={diversificationScore >= 70 ? "var(--emerald)" : diversificationScore >= 40 ? "var(--gold)" : "var(--red)"}
+                  strokeWidth="3"
+                  strokeDasharray={`${diversificationScore}, 100`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className={pd.gaugeNumber}>{diversificationScore}</span>
+            </div>
+            <div className={pd.gaugeInfo}>
+              <p className={pd.kicker}>Diversification</p>
+              <h3 className={pd.panelTitle}>
+                {diversificationScore >= 70 ? "Well Diversified" : diversificationScore >= 40 ? "Moderate" : "Concentrated"}
+              </h3>
+              <p className={pd.gaugeHint}>
+                {sectorAlloc.length} sector{sectorAlloc.length !== 1 ? "s" : ""} &middot; {enriched.length} stock{enriched.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className={pd.sectionDivider} />
+
           <div className={pd.panelHeader}>
             <div>
               <p className={pd.kicker}>Allocation</p>
               <h3 className={pd.panelTitle}>By Sector</h3>
+            </div>
+          </div>
+
+          {/* Donut-style sector bar */}
+          <div className={pd.sectorDonut}>
+            <div className={pd.sectorDonutBar}>
+              {sectorAlloc.map((s, i) => (
+                <div
+                  key={s.sector}
+                  className={pd.sectorDonutSegment}
+                  style={{
+                    width: `${Math.max(s.pct, 3)}%`,
+                    background: sectorColors[i % sectorColors.length],
+                  }}
+                  title={`${s.sector}: ${s.pct.toFixed(1)}%`}
+                />
+              ))}
             </div>
           </div>
 

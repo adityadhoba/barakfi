@@ -4,6 +4,7 @@ import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
+import { StockLogo } from "@/components/stock-logo";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 100;
@@ -288,9 +289,11 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             return (
               <Link className={styles.stockItem} href={`/stocks/${encodeURIComponent(row.symbol)}`} key={row.symbol}>
                 <div className={styles.stockItemTop}>
-                  <div className={styles.stockAvatar}>
-                    {row.symbol.slice(0, 2).toUpperCase()}
-                  </div>
+                  <StockLogo
+                    symbol={row.symbol}
+                    size={36}
+                    status={scr?.screening.status}
+                  />
                   <div className={styles.stockIdentity}>
                     <span className={styles.stockSymbol}>{row.symbol}</span>
                     <span className={styles.stockName}>{row.name}</span>
@@ -343,6 +346,55 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
       </section>
 
+      {/* ── Halal Investing in India ── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>Halal Investing in India</h2>
+          <Link href="/halal-stocks" className={styles.seeAll}>View halal stocks &rarr;</Link>
+        </div>
+        <div className={styles.marketingGrid}>
+          <div className={styles.marketingCard}>
+            <div className={`${styles.marketingIcon} ${styles.marketingIconShield}`}>
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <h3 className={styles.marketingTitle}>What Is Shariah-Compliant Investing?</h3>
+            <p className={styles.marketingDesc}>
+              Shariah-compliant investing follows Islamic financial principles &mdash; avoiding interest (riba),
+              excessive uncertainty (gharar), and prohibited industries. Stocks are screened against financial
+              ratios to ensure the company&apos;s business and finances align with Islamic law.
+            </p>
+          </div>
+          <div className={styles.marketingCard}>
+            <div className={`${styles.marketingIcon} ${styles.marketingIconIndia}`}>
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className={styles.marketingTitle}>Why India Needs a Halal Stock Screener</h3>
+            <p className={styles.marketingDesc}>
+              With over 200 million Muslims, India has one of the world&apos;s largest Muslim populations.
+              Yet access to reliable, free Shariah screening tools for Indian stocks has been limited.
+              Barakfi fills this gap with transparent, technology-driven screening built for the Indian market.
+            </p>
+          </div>
+          <div className={styles.marketingCard}>
+            <div className={`${styles.marketingIcon} ${styles.marketingIconBook}`}>
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 className={styles.marketingTitle}>S&amp;P Shariah Methodology</h3>
+            <p className={styles.marketingDesc}>
+              We follow the globally recognized S&amp;P Shariah Indices screening methodology.
+              Each stock is evaluated against 5 financial ratios plus sector-level filters,
+              covering debt levels, income purity, receivables, and prohibited business activities.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Trust & Methodology Bar ── */}
       <section className={styles.trustBar}>
         <div className={styles.trustItem}>
@@ -391,6 +443,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             </div>
             <div className={styles.footerCol}>
               <span className={styles.footerColTitle}>Resources</span>
+              <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
               <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
               <Link href="/tools" className={styles.footerLink}>Calculators</Link>

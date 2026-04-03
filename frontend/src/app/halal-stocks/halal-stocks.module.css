@@ -1,0 +1,335 @@
+/* ═══════════════════════════════════════════════════════════════════
+   HALAL STOCKS LIST — SEO-optimized halal stock listing page
+   ═══════════════════════════════════════════════════════════════════ */
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+/* ── Hero ── */
+.hero {
+  margin-bottom: 32px;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+.breadcrumbs a {
+  color: var(--emerald);
+  text-decoration: none;
+}
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+
+.year {
+  color: var(--emerald);
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 0 20px;
+}
+
+.ctas {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary,
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.ctaPrimary {
+  background: var(--emerald);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+.ctaPrimary:hover {
+  background: var(--emerald-hover);
+  transform: translateY(-1px);
+}
+
+.ctaSecondary {
+  background: var(--bg-soft);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.ctaSecondary:hover {
+  border-color: var(--line-strong);
+}
+
+/* ── Stats ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.stat {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  text-align: center;
+}
+
+.statValue {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--emerald);
+  letter-spacing: -0.02em;
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* ── Sections ── */
+.section {
+  margin-bottom: 32px;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 16px;
+  letter-spacing: -0.015em;
+}
+
+/* ── Sector Grid ── */
+.sectorGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.sectorCard {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+.sectorCard:hover {
+  border-color: var(--emerald-border);
+}
+
+.sectorName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sectorCount {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ── Table ── */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--line);
+}
+
+.thRight {
+  text-align: right !important;
+}
+
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover {
+  background: var(--bg-soft);
+}
+
+.tdNum {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  width: 40px;
+}
+
+.tdSector {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.tdRight {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.stockLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+}
+.stockLink:hover strong {
+  color: var(--emerald);
+}
+
+.stockInfo {
+  display: grid;
+  gap: 1px;
+}
+.stockInfo strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.stockInfo span {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.halalBadge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* ── Prose ── */
+.prose {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.prose p {
+  margin: 0 0 16px;
+}
+.prose h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 24px 0 8px;
+}
+.prose ul {
+  margin: 0 0 16px;
+  padding-left: 20px;
+}
+.prose li {
+  margin-bottom: 8px;
+}
+
+/* ── FAQ ── */
+.faqGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.faqItem {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+}
+.faqItem h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.faqItem p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sectorGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 16px 16px 48px;
+  }
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stat {
+    padding: 14px;
+  }
+  .statValue {
+    font-size: 1.2rem;
+  }
+}

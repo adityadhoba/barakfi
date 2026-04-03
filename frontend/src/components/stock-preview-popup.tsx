@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import styles from "./stock-preview-popup.module.css";
 import type { ScreeningResult, Stock } from "@/lib/api";
+import { StockLogo } from "@/components/stock-logo";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -62,10 +63,6 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
     : stock.screening.status === "REQUIRES_REVIEW" ? styles.statusReview
     : styles.statusFail;
 
-  const avatarBg = stock.screening.status === "HALAL" ? "var(--emerald)"
-    : stock.screening.status === "REQUIRES_REVIEW" ? "var(--gold)"
-    : "var(--red)";
-
   return (
     <div
       ref={wrapRef}
@@ -82,9 +79,7 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
 
           {/* Header */}
           <div className={styles.popupHeader}>
-            <div className={styles.popupAvatar} style={{ background: avatarBg }}>
-              {stock.symbol.slice(0, 2)}
-            </div>
+            <StockLogo symbol={stock.symbol} size={36} status={stock.screening.status} />
             <div className={styles.popupIdentity}>
               <span className={styles.popupName}>{stock.name}</span>
               <span className={styles.popupSymbol}>{stock.symbol}</span>

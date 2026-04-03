@@ -5,6 +5,8 @@ import { ComplianceCheckPanel } from "@/components/compliance-check-panel";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { PortfolioDashboard } from "@/components/portfolio-dashboard";
 import { AddHoldingButton } from "@/components/add-holding-modal";
+import { PortfolioTabs } from "@/components/portfolio-tabs";
+import { BrokerConnectButton } from "@/components/broker-connect-modal";
 import {
   bootstrapAuthenticatedUser,
   getAuthenticatedAlerts,
@@ -148,6 +150,7 @@ export async function WorkspaceShell() {
           <h1 className={ws.dashTitle}>{firstName}&apos;s Portfolio</h1>
           <div className={ws.dashActions}>
             <AddHoldingButton stocks={stockOptions} />
+            <BrokerConnectButton />
             <Link href="/screener" className={ws.actionBtn}>
               Screen stocks
             </Link>
@@ -201,32 +204,33 @@ export async function WorkspaceShell() {
         </section>
       )}
 
-      {/* ── Holdings ── */}
-      {hasHoldings ? (
-        <section style={{ marginBottom: 24 }}>
+      {/* ── Portfolio Tabs (Stocks / Mutual Funds / Gold) ── */}
+      <PortfolioTabs>
+        {hasHoldings ? (
           <PortfolioDashboard
             holdings={activePortfolio.holdings}
             screeningStatuses={screeningStatuses}
             portfolioName={activePortfolio.name || "Portfolio"}
           />
-        </section>
-      ) : (
-        <section className={ws.emptySection}>
-          <div className={ws.emptyCard}>
-            <span className={ws.emptyIcon}>&#x1F4BC;</span>
-            <h3 className={ws.emptyTitle}>No holdings yet</h3>
-            <p className={ws.emptyDesc}>
-              Add stocks you own to track your portfolio&apos;s Shariah compliance and performance.
-            </p>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-              <AddHoldingButton stocks={stockOptions} />
-              <Link className={ws.actionBtn} href="/screener">
-                Browse screener
-              </Link>
+        ) : (
+          <section className={ws.emptySection}>
+            <div className={ws.emptyCard}>
+              <span className={ws.emptyIcon}>&#x1F4BC;</span>
+              <h3 className={ws.emptyTitle}>No holdings yet</h3>
+              <p className={ws.emptyDesc}>
+                Add stocks you own or connect your broker to import holdings automatically.
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+                <AddHoldingButton stocks={stockOptions} />
+                <BrokerConnectButton />
+                <Link className={ws.actionBtn} href="/screener">
+                  Browse screener
+                </Link>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+      </PortfolioTabs>
 
       {/* ── Watchlist ── */}
       {watchlist.length > 0 && (

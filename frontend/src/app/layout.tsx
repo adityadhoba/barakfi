@@ -22,9 +22,24 @@ import "./globals.css";
 import "./shell.css";
 
 export const metadata: Metadata = {
-  title: "Barakfi — Shariah-Compliant Indian Equity Research",
+  title: {
+    default: "Barakfi — Halal Stock Screener India | Shariah-Compliant Investing",
+    template: "%s | Barakfi",
+  },
   description:
-    "Screen, track, and invest in Shariah-compliant Indian stocks with confidence. Built for disciplined investors who care about compliance and trust.",
+    "India's free halal stock screener. Screen NSE stocks for Shariah compliance using S&P methodology. Track your halal portfolio, research companies, and invest with confidence.",
+  keywords: [
+    "halal stocks India",
+    "shariah compliant stocks",
+    "halal investment India",
+    "Islamic finance India",
+    "shariah stock screener",
+    "halal stock screener",
+    "Muslim investments India",
+    "halal equity screening",
+    "NSE halal stocks",
+    "Barakfi",
+  ],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -32,18 +47,21 @@ export const metadata: Metadata = {
     title: "Barakfi",
   },
   openGraph: {
-    title: "Barakfi",
-    description: "Shariah-compliant Indian equity screening, portfolio management, and compliance tracking.",
+    title: "Barakfi — India's Free Halal Stock Screener",
+    description: "Screen Indian stocks for Shariah compliance. Track halal portfolios. Free, transparent, and built for Indian Muslim investors.",
     type: "website",
     locale: "en_IN",
     siteName: "Barakfi",
-    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Barakfi — Screen. Research. Invest." }],
+    images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "Barakfi — Halal Stock Screener for India" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Barakfi",
-    description: "Shariah-compliant Indian equity screening and portfolio management.",
+    title: "Barakfi — India's Free Halal Stock Screener",
+    description: "Screen Indian stocks for Shariah compliance. Free halal stock screener powered by S&P methodology.",
     images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "https://barakfi.in",
   },
 };
 
@@ -81,7 +99,7 @@ export default async function RootLayout({
               "@type": "WebApplication",
               name: "Barakfi",
               url: "https://barakfi.in",
-              description: "Screen, track, and invest in Shariah-compliant Indian stocks with confidence.",
+              description: "India's free halal stock screener. Screen NSE stocks for Shariah compliance, track halal portfolios, and invest with confidence.",
               applicationCategory: "FinanceApplication",
               operatingSystem: "All",
               offers: {
@@ -92,7 +110,24 @@ export default async function RootLayout({
               creator: {
                 "@type": "Organization",
                 name: "Barakfi",
+                url: "https://barakfi.in",
               },
+              keywords: "halal stocks India, shariah compliant stocks, Islamic finance India, halal investment, NSE halal stocks",
+              inLanguage: "en-IN",
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Barakfi",
+              url: "https://barakfi.in",
+              description: "Shariah-compliant equity screening platform for the Indian stock market.",
+              foundingDate: "2026",
+              sameAs: [],
             }),
           }}
         />

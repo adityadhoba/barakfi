@@ -282,6 +282,32 @@ class ComplianceReviewEvent(Base):
     review_case = relationship("ComplianceReviewCase", back_populates="events")
 
 
+class BrokerConnection(Base):
+    """
+    Tracks broker integrations per user.
+
+    Stores connection state and encrypted credentials for supported brokers.
+    Actual API key values are encrypted at rest; only the broker ID and
+    connection status are stored in plaintext.
+    """
+    __tablename__ = "broker_connections"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    broker_id = Column(String, nullable=False, index=True)
+    broker_name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    access_token_enc = Column(Text, nullable=True)
+    refresh_token_enc = Column(Text, nullable=True)
+    token_expires_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    updated_at = Column(DateTime, nullable=False, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User")
+
+
 class ScreeningLog(Base):
     __tablename__ = "screening_logs"
 

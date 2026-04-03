@@ -201,6 +201,28 @@
   margin: 0 0 16px;
 }
 
+/* ── Connect Button ── */
+.connectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  color: #fff;
+  background: linear-gradient(135deg, var(--emerald), #059669);
+  border: 1px solid var(--emerald);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+.connectBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
 /* ── Responsive ── */
 @media (max-width: 640px) {
   .dashHeader { flex-direction: column; }

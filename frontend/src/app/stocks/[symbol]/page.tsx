@@ -23,6 +23,7 @@ import { PriceChart } from "@/components/price-chart";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
+import { StockLogo } from "@/components/stock-logo";
 
 export async function generateMetadata({
   params,
@@ -296,9 +297,7 @@ export default async function StockDetailPage({
               <span className={styles.stockMetaChip}>{stock.country}</span>
             </div>
             <div className={styles.stockTitleRow}>
-              <div className={`${styles.stockAvatar} ${styles[STATUS_HERO[screening.status] || "review"]}`}>
-                {stock.symbol.slice(0, 2).toUpperCase()}
-              </div>
+              <StockLogo symbol={stock.symbol} size={44} status={screening.status} />
               <div>
                 <h1 className={styles.stockTitle}>{stock.name}</h1>
                 <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>

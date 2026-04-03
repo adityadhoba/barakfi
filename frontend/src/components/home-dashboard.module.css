@@ -744,6 +744,77 @@
 
 
 /* ══════════════════════════════════════════
+   Marketing Cards — Halal Investing in India
+   ══════════════════════════════════════════ */
+.marketingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .marketingGrid { grid-template-columns: 1fr; }
+}
+
+.marketingCard {
+  padding: 24px 20px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.marketingCard:hover {
+  border-color: var(--emerald-border);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+.marketingIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.marketingIconShield {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+}
+
+.marketingIconIndia {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.marketingIconBook {
+  background: var(--gold-bg);
+  color: var(--gold);
+}
+
+.marketingTitle {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.marketingDesc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+
+/* ══════════════════════════════════════════
    Trust & Methodology Bar
    ══════════════════════════════════════════ */
 .trustBar {

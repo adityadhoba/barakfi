@@ -240,10 +240,16 @@
 }
 
 .stockLink {
-  display: grid;
-  gap: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-decoration: none;
   color: inherit;
+}
+
+.stockInfo {
+  display: grid;
+  gap: 1px;
 }
 .stockLink strong {
   font-size: 0.88rem;
@@ -308,6 +314,73 @@
   background: var(--gold-bg);
   color: var(--gold);
   border: 1px solid var(--gold-border);
+}
+
+/* ── Diversification Gauge ── */
+.diversificationGauge {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gaugeVisual {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+}
+
+.gaugeSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.gaugeNumber {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.gaugeInfo {
+  min-width: 0;
+}
+
+.gaugeHint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.sectionDivider {
+  height: 1px;
+  background: var(--line);
+  margin-bottom: 16px;
+}
+
+/* ── Sector Donut Bar ── */
+.sectorDonut {
+  margin-bottom: 16px;
+}
+
+.sectorDonutBar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  gap: 2px;
+}
+
+.sectorDonutSegment {
+  transition: width 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 3px;
 }
 
 /* ── Sector Allocation ── */

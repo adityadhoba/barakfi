@@ -9,6 +9,7 @@ import type { ScreeningResult, Stock } from "@/lib/api";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { AdUnit } from "@/components/ad-unit";
 import { StockPreviewPopup } from "@/components/stock-preview-popup";
+import { StockLogo } from "@/components/stock-logo";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -59,12 +60,6 @@ function getSortValue(s: ScreenedStock, key: SortKey): number | string {
     case "debt_ratio": return s.screening.breakdown.debt_to_36m_avg_market_cap_ratio;
     case "income_purity": return s.screening.breakdown.non_permissible_income_ratio;
   }
-}
-
-function getAvatarColor(status: string): string {
-  if (status === "HALAL") return "var(--emerald)";
-  if (status === "REQUIRES_REVIEW") return "var(--gold)";
-  return "var(--red)";
 }
 
 function exportToCsv(stocks: ScreenedStock[]) {
@@ -447,12 +442,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                         price={quotes[s.symbol]?.last_price ?? s.price}
                         changePct={quotes[s.symbol]?.change_percent ?? null}
                       >
-                        <span
-                          className={styles.avatar}
-                          style={{ background: getAvatarColor(s.screening.status) }}
-                        >
-                          {s.symbol.slice(0, 2)}
-                        </span>
+                        <StockLogo symbol={s.symbol} size={32} status={s.screening.status} />
                         <div className={styles.nameBlock}>
                           <span className={styles.stockName}>{s.name}</span>
                           <span className={styles.stockSymbol}>{s.symbol}</span>
