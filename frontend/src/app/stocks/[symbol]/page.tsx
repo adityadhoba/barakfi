@@ -12,7 +12,9 @@ import {
   getAuthenticatedWatchlist,
   getAuthenticatedWorkspace,
   getBulkScreeningResults,
+  getComplianceHistory,
   getEquityQuote,
+  getInvestmentMetrics,
   getMultiScreeningResult,
   getScreeningResult,
   getStock,
@@ -26,6 +28,10 @@ import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { MethodologyComparison } from "@/components/methodology-comparison";
+import { ComplianceRating } from "@/components/compliance-rating";
+import { ComplianceTimeline } from "@/components/compliance-timeline";
+import { InvestmentGauge } from "@/components/investment-gauge";
+import { CountryBadge } from "@/components/country-badge";
 
 export async function generateMetadata({
   params,
@@ -140,7 +146,7 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [stock, screening, watchlist, workspace, liveQuote, allStocks, multiScreening] = await Promise.all([
+  const [stock, screening, watchlist, workspace, liveQuote, allStocks, multiScreening, complianceHistory, investmentMetrics] = await Promise.all([
     getStock(symbol),
     getScreeningResult(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
@@ -148,6 +154,8 @@ export default async function StockDetailPage({
     getEquityQuote(symbol, "auto_india"),
     getStocks(),
     getMultiScreeningResult(symbol).catch(() => null),
+    getComplianceHistory(symbol),
+    getInvestmentMetrics(symbol),
   ]);
 
   if (!stock || !screening) notFound();
@@ -301,9 +309,13 @@ export default async function StockDetailPage({
               <StockLogo symbol={stock.symbol} size={44} status={screening.status} />
               <div>
                 <h1 className={styles.stockTitle}>{stock.name}</h1>
-                <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                  {STATUS_LABELS[screening.status] || screening.status}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                    {STATUS_LABELS[screening.status] || screening.status}
+                  </span>
+                  <ComplianceRating rating={(screening as unknown as Record<string, unknown>).compliance_rating as number | null} size={16} />
+                  <CountryBadge exchange={stock.exchange} size="md" />
+                </div>
               </div>
             </div>
             <div className={styles.stockMeta}>
@@ -693,8 +705,35 @@ export default async function StockDetailPage({
               </table>
             </div>
 
+            {/* Investment Metrics */}
+            <div className={styles.sectionHeading} style={{ marginTop: 24 }}>
+              <h2 className={styles.sectionTitle}>Investment Checklist</h2>
+              <p className={styles.sectionSub}>Key investment metrics for this stock</p>
+            </div>
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+              gap: 16, padding: 20, background: "var(--bg-elevated)",
+              borderRadius: "var(--radius-xl)", border: "1px solid var(--line)", marginBottom: 28,
+            }}>
+              <InvestmentGauge label="Expected Return" value={investmentMetrics.expected_return} suffix="%" min={-20} max={40} thresholds={{ good: 10, warn: 0 }} />
+              <InvestmentGauge label="Volatility" value={investmentMetrics.volatility} suffix="%" min={0} max={60} thresholds={{ good: 20, warn: 35 }} />
+              <InvestmentGauge label="Sharpe Ratio" value={investmentMetrics.sharpe_ratio} min={-1} max={3} thresholds={{ good: 1, warn: 0.5 }} />
+              <InvestmentGauge label="Beta" value={investmentMetrics.beta} min={0} max={2} thresholds={{ good: 0.8, warn: 1.2 }} />
+              <InvestmentGauge label="Div Yield" value={investmentMetrics.dividend_yield} suffix="%" min={0} max={8} thresholds={{ good: 2, warn: 1 }} />
+              <InvestmentGauge label="P/E Ratio" value={investmentMetrics.pe_ratio} min={0} max={60} thresholds={{ good: 20, warn: 30 }} />
+            </div>
 
-
+            {/* Compliance History */}
+            <div className={styles.sectionHeading} style={{ marginTop: 24 }}>
+              <h2 className={styles.sectionTitle}>Compliance History</h2>
+              <p className={styles.sectionSub}>Status changes over time</p>
+            </div>
+            <div style={{
+              padding: 20, background: "var(--bg-elevated)",
+              borderRadius: "var(--radius-xl)", border: "1px solid var(--line)",
+            }}>
+              <ComplianceTimeline history={complianceHistory} />
+            </div>
           </div>
 
           {/* Tab 3: Research */}

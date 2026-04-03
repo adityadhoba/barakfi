@@ -77,6 +77,20 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
   const halalCount = enriched.filter((h) => h.complianceStatus === "COMPLIANT").length;
   const nonCompliantCount = enriched.filter((h) => h.complianceStatus === "NON_COMPLIANT").length;
   const reviewCount = enriched.length - halalCount - nonCompliantCount;
+  const halalPct = enriched.length > 0 ? Math.round((halalCount / enriched.length) * 100) : 0;
+
+  const halalValue = enriched.filter((h) => h.complianceStatus === "COMPLIANT").reduce((s, h) => s + h.currentValue, 0);
+  const nonCompliantValue = enriched.filter((h) => h.complianceStatus === "NON_COMPLIANT").reduce((s, h) => s + h.currentValue, 0);
+  const cautionValue = enriched.filter((h) => h.complianceStatus !== "COMPLIANT" && h.complianceStatus !== "NON_COMPLIANT").reduce((s, h) => s + h.currentValue, 0);
+
+  const purificationEstimate = useMemo(() => {
+    const nonCompliantHoldings = enriched.filter((h) => h.complianceStatus !== "COMPLIANT");
+    const totalNonCompliantDividend = nonCompliantHoldings.reduce((sum, h) => {
+      const estimatedDivYield = 0.02;
+      return sum + h.currentValue * estimatedDivYield;
+    }, 0);
+    return Math.round(totalNonCompliantDividend);
+  }, [enriched]);
 
   // Sector allocation
   const sectorAlloc = useMemo(() => {
@@ -104,6 +118,27 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
     const sectorBonus = Math.min(sectorAlloc.length * 5, 20);
     return Math.min(100, Math.round(normalized + sectorBonus));
   }, [enriched, totalCurrent, sectorAlloc.length]);
+
+  const complianceAlerts = useMemo(() => {
+    const alerts: { type: "warning" | "danger"; message: string; symbol: string }[] = [];
+    for (const h of enriched) {
+      if (h.complianceStatus === "NON_COMPLIANT") {
+        alerts.push({ type: "danger", message: `${h.stock.symbol} is Non-Compliant — consider divesting`, symbol: h.stock.symbol });
+      }
+    }
+    if (nonCompliantValue > totalCurrent * 0.2 && totalCurrent > 0) {
+      alerts.push({ type: "danger", message: `Over 20% of your portfolio is in non-compliant stocks`, symbol: "" });
+    }
+    if (halalPct < 50 && enriched.length > 0) {
+      alerts.push({ type: "warning", message: `Less than half your holdings are Shariah-compliant`, symbol: "" });
+    }
+    for (const s of sectorAlloc) {
+      if (s.pct > 40) {
+        alerts.push({ type: "warning", message: `Heavy concentration (${s.pct.toFixed(0)}%) in ${s.sector}`, symbol: "" });
+      }
+    }
+    return alerts;
+  }, [enriched, nonCompliantValue, totalCurrent, halalPct, sectorAlloc]);
 
   // Sorted holdings
   const sorted = useMemo(() => {
@@ -387,6 +422,116 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
                   </div>
                 );
               })()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Compliance Monitoring & Purification ── */}
+      <div className={pd.mainGrid}>
+        {/* Purification Tracker */}
+        <div className={pd.sectorPanel}>
+          <div className={pd.panelHeader}>
+            <div>
+              <p className={pd.kicker}>Purification</p>
+              <h3 className={pd.panelTitle}>Income to Purify</h3>
+            </div>
+          </div>
+          <div style={{ padding: "0 0 20px" }}>
+            {/* Compliance pie */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+              <svg viewBox="0 0 36 36" width={100} height={100}>
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--line)" strokeWidth="3" />
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--emerald)" strokeWidth="3"
+                  strokeDasharray={`${halalPct} ${100 - halalPct}`} strokeDashoffset="25" strokeLinecap="round" />
+                {nonCompliantCount > 0 && (
+                  <circle cx="18" cy="18" r="15.9155" fill="none" stroke="var(--red)" strokeWidth="3"
+                    strokeDasharray={`${Math.round((nonCompliantCount / enriched.length) * 100)} 100`}
+                    strokeDashoffset={`${25 - halalPct}`} strokeLinecap="round" />
+                )}
+                <text x="18" y="18" textAnchor="middle" dy=".35em" fontSize="8" fontWeight="700" fill="var(--text-primary)">
+                  {halalPct}%
+                </text>
+              </svg>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, textAlign: "center", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Halal</div>
+                <div style={{ fontWeight: 700, color: "var(--emerald)", fontSize: "0.85rem" }}>{formatINR(halalValue)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Cautious</div>
+                <div style={{ fontWeight: 700, color: "var(--gold)", fontSize: "0.85rem" }}>{formatINR(cautionValue)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Flagged</div>
+                <div style={{ fontWeight: 700, color: "var(--red)", fontSize: "0.85rem" }}>{formatINR(nonCompliantValue)}</div>
+              </div>
+            </div>
+            <div className={pd.sectionDivider} />
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: 4 }}>
+                Estimated Annual Purification
+              </p>
+              <p style={{ fontSize: "1.4rem", fontWeight: 700, color: purificationEstimate > 0 ? "var(--gold)" : "var(--emerald)" }}>
+                {formatINR(purificationEstimate)}
+              </p>
+              <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4 }}>
+                Based on ~2% estimated dividend yield on non-compliant holdings
+              </p>
+              {purificationEstimate > 0 && (
+                <Link href="/tools/purification" style={{
+                  display: "inline-block", marginTop: 12, padding: "8px 16px",
+                  background: "var(--emerald)", color: "#000", borderRadius: "var(--radius-md)",
+                  fontSize: "0.8rem", fontWeight: 600, textDecoration: "none",
+                }}>
+                  Calculate Exact Amount
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Compliance Alerts */}
+        <div className={pd.holdingsPanel}>
+          <div className={pd.panelHeader}>
+            <div>
+              <p className={pd.kicker}>Monitoring</p>
+              <h3 className={pd.panelTitle}>Compliance Alerts</h3>
+            </div>
+          </div>
+          {complianceAlerts.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: "var(--emerald)" }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 8 }}>
+                <circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" />
+              </svg>
+              <p style={{ fontWeight: 600, fontSize: "0.9rem" }}>All Clear</p>
+              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>No compliance issues detected in your portfolio</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 0 16px" }}>
+              {complianceAlerts.map((alert, i) => (
+                <div key={i} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
+                  borderRadius: "var(--radius-md)",
+                  background: alert.type === "danger" ? "rgba(239,68,68,0.08)" : "rgba(234,179,8,0.08)",
+                  border: `1px solid ${alert.type === "danger" ? "rgba(239,68,68,0.2)" : "rgba(234,179,8,0.2)"}`,
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alert.type === "danger" ? "var(--red)" : "var(--gold)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" />
+                  </svg>
+                  <div>
+                    <p style={{ fontSize: "0.82rem", fontWeight: 500, color: "var(--text-primary)" }}>
+                      {alert.message}
+                    </p>
+                    {alert.symbol && (
+                      <Link href={`/stocks/${encodeURIComponent(alert.symbol)}`} style={{ fontSize: "0.75rem", color: "var(--emerald)", textDecoration: "none" }}>
+                        View Details &rarr;
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

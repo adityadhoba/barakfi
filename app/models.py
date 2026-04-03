@@ -64,6 +64,24 @@ class Stock(Base):
     country = Column(String, nullable=False, default="India")
     data_source = Column(String, nullable=False, default="internal_seed")
     is_active = Column(Boolean, nullable=False, default=True)
+    # Investment metrics
+    beta = Column(Float, nullable=True)
+    dividend_yield = Column(Float, nullable=True)
+    pe_ratio = Column(Float, nullable=True)
+    eps = Column(Float, nullable=True)
+    week_52_high = Column(Float, nullable=True)
+    week_52_low = Column(Float, nullable=True)
+    avg_volume = Column(Float, nullable=True)
+    shares_outstanding = Column(Float, nullable=True)
+    # Global identifiers
+    isin = Column(String, nullable=True)
+    exchange_code = Column(String, nullable=True, index=True)
+    # Compliance
+    compliance_rating = Column(Integer, nullable=True)
+    last_compliance_change = Column(DateTime, nullable=True)
+    is_etf = Column(Boolean, nullable=False, default=False)
+    # Price change
+    price_change_pct = Column(Float, nullable=True)
 
 
 class ComplianceRuleVersion(Base):
@@ -321,3 +339,77 @@ class ScreeningLog(Base):
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     stock = relationship("Stock")
+
+
+class ComplianceHistory(Base):
+    __tablename__ = "compliance_history"
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    old_status = Column(String, nullable=False)
+    new_status = Column(String, nullable=False)
+    profile_code = Column(String, nullable=False, default="sp_shariah")
+    old_rating = Column(Integer, nullable=True)
+    new_rating = Column(Integer, nullable=True)
+    changed_at = Column(DateTime, nullable=False, default=utc_now)
+    stock = relationship("Stock")
+
+
+class StockCollection(Base):
+    __tablename__ = "stock_collections"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=False, default="")
+    icon = Column(String, nullable=False, default="")
+    is_featured = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    entries = relationship("CollectionEntry", back_populates="collection", cascade="all, delete-orphan")
+
+
+class CollectionEntry(Base):
+    __tablename__ = "collection_entries"
+    id = Column(Integer, primary_key=True)
+    collection_id = Column(Integer, ForeignKey("stock_collections.id"), nullable=False, index=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    added_at = Column(DateTime, nullable=False, default=utc_now)
+    collection = relationship("StockCollection", back_populates="entries")
+    stock = relationship("Stock")
+
+
+class SuperInvestor(Base):
+    __tablename__ = "super_investors"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    firm = Column(String, nullable=False, default="")
+    slug = Column(String, unique=True, index=True, nullable=False)
+    bio = Column(Text, nullable=False, default="")
+    image_url = Column(String, nullable=True)
+    source_url = Column(String, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+    holdings = relationship("SuperInvestorHolding", back_populates="investor", cascade="all, delete-orphan")
+
+
+class SuperInvestorHolding(Base):
+    __tablename__ = "super_investor_holdings"
+    id = Column(Integer, primary_key=True)
+    investor_id = Column(Integer, ForeignKey("super_investors.id"), nullable=False, index=True)
+    symbol = Column(String, nullable=False)
+    company_name = Column(String, nullable=False, default="")
+    shares = Column(Float, nullable=False, default=0)
+    value = Column(Float, nullable=False, default=0)
+    pct_portfolio = Column(Float, nullable=False, default=0)
+    as_of_date = Column(DateTime, nullable=False, default=utc_now)
+    investor = relationship("SuperInvestor", back_populates="holdings")
+
+
+class CoverageRequest(Base):
+    __tablename__ = "coverage_requests"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    symbol = Column(String, nullable=False)
+    exchange = Column(String, nullable=False, default="")
+    status = Column(String, nullable=False, default="pending")
+    result_status = Column(String, nullable=True)
+    requested_at = Column(DateTime, nullable=False, default=utc_now)
+    resolved_at = Column(DateTime, nullable=True)
+    user = relationship("User")

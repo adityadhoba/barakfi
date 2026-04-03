@@ -94,6 +94,17 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  beta?: number | null;
+  dividend_yield?: number | null;
+  pe_ratio?: number | null;
+  eps?: number | null;
+  week_52_high?: number | null;
+  week_52_low?: number | null;
+  avg_volume?: number | null;
+  price_change_pct?: number | null;
+  compliance_rating?: number | null;
+  exchange_code?: string | null;
+  is_etf?: boolean;
 };
 
 export type Holding = {
@@ -620,6 +631,110 @@ export type MultiMethodologyResult = {
   };
 };
 
+export type TrendingStock = {
+  symbol: string;
+  name: string;
+  sector: string;
+  exchange: string;
+  country: string;
+  price: number;
+  price_change_pct: number | null;
+  market_cap: number;
+  compliance_status: string;
+  compliance_rating: number | null;
+  beta: number | null;
+  dividend_yield: number | null;
+  week_52_high: number | null;
+  week_52_low: number | null;
+};
+
+export type Collection = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  is_featured: boolean;
+  stock_count: number;
+};
+
+export type CollectionDetail = {
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  stocks: Array<{
+    symbol: string;
+    name: string;
+    sector: string;
+    exchange: string;
+    price: number;
+    market_cap: number;
+    compliance_status: string;
+    compliance_rating: number | null;
+  }>;
+};
+
+export type SuperInvestorSummary = {
+  name: string;
+  firm: string;
+  slug: string;
+  bio: string;
+  image_url: string | null;
+  holdings_count: number;
+};
+
+export type SuperInvestorDetail = {
+  name: string;
+  firm: string;
+  slug: string;
+  bio: string;
+  image_url: string | null;
+  source_url: string | null;
+  total_holdings: number;
+  halal_pct: number;
+  halal_count: number;
+  total_value: number;
+  holdings: Array<{
+    symbol: string;
+    company_name: string;
+    shares: number;
+    value: number;
+    pct_portfolio: number;
+    compliance_status: string;
+    compliance_rating: number | null;
+  }>;
+};
+
+export type ComplianceHistoryEntry = {
+  old_status: string;
+  new_status: string;
+  old_rating: number | null;
+  new_rating: number | null;
+  profile_code: string;
+  changed_at: string;
+};
+
+export type InvestmentMetrics = {
+  expected_return: number | null;
+  volatility: number | null;
+  sharpe_ratio: number | null;
+  beta: number | null;
+  dividend_yield: number | null;
+  pe_ratio: number | null;
+  eps: number | null;
+};
+
+export type CoverageRequestItem = {
+  id: number;
+  symbol: string;
+  exchange: string;
+  status: string;
+  result_status: string | null;
+  requested_at: string;
+  resolved_at: string | null;
+};
+
 export function getMultiScreeningResult(symbol: string) {
   return apiFetch<MultiMethodologyResult | null>(`/screen/${encodeURIComponent(symbol)}/multi`, null);
 }
@@ -1084,4 +1199,73 @@ export async function bootstrapAuthenticatedUser(
   }
 
   return (await response.json()) as User;
+}
+
+// ---------------------------------------------------------------------------
+// New Musaffa-parity API functions
+// ---------------------------------------------------------------------------
+
+export function getTrending(category: string, exchange?: string, limit = 20) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (exchange) params.set("exchange", exchange);
+  return apiFetch<TrendingStock[]>(`/trending/${encodeURIComponent(category)}?${params}`, []);
+}
+
+export function getCollections() {
+  return apiFetch<Collection[]>("/collections", []);
+}
+
+export function getCollection(slug: string) {
+  return apiFetch<CollectionDetail | null>(`/collections/${encodeURIComponent(slug)}`, null);
+}
+
+export function getSuperInvestors() {
+  return apiFetch<SuperInvestorSummary[]>("/super-investors", []);
+}
+
+export function getSuperInvestor(slug: string) {
+  return apiFetch<SuperInvestorDetail | null>(`/super-investors/${encodeURIComponent(slug)}`, null);
+}
+
+export function getComplianceHistory(symbol: string) {
+  return apiFetch<ComplianceHistoryEntry[]>(`/compliance-history/${encodeURIComponent(symbol)}`, []);
+}
+
+export function getInvestmentMetrics(symbol: string) {
+  return apiFetch<InvestmentMetrics>(`/metrics/${encodeURIComponent(symbol)}`, {
+    expected_return: null, volatility: null, sharpe_ratio: null,
+    beta: null, dividend_yield: null, pe_ratio: null, eps: null,
+  });
+}
+
+export function getETFs() {
+  return apiFetch<Array<{ symbol: string; name: string; exchange: string; price: number; market_cap: number; sector: string; country: string }>>("/etfs", []);
+}
+
+export async function createCoverageRequest(
+  token: string, symbol: string, exchange: string, actor?: BackendActor | null,
+) {
+  const response = await fetch(`${apiBaseUrl}/me/coverage-requests`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    body: JSON.stringify({ symbol, exchange }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/me/coverage-requests POST");
+  }
+  return (await response.json()) as { id: number; symbol: string; status: string };
+}
+
+export async function getCoverageRequests(token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/me/coverage-requests`, {
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/me/coverage-requests GET");
+  }
+  return (await response.json()) as CoverageRequestItem[];
 }

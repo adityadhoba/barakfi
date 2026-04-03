@@ -99,6 +99,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sectorFilter, setSectorFilter] = useState("All");
   const [mcapFilter, setMcapFilter] = useState("all");
   const [indexFilter, setIndexFilter] = useState("all");
+  const [exchangeFilter, setExchangeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -136,6 +137,8 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (mcap && MCAP_OPTIONS.some((o) => o.key === mcap)) setMcapFilter(mcap);
     const idx = searchParams.get("index");
     if (idx && INDEX_OPTIONS.some((o) => o.key === idx)) setIndexFilter(idx);
+    const ex = searchParams.get("exchange");
+    if (ex && ["NSE", "US", "LSE"].includes(ex)) setExchangeFilter(ex);
     setInitialized(true);
   }, [searchParams, screenedStocks]);
 
@@ -149,6 +152,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (mcapFilter !== "all") params.set("mcap", mcapFilter);
     if (indexFilter !== "all") params.set("index", indexFilter);
+    if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
     router.replace(qs ? `/screener?${qs}` : "/screener", { scroll: false });
   }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, router]);
@@ -171,9 +175,10 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
       if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter)) return false;
+      if (exchangeFilter !== "all" && s.exchange !== exchangeFilter) return false;
       return true;
     });
-  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter]);
+  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter, exchangeFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -215,14 +220,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusedIdx]);
 
-  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || query.trim() !== "";
+  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || exchangeFilter !== "all" || query.trim() !== "";
 
   function resetAllFilters() {
-    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
+    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all"); setExchangeFilter("all");
     setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
   }
 
-  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", query.trim() !== ""].filter(Boolean).length;
+  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", exchangeFilter !== "all", query.trim() !== ""].filter(Boolean).length;
 
   async function handleSaveFilter() {
     if (!saveFilterName.trim()) return;
@@ -363,6 +368,28 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
+        {/* Exchange */}
+        <div className={styles.filterSection}>
+          <h4 className={styles.filterLabel}>Exchange</h4>
+          <div className={styles.filterPills}>
+            {[
+              { key: "all", label: "All" },
+              { key: "NSE", label: "🇮🇳 NSE" },
+              { key: "US", label: "🇺🇸 US" },
+              { key: "LSE", label: "🇬🇧 LSE" },
+            ].map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                className={`${styles.filterPill} ${exchangeFilter === opt.key ? styles.filterPillActive : ""}`}
+                onClick={() => setExchangeFilter(opt.key)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Sidebar toggle on mobile */}
         <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
           {sidebarOpen ? "Hide Filters" : "Show Filters"}
@@ -426,6 +453,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button type="button" onClick={() => setIndexFilter("all")}>&times;</button>
               </span>
             )}
+            {exchangeFilter !== "all" && (
+              <span className={styles.chip}>
+                {exchangeFilter}
+                <button type="button" onClick={() => setExchangeFilter("all")}>&times;</button>
+              </span>
+            )}
             {query.trim() && (
               <span className={styles.chip}>
                 &ldquo;{query.trim()}&rdquo;
@@ -447,6 +480,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
                 <SortTh col="status">Shariah</SortTh>
+                <th className={styles.th}>Rating</th>
                 <SortTh col="debt_ratio" numeric>Debt Ratio</SortTh>
                 <SortTh col="income_purity" numeric>Income Purity</SortTh>
               </tr>
@@ -492,6 +526,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                     <td>
                       <span className={`${styles.statusBadge} ${styles[cfg.cls]}`}>{cfg.label}</span>
                     </td>
+                    <td style={{ fontSize: "0.78rem", letterSpacing: 1 }}>
+                      {(s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating ? (
+                        <span style={{ color: (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating! >= 4 ? "var(--emerald)" : (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating! >= 3 ? "var(--gold)" : "var(--red)" }}>
+                          {"★".repeat((s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating!)}
+                          {"☆".repeat(5 - (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating!)}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      )}
+                    </td>
                     <td className={styles.tdRight}>{formatPct(b.debt_to_36m_avg_market_cap_ratio)}</td>
                     <td className={styles.tdRight}>{formatPct(b.non_permissible_income_ratio)}</td>
                   </tr>
@@ -499,7 +543,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={8} className={styles.emptyRow}>
+                  <td colSpan={9} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>
