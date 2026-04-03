@@ -4,6 +4,8 @@ import { ResearchNotePanel } from "@/components/research-note-panel";
 import { ComplianceCheckPanel } from "@/components/compliance-check-panel";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { PortfolioDashboard } from "@/components/portfolio-dashboard";
+import { PurificationCalculator } from "@/components/purification-calculator";
+import { ZakatCalculator } from "@/components/zakat-calculator";
 import {
   bootstrapAuthenticatedUser,
   getAuthenticatedAlerts,
@@ -246,6 +248,19 @@ export async function WorkspaceShell() {
           <Link className={styles.pill} href="/watchlist">View all</Link>
         </div>
         <WatchlistPanel entries={watchlist} />
+      </section>
+
+      {/* ── Islamic Finance Tools ── */}
+      <section className={`shellSection ${styles.featureGrid}`}>
+        <article className={styles.featurePanel} style={{ padding: 0, border: "none", background: "none" }}>
+          <PurificationCalculator />
+        </article>
+        <article className={styles.featurePanel} style={{ padding: 0, border: "none", background: "none" }}>
+          <ZakatCalculator
+            portfolioValue={dashboard.portfolio_market_value}
+            holdingCount={totalHoldings}
+          />
+        </article>
       </section>
 
       {/* ── Compliance + Research (side by side) ── */}
