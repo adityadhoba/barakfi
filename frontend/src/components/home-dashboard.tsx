@@ -90,8 +90,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             )}
           </h1>
           <p className={styles.heroSub}>
-            Screen Indian stocks against S&amp;P Shariah rules. Track compliance in real-time.
-            Build a portfolio that aligns with your values.
+            Screen Indian stocks using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
+            Multi-methodology compliance, real-time data, zero cost.
           </p>
           <div className={styles.heroCtas}>
             <Link href="/screener" className={styles.heroCtaPrimary}>
@@ -385,11 +385,11 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
-            <h3 className={styles.marketingTitle}>S&amp;P Shariah Methodology</h3>
+            <h3 className={styles.marketingTitle}>3 Global Shariah Standards</h3>
             <p className={styles.marketingDesc}>
-              We follow the globally recognized S&amp;P Shariah Indices screening methodology.
-              Each stock is evaluated against 5 financial ratios plus sector-level filters,
-              covering debt levels, income purity, receivables, and prohibited business activities.
+              Every stock is screened through S&amp;P, AAOIFI, and FTSE/Maxis methodologies.
+              Each methodology evaluates debt ratios, income purity, receivables, and prohibited business activities
+              with its own thresholds — giving you a transparent, multi-standard compliance view.
             </p>
           </div>
         </div>
@@ -404,8 +404,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             </svg>
           </span>
           <div className={styles.trustText}>
-            <span className={styles.trustTitle}>S&amp;P Shariah Methodology</span>
-            <span className={styles.trustDesc}>Industry-standard screening rules</span>
+            <span className={styles.trustTitle}>Multi-Standard Screening</span>
+            <span className={styles.trustDesc}>S&amp;P, AAOIFI &amp; FTSE methodologies</span>
           </div>
         </div>
         <div className={styles.trustItem}>
@@ -462,7 +462,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
               <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
               <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
-              <Link href="/tools" className={styles.footerLink}>Calculators</Link>
+              <Link href="/tools#purification" className={styles.footerLink}>Purification Calculator</Link>
+              <Link href="/tools#zakat" className={styles.footerLink}>Zakat Calculator</Link>
               <Link href="/shariah-compliance" className={styles.footerLink}>Shariah Compliance</Link>
             </div>
             <div className={styles.footerCol}>
@@ -475,7 +476,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
         <div className={styles.footerBottom}>
           <p>Built for disciplined investors. Always confirm with your scholar or advisor before investing.</p>
-          <p>Screening methodology anchored to S&amp;P Shariah Indices. &copy; {new Date().getFullYear()} Barakfi.</p>
+          <p>Screening powered by S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies. &copy; {new Date().getFullYear()} Barakfi.</p>
         </div>
       </footer>
     </div>

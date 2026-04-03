@@ -4,9 +4,18 @@ import { PurificationCalculator } from "@/components/purification-calculator";
 import { ZakatCalculator } from "@/components/zakat-calculator";
 
 export const metadata: Metadata = {
-  title: "Islamic Finance Tools — Barakfi",
+  title: "Islamic Finance Tools — Purification & Zakat Calculator | Barakfi",
   description:
     "Free purification calculator and zakat calculator for halal investors. Calculate how much to donate from dividends and zakat on your stock portfolio.",
+  keywords: [
+    "purification calculator",
+    "zakat calculator",
+    "Islamic finance calculator",
+    "halal investment tools",
+    "dividend purification",
+    "zakat on stocks",
+    "Islamic finance tools India",
+  ],
 };
 
 export default function ToolsPage() {
@@ -36,8 +45,12 @@ export default function ToolsPage() {
         </header>
 
         <div style={{ display: "grid", gap: 24 }}>
-          <PurificationCalculator />
-          <ZakatCalculator />
+          <section id="purification">
+            <PurificationCalculator />
+          </section>
+          <section id="zakat">
+            <ZakatCalculator />
+          </section>
         </div>
 
         <div style={{

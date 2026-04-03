@@ -511,7 +511,7 @@ def screen_stock_manual(
             "name": existing.name,
             "is_prescreened": True,
             "screening": {**primary_result, "symbol": existing.symbol, "name": existing.name},
-            "multi": multi_result,
+            "multi": {"symbol": existing.symbol, "name": existing.name, **multi_result},
         }
 
     stock_data = fetch_and_screen(clean_symbol)
@@ -526,7 +526,7 @@ def screen_stock_manual(
         "name": stock_data["name"],
         "is_prescreened": False,
         "screening": {**primary_result, "symbol": stock_data["symbol"], "name": stock_data["name"]},
-        "multi": multi_result,
+        "multi": {"symbol": stock_data["symbol"], "name": stock_data["name"], **multi_result},
     }
 
 

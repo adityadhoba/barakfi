@@ -10,3 +10,5 @@ pytest
 PyJWT
 cryptography
 psycopg2-binary
+yfinance>=0.2.36
+pandas>=2.0

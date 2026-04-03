@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-const LOGO_API_TOKEN = "sk_aYOWOXntQbavQkHYXXYJ_g";
-
 const SYMBOL_TO_DOMAIN: Record<string, string> = {
   // NIFTY 50
   RELIANCE: "ril.com",
@@ -233,11 +231,21 @@ function normalizeSymbol(symbol: string): string {
     .toUpperCase();
 }
 
-function getLogoUrl(symbol: string): string | null {
+function getLogoDomain(symbol: string): string | null {
   const clean = normalizeSymbol(symbol);
-  const domain = SYMBOL_TO_DOMAIN[clean] || SYMBOL_TO_DOMAIN[symbol.replace(/\.NS$/, "").toUpperCase()];
+  return SYMBOL_TO_DOMAIN[clean] || SYMBOL_TO_DOMAIN[symbol.replace(/\.NS$/, "").toUpperCase()] || null;
+}
+
+function getLogoUrl(symbol: string): string | null {
+  const domain = getLogoDomain(symbol);
   if (!domain) return null;
-  return `https://img.logo.dev/${domain}?token=${LOGO_API_TOKEN}&size=64`;
+  return `https://cdn.brandfetch.io/${domain}/w/256/h/256`;
+}
+
+function getFallbackLogoUrl(symbol: string): string | null {
+  const domain = getLogoDomain(symbol);
+  if (!domain) return null;
+  return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
 }
 
 function getAvatarColor(status?: string): string {
@@ -255,11 +263,14 @@ type Props = {
 };
 
 export function StockLogo({ symbol, size = 32, status, className }: Props) {
-  const [imgError, setImgError] = useState(false);
+  const [srcLevel, setSrcLevel] = useState(0);
   const logoUrl = getLogoUrl(symbol);
+  const fallbackUrl = getFallbackLogoUrl(symbol);
   const initials = symbol.replace(/\.NS$/, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  if (!logoUrl || imgError) {
+  const currentSrc = srcLevel === 0 ? logoUrl : srcLevel === 1 ? fallbackUrl : null;
+
+  if (!currentSrc) {
     return (
       <span
         className={className}
@@ -285,12 +296,12 @@ export function StockLogo({ symbol, size = 32, status, className }: Props) {
 
   return (
     <img
-      src={logoUrl}
+      src={currentSrc}
       alt={`${symbol} logo`}
       width={size}
       height={size}
       className={className}
-      onError={() => setImgError(true)}
+      onError={() => setSrcLevel((prev) => prev + 1)}
       style={{
         borderRadius: size > 28 ? 10 : 6,
         objectFit: "contain",

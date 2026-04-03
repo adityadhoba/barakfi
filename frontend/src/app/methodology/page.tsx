@@ -123,7 +123,7 @@ export default function MethodologyPage() {
             <div className={styles.flowStep}>
               <div className={`${styles.flowIcon} ${styles.flowIconRatio}`}>&#x2696;</div>
               <div className={styles.flowStepBody}>
-                <span className={styles.flowStepTitle}>7 Financial Rules</span>
+                <span className={styles.flowStepTitle}>6 Financial Rules</span>
                 <span className={styles.flowStepDesc}>Debt, income, receivables checks</span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function MethodologyPage() {
               <div className={`${styles.flowIcon} ${styles.flowIconResult}`}>&#x2713;</div>
               <div className={styles.flowStepBody}>
                 <span className={styles.flowStepTitle}>Classification</span>
-                <span className={styles.flowStepDesc}>Halal / Review / Non-Compliant</span>
+                <span className={styles.flowStepDesc}>Halal / Cautious / Non-Compliant</span>
               </div>
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function MethodologyPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>Step 2: Financial Ratio Screen</h2>
           <p className={styles.prose}>
-            Companies in permissible sectors must pass five financial ratio tests. Each ratio
+            Companies in permissible sectors must pass six financial ratio tests. Each ratio
             is designed to limit exposure to interest-based debt, non-halal income, and
             receivables-heavy business models.
           </p>
@@ -203,7 +203,7 @@ export default function MethodologyPage() {
           <div className={styles.outcomeGrid}>
             <div className={`${styles.outcomeCard} ${styles.outcomeHalal}`}>
               <span className={styles.outcomeBadge}>Halal</span>
-              <p>Passes sector screen and all five financial ratio thresholds. Suitable for Shariah-compliant investment.</p>
+              <p>Passes sector screen and all six financial ratio thresholds. Suitable for Shariah-compliant investment.</p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeReview}`}>
               <span className={styles.outcomeBadge}>Requires Review</span>

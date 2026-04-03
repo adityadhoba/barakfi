@@ -7,10 +7,24 @@ export async function GET(
   context: { params: Promise<{ symbol: string }> },
 ) {
   const { symbol } = await context.params;
-  const response = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}`, {
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}`, {
+      cache: "no-store",
+    });
 
-  const responseBody = await response.json();
-  return NextResponse.json(responseBody, { status: response.status });
+    if (!response.ok) {
+      return NextResponse.json(
+        { detail: `Screening failed for ${symbol}` },
+        { status: response.status },
+      );
+    }
+
+    const responseBody = await response.json();
+    return NextResponse.json(responseBody, { status: response.status });
+  } catch {
+    return NextResponse.json(
+      { detail: "Backend unavailable" },
+      { status: 502 },
+    );
+  }
 }

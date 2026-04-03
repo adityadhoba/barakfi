@@ -3,133 +3,230 @@
   border: 1px solid var(--line);
   background: var(--panel);
   overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+.calculator:hover {
+  box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);
 }
 
 .header {
-  padding: 20px 20px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 0;
+}
+
+.iconBadge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--emerald);
+  flex-shrink: 0;
 }
 
 .title {
   font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 800;
   color: var(--text);
   margin: 0 0 4px;
+  letter-spacing: -0.02em;
 }
 
 .desc {
   font-size: 0.78rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
 }
 
-.manualCalc {
-  padding: 16px 20px;
+.body {
+  padding: 20px 24px 24px;
 }
 
-.inputRow {
-  display: flex;
+.inputGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
-  align-items: flex-end;
-  flex-wrap: wrap;
 }
 
 .inputGroup {
-  flex: 1;
-  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .inputLabel {
-  display: block;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-tertiary);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  background: var(--bg-soft);
-  color: var(--text);
-  font-size: 0.88rem;
-  font-variant-numeric: tabular-nums;
-  transition: border-color var(--transition-fast);
-}
-.input:focus {
-  outline: none;
-  border-color: var(--emerald);
-  box-shadow: 0 0 0 2px var(--emerald-dim);
-}
-
-.resultBox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  background: var(--emerald-bg);
-  border: 1px solid var(--emerald-border);
-  min-width: 100px;
-}
-
-.resultLabel {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--emerald);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
+.inputWrap {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+.inputWrap:focus-within {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px var(--emerald-dim);
+}
+
+.inputPrefix,
+.inputSuffix {
+  padding: 0 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.input {
+  flex: 1;
+  padding: 12px 4px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  min-width: 0;
+}
+.input::placeholder { color: var(--text-tertiary); opacity: 0.5; }
+
+.resultCard {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.resultActive {
+  background: var(--emerald-bg);
+  border-color: var(--emerald-border);
+}
+
+.resultTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.resultLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.resultActive .resultLabel { color: var(--emerald); }
+
+.copyBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.copyBtn:hover { color: var(--emerald); border-color: var(--emerald-border); }
+
 .resultValue {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 2rem;
   font-weight: 800;
   color: var(--emerald);
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  display: block;
+}
+
+.breakdownBar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  margin: 14px 0;
+  overflow: hidden;
+}
+.breakdownFill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--emerald);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hint {
   font-size: 0.72rem;
   color: var(--text-tertiary);
-  margin: 10px 0 0;
   line-height: 1.5;
+  margin: 0;
 }
+
+.portfolioToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 24px;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.portfolioToggle:hover { background: var(--bg-soft); }
 
 .portfolioSection {
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--line);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-.sectionTitle {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text);
-  margin: 0 0 10px;
+.portfolioOpen {
+  max-height: 500px;
 }
 
 .holdingsList {
+  padding: 0 24px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .holdingRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 0.82rem;
+  border-bottom: 1px solid var(--line);
 }
+.holdingRow:last-child { border-bottom: none; }
 
 .holdingSymbol {
   font-weight: 700;
   color: var(--text);
   min-width: 80px;
+  font-family: var(--font-display);
 }
 
 .holdingName {
@@ -150,13 +247,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0 0;
-  margin-top: 10px;
-  border-top: 1px solid var(--line);
+  padding: 14px 24px 20px;
   font-size: 0.88rem;
   color: var(--text);
 }
-
 .totalRow strong {
   font-family: var(--font-display);
   font-size: 1.1rem;
@@ -164,6 +258,8 @@
 }
 
 @media (max-width: 480px) {
-  .inputRow { flex-direction: column; }
-  .resultBox { flex-direction: row; gap: 8px; justify-content: center; }
+  .inputGrid { grid-template-columns: 1fr; }
+  .resultValue { font-size: 1.6rem; }
+  .header { padding: 20px 16px 0; }
+  .body { padding: 16px; }
 }

@@ -374,9 +374,12 @@
 
 .row {
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
-.row:hover { background: var(--panel-hover); }
+.row:hover {
+  background: var(--panel-hover);
+  box-shadow: inset 3px 0 0 var(--emerald);
+}
 .rowFocused { background: var(--emerald-bg) !important; }
 
 .row td {
@@ -1126,7 +1129,7 @@
 /* ── Similar Stocks Grid ── */
 .similarGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 12px;
   margin-bottom: 28px;
 }
@@ -1143,8 +1146,8 @@
 }
 .similarCard:hover {
   border-color: var(--emerald);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(13, 150, 104, 0.1), 0 1px 4px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 .similarCardTop {
   display: flex;
@@ -1170,6 +1173,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 .similarSymbol {
   font-weight: 700;
@@ -1177,6 +1182,9 @@
   color: var(--text);
   font-family: var(--font-display);
   letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .similarName {
   font-size: 0.72rem;

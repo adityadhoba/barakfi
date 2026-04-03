@@ -803,9 +803,7 @@ export default async function StockDetailPage({
                 return (
                   <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
                     <div className={styles.similarCardTop}>
-                      <div className={`${styles.similarAvatar} ${styles[STATUS_HERO[peerData?.status] || "review"]}`}>
-                        {s.symbol.slice(0, 2).toUpperCase()}
-                      </div>
+                      <StockLogo symbol={s.symbol} size={34} status={peerData?.status} />
                       <div className={styles.similarIdentity}>
                         <span className={styles.similarSymbol}>{s.symbol}</span>
                         <span className={styles.similarName}>{s.name}</span>

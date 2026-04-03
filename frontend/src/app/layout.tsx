@@ -10,6 +10,7 @@ import { AnalyticsProvider } from "@/components/analytics-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileDrawer } from "@/components/mobile-drawer";
 import { TopbarLink } from "@/components/topbar-link";
+import { TopbarDropdown } from "@/components/topbar-dropdown";
 import { TopbarSearch } from "@/components/topbar-search";
 import { TopbarScroll } from "@/components/topbar-scroll";
 import { ToastProvider } from "@/components/toast";
@@ -153,7 +154,14 @@ export default async function RootLayout({
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
                       <TopbarLink href="/compare" label="Compare" />
-                      <TopbarLink href="/tools" label="Tools" />
+                      <TopbarDropdown
+                        label="Tools"
+                        basePath="/tools"
+                        items={[
+                          { href: "/tools#purification", label: "Purification Calculator" },
+                          { href: "/tools#zakat", label: "Zakat Calculator" },
+                        ]}
+                      />
                       <TopbarLink href="/watchlist" label="Watchlist" />
                       <TopbarLink href={portfolioHref} label="Portfolio" />
                     </nav>
@@ -170,7 +178,14 @@ export default async function RootLayout({
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
                       <TopbarLink href="/compare" label="Compare" />
-                      <TopbarLink href="/tools" label="Tools" />
+                      <TopbarDropdown
+                        label="Tools"
+                        basePath="/tools"
+                        items={[
+                          { href: "/tools#purification", label: "Purification Calculator" },
+                          { href: "/tools#zakat", label: "Zakat Calculator" },
+                        ]}
+                      />
                       <TopbarLink href="/watchlist" label="Watchlist" />
                       <TopbarLink href={portfolioHref} label="Portfolio" />
                       <AdminLink />

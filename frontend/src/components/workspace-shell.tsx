@@ -4,7 +4,6 @@ import { ResearchNotePanel } from "@/components/research-note-panel";
 import { ComplianceCheckPanel } from "@/components/compliance-check-panel";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { PortfolioDashboard } from "@/components/portfolio-dashboard";
-import { AddHoldingButton } from "@/components/add-holding-modal";
 import { PortfolioTabs } from "@/components/portfolio-tabs";
 import { BrokerConnectButton } from "@/components/broker-connect-modal";
 import {
@@ -134,7 +133,7 @@ export async function WorkspaceShell() {
   const screeningStatuses = screeningResults.map((r) => ({ symbol: r.symbol, status: r.status }));
 
   const allStocks = await getStocks().catch(() => []);
-  const stockOptions = allStocks.map((s) => ({ symbol: s.symbol, name: s.name }));
+
 
   const urgentAlerts = alerts.filter((a) => a.level === "critical" || a.level === "warning");
   const firstName = user.display_name.split(" ")[0];
@@ -149,7 +148,6 @@ export async function WorkspaceShell() {
         <div className={ws.dashHeaderLeft}>
           <h1 className={ws.dashTitle}>{firstName}&apos;s Portfolio</h1>
           <div className={ws.dashActions}>
-            <AddHoldingButton stocks={stockOptions} />
             <BrokerConnectButton />
             <Link href="/screener" className={ws.actionBtn}>
               Screen stocks
@@ -221,7 +219,6 @@ export async function WorkspaceShell() {
                 Add stocks you own or connect your broker to import holdings automatically.
               </p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
-                <AddHoldingButton stocks={stockOptions} />
                 <BrokerConnectButton />
                 <Link className={ws.actionBtn} href="/screener">
                   Browse screener

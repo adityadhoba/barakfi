@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useDeferredValue } from "react";
+import { StockLogo } from "@/components/stock-logo";
 
 type StockHit = {
   symbol: string;
@@ -199,6 +200,7 @@ export function TopbarSearch() {
                   navigate(stock.symbol);
                 }}
               >
+                <StockLogo symbol={stock.symbol} size={28} />
                 <div className="searchDropdownLeft">
                   <span className="searchDropdownSymbol">{stock.symbol}</span>
                   <span className="searchDropdownName">{stock.name}</span>
