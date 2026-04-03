@@ -72,6 +72,7 @@ export default async function RootLayout({
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="google-adsense-account" content="ca-pub-1863162701433616" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
