@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
   title: "Sign In — Barakfi",
@@ -10,9 +11,11 @@ export const metadata: Metadata = {
 export default function SignInPage() {
   return (
     <div className="authPage">
-      <div className="authSidebar">
+      <div className="authSidebar authSidebarGradient">
         <div className="authSidebarInner">
-          <Link href="/" className="authLogo">Barakfi</Link>
+          <Link href="/" style={{ textDecoration: "none" }}>
+            <Logo size={28} showText variant="light" />
+          </Link>
           <h2 className="authSidebarTitle">Welcome back</h2>
           <p className="authSidebarDesc">
             Sign in to access your watchlist, portfolio, and screening results.
@@ -31,8 +34,17 @@ export default function SignInPage() {
               <span>Add research notes with reasoning</span>
             </div>
           </div>
+
+          {/* Testimonial */}
+          <div className="authTestimonial">
+            <p className="authTestimonialQuote">
+              &ldquo;Finally, a screening tool that shows me exactly why a stock is halal — with real financial data, not just opinions.&rdquo;
+            </p>
+            <span className="authTestimonialAttr">— Early beta user, Mumbai</span>
+          </div>
+
           <p className="authSidebarFooter">
-            Trusted by disciplined investors across India.
+            100+ NSE stocks screened with S&amp;P + AAOIFI methodology
           </p>
         </div>
       </div>
@@ -42,8 +54,8 @@ export default function SignInPage() {
             elements: {
               rootBox: { width: "100%", maxWidth: "440px" },
               card: {
-                borderRadius: "16px",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05)",
+                borderRadius: "20px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
                 border: "1px solid var(--line)",
                 background: "var(--panel)",
               },
@@ -52,11 +64,18 @@ export default function SignInPage() {
                 fontWeight: 800,
                 letterSpacing: "-0.02em",
               },
+              formFieldInput: {
+                borderRadius: "10px",
+                background: "var(--bg-soft)",
+                fontSize: "0.9rem",
+              },
               formButtonPrimary: {
                 background: "var(--emerald)",
                 borderRadius: "10px",
                 fontWeight: 600,
-                transition: "background 150ms ease",
+                fontSize: "0.9rem",
+                padding: "12px 0",
+                transition: "all 150ms ease",
               },
               footerActionLink: {
                 color: "var(--emerald)",

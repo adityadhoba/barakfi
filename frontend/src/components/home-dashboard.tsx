@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
@@ -378,7 +379,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
       <footer className={styles.footer}>
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
-            <span className={styles.footerLogo}>Barakfi</span>
+            <Logo size={24} showText />
             <p className={styles.footerTagline}>Shariah-compliant equity screening for the Indian market.</p>
           </div>
           <div className={styles.footerLinks}>

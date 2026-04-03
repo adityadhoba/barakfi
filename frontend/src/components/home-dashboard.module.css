@@ -25,6 +25,19 @@
 .hero {
   padding: 56px 0 44px;
   text-align: center;
+  position: relative;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(ellipse, var(--emerald-glow) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 @media (max-width: 768px) {
@@ -34,6 +47,8 @@
 .heroContent {
   max-width: 620px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .heroBadge {
@@ -67,7 +82,7 @@
 .heroTitle {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: clamp(1.85rem, 5vw, 2.6rem);
+  font-size: clamp(2rem, 5.5vw, 3rem);
   line-height: 1.12;
   letter-spacing: -0.035em;
   color: var(--text);
@@ -370,11 +385,13 @@
   gap: 12px;
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  background: var(--panel);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   text-decoration: none;
   color: inherit;
-  transition: all var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-xs);
 }
 .statCard:hover {
@@ -570,11 +587,13 @@
   gap: 12px;
   padding: 16px;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
-  background: var(--panel);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
   text-decoration: none;
   color: inherit;
-  transition: all var(--transition-fast);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-xs);
 }
 .stockItem:hover {

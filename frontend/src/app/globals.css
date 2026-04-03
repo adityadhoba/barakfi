@@ -81,6 +81,11 @@
   --shimmer-color: rgba(148, 163, 184, 0.06);
   --shimmer-peak: rgba(148, 163, 184, 0.1);
 
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-blur: 12px;
+  --gradient-emerald: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+
   color-scheme: light;
 }
 
@@ -141,6 +146,11 @@
 
   --shimmer-color: rgba(255, 255, 255, 0.04);
   --shimmer-peak: rgba(255, 255, 255, 0.08);
+
+  --glass-bg: rgba(19, 26, 40, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-blur: 12px;
+  --gradient-emerald: linear-gradient(135deg, #047857 0%, #10b981 50%, #34d399 100%);
 
   color-scheme: dark;
 }
@@ -939,13 +949,55 @@ textarea:focus::placeholder {
   border-right: 1px solid var(--emerald-border);
 }
 
-[data-theme="dark"] .authSidebar {
+/* Premium gradient variant for login/signup */
+.authSidebarGradient {
+  background: linear-gradient(170deg, #064e3b 0%, #065f46 40%, #047857 100%);
+  border-right: none;
+  position: relative;
+  overflow: hidden;
+}
+.authSidebarGradient::before {
+  content: "";
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+}
+.authSidebarGradient::after {
+  content: "";
+  position: absolute;
+  bottom: -60px;
+  left: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+}
+.authSidebarGradient .authSidebarTitle { color: #ffffff; }
+.authSidebarGradient .authSidebarDesc { color: rgba(255, 255, 255, 0.8); }
+.authSidebarGradient .authFeature { color: rgba(255, 255, 255, 0.85); }
+.authSidebarGradient .authFeatureIcon {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(4px);
+  width: 32px;
+  height: 32px;
+}
+.authSidebarGradient .authSidebarFooter { color: rgba(255, 255, 255, 0.5); }
+
+[data-theme="dark"] .authSidebar:not(.authSidebarGradient) {
   background: rgba(5, 150, 105, 0.06);
   border-right-color: rgba(5, 150, 105, 0.15);
 }
 
 .authSidebarInner {
   max-width: 360px;
+  position: relative;
+  z-index: 1;
 }
 
 .authLogo {
@@ -980,7 +1032,7 @@ textarea:focus::placeholder {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .authFeature {
@@ -1004,6 +1056,28 @@ textarea:focus::placeholder {
   font-size: 0.72rem;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+/* Testimonial card on auth sidebar */
+.authTestimonial {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  margin-bottom: 20px;
+}
+.authTestimonialQuote {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.55;
+  font-style: italic;
+  margin: 0 0 8px;
+}
+.authTestimonialAttr {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
 }
 
 .authSidebarFooter {

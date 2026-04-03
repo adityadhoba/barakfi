@@ -489,7 +489,11 @@ export function StockScreenerTable({ screenedStocks }: Props) {
 
             return (
               <Link
-                className={`${styles.stockCardItem} ${focusedIdx === idx ? styles.stockCardFocused : ""}`}
+                className={`${styles.stockCardItem} ${focusedIdx === idx ? styles.stockCardFocused : ""} ${
+                  s.screening.status === "HALAL" ? styles.stockCardHalal
+                  : s.screening.status === "REQUIRES_REVIEW" ? styles.stockCardReview
+                  : styles.stockCardFail
+                }`}
                 href={`/stocks/${encodeURIComponent(s.symbol)}`}
                 key={s.symbol}
                 data-stock-idx={idx}

@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
 import { AdminLink } from "@/components/admin-link";
+import { Logo } from "@/components/logo";
 import "./globals.css";
 import "./shell.css";
 
@@ -102,8 +103,8 @@ export default async function RootLayout({
             <a className="skipToContent" href="#main-content">Skip to content</a>
             <MarketTicker />
             <header className="topbar" role="banner">
-              <Link className="wordmark" href="/">
-                Barakfi
+              <Link className="wordmark" href="/" style={{ textDecoration: "none" }}>
+                <Logo size={28} showText />
               </Link>
 
               <TopbarSearch />
