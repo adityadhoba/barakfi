@@ -76,18 +76,25 @@ def seed_investors(db: Session) -> int:
     for inv_data in SUPER_INVESTORS:
         existing = db.query(SuperInvestor).filter(SuperInvestor.slug == inv_data["slug"]).first()
         if existing:
-            continue
-
-        investor = SuperInvestor(
-            name=inv_data["name"],
-            slug=inv_data["slug"],
-            title=inv_data["title"],
-            bio=inv_data["bio"],
-            country=inv_data["country"],
-            investment_style=inv_data["investment_style"],
-        )
-        db.add(investor)
-        db.flush()
+            existing.name = inv_data["name"]
+            existing.title = inv_data["title"]
+            existing.bio = inv_data["bio"]
+            existing.country = inv_data["country"]
+            existing.investment_style = inv_data["investment_style"]
+            existing.image_url = inv_data.get("image_url", "") or ""
+            investor = existing
+        else:
+            investor = SuperInvestor(
+                name=inv_data["name"],
+                slug=inv_data["slug"],
+                title=inv_data["title"],
+                bio=inv_data["bio"],
+                country=inv_data["country"],
+                investment_style=inv_data["investment_style"],
+                image_url=inv_data.get("image_url", "") or "",
+            )
+            db.add(investor)
+            db.flush()
 
         for h in inv_data.get("holdings", []):
             stock = db.query(Stock).filter(Stock.symbol == h["symbol"]).first()

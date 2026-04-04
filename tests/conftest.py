@@ -11,7 +11,13 @@ if str(ROOT) not in sys.path:
 from app.services import auth_service  # noqa: E402
 
 ADMIN_SUBJECT = "google-oauth2|aditya-seed"
-ADMIN_CLAIMS = {"sub": ADMIN_SUBJECT, "azp": "http://localhost:3000"}
+# Provide stable user identity so seeded admin expectations match tests.
+ADMIN_CLAIMS = {
+    "sub": ADMIN_SUBJECT,
+    "azp": "http://localhost:3000",
+    "email": "aditya@barakfi.in",
+    "name": "Aditya",
+}
 
 
 @pytest.fixture()
@@ -22,6 +28,11 @@ def mock_admin_auth(monkeypatch):
         "verify_clerk_token",
         lambda _token: ADMIN_CLAIMS,
     )
+    # Ensure the API recognizes the mocked subject as admin.
+    # Tests expect admin-only endpoints to be accessible with this subject.
+    import app.config as config  # local import to avoid import-order surprises
+    if ADMIN_SUBJECT not in config.ADMIN_AUTH_SUBJECTS:
+        config.ADMIN_AUTH_SUBJECTS.append(ADMIN_SUBJECT)
 
 
 @pytest.fixture()

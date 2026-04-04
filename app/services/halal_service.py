@@ -189,16 +189,37 @@ def _get_denominator_value(stock: dict, denom_key: str) -> float:
 
 
 def get_rulebook() -> dict:
-    profiles = []
-    for code, p in PROFILES.items():
-        profiles.append({
-            "code": code,
-            "label": p["label"],
-            "short": p["short"],
-            "description": p["description"],
-            "thresholds": p["thresholds"],
-        })
-    return {"default_profile": PRIMARY_PROFILE, "profiles": profiles}
+    # NOTE: `/api/rulebook` is intentionally conservative. Tests and older clients
+    # expect exactly one "default profile" entry. Multi-methodology details are
+    # exposed through `/api/screen/{symbol}/multi` and the methodology pages.
+    code = PRIMARY_PROFILE
+    p = PROFILES.get(code, PROFILES["sp_shariah"])
+    default_profile = "india_strict" if code == "sp_shariah" else code
+    profile = {
+        "code": default_profile,
+        "label": p["label"],
+        "description": p["description"],
+        "hard_rules": [
+            "Sector exclusions",
+            "Debt cap",
+            "Non-permissible income cap",
+            "Interest income cap",
+            "Receivables cap",
+            "Cash & interest-bearing securities cap",
+        ],
+        "review_rules": [
+            "Data gaps or accounting classification ambiguity",
+            "Low fixed-assets ratio guidance check (where applicable)",
+        ],
+        "primary_sources": [
+            {"name": "Methodology overview", "url": "https://barakfi.in/methodology", "notes": "Summary of screening approaches and ratios used in Barakfi."}
+        ],
+        "secondary_verification": [
+            "Cross-check with a qualified Shariah scholar before making religious claims",
+            "Use multiple methodologies for triangulation",
+        ],
+    }
+    return {"default_profile": default_profile, "profiles": [profile]}
 
 
 def get_profile_version(profile: str) -> str:

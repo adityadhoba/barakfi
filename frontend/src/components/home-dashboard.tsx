@@ -88,7 +88,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
           <h1 className={styles.heroTitle}>
             {isSignedIn ? (
-              <>Welcome back.</>
+              <>As-salamu alaykum.</>
             ) : (
               <>
                 Invest with <span className={styles.heroGradient}>clarity</span> and <span className={styles.heroGradient}>conviction</span>.
@@ -300,6 +300,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                     symbol={row.symbol}
                     size={36}
                     status={scr?.screening.status}
+                    exchange={row.exchange}
                   />
                   <div className={styles.stockIdentity}>
                     <span className={styles.stockSymbol}>{row.symbol}</span>

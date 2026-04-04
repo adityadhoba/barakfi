@@ -19,7 +19,7 @@ export default function SignInPage() {
           <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
             Shariah-Compliant Investing
           </div>
-          <h2 className="authSidebarTitle">Welcome to Barakfi</h2>
+          <h2 className="authSidebarTitle">Assalamu Alaikum — welcome to Barakfi</h2>
           <p className="authSidebarDesc">
             Sign in to access your halal portfolio tracker, watchlist, and screening results across Indian, US, and UK markets.
           </p>

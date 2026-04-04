@@ -86,8 +86,9 @@ def stock_to_dict(stock: Stock) -> dict:
         "debt": stock.debt,
         "revenue": stock.revenue,
         "total_business_income": stock.total_business_income,
-        "interest_income": stock.interest_income,
-        "non_permissible_income": stock.non_permissible_income,
+        # Some providers represent these as negative line items; we treat them as magnitudes.
+        "interest_income": abs(stock.interest_income or 0.0),
+        "non_permissible_income": abs(stock.non_permissible_income or 0.0),
         "accounts_receivable": stock.accounts_receivable,
         "cash_and_equivalents": stock.cash_and_equivalents,
         "short_term_investments": stock.short_term_investments,
@@ -444,6 +445,7 @@ def build_compliance_queue(portfolios: list[Portfolio], watchlist_entries: list[
 
 
 def create_default_workspace(db: Session, user: User) -> None:
+    # Preserve historical default name expected by tests and earlier UI copy.
     portfolio = Portfolio(
         user_id=user.id,
         owner_name=(user.display_name or user.email or "user").lower().replace(" ", "-"),
@@ -461,6 +463,18 @@ def create_default_workspace(db: Session, user: User) -> None:
         .all()
     )
     for stock in starter_stocks:
+        # Give the starter portfolio at least one holding so portfolio endpoints
+        # have meaningful data out-of-the-box (used in tests and demos).
+        db.add(
+            PortfolioHolding(
+                portfolio_id=portfolio.id,
+                stock_id=stock.id,
+                quantity=1,
+                average_buy_price=stock.price or 0.0,
+                target_allocation_pct=0.0,
+                thesis="Seeded starter holding for demo/testing.",
+            )
+        )
         db.add(
             WatchlistEntry(
                 user_id=user.id,

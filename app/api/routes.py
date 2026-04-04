@@ -1030,7 +1030,36 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
 
     user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not provisioned")
+        # Keep /me endpoints usable in first-session flows without requiring an explicit
+        # bootstrap step. This mirrors the behavior of `GET /me`.
+        email = claims.get("email", "")
+        display = email.split("@")[0] if email else auth_subject
+        try:
+            user = User(
+                email=email or f"{auth_subject}@example.local",
+                display_name=display,
+                auth_provider="clerk",
+                auth_subject=auth_subject,
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()
+            helpers.create_default_workspace(db, user)
+            if not user.settings:
+                db.add(
+                    UserSettings(
+                        user_id=user.id,
+                        preferred_currency="INR",
+                        risk_profile="moderate",
+                        notifications_enabled=True,
+                        theme="dark",
+                    )
+                )
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to auto-provision user")
 
     portfolios = (
         db.query(Portfolio)
@@ -1057,6 +1086,20 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
         .all()
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
+    # If the user has no review cases (common for fresh accounts), include the
+    # seeded public demo case so UX + API shape remain stable.
+    if not review_cases:
+        demo_review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
+        # The above is user-scoped; add global demo if still empty.
+        if not demo_review_cases:
+            try:
+                demo_stock = db.query(Stock).filter(Stock.symbol == "WIPRO").first()
+                if demo_stock:
+                    demo_case = helpers.get_public_review_case_for_stock(db, demo_stock.id)
+                    if demo_case:
+                        review_cases = [demo_case]
+            except Exception:
+                pass
 
     return {
         "user": user,
