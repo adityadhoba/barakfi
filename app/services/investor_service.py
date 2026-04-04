@@ -135,8 +135,10 @@ def get_investor_with_compliance(db: Session, slug: str) -> dict | None:
     halal_count = 0
     total_value = 0
 
+    from app.services.stock_lookup import resolve_stock
+
     for h in inv.holdings:
-        stock = db.query(Stock).filter(Stock.symbol == h.symbol).first()
+        stock = resolve_stock(db, h.symbol, "US", active_only=True) or resolve_stock(db, h.symbol, None, active_only=True)
         compliance_status = "UNKNOWN"
         compliance_rating = None
 

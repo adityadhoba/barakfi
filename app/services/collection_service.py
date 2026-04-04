@@ -95,8 +95,10 @@ def seed_collections(db: Session) -> int:
         db.add(coll)
         db.flush()
 
+        from app.services.stock_lookup import resolve_stock
+
         for sym in coll_data["symbols"]:
-            stock = db.query(Stock).filter(Stock.symbol == sym).first()
+            stock = resolve_stock(db, sym, "NSE", active_only=True) or resolve_stock(db, sym, None, active_only=True)
             if stock:
                 entry = CollectionEntry(
                     collection_id=coll.id,

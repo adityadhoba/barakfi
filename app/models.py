@@ -10,7 +10,7 @@ Key relationships:
 - Stock (1) -> (N) PortfolioHolding, WatchlistEntry, ScreeningLog, ComplianceOverride
 """
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import UTC, datetime
 from app.database import Base
@@ -39,11 +39,14 @@ class Stock(Base):
     - (1) stock -> (N) watchlist_entries (on watchlists)
     - (1) stock -> (N) screening_logs (audit trail)
     - (1) stock -> (N) compliance_overrides (manual decisions)
+    - (1) stock -> (N) etf_holdings (when this row is an ETF)
+    - (1) stock -> (N) index_memberships
     """
     __tablename__ = "stocks"
+    __table_args__ = (UniqueConstraint("exchange", "symbol", name="uq_stocks_exchange_symbol"),)
 
     id = Column(Integer, primary_key=True)
-    symbol = Column(String, unique=True, index=True, nullable=False)
+    symbol = Column(String, index=True, nullable=False)
     name = Column(String, nullable=False)
     sector = Column(String, nullable=False)
     exchange = Column(String, nullable=False, default="NSE")
@@ -82,6 +85,45 @@ class Stock(Base):
     is_etf = Column(Boolean, nullable=False, default=False)
     # Price change
     price_change_pct = Column(Float, nullable=True)
+
+    stock_index_links = relationship(
+        "StockIndexMembership", back_populates="stock", cascade="all, delete-orphan"
+    )
+    etf_holdings = relationship("EtfHolding", back_populates="etf", cascade="all, delete-orphan")
+
+
+class EtfHolding(Base):
+    """
+    A single line in an ETF's disclosed holdings (from yfinance or paid API).
+
+    Weights are stored as percentage points (e.g. 5.2 means 5.2% of NAV).
+    """
+
+    __tablename__ = "etf_holdings"
+
+    id = Column(Integer, primary_key=True)
+    etf_stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    holding_symbol = Column(String, nullable=False, index=True)
+    holding_name = Column(String, nullable=False, default="")
+    weight_pct = Column(Float, nullable=True)
+    shares_held = Column(Float, nullable=True)
+    as_of = Column(DateTime, nullable=True)
+    source = Column(String, nullable=False, default="yfinance")
+
+    etf = relationship("Stock", back_populates="etf_holdings", foreign_keys=[etf_stock_id])
+
+
+class StockIndexMembership(Base):
+    """NSE (and other) index membership for universe filters."""
+
+    __tablename__ = "stock_index_memberships"
+    __table_args__ = (UniqueConstraint("stock_id", "index_code", name="uq_stock_index_code"),)
+
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    index_code = Column(String, nullable=False, index=True)
+
+    stock = relationship("Stock", back_populates="stock_index_links")
 
 
 class ComplianceRuleVersion(Base):

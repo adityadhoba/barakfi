@@ -3,70 +3,75 @@ import Link from "next/link";
 import { getETFs } from "@/lib/api";
 import { CountryBadge } from "@/components/country-badge";
 import { StockLogo } from "@/components/stock-logo";
+import ep from "../explore-pages.module.css";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Halal ETFs — Shariah Compliant Exchange-Traded Funds | Barakfi",
   description:
-    "Screen ETFs for Shariah compliance. See which exchange-traded funds hold predominantly halal stocks and meet Islamic finance standards.",
+    "Screen ETFs for Shariah compliance using disclosed holdings. See halal-weight estimates and drill into each fund.",
   keywords: [
-    "halal etf", "shariah compliant etf", "islamic etf", "halal index fund",
-    "shariah etf screening", "muslim etf investing",
+    "halal etf",
+    "shariah compliant etf",
+    "islamic etf",
+    "halal index fund",
+    "shariah etf screening",
+    "muslim etf investing",
   ],
 };
+
+function statusColor(st?: string | null) {
+  if (st === "HALAL") return "var(--emerald)";
+  if (st === "NON_COMPLIANT") return "var(--red)";
+  return "var(--gold)";
+}
 
 export default async function ETFsPage() {
   const etfs = await getETFs();
 
   return (
     <main className="shellPage">
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.6rem", fontWeight: 800, marginBottom: 6 }}>
-            Halal ETFs
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", maxWidth: 600 }}>
-            Exchange-traded funds screened for Shariah compliance. We analyze top holdings to determine overall halal percentage.
+      <div className={ep.shell}>
+        <header className={ep.hero}>
+          <h1 className={ep.title}>Halal ETFs</h1>
+          <p className={ep.subtitle}>
+            We analyse disclosed ETF holdings and map them to our Shariah screening engine. Weights drive the halal
+            percentage — sync holdings with{" "}
+            <code style={{ fontSize: "0.85em" }}>python -m app.scripts.sync_etf_holdings</code> after fetching ETF
+            symbols. Optional: set <code style={{ fontSize: "0.85em" }}>MARKET_DATA_API_KEY</code> for FMP fallback.
           </p>
-        </div>
+        </header>
 
         {etfs.length === 0 ? (
-          <div style={{
-            padding: "48px 24px", textAlign: "center",
-            background: "var(--bg-elevated)", borderRadius: "var(--radius-xl)",
-            border: "1px solid var(--line)",
-          }}>
-            <div style={{ fontSize: "2rem", marginBottom: 12 }}>📊</div>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: 8 }}>ETF Screening Coming Soon</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", maxWidth: 400, margin: "0 auto" }}>
-              We are building ETF screening capabilities. ETFs will be analyzed by examining their underlying holdings for Shariah compliance.
+          <div className={ep.empty}>
+            <h2 className={ep.emptyTitle}>No ETFs in the database yet</h2>
+            <p className={ep.emptyText}>
+              Run <code>fetch_real_data.py</code> (US list includes SPY, QQQ, VTI) or mark funds with{" "}
+              <code>is_etf</code>, then sync holdings.
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}>
+          <div className={ep.grid}>
             {etfs.map((etf) => (
-              <Link
-                key={etf.symbol}
-                href={`/stocks/${etf.symbol}`}
-                style={{
-                  display: "flex", alignItems: "center", gap: 14,
-                  padding: 16, background: "var(--bg-elevated)",
-                  borderRadius: "var(--radius-lg)", border: "1px solid var(--line)",
-                  textDecoration: "none", color: "inherit",
-                  transition: "border-color var(--transition-fast)",
-                }}
-              >
+              <Link key={`${etf.exchange}-${etf.symbol}`} href={`/etfs/${encodeURIComponent(etf.symbol)}`} className={ep.card}>
                 <StockLogo symbol={etf.symbol} size={40} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.9rem" }}>{etf.symbol}</div>
-                  <div style={{ fontSize: "0.78rem", color: "var(--text-tertiary)" }}>{etf.name}</div>
+                <div className={ep.cardMeta}>
+                  <div className={ep.cardTitle}>{etf.symbol}</div>
+                  <div className={ep.cardSub}>{etf.name}</div>
                 </div>
-                <div style={{ textAlign: "right" }}>
+                <div className={ep.badgeRow}>
                   <CountryBadge exchange={etf.exchange} />
-                  <div style={{ fontSize: "0.85rem", fontWeight: 600, marginTop: 4 }}>
-                    {etf.exchange === "US" ? "$" : "₹"}{etf.price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
-                  </div>
+                  {etf.holdings_count != null && etf.holdings_count > 0 && etf.halal_pct != null && (
+                    <span className={ep.pct} style={{ color: statusColor(etf.status) }}>
+                      {etf.halal_pct}% halal
+                    </span>
+                  )}
+                  {(!etf.holdings_count || etf.holdings_count === 0) && (
+                    <span className={ep.pct} style={{ color: "var(--text-tertiary)" }}>
+                      Sync holdings
+                    </span>
+                  )}
                 </div>
               </Link>
             ))}

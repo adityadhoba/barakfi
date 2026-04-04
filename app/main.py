@@ -109,7 +109,16 @@ def _auto_seed_stocks():
         added = 0
         updated = 0
         for payload in stock_data:
-            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+            existing = (
+                db.query(Stock)
+                .filter(
+                    Stock.symbol == payload["symbol"],
+                    Stock.exchange == payload.get("exchange", "NSE"),
+                )
+                .first()
+            )
+            if not existing:
+                existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
             if existing:
                 for key, value in payload.items():
                     setattr(existing, key, value)
@@ -143,6 +152,43 @@ APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="u
 
 # 1. Create any brand-new tables
 Base.metadata.create_all(bind=engine)
+
+
+def _sqlite_migrate_stocks_composite_unique():
+    """Drop legacy SQLite UNIQUE(symbol) after adding UNIQUE(exchange, symbol)."""
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA index_list('stocks')")).fetchall()
+        names = {r[1] for r in rows}
+        if "uq_stocks_exchange_symbol" in names:
+            return
+        try:
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_stocks_exchange_symbol "
+                    "ON stocks (exchange, symbol)"
+                )
+            )
+        except Exception as exc:
+            logger.warning("[sqlite-migrate] Could not add composite unique on stocks: %s", exc)
+            return
+        for r in rows:
+            idx_name, unique = r[1], r[2]
+            if not unique or not str(idx_name).startswith("sqlite_autoindex_stocks"):
+                continue
+            info = conn.execute(text(f"PRAGMA index_info('{idx_name}')")).fetchall()
+            cols = [x[2] for x in info]
+            if cols == ["symbol"]:
+                try:
+                    conn.execute(text(f'DROP INDEX "{idx_name}"'))
+                    logger.info("[sqlite-migrate] Dropped legacy unique index %s", idx_name)
+                except Exception as exc:
+                    logger.warning("[sqlite-migrate] Could not drop %s: %s", idx_name, exc)
+
+
+_sqlite_migrate_stocks_composite_unique()
+
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
 # 3. Auto-seed stocks if the database is empty
@@ -161,6 +207,9 @@ def _seed_extras():
         i = seed_investors(db)
         if i:
             logger.info("[auto-seed] Seeded %d super investors", i)
+        from app.services.index_membership_service import seed_index_memberships
+
+        seed_index_memberships(db)
     except Exception as exc:
         db.rollback()
         logger.error("[auto-seed] Failed to seed extras: %s", exc)

@@ -155,7 +155,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
     router.replace(qs ? `/screener?${qs}` : "/screener", { scroll: false });
-  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, router]);
+  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, exchangeFilter, router]);
 
   const sectorCounts = useMemo(() => {
     const counts: Record<string, number> = { All: screenedStocks.length };
@@ -174,7 +174,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       if (statusFilter !== "all" && s.screening.status !== statusFilter) return false;
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
-      if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter)) return false;
+      if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter, s.index_memberships)) return false;
       if (exchangeFilter !== "all" && s.exchange !== exchangeFilter) return false;
       return true;
     });

@@ -105,6 +105,7 @@ export type Stock = {
   compliance_rating?: number | null;
   exchange_code?: string | null;
   is_etf?: boolean;
+  index_memberships?: string[];
 };
 
 export type Holding = {
@@ -1238,8 +1239,56 @@ export function getInvestmentMetrics(symbol: string) {
   });
 }
 
+export type ETFListItem = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  country: string;
+  price: number;
+  market_cap: number;
+  halal_pct?: number | null;
+  status?: string | null;
+  holdings_count?: number | null;
+};
+
+export type ETFHoldingsRow = {
+  symbol: string;
+  name: string;
+  weight_pct: number | null;
+  status: string;
+  rating: number | null;
+  mapped: boolean;
+  underlying_symbol?: string;
+  underlying_exchange?: string;
+};
+
+export type ETFDetail = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  halal_pct: number | null;
+  cautious_pct?: number | null;
+  non_compliant_pct?: number | null;
+  unknown_pct?: number | null;
+  total_holdings_checked: number;
+  halal_count: number;
+  non_compliant_count: number;
+  cautious_count: number;
+  unknown_count: number;
+  status: string;
+  holdings: ETFHoldingsRow[];
+  holdings_as_of: string | null;
+  holdings_source?: string;
+  data_note?: string;
+};
+
 export function getETFs() {
-  return apiFetch<Array<{ symbol: string; name: string; exchange: string; price: number; market_cap: number; sector: string; country: string }>>("/etfs", []);
+  return apiFetch<ETFListItem[]>("/etfs", []);
+}
+
+export function getETFDetail(symbol: string, exchange?: string) {
+  const q = exchange ? `?exchange=${encodeURIComponent(exchange)}` : "";
+  return apiFetch<ETFDetail | null>(`/etfs/${encodeURIComponent(symbol)}${q}`, null);
 }
 
 export async function createCoverageRequest(

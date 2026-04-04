@@ -32,6 +32,20 @@ class StockCreate(StockBase):
 
 class StockRead(StockBase):
     id: int
+    exchange_code: str | None = None
+    isin: str | None = None
+    beta: float | None = None
+    dividend_yield: float | None = None
+    pe_ratio: float | None = None
+    eps: float | None = None
+    week_52_high: float | None = None
+    week_52_low: float | None = None
+    avg_volume: float | None = None
+    shares_outstanding: float | None = None
+    price_change_pct: float | None = None
+    compliance_rating: int | None = None
+    is_etf: bool = False
+    index_memberships: list[str] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 

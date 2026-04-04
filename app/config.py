@@ -49,6 +49,9 @@ KITE_ACCESS_TOKEN = os.getenv("KITE_ACCESS_TOKEN", "")
 UPSTOX_ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN", "")
 SIGNALX_API_KEY = os.getenv("SIGNALX_API_KEY", "")
 XARO_API_KEY = os.getenv("XARO_API_KEY", "")
+# Optional paid market data (e.g. Financial Modeling Prep) for ETF holdings / fundamentals fallback
+MARKET_DATA_API_KEY = os.getenv("MARKET_DATA_API_KEY", "").strip()
+FMP_API_BASE = os.getenv("FMP_API_BASE", "https://financialmodelingprep.com/api/v3").rstrip("/")
 
 
 

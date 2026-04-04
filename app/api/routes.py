@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -36,6 +37,7 @@ from app.models import (
     ScreeningLog,
     SupportNote,
     Stock,
+    StockIndexMembership,
     User,
     UserSettings,
     WatchlistEntry,
@@ -101,8 +103,32 @@ from app.services.market_data_service import get_data_stack_status, get_fundamen
 from app.services.quote_sync_service import PUBLIC_INDIAN_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal
+from app.services.stock_lookup import resolve_stock
 
 router = APIRouter(prefix="/api")
+
+
+def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
+    m: defaultdict[int, list[str]] = defaultdict(list)
+    if not stock_ids:
+        return {}
+    for r in db.query(StockIndexMembership).filter(StockIndexMembership.stock_id.in_(stock_ids)):
+        m[r.stock_id].append(r.index_code)
+    return {k: sorted(set(v)) for k, v in m.items()}
+
+
+def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
+    codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
+    return StockRead.model_validate(stock).model_copy(update={"index_memberships": codes})
+
+
+def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
+    ids = [s.id for s in stocks]
+    code_map = _index_codes_by_stock_id(db, ids)
+    return [
+        StockRead.model_validate(s).model_copy(update={"index_memberships": code_map.get(s.id, [])})
+        for s in stocks
+    ]
 
 
 @router.get("/auth/strategy", response_model=AuthStrategyResponse)
@@ -201,9 +227,7 @@ def equity_quote_snapshot(
             status_code=400,
             detail=f"provider must be one of: {', '.join(sorted(PUBLIC_INDIAN_MARKET_PROVIDERS))}",
         )
-    row = (
-        db.query(Stock).filter(Stock.symbol == sym, Stock.is_active.is_(True)).first()
-    )
+    row = resolve_stock(db, sym, None, active_only=True)
     ex = (exchange or (row.exchange if row else "NSE")).upper()
     quote = fetch_quote_by_provider(sym, ex, effective)
     if not quote or quote.last_price is None:
@@ -316,17 +340,22 @@ def list_stocks(
     stocks = query.order_by(Stock.symbol.asc()).all()
 
     if not halal_only:
-        return stocks
+        return _stocks_read_enriched(db, stocks)
 
-    return [
+    filtered = [
         stock
         for stock in stocks
         if evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)["status"] == "HALAL"
     ]
+    return _stocks_read_enriched(db, filtered)
 
 
 @router.get("/stocks/{symbol}", response_model=StockRead)
-def get_stock(symbol: str, db: Session = Depends(get_db)):
+def get_stock(
+    symbol: str,
+    exchange: str | None = Query(default=None, description="Disambiguate when the same ticker exists on multiple venues"),
+    db: Session = Depends(get_db),
+):
     """
     Get a single stock's fundamental data.
 
@@ -341,19 +370,16 @@ def get_stock(symbol: str, db: Session = Depends(get_db)):
     Raises:
         HTTPException 404: If stock not found or inactive
     """
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
-    return stock
+    return _stock_read_enriched(db, stock)
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)
 def screen_stock(
     symbol: str,
+    exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     """
@@ -374,11 +400,7 @@ def screen_stock(
     Raises:
         HTTPException 404: If stock not found or inactive
     """
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -427,11 +449,19 @@ def screen_stocks_bulk(
         .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
         .all()
     )
-    stock_map = {s.symbol: s for s in stocks}
+    by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
+    for s in stocks:
+        by_sym[s.symbol].append(s)
+
+    def _pick(sym: str) -> Stock | None:
+        cands = by_sym.get(sym, [])
+        if not cands:
+            return None
+        return next((c for c in cands if c.exchange == "NSE"), cands[0])
 
     results = []
     for sym in upper_symbols:
-        stock = stock_map.get(sym)
+        stock = _pick(sym)
         if not stock:
             continue
         stock_data = helpers.stock_to_dict(stock)
@@ -453,6 +483,7 @@ def screen_stocks_bulk(
 @router.get("/screen/{symbol}/multi")
 def screen_stock_multi(
     symbol: str,
+    exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
     """
@@ -461,11 +492,7 @@ def screen_stock_multi(
 
     Auth: None (public endpoint)
     """
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -496,12 +523,8 @@ def screen_stock_manual(
 
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
-    # Check if stock already exists in database
-    existing = (
-        db.query(Stock)
-        .filter(Stock.symbol == clean_symbol, Stock.is_active.is_(True))
-        .first()
-    )
+    # Check if stock already exists in database (manual flow is India-first)
+    existing = resolve_stock(db, clean_symbol, "NSE", active_only=True)
 
     if existing:
         stock_data = helpers.stock_to_dict(existing)
@@ -600,11 +623,7 @@ def create_compliance_override(
     db: Session = Depends(get_db),
 ):
     admin_subject = helpers.require_admin(db, claims)
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, payload.symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -631,11 +650,7 @@ def create_review_case(
     db: Session = Depends(get_db),
 ):
     admin_subject = helpers.require_admin(db, claims)
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, payload.symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1190,11 +1205,7 @@ def create_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, payload.symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1233,11 +1244,7 @@ def delete_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1262,11 +1269,7 @@ def create_holding(
 ):
     user = helpers.get_current_user_from_claims(db, claims)
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, payload.symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1325,11 +1328,7 @@ def delete_holding(
 ):
     user = helpers.get_current_user_from_claims(db, claims)
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1399,11 +1398,7 @@ def create_current_research_note(
     db: Session = Depends(get_db),
 ):
     user = helpers.get_current_user_from_claims(db, claims)
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == payload.symbol.upper(), Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, payload.symbol, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1751,8 +1746,12 @@ def admin_update_user_active(
 # Compliance History
 # ---------------------------------------------------------------------------
 @router.get("/compliance-history/{symbol}")
-def get_compliance_history(symbol: str, db: Session = Depends(get_db)):
-    stock = db.query(Stock).filter(Stock.symbol == symbol).first()
+def get_compliance_history(
+    symbol: str,
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
     if not stock:
         raise HTTPException(404, f"Stock {symbol} not found")
     history = (
@@ -1971,8 +1970,12 @@ def list_coverage_requests(
 # Investment Metrics
 # ---------------------------------------------------------------------------
 @router.get("/metrics/{symbol}")
-def get_investment_metrics(symbol: str, db: Session = Depends(get_db)):
-    stock = db.query(Stock).filter(Stock.symbol == symbol).first()
+def get_investment_metrics(
+    symbol: str,
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
     if not stock:
         raise HTTPException(404, f"Stock {symbol} not found")
     from app.services.metrics_service import get_investment_checklist
@@ -1990,17 +1993,21 @@ def get_investment_metrics(symbol: str, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 @router.get("/etfs")
 def list_etfs(db: Session = Depends(get_db)):
-    etfs = db.query(Stock).filter(Stock.is_etf == True, Stock.is_active == True).all()
-    results = []
-    for e in etfs:
-        results.append({
-            "symbol": e.symbol,
-            "name": e.name,
-            "exchange": e.exchange,
-            "price": e.price,
-            "market_cap": e.market_cap,
-            "sector": e.sector,
-            "country": e.country,
-        })
-    return results
+    from app.services.etf_service import list_etfs_with_compliance
+
+    return list_etfs_with_compliance(db)
+
+
+@router.get("/etfs/{symbol}")
+def get_etf_detail(
+    symbol: str,
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    from app.services.etf_service import screen_etf
+
+    snap = screen_etf(db, symbol, exchange)
+    if not snap:
+        raise HTTPException(404, "ETF not found")
+    return snap
 
