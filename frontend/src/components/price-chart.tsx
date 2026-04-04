@@ -20,7 +20,7 @@ const RANGES: { label: string; value: ChartRange; interval: string; ariaLabel: s
   { label: "5Y", value: "5y", interval: "1mo", ariaLabel: "5 year price range" },
 ];
 
-export function PriceChart({ symbol }: { symbol: string }) {
+export function PriceChart({ symbol, exchange }: { symbol: string; exchange?: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
   const [range, setRange] = useState<ChartRange>("6mo");
@@ -33,6 +33,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
       setLoading(true);
       setError(false);
       const qs = new URLSearchParams({ range: cfg.value, interval: cfg.interval });
+      if (exchange) qs.set("exchange", exchange);
       const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?${qs.toString()}`);
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
@@ -43,7 +44,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     } finally {
       setLoading(false);
     }
-  }, [symbol]);
+  }, [symbol, exchange]);
 
   useEffect(() => {
     if (!containerRef.current) return;

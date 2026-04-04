@@ -69,6 +69,7 @@ export type EquityQuote = {
   source: string;
   as_of: string;
   disclaimer: string;
+  currency?: string;
 };
 
 export type Stock = {
@@ -535,10 +536,17 @@ export async function getMarketIndices(): Promise<IndexQuote[]> {
  */
 export async function getEquityQuote(
   symbol: string,
-  provider: "nse_public" | "yahoo_india" | "auto_india" = "auto_india",
+  provider:
+    | "nse_public"
+    | "yahoo_india"
+    | "auto_india"
+    | "yahoo_global"
+    | "auto_global" = "auto_india",
+  exchange?: string,
 ): Promise<EquityQuote | null> {
   try {
     const q = new URLSearchParams({ provider });
+    if (exchange) q.set("exchange", exchange);
     const response = await fetch(
       `${apiBaseUrl}/market-data/quote/${encodeURIComponent(symbol)}?${q.toString()}`,
       { next: { revalidate: 60 } },

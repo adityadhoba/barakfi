@@ -57,7 +57,7 @@ const STATUS_HERO: Record<string, string> = {
 
 function formatCurrency(value: number, currency: string = "INR") {
   const cur = currency || "INR";
-  const locale = cur === "INR" ? "en-IN" : "en-US";
+  const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
   return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(value);
 }
 
@@ -149,17 +149,18 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [stock, screening, watchlist, workspace, liveQuote, allStocks, multiScreening] = await Promise.all([
+  const [stock, screening, watchlist, workspace, allStocks, multiScreening] = await Promise.all([
     getStock(symbol),
     getScreeningResult(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
-    getEquityQuote(symbol, "auto_global" as never),
     getStocks(),
     getMultiScreeningResult(symbol).catch(() => null),
   ]);
 
   if (!stock || !screening) notFound();
+
+  const liveQuote = await getEquityQuote(symbol, "auto_global", stock.exchange);
 
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;
@@ -177,6 +178,7 @@ export default async function StockDetailPage({
   ];
 
   const cur = stock.currency || "INR";
+  const quoteCur = liveQuote?.currency?.trim() || cur;
   const financials = [
     { label: "Market Cap", value: formatMcap(stock.market_cap, cur) },
     { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m, cur) },
@@ -308,7 +310,7 @@ export default async function StockDetailPage({
               <span className={styles.stockMetaChip}>{stock.country}</span>
             </div>
             <div className={styles.stockTitleRow}>
-              <StockLogo symbol={stock.symbol} size={44} status={screening.status} />
+              <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
               <div>
                 <h1 className={styles.stockTitle}>{stock.name}</h1>
                 <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
@@ -318,7 +320,7 @@ export default async function StockDetailPage({
             </div>
             <div className={styles.stockMeta}>
               <span className={styles.stockPrice}>
-                {formatCurrency(liveQuote?.last_price ?? stock.price)}
+                {formatCurrency(liveQuote?.last_price ?? stock.price, quoteCur)}
               </span>
             </div>
             {liveQuote && (
@@ -334,11 +336,11 @@ export default async function StockDetailPage({
                   </span>
                 )}
                 {liveQuote.change_percent == null && liveQuote.change != null && (
-                  <span className={styles.quoteChangeUp}>&Delta; {formatCurrency(liveQuote.change)}</span>
+                  <span className={styles.quoteChangeUp}>&Delta; {formatCurrency(liveQuote.change, quoteCur)}</span>
                 )}
                 {" · "}
                 Day {liveQuote.day_low != null && liveQuote.day_high != null
-                  ? `${formatCurrency(liveQuote.day_low)} – ${formatCurrency(liveQuote.day_high)}`
+                  ? `${formatCurrency(liveQuote.day_low, quoteCur)} – ${formatCurrency(liveQuote.day_high, quoteCur)}`
                   : "range n/a"}
                 {liveQuote.volume != null && (
                   <>
@@ -435,15 +437,15 @@ export default async function StockDetailPage({
         <div className={styles.keyMetricsStrip}>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Market Cap</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.market_cap)}</span>
+            <span className={styles.keyMetricValue}>{formatMcap(stock.market_cap, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Revenue</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.revenue)}</span>
+            <span className={styles.keyMetricValue}>{formatMcap(stock.revenue, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Total Debt</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.debt)}</span>
+            <span className={styles.keyMetricValue}>{formatMcap(stock.debt, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Debt / Mcap</span>
@@ -485,7 +487,7 @@ export default async function StockDetailPage({
                 {stock.market_cap >= 100000 ? "Large Cap" : stock.market_cap >= 20000 ? "Mid Cap" : "Small Cap"} &rsaquo;
               </span>
               <span className={styles.categorySub}>
-                Market cap of {formatMcap(stock.market_cap)}
+                Market cap of {formatMcap(stock.market_cap, cur)}
               </span>
             </div>
           </div>
@@ -507,7 +509,7 @@ export default async function StockDetailPage({
 
         {/* Price Chart */}
         <div style={{ marginBottom: 28 }}>
-          <PriceChart symbol={stock.symbol} />
+          <PriceChart symbol={stock.symbol} exchange={stock.exchange} />
         </div>
 
         {/* 52-Week Range Visual + Volume Summary */}
@@ -541,9 +543,9 @@ export default async function StockDetailPage({
                   />
                 </div>
                 <div className={styles.rangeBarFooter}>
-                  <span>{formatCurrency(liveQuote.week_52_low!)}</span>
-                  <span className={styles.rangeBarCurrent}>{formatCurrency(liveQuote.last_price ?? stock.price)}</span>
-                  <span>{formatCurrency(liveQuote.week_52_high!)}</span>
+                  <span>{formatCurrency(liveQuote.week_52_low!, quoteCur)}</span>
+                  <span className={styles.rangeBarCurrent}>{formatCurrency(liveQuote.last_price ?? stock.price, quoteCur)}</span>
+                  <span>{formatCurrency(liveQuote.week_52_high!, quoteCur)}</span>
                 </div>
               </div>
             )}
@@ -552,19 +554,19 @@ export default async function StockDetailPage({
               {liveQuote.week_52_low != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>52-Week Low</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.week_52_high != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>52-Week High</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.previous_close != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>Prev Close</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.volume != null && (
@@ -717,6 +719,12 @@ export default async function StockDetailPage({
                     <td>Data source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
                   </tr>
+                  <tr>
+                    <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
+                      Fundamentals are derived from public market data (Yahoo Finance via our pipeline) and refreshed on a periodic schedule.
+                      They are indicative and may lag; do not use as the sole basis for investment decisions.
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -768,7 +776,7 @@ export default async function StockDetailPage({
                 return (
                   <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
                     <div className={styles.similarCardTop}>
-                      <StockLogo symbol={s.symbol} size={34} status={peerData?.status} />
+                      <StockLogo symbol={s.symbol} size={34} status={peerData?.status} exchange={s.exchange} />
                       <div className={styles.similarIdentity}>
                         <span className={styles.similarSymbol}>{s.symbol}</span>
                         <span className={styles.similarName}>{s.name}</span>
@@ -781,7 +789,7 @@ export default async function StockDetailPage({
                     </div>
                     <div className={styles.similarCardBottom}>
                       <div>
-                        <span className={styles.similarPrice}>{formatCurrency(s.price)}</span>
+                        <span className={styles.similarPrice}>{formatCurrency(s.price, s.currency || "INR")}</span>
                         {peerQuote?.change_percent != null && (
                           <span className={peerQuote.change_percent >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown} style={{ fontSize: "0.75rem", marginLeft: 4 }}>
                             {peerQuote.change_percent >= 0 ? "+" : ""}
@@ -789,7 +797,7 @@ export default async function StockDetailPage({
                           </span>
                         )}
                       </div>
-                      <span className={styles.similarMcap}>{formatMcap(s.market_cap)}</span>
+                      <span className={styles.similarMcap}>{formatMcap(s.market_cap, s.currency || "INR")}</span>
                     </div>
                   </Link>
                 );
