@@ -25,6 +25,7 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   SBIN: "sbi.co.in",
   BHARTIARTL: "airtel.in",
   KOTAKBANK: "kotak.com",
+  CHOLAFIN: "cholamandalam.com",
   LT: "larsentoubro.com",
   HCLTECH: "hcltech.com",
   AXISBANK: "axisbank.com",
