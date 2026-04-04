@@ -99,7 +99,7 @@ from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
 from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
-from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal
+from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 
 router = APIRouter(prefix="/api")
 
@@ -1744,4 +1744,151 @@ def admin_update_user_active(
         is_active=target_user.is_active,
         created_at=target_user.created_at,
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# TRENDING
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/trending/{category}")
+def get_trending(
+    category: str,
+    exchange: str | None = None,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
+    from app.services.trending_service import get_trending as _get_trending
+    return _get_trending(db, category=category, exchange=exchange, limit=min(limit, 50))
+
+
+# ═══════════════════════════════════════════════════════════════
+# COLLECTIONS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/collections")
+def list_collections(db: Session = Depends(get_db)):
+    from app.services.collection_service import get_collections
+    return get_collections(db)
+
+
+@router.get("/collections/{slug}")
+def get_collection(slug: str, db: Session = Depends(get_db)):
+    from app.services.collection_service import get_collection_detail
+    result = get_collection_detail(db, slug)
+    if not result:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# SUPER INVESTORS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/super-investors")
+def list_super_investors(db: Session = Depends(get_db)):
+    from app.services.investor_service import get_investors
+    return get_investors(db)
+
+
+@router.get("/super-investors/{slug}")
+def get_super_investor(slug: str, db: Session = Depends(get_db)):
+    from app.services.investor_service import get_investor_detail
+    result = get_investor_detail(db, slug)
+    if not result:
+        raise HTTPException(status_code=404, detail="Investor not found")
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+# ETFS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/etfs")
+def list_etfs(exchange: str | None = None):
+    from app.services.etf_service import get_etfs
+    return get_etfs(exchange=exchange)
+
+
+# ═══════════════════════════════════════════════════════════════
+# INVESTMENT METRICS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/metrics/{symbol}")
+def get_metrics(symbol: str, db: Session = Depends(get_db)):
+    from app.services.metrics_service import get_investment_metrics
+    stock = db.query(Stock).filter(Stock.symbol == symbol.upper()).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    stock_data = helpers.stock_to_dict(stock)
+    return get_investment_metrics(stock_data)
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMPLIANCE HISTORY
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/compliance-history/{symbol}")
+def get_compliance_history(symbol: str, db: Session = Depends(get_db)):
+    from app.models import ComplianceHistory
+    stock = db.query(Stock).filter(Stock.symbol == symbol.upper()).first()
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    entries = (
+        db.query(ComplianceHistory)
+        .filter(ComplianceHistory.stock_id == stock.id)
+        .order_by(ComplianceHistory.recorded_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "status": e.status,
+            "profile_code": e.profile_code,
+            "recorded_at": e.recorded_at.isoformat() if e.recorded_at else None,
+        }
+        for e in entries
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════
+# COVERAGE REQUESTS
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/me/coverage-requests")
+def create_coverage_request(
+    symbol: str = Body(...),
+    exchange: str = Body("NSE"),
+    notes: str = Body(""),
+    db: Session = Depends(get_db),
+    auth_subject: str = Depends(require_auth),
+):
+    from app.models import CoverageRequest
+    user = db.query(User).filter(User.auth_subject == auth_subject).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    req = CoverageRequest(
+        user_id=user.id,
+        symbol=symbol.upper().strip(),
+        exchange=exchange.upper().strip(),
+        notes=notes,
+    )
+    db.add(req)
+    db.commit()
+    return {"id": req.id, "symbol": req.symbol, "exchange": req.exchange, "status": req.status}
+
+
+@router.get("/me/coverage-requests")
+def list_coverage_requests(
+    db: Session = Depends(get_db),
+    auth_subject: str = Depends(require_auth),
+):
+    from app.models import CoverageRequest
+    user = db.query(User).filter(User.auth_subject == auth_subject).first()
+    if not user:
+        return []
+    requests = db.query(CoverageRequest).filter(CoverageRequest.user_id == user.id).order_by(CoverageRequest.created_at.desc()).all()
+    return [
+        {"id": r.id, "symbol": r.symbol, "exchange": r.exchange, "notes": r.notes, "status": r.status, "created_at": r.created_at.isoformat() if r.created_at else None}
+        for r in requests
+    ]
 

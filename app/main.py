@@ -20,6 +20,14 @@ from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_P
 from app.database import Base, engine
 from app.api.routes import router
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all tables
+    ComplianceHistory,
+    StockCollection,
+    CollectionEntry,
+    SuperInvestor,
+    SuperInvestorHolding,
+    CoverageRequest,
+)
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)
 
@@ -147,6 +155,28 @@ Base.metadata.create_all(bind=engine)
 _auto_migrate_columns()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
+
+# 4. Seed collections and super investors
+log = logging.getLogger("barakfi")
+try:
+    from app.database import SessionLocal as _SeedSession
+    _seed_db = _SeedSession()
+    try:
+        from app.services.collection_service import seed_collections
+        from app.services.investor_service import seed_investors
+        count = seed_collections(_seed_db)
+        if count > 0:
+            log.info("Seeded %d collections", count)
+        count = seed_investors(_seed_db)
+        if count > 0:
+            log.info("Seeded %d super investors", count)
+    except Exception as exc:
+        log.warning("Seeding collections/investors failed: %s", exc)
+    finally:
+        _seed_db.close()
+except Exception as exc:
+    log.warning("Seeding collections/investors failed: %s", exc)
+
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 if not DEBUG:
