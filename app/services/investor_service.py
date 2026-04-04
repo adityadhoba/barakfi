@@ -140,7 +140,6 @@ def seed_investors(db: Session) -> int:
                         currency=stock.currency,
                         country=stock.country,
                         sector=stock.sector,
-                        added_at=now,
                     ))
         seeded += 1
 
