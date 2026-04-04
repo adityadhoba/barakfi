@@ -170,42 +170,6 @@ def calculate_purification_ratio(stock: dict) -> float | None:
     return round(ratio * 100, 2)
 
 
-def calculate_compliance_rating(breakdown: dict, status: str) -> int:
-    """
-    Calculate a 1-5 compliance rating based on how far ratios are from thresholds.
-    5 = Excellent (all ratios well below limits)
-    4 = Good (all ratios comfortably below limits)
-    3 = Acceptable (halal but some ratios approaching limits)
-    2 = Borderline (cautious, near thresholds)
-    1 = Non-compliant
-    """
-    if status == "NON_COMPLIANT":
-        return 1
-
-    ratios = [
-        (breakdown.get("debt_ratio_value", 0), breakdown.get("debt_ratio_threshold", 0.33)),
-        (breakdown.get("non_permissible_income_ratio", 0), 0.05),
-        (breakdown.get("interest_income_ratio", 0), 0.05),
-        (breakdown.get("receivables_ratio_value", 0), breakdown.get("receivables_ratio_threshold", 0.33)),
-        (breakdown.get("cash_and_interest_bearing_to_assets_ratio", 0), breakdown.get("cash_ib_ratio_threshold", 0.33)),
-    ]
-
-    if status == "CAUTIOUS":
-        max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
-        return 3 if max_pct < 0.7 else 2
-
-    max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
-    avg_pct = sum(v / t if t > 0 else 0 for v, t in ratios) / len(ratios) if ratios else 0
-
-    if max_pct < 0.3 and avg_pct < 0.2:
-        return 5
-    if max_pct < 0.5 and avg_pct < 0.35:
-        return 5
-    if max_pct < 0.7:
-        return 4
-    return 3
-
-
 # ============================================================================
 # SCREENING ENGINE
 # ============================================================================
@@ -361,19 +325,6 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
             "receivables_ratio_threshold": t["receivables_ratio"],
             "cash_ib_ratio_threshold": t["cash_ib_ratio"],
         },
-        "compliance_rating": calculate_compliance_rating(
-            {
-                "debt_ratio_value": debt_ratio,
-                "debt_ratio_threshold": t["debt_ratio"],
-                "non_permissible_income_ratio": non_permissible_ratio,
-                "interest_income_ratio": interest_income_ratio,
-                "receivables_ratio_value": receivables_ratio,
-                "receivables_ratio_threshold": t["receivables_ratio"],
-                "cash_and_interest_bearing_to_assets_ratio": cash_to_assets,
-                "cash_ib_ratio_threshold": t["cash_ib_ratio"],
-            },
-            status
-        ),
     }
 
 

@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections } from "@/lib/api";
+import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { TrendingCard } from "@/components/trending-card";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -50,11 +49,7 @@ type Props = {
 };
 
 export async function HomeDashboard({ isSignedIn }: Props) {
-  const [stocks, trendingGainers, collections] = await Promise.all([
-    getStocks(),
-    getTrending("gainers", undefined, 8),
-    getCollections(),
-  ]);
+  const stocks = await getStocks();
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -324,99 +319,6 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
       </section>
 
-      {/* ── Trending Stocks ── */}
-      {trendingGainers.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Trending Stocks</h2>
-            <Link href="/trending" className={styles.seeAll}>View all &rarr;</Link>
-          </div>
-          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-            {trendingGainers.slice(0, 6).map((s) => (
-              <TrendingCard
-                key={s.symbol}
-                symbol={s.symbol}
-                name={s.name}
-                price={s.price}
-                priceChangePct={s.price_change_pct}
-                complianceStatus={s.compliance_status}
-                complianceRating={s.compliance_rating}
-                exchange={s.exchange}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Collections ── */}
-      {collections.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Halal Collections</h2>
-            <Link href="/collections" className={styles.seeAll}>Browse all &rarr;</Link>
-          </div>
-          <div style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-            {collections.filter(c => c.is_featured).slice(0, 4).map((c) => (
-              <Link
-                key={c.slug}
-                href={`/collections/${c.slug}`}
-                style={{
-                  display: "block", padding: 20,
-                  background: "var(--bg-elevated)", borderRadius: "var(--radius-xl)",
-                  border: "1px solid var(--line)", textDecoration: "none", color: "inherit",
-                  transition: "border-color var(--transition-fast), box-shadow var(--transition-fast)",
-                }}
-              >
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, fontFamily: "var(--font-display)" }}>{c.name}</h3>
-                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.4, marginBottom: 10 }}>{c.description}</p>
-                <span style={{
-                  padding: "3px 8px", borderRadius: "var(--radius-full)",
-                  background: "var(--emerald-dim)", color: "var(--emerald)",
-                  fontSize: "0.7rem", fontWeight: 600,
-                }}>
-                  {c.stock_count} stocks
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Explore More ── */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Explore Barakfi</h2>
-        </div>
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
-          {[
-            { href: "/trending", label: "Trending Stocks", icon: "📈", desc: "Top movers today" },
-            { href: "/collections", label: "Collections", icon: "📚", desc: "Curated halal lists" },
-            { href: "/super-investors", label: "Super Investors", icon: "👤", desc: "Track top portfolios" },
-            { href: "/academy", label: "Academy", icon: "🎓", desc: "Learn halal investing" },
-            { href: "/etfs", label: "Halal ETFs", icon: "📊", desc: "Screened ETFs" },
-            { href: "/news", label: "News", icon: "📰", desc: "Islamic finance updates" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "14px 16px", background: "var(--bg-elevated)",
-                borderRadius: "var(--radius-lg)", border: "1px solid var(--line)",
-                textDecoration: "none", color: "inherit",
-                transition: "border-color var(--transition-fast), box-shadow var(--transition-fast)",
-              }}
-            >
-              <span style={{ fontSize: "1.3rem" }}>{item.icon}</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>{item.label}</div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>{item.desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* ── Ad: between sections ── */}
       <AdUnit format="rectangle" />
 
@@ -546,43 +448,35 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
             <Logo size={24} showText />
-            <p className={styles.footerTagline}>Global Shariah-compliant equity screening across India, US &amp; UK markets.</p>
+            <p className={styles.footerTagline}>Shariah-compliant equity screening for the Indian market.</p>
           </div>
           <div className={styles.footerLinks}>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Screener</span>
-              <Link href="/screener" className={styles.footerLink}>Stock Screener</Link>
-              <Link href="/etfs" className={styles.footerLink}>Halal ETFs</Link>
-              <Link href="/trending" className={styles.footerLink}>Trending Stocks</Link>
-              <Link href="/collections" className={styles.footerLink}>Collections</Link>
-            </div>
-            <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Invest</span>
-              <Link href="/super-investors" className={styles.footerLink}>Super Investors</Link>
+              <span className={styles.footerColTitle}>Product</span>
+              <Link href="/screener" className={styles.footerLink}>Screener</Link>
               <Link href="/watchlist" className={styles.footerLink}>Watchlist</Link>
               <Link href="/workspace" className={styles.footerLink}>Portfolio</Link>
-              <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
             </div>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Learn</span>
-              <Link href="/academy" className={styles.footerLink}>Academy</Link>
-              <Link href="/news" className={styles.footerLink}>News</Link>
+              <span className={styles.footerColTitle}>Resources</span>
+              <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
+              <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
               <Link href="/tools/purification" className={styles.footerLink}>Purification Calculator</Link>
               <Link href="/tools/zakat" className={styles.footerLink}>Zakat Calculator</Link>
+              <Link href="/shariah-compliance" className={styles.footerLink}>Shariah Compliance</Link>
             </div>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>More</span>
-              <Link href="/request-coverage" className={styles.footerLink}>Request Coverage</Link>
-              <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks</Link>
-              <Link href="/terms" className={styles.footerLink}>Terms</Link>
-              <Link href="/privacy" className={styles.footerLink}>Privacy</Link>
+              <span className={styles.footerColTitle}>Legal</span>
+              <Link href="/terms" className={styles.footerLink}>Terms of Service</Link>
+              <Link href="/privacy" className={styles.footerLink}>Privacy Policy</Link>
+              <Link href="/disclaimer" className={styles.footerLink}>Risk Disclaimer</Link>
             </div>
           </div>
         </div>
         <div className={styles.footerBottom}>
           <p>Built for disciplined investors. Always confirm with your scholar or advisor before investing.</p>
-          <p>Global screening powered by S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies. &copy; {new Date().getFullYear()} Barakfi.</p>
+          <p>Screening powered by S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies. &copy; {new Date().getFullYear()} Barakfi.</p>
         </div>
       </footer>
     </div>

@@ -147,27 +147,6 @@ Base.metadata.create_all(bind=engine)
 _auto_migrate_columns()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
-
-# 4. Seed collections and super investors
-def _seed_extras():
-    from app.database import SessionLocal
-    db = SessionLocal()
-    try:
-        from app.services.collection_service import seed_collections
-        from app.services.investor_service import seed_investors
-        c = seed_collections(db)
-        if c:
-            logger.info("[auto-seed] Seeded %d collections", c)
-        i = seed_investors(db)
-        if i:
-            logger.info("[auto-seed] Seeded %d super investors", i)
-    except Exception as exc:
-        db.rollback()
-        logger.error("[auto-seed] Failed to seed extras: %s", exc)
-    finally:
-        db.close()
-
-_seed_extras()
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
 if not DEBUG:
