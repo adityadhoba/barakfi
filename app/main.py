@@ -238,15 +238,20 @@ try:
         with engine.begin() as _conn:
             if not _acquire_seed_lock(_conn):
                 log.info("Seed lock held by another worker; skipping seed step.")
-                raise SystemExit(0)
-        from app.services.collection_service import seed_collections
-        from app.services.investor_service import seed_investors
-        count = seed_collections(_seed_db)
-        if count > 0:
-            log.info("Seeded %d collections", count)
-        count = seed_investors(_seed_db)
-        if count > 0:
-            log.info("Seeded %d super investors", count)
+                # IMPORTANT: don't exit the worker process here (gunicorn multi-worker).
+                # We only want to skip the seeding work; the API should still boot.
+                seed_collections = None
+                seed_investors = None
+            else:
+                from app.services.collection_service import seed_collections
+                from app.services.investor_service import seed_investors
+        if seed_collections and seed_investors:
+            count = seed_collections(_seed_db)
+            if count > 0:
+                log.info("Seeded %d collections", count)
+            count = seed_investors(_seed_db)
+            if count > 0:
+                log.info("Seeded %d super investors", count)
 
         # Ensure a default admin user exists for tests + local admin workflows.
         # This is safe in dev/test, and in production the admin list is controlled
