@@ -117,6 +117,7 @@ class EquityQuoteResponse(BaseModel):
     week_52_low: float | None = None
     source: str
     as_of: str
+    currency: str = "INR"
     disclaimer: str = (
         "Indicative delayed-style data from public sources, not financial advice. "
         "Not an official NSE/BSE redistribution feed."

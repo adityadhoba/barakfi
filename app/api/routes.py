@@ -225,6 +225,7 @@ def equity_quote_snapshot(
         week_52_low=payload["week_52_low"],
         source=payload["source"],
         as_of=payload["as_of"],
+        currency=str(payload.get("currency") or "INR"),
     )
 
 

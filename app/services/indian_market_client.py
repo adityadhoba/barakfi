@@ -42,6 +42,7 @@ class EquityQuote:
     week_52_low: float | None
     source: str
     as_of: str
+    currency: str = "INR"
 
 
 IndianEquityQuote = EquityQuote
@@ -114,6 +115,7 @@ def fetch_nse_equity_quote(symbol: str) -> EquityQuote | None:
         week_52_low=w52l,
         source="nse_india_public",
         as_of=_iso_now(),
+        currency="INR",
     )
 
 
@@ -146,6 +148,15 @@ def fetch_yahoo_india_quote(symbol: str, exchange: str = "NSE") -> EquityQuote |
     w52l = _to_float(meta.get("fiftyTwoWeekLow"))
     chg = (last - prev) if prev is not None else None
     pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
+    ycur = (meta.get("currency") or "").strip().upper()
+    if isinstance(ycur, str) and len(ycur) == 3:
+        currency = ycur
+    elif ex in ("LSE", "LON"):
+        currency = "GBP"
+    elif ex in ("US", "NYSE", "NASDAQ"):
+        currency = "USD"
+    else:
+        currency = "INR"
     return EquityQuote(
         symbol=sym,
         exchange="BSE" if suffix == ".BO" else "NSE",
@@ -160,6 +171,7 @@ def fetch_yahoo_india_quote(symbol: str, exchange: str = "NSE") -> EquityQuote |
         week_52_low=w52l,
         source="yahoo_finance_chart",
         as_of=_iso_now(),
+        currency=currency,
     )
 
 
@@ -213,6 +225,15 @@ def fetch_yahoo_global_quote(symbol: str, exchange: str = "NSE") -> EquityQuote 
     w52l = _to_float(meta.get("fiftyTwoWeekLow"))
     chg = (last - prev) if prev is not None else None
     pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
+    ycur = (meta.get("currency") or "").strip().upper()
+    if isinstance(ycur, str) and len(ycur) == 3:
+        currency = ycur
+    elif ex in ("LSE", "LON"):
+        currency = "GBP"
+    elif ex in ("US", "NYSE", "NASDAQ"):
+        currency = "USD"
+    else:
+        currency = "INR"
     return EquityQuote(
         symbol=sym,
         exchange=_EXCHANGE_CANONICAL.get(ex, ex),
@@ -227,6 +248,7 @@ def fetch_yahoo_global_quote(symbol: str, exchange: str = "NSE") -> EquityQuote 
         week_52_low=w52l,
         source="yahoo_finance_chart",
         as_of=_iso_now(),
+        currency=currency,
     )
 
 
@@ -337,4 +359,5 @@ def quote_to_dict(q: EquityQuote) -> dict:
         "week_52_low": q.week_52_low,
         "source": q.source,
         "as_of": q.as_of,
+        "currency": getattr(q, "currency", None) or "INR",
     }

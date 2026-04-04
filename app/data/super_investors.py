@@ -37,53 +37,6 @@ SUPER_INVESTORS: list[dict] = [
         ],
     },
     {
-        "name": "Radhakishan Damani",
-        "slug": "radhakishan-damani",
-        "title": "Founder of DMart",
-        "image_url": "",
-        "bio": (
-            "Reclusive billionaire and founder of Avenue Supermarts (DMart), "
-            "India's most profitable hypermarket chain. Known for his patient, "
-            "long-horizon approach, Damani favours consumer-facing businesses "
-            "with durable moats and low debt. His personal portfolio reflects "
-            "a deep conviction in India's consumption story."
-        ),
-        "country": "India",
-        "investment_style": "Value + Retail Focus",
-        "holdings": [
-            {"symbol": "DMART", "weight_pct": 52.0},
-            {"symbol": "TRENT", "weight_pct": 12.5},
-            {"symbol": "ITC", "weight_pct": 8.0},
-            {"symbol": "INDIAMART", "weight_pct": 5.6},
-            {"symbol": "BRITANNIA", "weight_pct": 4.3},
-            {"symbol": "NESTLEIND", "weight_pct": 3.8},
-        ],
-    },
-    {
-        "name": "Dolly Khanna",
-        "slug": "dolly-khanna",
-        "title": "Small & Mid Cap Queen",
-        "image_url": "",
-        "bio": (
-            "Chennai-based investor renowned for uncovering hidden gems in "
-            "India's small- and mid-cap universe. Dolly Khanna's portfolio, "
-            "managed alongside her husband Rajiv Khanna, has consistently "
-            "outperformed benchmarks through early entry into high-growth "
-            "manufacturing and specialty chemical companies."
-        ),
-        "country": "India",
-        "investment_style": "Growth at Reasonable Price",
-        "holdings": [
-            {"symbol": "TATAELXSI", "weight_pct": 9.5},
-            {"symbol": "KPITTECH", "weight_pct": 8.2},
-            {"symbol": "BHARATFORG", "weight_pct": 7.0},
-            {"symbol": "PERSISTENT", "weight_pct": 6.5},
-            {"symbol": "CLEAN", "weight_pct": 5.8},
-            {"symbol": "MARICO", "weight_pct": 5.0},
-            {"symbol": "DABUR", "weight_pct": 4.2},
-        ],
-    },
-    {
         "name": "Vijay Kedia",
         "slug": "vijay-kedia",
         "title": "The Smiling Bull",
@@ -104,29 +57,6 @@ SUPER_INVESTORS: list[dict] = [
             {"symbol": "MPHASIS", "weight_pct": 7.2},
             {"symbol": "MASTEK", "weight_pct": 6.0},
             {"symbol": "KFINTECH", "weight_pct": 5.5},
-        ],
-    },
-    {
-        "name": "Ashish Dhawan",
-        "slug": "ashish-dhawan",
-        "title": "Education Philanthropist & Investor",
-        "image_url": "",
-        "bio": (
-            "Former co-founder of ChrysCapital, one of India's premier PE "
-            "firms, Ashish Dhawan pivoted to philanthropy through the Central "
-            "Square Foundation while maintaining a sizeable personal equity "
-            "portfolio. His picks lean toward quality compounders with strong "
-            "management and secular tailwinds."
-        ),
-        "country": "India",
-        "investment_style": "Quality Compounding",
-        "holdings": [
-            {"symbol": "TCS", "weight_pct": 14.0},
-            {"symbol": "INFY", "weight_pct": 11.0},
-            {"symbol": "HCLTECH", "weight_pct": 8.5},
-            {"symbol": "DMART", "weight_pct": 7.8},
-            {"symbol": "TITAN", "weight_pct": 6.2},
-            {"symbol": "COLPAL", "weight_pct": 4.5},
         ],
     },
     {
@@ -228,29 +158,12 @@ SUPER_INVESTORS: list[dict] = [
             {"symbol": "TSLA", "weight_pct": 3.2},
         ],
     },
-    {
-        "name": "Mohnish Pabrai",
-        "slug": "mohnish-pabrai",
-        "title": "The Dhandho Investor",
-        "image_url": "",
-        "bio": (
-            "Indian-American investor and author of 'The Dhandho Investor', "
-            "Mohnish Pabrai runs the Pabrai Investment Funds with a concentrated, "
-            "low-turnover strategy inspired by Warren Buffett and Charlie Munger. "
-            "He is known for investing in both US and Indian equities, seeking "
-            "asymmetric risk-reward opportunities with a significant margin of "
-            "safety."
-        ),
-        "country": "United States",
-        "investment_style": "Concentrated Value",
-        "holdings": [
-            {"symbol": "COALINDIA", "weight_pct": 14.0},
-            {"symbol": "RELIANCE", "weight_pct": 10.5},
-            {"symbol": "AAPL", "weight_pct": 9.0},
-            {"symbol": "GOOGL", "weight_pct": 7.5},
-            {"symbol": "TRENT", "weight_pct": 6.8},
-            {"symbol": "ITC", "weight_pct": 5.5},
-            {"symbol": "TITAN", "weight_pct": 4.0},
-        ],
-    },
+]
+
+# Profiles removed from the public site (no reliable photo); seed deactivates these slugs.
+DEACTIVATED_SUPER_INVESTOR_SLUGS: list[str] = [
+    "radhakishan-damani",
+    "dolly-khanna",
+    "ashish-dhawan",
+    "mohnish-pabrai",
 ]
