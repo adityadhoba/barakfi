@@ -402,6 +402,8 @@ class SuperInvestorHolding(Base):
     company_name = Column(String, nullable=False, default="")
     sector = Column(String, nullable=False, default="")
     company_sector = Column(String, nullable=False, default="")
+    # Some production schemas persist position size details; keep a safe default.
+    shares = Column(Float, nullable=False, default=0.0)
     exchange = Column(String, nullable=False, default="")
     currency = Column(String, nullable=False, default="")
     country = Column(String, nullable=False, default="")
