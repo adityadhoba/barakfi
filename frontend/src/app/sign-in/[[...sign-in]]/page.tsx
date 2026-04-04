@@ -16,22 +16,25 @@ export default function SignInPage() {
           <Link href="/" style={{ textDecoration: "none" }}>
             <Logo size={28} showText variant="light" />
           </Link>
-          <h2 className="authSidebarTitle">Welcome back</h2>
+          <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
+            Shariah-Compliant Investing
+          </div>
+          <h2 className="authSidebarTitle">Welcome to Barakfi</h2>
           <p className="authSidebarDesc">
-            Sign in to access your watchlist, portfolio, and screening results.
+            Sign in to access your halal portfolio tracker, watchlist, and screening results across Indian, US, and UK markets.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2713;</span>
-              <span>Track Shariah compliance across your portfolio</span>
+              <span>Screen 370+ stocks across NSE, NYSE, and LSE</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>
-              <span>Save stocks to your personal watchlist</span>
+              <span>Track Shariah compliance across your portfolio</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x25A6;</span>
-              <span>Add research notes with reasoning</span>
+              <span>Free purification and zakat calculators</span>
             </div>
           </div>
 
@@ -44,7 +47,7 @@ export default function SignInPage() {
           </div>
 
           <p className="authSidebarFooter">
-            100+ NSE stocks screened with S&amp;P + AAOIFI methodology
+            370+ stocks screened across 3 global exchanges
           </p>
         </div>
       </div>
