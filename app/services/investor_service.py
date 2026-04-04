@@ -96,14 +96,35 @@ def seed_investors(db: Session) -> int:
             db.add(investor)
             db.flush()
 
+        existing_holdings = {
+            row.stock_id
+            for row in db.query(SuperInvestorHolding)
+            .filter(SuperInvestorHolding.investor_id == investor.id)
+            .all()
+        }
+
         for h in inv_data.get("holdings", []):
-            stock = db.query(Stock).filter(Stock.symbol == h["symbol"]).first()
+            sym = (h.get("symbol") or "").upper()
+            stock = db.query(Stock).filter(Stock.symbol == sym).first()
             if stock:
-                db.add(SuperInvestorHolding(
-                    investor_id=investor.id,
-                    stock_id=stock.id,
-                    weight_pct=h.get("weight_pct", 0.0),
-                ))
+                if stock.id in existing_holdings:
+                    # Update weight if already exists
+                    row = (
+                        db.query(SuperInvestorHolding)
+                        .filter(
+                            SuperInvestorHolding.investor_id == investor.id,
+                            SuperInvestorHolding.stock_id == stock.id,
+                        )
+                        .first()
+                    )
+                    if row:
+                        row.weight_pct = h.get("weight_pct", 0.0)
+                else:
+                    db.add(SuperInvestorHolding(
+                        investor_id=investor.id,
+                        stock_id=stock.id,
+                        weight_pct=h.get("weight_pct", 0.0),
+                    ))
         seeded += 1
 
     db.commit()

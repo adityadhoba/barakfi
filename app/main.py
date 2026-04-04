@@ -109,6 +109,30 @@ def _auto_migrate_columns():
     logger.info("[auto-migrate] Schema check complete.")
 
 
+def _acquire_seed_lock(conn) -> bool:
+    """
+    Acquire a best-effort cross-process seed lock.
+    - Postgres: uses advisory lock (prevents multi-worker double-seeding)
+    - Others: no-op (returns True)
+    """
+    try:
+        if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+            # Use a stable integer key; any 32-bit int is fine.
+            got = conn.execute(text("SELECT pg_try_advisory_lock(42424242)")).scalar()
+            return bool(got)
+    except Exception:
+        return True
+    return True
+
+
+def _release_seed_lock(conn) -> None:
+    try:
+        if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+            conn.execute(text("SELECT pg_advisory_unlock(42424242)"))
+    except Exception:
+        pass
+
+
 def _auto_seed_stocks():
     """
     Seed the database with stock data if it's empty.
@@ -204,12 +228,17 @@ _auto_migrate_columns()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
 
-# 4. Seed collections and super investors
+# 4. Seed collections and super investors (single-worker safe)
 log = logging.getLogger("barakfi")
 try:
     from app.database import SessionLocal as _SeedSession
     _seed_db = _SeedSession()
     try:
+        # Only one worker should seed on Postgres.
+        with engine.begin() as _conn:
+            if not _acquire_seed_lock(_conn):
+                log.info("Seed lock held by another worker; skipping seed step.")
+                raise SystemExit(0)
         from app.services.collection_service import seed_collections
         from app.services.investor_service import seed_investors
         count = seed_collections(_seed_db)
@@ -327,6 +356,8 @@ try:
             if admin_portfolio.name != "Core India Halal":
                 admin_portfolio.name = "Core India Halal"
             _seed_db.commit()
+    except SystemExit:
+        pass
     except Exception as exc:
         log.warning("Seeding collections/investors failed: %s", exc)
     finally:

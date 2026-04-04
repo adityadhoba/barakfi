@@ -71,20 +71,33 @@ def seed_collections(db: Session) -> int:
     for i, coll_data in enumerate(COLLECTIONS):
         existing = db.query(StockCollection).filter(StockCollection.slug == coll_data["slug"]).first()
         if existing:
-            continue
+            existing.name = coll_data["name"]
+            existing.description = coll_data["description"]
+            existing.icon = coll_data["icon"]
+            existing.display_order = i
+            existing.is_active = True
+            collection = existing
+        else:
+            collection = StockCollection(
+                name=coll_data["name"],
+                slug=coll_data["slug"],
+                description=coll_data["description"],
+                icon=coll_data["icon"],
+                display_order=i,
+                is_active=True,
+            )
+            db.add(collection)
+            db.flush()
 
-        collection = StockCollection(
-            name=coll_data["name"],
-            slug=coll_data["slug"],
-            description=coll_data["description"],
-            icon=coll_data["icon"],
-            display_order=i,
-        )
-        db.add(collection)
-        db.flush()
+        # Idempotent: reset entries and rebuild
+        db.query(CollectionEntry).filter(CollectionEntry.collection_id == collection.id).delete()
 
         for j, sym in enumerate(coll_data["symbols"]):
+            # Symbols may be stored with Yahoo suffixes for LSE (e.g. "AZN.L").
+            # Prefer exact match; fall back to LSE-suffixed match.
             stock = db.query(Stock).filter(Stock.symbol == sym).first()
+            if not stock and coll_data["slug"].startswith("ftse100"):
+                stock = db.query(Stock).filter(Stock.symbol == f"{sym}.L").first()
             if stock:
                 db.add(CollectionEntry(
                     collection_id=collection.id,
