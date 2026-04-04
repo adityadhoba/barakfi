@@ -2067,3 +2067,28 @@ def admin_update_coverage_request(
     db.commit()
     return {"id": cr.id, "status": cr.status}
 
+# ═══════════════════════════════════════════════════════════════
+# NEWS (RSS-backed)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/news")
+def list_public_news(
+    limit: int = Query(default=24, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    from app.services.news_service import list_news
+    return list_news(db, limit=limit)
+
+
+@router.post("/internal/news/sync")
+def sync_news_feed(
+    db: Session = Depends(get_db),
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+):
+    from app.config import INTERNAL_SERVICE_TOKEN
+    from app.services.news_service import fetch_and_upsert_news
+    if x_internal_service_token != INTERNAL_SERVICE_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    n = fetch_and_upsert_news(db)
+    return {"ok": True, "upserted": n}
+

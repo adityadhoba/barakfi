@@ -37,7 +37,17 @@ def verify_clerk_token(token: str) -> dict:
     except jwt.InvalidTokenError as exc:
         raise HTTPException(status_code=401, detail=f"Invalid session token: {type(exc).__name__}") from exc
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=f"Token verification failed: {type(exc).__name__}") from exc
+        hint = ""
+        exc_name = type(exc).__name__
+        if "JWK" in exc_name or "Connection" in exc_name:
+            hint = (
+                " Check CLERK_JWKS_URL in the API environment (Clerk Dashboard → API Keys → JWKS URL). "
+                "The default https://api.clerk.com/v1/jwks is usually wrong for session tokens."
+            )
+        raise HTTPException(
+            status_code=401,
+            detail=f"Token verification failed: {exc_name}.{hint}",
+        ) from exc
 
     authorized_party = claims.get("azp")
     if authorized_party and AUTHORIZED_PARTIES and authorized_party not in AUTHORIZED_PARTIES:

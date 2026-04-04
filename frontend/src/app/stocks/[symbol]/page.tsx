@@ -26,6 +26,7 @@ import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { MethodologyComparison } from "@/components/methodology-comparison";
+import { displayCountryForStock } from "@/lib/stock-display";
 
 export async function generateMetadata({
   params,
@@ -72,6 +73,18 @@ function formatMcap(value: number, currency: string = "INR") {
   if (value >= 1e9) return `${symbol}${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `${symbol}${(value / 1e6).toFixed(0)}M`;
   return formatCurrency(value, cur);
+}
+
+function formatVolumeShorthand(volume: number, currency: string) {
+  const cur = currency || "INR";
+  if (cur === "INR") {
+    if (volume >= 1e7) return `${(volume / 1e7).toFixed(2)} Cr`;
+    return `${(volume / 1e5).toFixed(1)} L`;
+  }
+  if (volume >= 1e9) return `${(volume / 1e9).toFixed(2)}B`;
+  if (volume >= 1e6) return `${(volume / 1e6).toFixed(2)}M`;
+  if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`;
+  return String(Math.round(volume));
 }
 
 function formatRatio(value: number) {
@@ -179,6 +192,7 @@ export default async function StockDetailPage({
 
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
+  const displayCountry = displayCountryForStock(stock.exchange, stock.country);
   const financials = [
     { label: "Market Cap", value: formatMcap(stock.market_cap, cur) },
     { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m, cur) },
@@ -307,7 +321,7 @@ export default async function StockDetailPage({
             <div className={styles.stockMeta}>
               <span className={styles.stockMetaChip}>{stock.exchange}</span>
               <span className={styles.stockMetaChip}>{stock.sector}</span>
-              <span className={styles.stockMetaChip}>{stock.country}</span>
+              <span className={styles.stockMetaChip}>{displayCountry}</span>
             </div>
             <div className={styles.stockTitleRow}>
               <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
@@ -345,7 +359,7 @@ export default async function StockDetailPage({
                 {liveQuote.volume != null && (
                   <>
                     {" · "}
-                    Vol {(liveQuote.volume / 1e5).toFixed(1)}L
+                    Vol {formatVolumeShorthand(liveQuote.volume, quoteCur)}
                   </>
                 )}
                 {" · "}
@@ -573,9 +587,7 @@ export default async function StockDetailPage({
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>Volume</span>
                   <span className={styles.financialCardValue}>
-                    {liveQuote.volume >= 1e7
-                      ? `${(liveQuote.volume / 1e7).toFixed(2)} Cr`
-                      : `${(liveQuote.volume / 1e5).toFixed(1)} L`}
+                    {formatVolumeShorthand(liveQuote.volume, quoteCur)}
                   </span>
                 </div>
               )}
