@@ -384,6 +384,8 @@ class SuperInvestor(Base):
     country = Column(String, nullable=False, default="India")
     investment_style = Column(String, nullable=False, default="")
     image_url = Column(String, nullable=False, default="")
+    # Production Postgres includes a NOT NULL canonical source URL.
+    source_url = Column(String, nullable=False, default="")
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
@@ -404,6 +406,9 @@ class SuperInvestorHolding(Base):
     company_sector = Column(String, nullable=False, default="")
     # Some production schemas persist position size details; keep a safe default.
     shares = Column(Float, nullable=False, default=0.0)
+    value = Column(Float, nullable=False, default=0.0)
+    pct_portfolio = Column(Float, nullable=False, default=0.0)
+    as_of_date = Column(DateTime, nullable=False, default=utc_now)
     exchange = Column(String, nullable=False, default="")
     currency = Column(String, nullable=False, default="")
     country = Column(String, nullable=False, default="")
