@@ -68,6 +68,47 @@ This project should not claim final Shariah certification yet. Production use ne
 - documented change control for compliance rules
 - legal and regulatory review before broker execution
 
+## Data Automation
+
+### Daily Price Updates
+
+Stock prices are updated via `scripts/daily_update.py`. Options:
+
+```bash
+# Update all exchanges
+python scripts/daily_update.py
+
+# Update only NSE stocks  
+python scripts/daily_update.py --exchange NSE
+
+# Dry run (no changes)
+python scripts/daily_update.py --dry-run
+```
+
+### Render Cron Job
+
+The `render.yaml` Blueprint includes a cron job that runs at 23:00 UTC (4:30 AM IST) on weekdays. To activate:
+
+1. Go to Render Dashboard → Blueprints
+2. Connect the repository
+3. Render will create the cron job automatically
+
+### Manual Stock Data Refresh
+
+To fetch fresh financial data (balance sheets, income statements):
+
+```bash
+python fetch_real_data.py --dry-run    # Preview
+python fetch_real_data.py              # Fetch and write to DB
+```
+
+### External Cron (Alternative)
+
+Use [cron-job.org](https://cron-job.org) (free) to call the keep-alive and price sync endpoints:
+
+- **Keep-alive**: `GET https://barakfi.in/api/keep-alive` — every 14 minutes
+- **Price sync**: `POST https://your-backend.onrender.com/api/market-data/sync-prices` with `X-Internal-Service-Token` header — daily
+
 ## Lean build strategy
 
 This project is intentionally designed for a low-budget founder path:

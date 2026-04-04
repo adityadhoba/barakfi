@@ -258,7 +258,7 @@ input, select, textarea, button {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: 0 32px;
   height: 56px;
   border-bottom: 1px solid var(--topbar-border);
   background: var(--topbar-bg);
@@ -417,15 +417,15 @@ input, select, textarea, button {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
-  background: var(--panel);
+  width: 100%;
+  background: var(--panel-solid);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08);
   list-style: none;
   margin: 0;
   padding: 4px;
-  z-index: 200;
+  z-index: 9999;
   max-height: 400px;
   overflow-y: auto;
   animation: dropdownIn 120ms ease-out;
@@ -541,7 +541,7 @@ input, select, textarea, button {
 .topbarNav {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 4px;
 }
 
 .topbarNavSecondary {
@@ -552,7 +552,7 @@ input, select, textarea, button {
 
 /* Nav links */
 .ghostLink {
-  padding: 7px 14px;
+  padding: 7px 16px;
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 500;
@@ -994,10 +994,17 @@ textarea:focus::placeholder {
 
 /* Premium gradient variant for login/signup */
 .authSidebarGradient {
-  background: linear-gradient(170deg, #064e3b 0%, #065f46 40%, #047857 100%);
+  background: linear-gradient(135deg, #047857 0%, #059669 40%, #10b981 70%, #065f46 100%);
+  background-size: 200% 200%;
+  animation: authGradientShift 12s ease-in-out infinite;
   border-right: none;
   position: relative;
   overflow: hidden;
+}
+
+@keyframes authGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 .authSidebarGradient::before {
   content: "";

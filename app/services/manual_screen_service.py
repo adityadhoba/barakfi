@@ -1,9 +1,10 @@
 """
 Manual stock screening service.
 
-Fetches live financial data from Yahoo Finance for any NSE symbol
-and screens it on-the-fly using all three Shariah methodologies.
-Results are cached in-memory for 1 hour to avoid repeated API calls.
+Fetches live financial data from Yahoo Finance for any symbol on NSE, US,
+or LSE exchanges and screens it on-the-fly using all three Shariah
+methodologies.  Results are cached in-memory for 1 hour to avoid repeated
+API calls.
 """
 
 import logging
@@ -60,14 +61,40 @@ def _set_cached(symbol: str, data: dict | None):
     _cache[symbol] = (time.time(), data)
 
 
-def fetch_and_screen(symbol: str) -> dict | None:
+_EXCHANGE_SUFFIX: dict[str, str] = {
+    "NSE": ".NS",
+    "BSE": ".BO",
+    "US": "",
+    "NYSE": "",
+    "NASDAQ": "",
+    "LSE": ".L",
+    "LON": ".L",
+}
+
+_EXCHANGE_META: dict[str, dict[str, str]] = {
+    "NSE":    {"exchange": "NSE",    "country": "India", "currency": "INR"},
+    "BSE":    {"exchange": "BSE",    "country": "India", "currency": "INR"},
+    "US":     {"exchange": "US",     "country": "US",    "currency": "USD"},
+    "NYSE":   {"exchange": "NYSE",   "country": "US",    "currency": "USD"},
+    "NASDAQ": {"exchange": "NASDAQ", "country": "US",    "currency": "USD"},
+    "LSE":    {"exchange": "LSE",    "country": "UK",    "currency": "GBP"},
+    "LON":    {"exchange": "LSE",    "country": "UK",    "currency": "GBP"},
+}
+
+MILLION = 1e6
+
+
+def fetch_and_screen(symbol: str, exchange: str = "NSE") -> dict | None:
     """
-    Fetch live financial data from Yahoo Finance for a given NSE symbol
+    Fetch live financial data from Yahoo Finance for a given symbol
     and return the raw stock data dict suitable for evaluate_stock().
 
+    Supports NSE (default), BSE, US/NYSE/NASDAQ, and LSE/LON exchanges.
     Returns None if the symbol cannot be found or data is insufficient.
     """
-    cached = _get_cached(symbol)
+    ex = (exchange or "NSE").upper()
+    cache_key = f"{symbol}:{ex}"
+    cached = _get_cached(cache_key)
     if cached is not None:
         return cached
 
@@ -77,8 +104,19 @@ def fetch_and_screen(symbol: str) -> dict | None:
         log.error("yfinance not installed — manual screening unavailable")
         return None
 
-    ticker_str = f"{symbol}.NS"
+    suffix = _EXCHANGE_SUFFIX.get(ex, ".NS")
+    ticker_str = f"{symbol}{suffix}"
     log.info("Manual screening: fetching %s from Yahoo Finance", ticker_str)
+
+    use_inr = ex in ("NSE", "BSE")
+    meta = _EXCHANGE_META.get(ex, {"exchange": ex, "country": "Unknown", "currency": "USD"})
+
+    def _scale(raw_value):
+        if raw_value is None or raw_value == 0.0:
+            return 0.0
+        if use_inr:
+            return _to_crores(raw_value)
+        return round(raw_value / MILLION, 2)
 
     try:
         ticker = yf.Ticker(ticker_str)
@@ -86,12 +124,12 @@ def fetch_and_screen(symbol: str) -> dict | None:
 
         if not info or (info.get("regularMarketPrice") is None and info.get("currentPrice") is None):
             log.warning("No data for %s", symbol)
-            _set_cached(symbol, None)
+            _set_cached(cache_key, None)
             return None
 
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
         market_cap_raw = info.get("marketCap") or 0.0
-        market_cap = _to_crores(market_cap_raw)
+        market_cap = _scale(market_cap_raw)
         average_market_cap_36m = round(market_cap * 0.9, 2) if market_cap > 0 else 0.0
 
         name = info.get("longName") or info.get("shortName") or symbol
@@ -118,33 +156,36 @@ def fetch_and_screen(symbol: str) -> dict | None:
         ppe_raw = _safe_val(balance_sheet, ["Net PPE", "Net Property Plant And Equipment", "Gross PPE", "Properties"])
         total_assets_raw = _safe_val(balance_sheet, ["Total Assets"])
 
+        unit_label = "Cr" if use_inr else "M"
+
         stock_data = {
             "symbol": symbol,
             "name": name,
             "sector": sector,
-            "exchange": "NSE",
-            "country": "India",
+            "exchange": meta["exchange"],
+            "country": meta["country"],
+            "currency": meta["currency"],
             "market_cap": market_cap,
             "average_market_cap_36m": average_market_cap_36m,
-            "debt": _to_crores(debt_raw),
-            "revenue": _to_crores(revenue_raw),
-            "total_business_income": _to_crores(revenue_raw + other_income_raw),
-            "interest_income": _to_crores(interest_income_raw),
-            "non_permissible_income": _to_crores(interest_income_raw),
-            "accounts_receivable": _to_crores(receivables_raw),
-            "cash_and_equivalents": _to_crores(cash_raw),
-            "short_term_investments": _to_crores(sti_raw),
-            "fixed_assets": _to_crores(ppe_raw),
-            "total_assets": _to_crores(total_assets_raw),
+            "debt": _scale(debt_raw),
+            "revenue": _scale(revenue_raw),
+            "total_business_income": _scale(revenue_raw + other_income_raw),
+            "interest_income": _scale(interest_income_raw),
+            "non_permissible_income": _scale(interest_income_raw),
+            "accounts_receivable": _scale(receivables_raw),
+            "cash_and_equivalents": _scale(cash_raw),
+            "short_term_investments": _scale(sti_raw),
+            "fixed_assets": _scale(ppe_raw),
+            "total_assets": _scale(total_assets_raw),
             "price": round(price, 2),
             "data_source": "yahoo_finance_live",
         }
 
-        _set_cached(symbol, stock_data)
-        log.info("Manual screening: fetched %s OK (MCap=%.0f Cr)", symbol, market_cap)
+        _set_cached(cache_key, stock_data)
+        log.info("Manual screening: fetched %s OK (MCap=%.0f %s)", symbol, market_cap, unit_label)
         return stock_data
 
     except Exception as exc:
         log.error("Manual screening FAILED for %s: %s", symbol, exc)
-        _set_cached(symbol, None)
+        _set_cached(cache_key, None)
         return None

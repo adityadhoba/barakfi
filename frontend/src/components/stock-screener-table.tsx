@@ -32,20 +32,34 @@ const MCAP_OPTIONS = [
   { key: "small", label: "Small Cap", min: 0, max: 20000 },
 ] as const;
 
+const EXCHANGE_OPTIONS = [
+  { key: "all", label: "All Markets" },
+  { key: "NSE", label: "India (NSE)" },
+  { key: "US", label: "US (NYSE/NASDAQ)" },
+  { key: "LSE", label: "UK (LSE)" },
+] as const;
+
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   HALAL: { cls: "statusHalal", label: "Halal" },
   CAUTIOUS: { cls: "statusReview", label: "Cautious" },
   NON_COMPLIANT: { cls: "statusFail", label: "Avoid" },
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+function formatPrice(value: number, currency?: string) {
+  const sym = currency === "GBP" ? "£" : currency === "USD" ? "$" : "₹";
+  const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
+  return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }
 
-function formatMcap(value: number) {
+function formatMcap(value: number, currency?: string) {
+  const sym = currency === "GBP" ? "£" : currency === "USD" ? "$" : "₹";
+  if (currency && currency !== "INR") {
+    if (value >= 1000) return `${sym}${(value / 1000).toFixed(1)}B`;
+    return `${sym}${value.toFixed(0)}M`;
+  }
   if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
   if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
+  return `₹${value.toFixed(0)}`;
 }
 
 function formatPct(value: number) {
@@ -99,6 +113,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sectorFilter, setSectorFilter] = useState("All");
   const [mcapFilter, setMcapFilter] = useState("all");
   const [indexFilter, setIndexFilter] = useState("all");
+  const [exchangeFilter, setExchangeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -136,6 +151,8 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (mcap && MCAP_OPTIONS.some((o) => o.key === mcap)) setMcapFilter(mcap);
     const idx = searchParams.get("index");
     if (idx && INDEX_OPTIONS.some((o) => o.key === idx)) setIndexFilter(idx);
+    const exc = searchParams.get("exchange");
+    if (exc && EXCHANGE_OPTIONS.some((o) => o.key === exc)) setExchangeFilter(exc);
     setInitialized(true);
   }, [searchParams, screenedStocks]);
 
@@ -149,9 +166,10 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (mcapFilter !== "all") params.set("mcap", mcapFilter);
     if (indexFilter !== "all") params.set("index", indexFilter);
+    if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
     router.replace(qs ? `/screener?${qs}` : "/screener", { scroll: false });
-  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, router]);
+  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, exchangeFilter, router]);
 
   const sectorCounts = useMemo(() => {
     const counts: Record<string, number> = { All: screenedStocks.length };
@@ -171,9 +189,10 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
       if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter)) return false;
+      if (exchangeFilter !== "all" && s.exchange !== exchangeFilter) return false;
       return true;
     });
-  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter]);
+  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter, exchangeFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -215,14 +234,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusedIdx]);
 
-  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || query.trim() !== "";
+  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || exchangeFilter !== "all" || query.trim() !== "";
 
   function resetAllFilters() {
-    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
+    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all"); setExchangeFilter("all");
     setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
   }
 
-  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", query.trim() !== ""].filter(Boolean).length;
+  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", exchangeFilter !== "all", query.trim() !== ""].filter(Boolean).length;
 
   async function handleSaveFilter() {
     if (!saveFilterName.trim()) return;
@@ -363,6 +382,23 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
+        {/* Exchange */}
+        <div className={styles.filterSection}>
+          <h4 className={styles.filterLabel}>Exchange</h4>
+          <div className={styles.filterPills}>
+            {EXCHANGE_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                className={`${styles.filterPill} ${exchangeFilter === opt.key ? styles.filterPillActive : ""}`}
+                onClick={() => setExchangeFilter(opt.key)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Sidebar toggle on mobile */}
         <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
           {sidebarOpen ? "Hide Filters" : "Show Filters"}
@@ -426,6 +462,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button type="button" onClick={() => setIndexFilter("all")}>&times;</button>
               </span>
             )}
+            {exchangeFilter !== "all" && (
+              <span className={styles.chip}>
+                {EXCHANGE_OPTIONS.find((o) => o.key === exchangeFilter)?.label}
+                <button type="button" onClick={() => setExchangeFilter("all")}>&times;</button>
+              </span>
+            )}
             {query.trim() && (
               <span className={styles.chip}>
                 &ldquo;{query.trim()}&rdquo;
@@ -479,9 +521,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       </StockPreviewPopup>
                     </td>
                     <td className={styles.tdSector}>{s.sector}</td>
-                    <td className={styles.tdRight}>{formatMcap(s.market_cap)}</td>
+                    <td className={styles.tdRight}>{formatMcap(s.market_cap, s.currency)}</td>
                     <td className={styles.tdRight}>
-                      {formatPrice(quotes[s.symbol]?.last_price ?? s.price)}
+                      {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
                       {quotes[s.symbol]?.change_percent != null && (
                         <span className={(quotes[s.symbol].change_percent ?? 0) >= 0 ? styles.up : styles.down}>
                           {" "}{(quotes[s.symbol].change_percent ?? 0) >= 0 ? "+" : ""}
@@ -546,6 +588,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             </button>
           </div>
         )}
+
+        <div className={styles.screenerDisclaimer}>
+          Screening results are based on automated financial ratio analysis using publicly available data.
+          They do not constitute a fatwa or religious ruling.
+          Consult a qualified Shariah scholar for definitive investment guidance.
+          <Link href="/methodology" className={styles.screenerDisclaimerLink}>View methodology</Link>
+        </div>
       </div>
 
       {/* Save Filter Modal */}

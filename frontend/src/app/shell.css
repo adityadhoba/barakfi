@@ -5,7 +5,7 @@
 
 /* ── Page Container ── */
 .shellPage {
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 24px 24px max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
   width: 100%;

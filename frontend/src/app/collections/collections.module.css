@@ -1,0 +1,20 @@
+.container { max-width: 900px; margin: 0 auto; padding: 24px 24px 64px; }
+.breadcrumb { display: flex; gap: 8px; font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 20px; }
+.breadcrumb a { color: var(--text-tertiary); text-decoration: none; }
+.breadcrumb a:hover { color: var(--emerald); }
+.header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.kicker { display: inline-flex; padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--emerald); background: var(--emerald-bg); border: 1px solid var(--emerald-border); margin-bottom: 12px; }
+.title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin: 0 0 8px; }
+.subtitle { font-size: 0.92rem; color: var(--text-secondary); margin: 0; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+@media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+.card { display: flex; align-items: flex-start; gap: 16px; padding: 20px; border-radius: var(--radius-xl); border: 1px solid var(--line); background: var(--panel); text-decoration: none; transition: border-color 200ms, box-shadow 200ms, transform 150ms; }
+.card:hover { border-color: var(--emerald); box-shadow: 0 0 0 1px var(--emerald), 0 8px 24px rgba(16,185,129,0.1); transform: translateY(-2px); }
+.cardIcon { font-size: 1.6rem; width: 48px; height: 48px; border-radius: 12px; background: var(--emerald-bg); border: 1px solid var(--emerald-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cardBody { flex: 1; min-width: 0; }
+.cardTitle { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0 0 4px; }
+.cardDesc { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cardMeta { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.cardCount { font-size: 0.72rem; font-weight: 600; color: var(--emerald); padding: 2px 8px; border-radius: var(--radius-full); background: var(--emerald-bg); }
+.cardArrow { font-size: 1rem; color: var(--text-tertiary); transition: color 150ms, transform 150ms; }
+.card:hover .cardArrow { color: var(--emerald); transform: translateX(3px); }

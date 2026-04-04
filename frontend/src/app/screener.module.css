@@ -1473,3 +1473,30 @@
     margin: 0 auto;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREENER DISCLAIMER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.screenerDisclaimer {
+  margin-top: 24px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  text-align: center;
+}
+
+.screenerDisclaimerLink {
+  color: var(--emerald);
+  font-weight: 600;
+  margin-left: 6px;
+  text-decoration: none;
+}
+
+.screenerDisclaimerLink:hover {
+  text-decoration: underline;
+}
