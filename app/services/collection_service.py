@@ -75,6 +75,11 @@ def seed_collections(db: Session) -> int:
             existing.description = coll_data["description"]
             existing.icon = coll_data["icon"]
             existing.display_order = i
+            # Optional field in some deployments; keep safe defaults.
+            try:
+                existing.is_featured = bool(coll_data.get("is_featured", False))
+            except Exception:
+                existing.is_featured = False
             existing.is_active = True
             collection = existing
         else:
@@ -84,6 +89,7 @@ def seed_collections(db: Session) -> int:
                 description=coll_data["description"],
                 icon=coll_data["icon"],
                 display_order=i,
+                is_featured=bool(coll_data.get("is_featured", False)),
                 is_active=True,
             )
             db.add(collection)
