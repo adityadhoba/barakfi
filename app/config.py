@@ -54,3 +54,9 @@ XARO_API_KEY = os.getenv("XARO_API_KEY", "")
 
 def is_production() -> bool:
     return APP_ENV.lower() == "production"
+
+# RSS feed for Islamic finance news (Google News topic query — configurable)
+NEWS_RSS_URL = os.getenv(
+    "NEWS_RSS_URL",
+    "https://news.google.com/rss/search?q=Islamic+finance+OR+Shariah+investing&hl=en-US&gl=US&ceid=US:en",
+)

@@ -1176,6 +1176,20 @@ export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetai
   return apiFetch(`/super-investors/${slug}`, null);
 }
 
+export type NewsItem = {
+  id: number;
+  title: string;
+  summary: string;
+  url: string;
+  image_url: string;
+  source: string;
+  published_at: string | null;
+};
+
+export async function getNews(limit: number = 24): Promise<NewsItem[]> {
+  return apiFetch(`/news?limit=${limit}`, []);
+}
+
 export async function getETFs(exchange?: string): Promise<HalalETF[]> {
   const params = exchange ? `?exchange=${exchange}` : "";
   return apiFetch(`/etfs${params}`, []);

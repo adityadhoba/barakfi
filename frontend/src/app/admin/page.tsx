@@ -14,7 +14,7 @@ async function checkAdminAccess() {
   // Get Clerk JWT token for backend authentication
   const token = await authState.getToken();
   if (!token) {
-    redirect("/");
+    redirect("/sign-in?redirect_url=/admin");
   }
 
   // Fetch user details from API to check role
@@ -28,20 +28,20 @@ async function checkAdminAccess() {
     });
 
     if (!response.ok) {
-      redirect("/");
+      redirect("/admin/forbidden");
     }
 
     const user = await response.json();
 
     // Check if user is admin (role = admin or is in legacy admin list)
     if (user.role !== "admin") {
-      redirect("/");
+      redirect("/admin/forbidden");
     }
 
     return user;
   } catch (error) {
     console.error("Admin access check failed:", error);
-    redirect("/");
+    redirect("/admin/forbidden");
   }
 }
 

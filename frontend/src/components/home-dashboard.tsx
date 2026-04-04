@@ -1,26 +1,37 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNews } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
+import { CollectionIcon } from "@/components/collection-icon";
+import { NewsCarousel } from "@/app/news/news-carousel";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", {
+function formatPrice(value: number, currency: string = "INR") {
+  const cur = currency || "INR";
+  const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "INR",
+    currency: cur,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function formatMcap(value: number) {
-  if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
+function formatMcap(value: number, currency: string = "INR") {
+  const cur = currency || "INR";
+  if (cur === "INR") {
+    if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
+    if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
+    return formatPrice(value, cur);
+  }
+  const sym = cur === "USD" ? "$" : cur === "GBP" ? "\u00a3" : "";
+  if (value >= 1e9) return `${sym}${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e6) return `${sym}${(value / 1e6).toFixed(1)}M`;
+  return formatPrice(value, cur);
 }
 
 type Screened = Stock & { screening: ScreeningResult };
@@ -49,12 +60,13 @@ type Props = {
 };
 
 export async function HomeDashboard({ isSignedIn }: Props) {
-  const [stocks, trendingStocks, collections, investors, etfs] = await Promise.all([
+  const [stocks, trendingStocks, collections, investors, etfs, newsFeed] = await Promise.all([
     getStocks(),
     getTrending("popular", undefined, 6),
     getCollections(),
     getSuperInvestors(),
     getETFs(),
+    getNews(12),
   ]);
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
@@ -308,8 +320,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                   </div>
                 </div>
                 <div className={styles.stockItemBottom}>
-                  <div className={styles.stockPrice}>{formatPrice(row.price)}</div>
-                  <div className={styles.stockMcap}>{formatMcap(row.market_cap)}</div>
+                  <div className={styles.stockPrice}>{formatPrice(row.price, row.currency || "INR")}</div>
+                  <div className={styles.stockMcap}>{formatMcap(row.market_cap, row.currency || "INR")}</div>
                 </div>
                 {scr && (
                   <div className={styles.stockStatus}>
@@ -354,6 +366,17 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
       </section>
 
+      {/* ── Islamic finance headlines (RSS) ── */}
+      {newsFeed.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Islamic finance headlines</h2>
+            <Link href="/news" className={styles.seeAll}>All news →</Link>
+          </div>
+          <NewsCarousel items={newsFeed.slice(0, 8)} />
+        </section>
+      )}
+
       {/* ── Trending Preview ── */}
       {trendingStocks.length > 0 && (
         <section className={styles.section}>
@@ -386,7 +409,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           <div className={styles.collectionsGrid}>
             {collections.slice(0, 4).map((coll) => (
               <Link key={coll.slug} href={`/collections/${coll.slug}`} className={styles.collectionCard}>
-                <span className={styles.collectionIcon}>{coll.icon}</span>
+                <CollectionIcon slug={coll.slug} />
                 <span className={styles.collectionName}>{coll.name}</span>
                 <span className={styles.collectionCount}>{coll.stock_count} stocks</span>
               </Link>
@@ -405,7 +428,12 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           <div className={styles.investorsGrid}>
             {investors.slice(0, 4).map((inv) => (
               <Link key={inv.slug} href={`/super-investors/${inv.slug}`} className={styles.investorCard}>
-                <div className={styles.investorAvatar}>{inv.name.charAt(0)}</div>
+                {inv.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={inv.image_url} alt="" className={styles.investorAvatarImg} width={40} height={40} />
+                ) : (
+                  <div className={styles.investorAvatar}>{inv.name.charAt(0)}</div>
+                )}
                 <div className={styles.investorBody}>
                   <span className={styles.investorName}>{inv.name}</span>
                   <span className={styles.investorTitle}>{inv.title}</span>
@@ -523,12 +551,13 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         <div className={styles.trustItem}>
           <span className={styles.trustIcon}>
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16" />
             </svg>
           </span>
           <div className={styles.trustText}>
-            <span className={styles.trustTitle}>Mobile-First PWA</span>
-            <span className={styles.trustDesc}>Install on any device, works offline</span>
+            <span className={styles.trustTitle}>Responsive web</span>
+            <span className={styles.trustDesc}>Fast on phone and desktop — no app install</span>
           </div>
         </div>
       </section>
