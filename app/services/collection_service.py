@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from sqlalchemy.orm import Session
-from app.models import Stock, StockCollection, CollectionEntry
+from app.models import Stock, StockCollection, CollectionEntry, utc_now
 
 
 def get_collections(db: Session) -> list[dict]:
@@ -109,6 +109,7 @@ def seed_collections(db: Session) -> int:
                     collection_id=collection.id,
                     stock_id=stock.id,
                     display_order=j,
+                    added_at=utc_now(),
                 ))
         seeded += 1
 
