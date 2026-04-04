@@ -1,0 +1,22 @@
+.container { max-width: 900px; margin: 0 auto; padding: 24px 24px 64px; }
+.breadcrumb { display: flex; gap: 8px; font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 20px; }
+.breadcrumb a { color: var(--text-tertiary); text-decoration: none; }
+.breadcrumb a:hover { color: var(--emerald); }
+.header { margin-bottom: 24px; }
+.kicker { display: inline-flex; padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--emerald); background: var(--emerald-bg); border: 1px solid var(--emerald-border); margin-bottom: 12px; }
+.title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin: 0 0 8px; }
+.subtitle { font-size: 0.92rem; color: var(--text-secondary); margin: 0; }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.pill { padding: 6px 16px; border-radius: var(--radius-full); border: 1px solid var(--line); background: var(--panel); font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+.pillActive { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-bg); }
+.grid { display: flex; flex-direction: column; gap: 8px; }
+.card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--panel); text-decoration: none; transition: border-color 150ms, transform 150ms; }
+.card:hover { border-color: var(--emerald); transform: translateX(2px); }
+.cardRank { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--text-tertiary); flex-shrink: 0; }
+.cardBody { flex: 1; min-width: 0; }
+.cardSymbol { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.cardName { font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardRight { text-align: right; flex-shrink: 0; }
+.cardPrice { font-size: 0.88rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.cardMcap { font-size: 0.7rem; color: var(--text-tertiary); }
+.cardExchange { padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); background: var(--bg-soft); flex-shrink: 0; }
