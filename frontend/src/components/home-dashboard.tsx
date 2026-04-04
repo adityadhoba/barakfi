@@ -289,6 +289,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </h2>
           <Link href="/screener" className={styles.seeAll}>Full list &rarr;</Link>
         </div>
+        <p className={styles.sectionFootnote}>Based on S&P Shariah screening criteria</p>
         <div className={styles.stockGrid}>
           {topHalal.map((row) => {
             const scr = 'screening' in row ? (row as Screened) : null;

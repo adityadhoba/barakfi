@@ -577,6 +577,13 @@
 }
 .seeAll:hover { opacity: 0.75; }
 
+.sectionFootnote {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  margin: 2px 0 0;
+  font-weight: 400;
+}
+
 
 /* ══════════════════════════════════════════
    Stock Grid

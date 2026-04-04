@@ -588,6 +588,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             </button>
           </div>
         )}
+
+        <div className={styles.screenerDisclaimer}>
+          Screening results are based on automated financial ratio analysis using publicly available data.
+          They do not constitute a fatwa or religious ruling.
+          Consult a qualified Shariah scholar for definitive investment guidance.
+          <Link href="/methodology" className={styles.screenerDisclaimerLink}>View methodology</Link>
+        </div>
       </div>
 
       {/* Save Filter Modal */}
