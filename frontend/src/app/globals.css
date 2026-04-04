@@ -258,7 +258,7 @@ input, select, textarea, button {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: 0 32px;
   height: 56px;
   border-bottom: 1px solid var(--topbar-border);
   background: var(--topbar-bg);
@@ -541,7 +541,7 @@ input, select, textarea, button {
 .topbarNav {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 4px;
 }
 
 .topbarNavSecondary {
@@ -552,7 +552,7 @@ input, select, textarea, button {
 
 /* Nav links */
 .ghostLink {
-  padding: 7px 14px;
+  padding: 7px 16px;
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 500;

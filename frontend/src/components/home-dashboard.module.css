@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .home {
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 0 24px 48px;
   animation: homeFadeIn 0.35s ease-out both;
@@ -968,6 +968,209 @@
   color: var(--text-tertiary);
   line-height: 1.55;
   margin: 0 0 4px;
+}
+
+
+/* ══════════════════════════════════════════
+   Trending Preview
+   ══════════════════════════════════════════ */
+.trendingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.trendingCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 150ms, transform 150ms;
+}
+.trendingCard:hover {
+  border-color: var(--emerald);
+  transform: translateX(2px);
+}
+.trendingRank {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.trendingBody {
+  flex: 1;
+  min-width: 0;
+}
+.trendingSymbol {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+.trendingName {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.trendingExchange {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   Collections Preview
+   ══════════════════════════════════════════ */
+.collectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.collectionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 200ms, transform 150ms;
+}
+.collectionCard:hover {
+  border-color: var(--emerald);
+  transform: translateY(-2px);
+}
+.collectionIcon {
+  font-size: 1.5rem;
+}
+.collectionName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.collectionCount {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--emerald);
+}
+
+/* ══════════════════════════════════════════
+   Investors Preview
+   ══════════════════════════════════════════ */
+.investorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.investorCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 200ms, transform 150ms;
+}
+.investorCard:hover {
+  border-color: var(--emerald);
+  transform: translateY(-1px);
+}
+.investorAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gradient-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.investorBody {
+  flex: 1;
+  min-width: 0;
+}
+.investorName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+.investorTitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  display: block;
+}
+.investorCountry {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   ETFs Preview
+   ══════════════════════════════════════════ */
+.etfsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.etfCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  transition: border-color 200ms;
+}
+.etfCard:hover {
+  border-color: var(--emerald-border);
+}
+.etfSymbol {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--emerald);
+  font-family: var(--font-display);
+}
+.etfName {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.etfExchange {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
 }
 
 
