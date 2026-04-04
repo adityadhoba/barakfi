@@ -1,27 +1,41 @@
 """
 Shariah compliance screening engine.
 
-Evaluates individual stocks against Islamic finance principles using three
+Evaluates individual stocks against Islamic finance principles using four
 internationally recognised methodologies:
 
-1. S&P Shariah Indices Methodology
+1. S&P Shariah Indices Methodology (Dow Jones Islamic Market Index)
 2. AAOIFI Financial Accounting Standards
 3. FTSE/Maxis (Yasaar) Shariah Index Series
+4. Khatkhatay Independent Norms (Harvard 2006)
+
+The fourth methodology is based on the academic paper "Shariah Compliant
+Equity Investments: An Assessment of Current Screening Norms" by M.H.
+Khatkhatay, presented at the Seventh Harvard University Forum on Islamic
+Finance (2006). It proposes stricter thresholds grounded in empirical
+analysis of BSE-500 data and argues for using total assets (not market
+capitalisation) as the denominator for all financial ratios.
 
 Core Functions:
 - evaluate_stock(stock_dict, profile) -> screening result with status
-- evaluate_stock_multi(stock_dict) -> results for all three methodologies
+- evaluate_stock_multi(stock_dict) -> results for all four methodologies
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
 Status Values:
-- HALAL: Passes all hard rules
-- CAUTIOUS: Passes core rules but has flags that need attention
-- NON_COMPLIANT: Fails one or more hard rules
+- HALAL: Meets all screening criteria under the given methodology
+- CAUTIOUS: Passes core criteria but has flags that need attention
+- NON_COMPLIANT: Fails one or more screening criteria
 """
 
 PRIMARY_PROFILE = "sp_shariah"
-PRIMARY_PROFILE_VERSION = "2026.04.1"
+PRIMARY_PROFILE_VERSION = "2026.04.2"
+
+SCREENING_DISCLAIMER = (
+    "Screening results are based on automated financial ratio analysis using "
+    "publicly available data. They do not constitute a fatwa or religious ruling. "
+    "Consult a qualified Shariah scholar for definitive investment guidance."
+)
 
 FORBIDDEN_KEYWORDS = {
     "ADULT",
@@ -57,8 +71,10 @@ PROFILES = {
         "label": "S&P Shariah Indices",
         "short": "S&P",
         "description": (
-            "S&P Dow Jones Shariah Indices methodology. Uses market capitalisation "
-            "as the denominator for debt and receivables ratios."
+            "S&P Dow Jones Shariah Indices methodology (DJIMI). Uses trailing "
+            "twelve-month average market capitalisation as the denominator for "
+            "debt and receivables ratios. Threshold of 33% for debt, receivables, "
+            "and cash ratios; 5% for income screens."
         ),
         "thresholds": {
             "debt_ratio": 0.33,
@@ -79,8 +95,9 @@ PROFILES = {
         "label": "AAOIFI Standards",
         "short": "AAOIFI",
         "description": (
-            "Accounting and Auditing Organisation for Islamic Financial Institutions. "
-            "Uses total assets as the denominator, with stricter debt limits."
+            "Accounting and Auditing Organisation for Islamic Financial "
+            "Institutions. Uses total assets as the denominator for all ratios. "
+            "Stricter debt limit at 30% and cash/IB at 30%."
         ),
         "thresholds": {
             "debt_ratio": 0.30,
@@ -101,8 +118,8 @@ PROFILES = {
         "label": "FTSE Yasaar (Maxis)",
         "short": "FTSE",
         "description": (
-            "FTSE Shariah Index Series methodology (Yasaar/Maxis). "
-            "Uses total assets as the denominator with a combined receivables+cash check."
+            "FTSE Shariah Index Series methodology (Yasaar/Maxis). Uses total "
+            "assets as the denominator. Higher receivables tolerance at 50%."
         ),
         "thresholds": {
             "debt_ratio": 0.33,
@@ -110,6 +127,34 @@ PROFILES = {
             "interest_income": 0.05,
             "receivables_ratio": 0.50,
             "cash_ib_ratio": 0.33,
+        },
+        "denominators": {
+            "debt": "total_assets",
+            "debt_current": "total_assets",
+            "receivables": "total_assets",
+            "cash_ib": "total_assets",
+        },
+    },
+    "khatkhatay": {
+        "code": "khatkhatay",
+        "label": "Khatkhatay Independent Norms",
+        "short": "Independent",
+        "description": (
+            "Independent screening norms proposed by Khatkhatay & Nisar "
+            "(Harvard University Forum on Islamic Finance, 2006). Uses total "
+            "assets as the denominator for all ratios. Stricter thresholds: "
+            "debt < 25% of total assets, interest income < 3% of revenue, "
+            "interest-bearing assets < 10% of total assets. The receivables "
+            "screen is effectively removed as the paper demonstrates it is "
+            "academically unsound — share price is not connected to the "
+            "par value of receivables."
+        ),
+        "thresholds": {
+            "debt_ratio": 0.25,
+            "non_permissible_income": 0.05,
+            "interest_income": 0.03,
+            "receivables_ratio": 1.0,
+            "cash_ib_ratio": 0.10,
         },
         "denominators": {
             "debt": "total_assets",
@@ -149,6 +194,7 @@ def get_rulebook() -> dict:
         profiles.append({
             "code": code,
             "label": p["label"],
+            "short": p["short"],
             "description": p["description"],
             "thresholds": p["thresholds"],
         })
@@ -176,22 +222,21 @@ def calculate_purification_ratio(stock: dict) -> float | None:
 
 def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
     """
-    Evaluate a stock's Shariah compliance against a specific methodology profile.
+    Evaluate a stock against a specific Shariah screening methodology.
 
     Hard Rules (NON_COMPLIANT if any fail):
-    1. Sector exclusion
-    2. Non-permissible income >= threshold
-    3. Interest income >= threshold
-    4. Debt >= threshold (using profile-specific denominator)
-    5. Debt current >= threshold
-    6. Receivables >= threshold
-    7. Cash + interest-bearing >= threshold
+    1. Sector exclusion (prohibited business activities)
+    2. Non-permissible income exceeds threshold
+    3. Interest income exceeds threshold
+    4. Debt exceeds threshold (using profile-specific denominator)
+    5. Debt (current) exceeds threshold
+    6. Receivables exceed threshold
+    7. Cash + interest-bearing securities exceed threshold
 
     Soft Rules (CAUTIOUS):
-    - Fixed-assets ratio < 25%
+    - Fixed-assets ratio below 25% guidance
     - Missing or zero critical financial fields
     """
-    # Support legacy profile name
     if profile == "india_strict":
         profile = "sp_shariah"
 
@@ -204,7 +249,6 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
 
     sector = stock["sector"].upper()
 
-    # --- Calculate all ratios using profile-specific denominators ---
     debt_denom = _get_denominator_value(stock, d["debt"])
     debt_current_denom = _get_denominator_value(stock, d["debt_current"])
     recv_denom = _get_denominator_value(stock, d["receivables"])
@@ -238,41 +282,43 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
 
     # --- Hard rules ---
     if not sector_allowed:
-        reasons.append("Business sector is non-compliant (prohibited activity).")
+        reasons.append(
+            f"Business sector involves prohibited activities under {p['short']} screening criteria."
+        )
 
     debt_label = "36m avg market cap" if d["debt"] == "market_cap_36m" else (
         "market cap" if d["debt"] == "market_cap" else "total assets"
     )
     if debt_ratio >= t["debt_ratio"]:
         reasons.append(
-            f"Debt is {debt_ratio:.1%} of {debt_label} (limit: <{t['debt_ratio']:.0%})."
+            f"Debt is {debt_ratio:.1%} of {debt_label}, exceeding the {t['debt_ratio']:.0%} threshold set by {p['short']}."
         )
 
     debt_cur_label = "market cap" if d["debt_current"] == "market_cap" else "total assets"
     if debt_current_ratio >= t["debt_ratio"]:
         reasons.append(
-            f"Debt is {debt_current_ratio:.1%} of current {debt_cur_label} (limit: <{t['debt_ratio']:.0%})."
+            f"Debt is {debt_current_ratio:.1%} of current {debt_cur_label}, exceeding the {t['debt_ratio']:.0%} threshold."
         )
 
     if non_permissible_ratio >= t["non_permissible_income"]:
         reasons.append(
-            f"Non-permissible income is {non_permissible_ratio:.1%} of revenue (limit: <{t['non_permissible_income']:.0%})."
+            f"Non-permissible income is {non_permissible_ratio:.1%} of revenue, exceeding the {t['non_permissible_income']:.0%} limit under {p['short']}."
         )
 
     if interest_income_ratio >= t["interest_income"]:
         reasons.append(
-            f"Interest income is {interest_income_ratio:.1%} of revenue (limit: <{t['interest_income']:.0%})."
+            f"Interest income is {interest_income_ratio:.1%} of revenue, exceeding the {t['interest_income']:.0%} limit under {p['short']}."
         )
 
     recv_label = "market cap" if d["receivables"] == "market_cap" else "total assets"
     if receivables_ratio >= t["receivables_ratio"]:
         reasons.append(
-            f"Receivables are {receivables_ratio:.1%} of {recv_label} (limit: <{t['receivables_ratio']:.0%})."
+            f"Receivables are {receivables_ratio:.1%} of {recv_label}, exceeding the {t['receivables_ratio']:.0%} threshold under {p['short']}."
         )
 
     if cash_to_assets >= t["cash_ib_ratio"]:
         reasons.append(
-            f"Cash & interest-bearing securities are {cash_to_assets:.1%} of total assets (limit: <{t['cash_ib_ratio']:.0%})."
+            f"Cash & interest-bearing securities are {cash_to_assets:.1%} of total assets, exceeding the {t['cash_ib_ratio']:.0%} limit under {p['short']}."
         )
 
     # --- Soft rules ---
@@ -299,15 +345,18 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
         status = "CAUTIOUS"
     else:
         status = "HALAL"
-        reasons.append("Passed all automated screening rules.")
+        reasons.append(
+            f"Meets all screening criteria under {p['label']} methodology."
+        )
 
-    # For backward compat, always include both market-cap-based and profile-based ratios
     return {
         "profile": profile,
         "status": status,
+        "methodology_label": p["label"],
         "reasons": reasons,
         "manual_review_flags": manual_review_flags,
         "purification_ratio_pct": purification_pct,
+        "disclaimer": SCREENING_DISCLAIMER,
         "breakdown": {
             "debt_to_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("market_cap", 0) or 0), 4),
             "debt_to_36m_avg_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("average_market_cap_36m", 0) or 0), 4),
@@ -330,8 +379,12 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
 
 def evaluate_stock_multi(stock: dict) -> dict:
     """
-    Evaluate a stock against all three methodologies and return a combined result.
-    The overall status is the consensus (halal only if halal in at least 2 of 3).
+    Evaluate a stock against all four methodologies and return a combined result.
+
+    Consensus rule (majority of 4):
+    - HALAL if 3+ methodologies pass
+    - NON_COMPLIANT if 3+ methodologies fail
+    - Otherwise uses 2+ threshold with NON_COMPLIANT taking precedence over ties
     """
     results = {}
     for code in ALL_PROFILE_CODES:
@@ -341,13 +394,13 @@ def evaluate_stock_multi(stock: dict) -> dict:
     halal_count = statuses.count("HALAL")
     fail_count = statuses.count("NON_COMPLIANT")
 
-    if halal_count == 3:
+    if halal_count >= 3:
         consensus = "HALAL"
-    elif fail_count >= 2:
+    elif fail_count >= 3:
         consensus = "NON_COMPLIANT"
     elif halal_count >= 2:
         consensus = "HALAL"
-    elif fail_count >= 1:
+    elif fail_count >= 2:
         consensus = "NON_COMPLIANT"
     else:
         consensus = "CAUTIOUS"
@@ -355,6 +408,7 @@ def evaluate_stock_multi(stock: dict) -> dict:
     return {
         "consensus_status": consensus,
         "methodologies": results,
+        "disclaimer": SCREENING_DISCLAIMER,
         "summary": {
             "halal_count": halal_count,
             "cautious_count": statuses.count("CAUTIOUS"),
