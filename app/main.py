@@ -1,6 +1,7 @@
 import logging
 from time import perf_counter
 from pathlib import Path
+from datetime import datetime
 
 logger = logging.getLogger("barakfi")
 logging.basicConfig(
@@ -53,7 +54,9 @@ def _auto_migrate_columns():
     """
     inspector = inspect(engine)
     with engine.begin() as conn:
-        is_postgres = engine.dialect.name.lower() in {"postgresql", "postgres"}
+        dialect = engine.dialect.name.lower()
+        is_postgres = dialect in {"postgresql", "postgres"}
+        is_sqlite = dialect == "sqlite"
         for table in Base.metadata.sorted_tables:
             if not inspector.has_table(table.name):
                 continue  # create_all() will handle brand-new tables
@@ -70,6 +73,15 @@ def _auto_migrate_columns():
                     default_val = column.default.arg
                     if callable(default_val):
                         default_val = default_val({})
+                    # SQLite cannot use unquoted datetime literals as defaults.
+                    # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()),
+                    # use CURRENT_TIMESTAMP across engines (Postgres/SQLite).
+                    try:
+                        if isinstance(default_val, datetime):
+                            default_clause = " DEFAULT CURRENT_TIMESTAMP"
+                            default_val = None
+                    except Exception:
+                        pass
                     # Postgres requires timestamp defaults to be quoted or expressions like CURRENT_TIMESTAMP.
                     # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()), use CURRENT_TIMESTAMP.
                     try:
@@ -102,9 +114,23 @@ def _auto_migrate_columns():
                     else:
                         default_clause = " DEFAULT ''"
 
-                sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
-                logger.info("[auto-migrate] %s", sql)
-                conn.execute(text(sql))
+                # SQLite limitation: ALTER TABLE .. ADD COLUMN does not allow
+                # non-constant defaults (e.g. CURRENT_TIMESTAMP). For timestamp
+                # columns we add them as nullable, then backfill.
+                if is_sqlite and "DATETIME" in str(col_type).upper() and "CURRENT_TIMESTAMP" in default_clause:
+                    sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
+                    logger.info("[auto-migrate] %s", sql)
+                    conn.execute(text(sql))
+                    backfill = (
+                        f'UPDATE "{table.name}" SET "{column.name}" = CURRENT_TIMESTAMP '
+                        f'WHERE "{column.name}" IS NULL'
+                    )
+                    logger.info("[auto-migrate] %s", backfill)
+                    conn.execute(text(backfill))
+                else:
+                    sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
+                    logger.info("[auto-migrate] %s", sql)
+                    conn.execute(text(sql))
 
     logger.info("[auto-migrate] Schema check complete.")
 
