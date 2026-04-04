@@ -364,6 +364,8 @@ class CollectionEntry(Base):
     collection_id = Column(Integer, ForeignKey("stock_collections.id"), nullable=False, index=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
     display_order = Column(Integer, nullable=False, default=0)
+    # Production Postgres includes this timestamp as NOT NULL; keep it populated.
+    added_at = Column(DateTime, nullable=False, default=utc_now)
 
     collection = relationship("StockCollection", back_populates="entries")
     stock = relationship("Stock")
