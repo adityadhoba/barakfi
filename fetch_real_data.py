@@ -1,15 +1,37 @@
 """
-Fetch REAL financial data for global stocks from Yahoo Finance.
-
-Supports multiple exchanges: NSE (India), NYSE/NASDAQ (US), LSE (UK), etc.
+Fetch REAL financial data for 200+ Indian NSE stocks from Yahoo Finance.
 
 Usage:
-    python fetch_real_data.py                      # Fetch ALL exchanges
-    python fetch_real_data.py --exchange NSE       # Fetch only NSE stocks
-    python fetch_real_data.py --exchange US         # Fetch only US stocks
-    python fetch_real_data.py --dry-run             # Skip DB write
+    python fetch_real_data.py              # Fetch data and write to DB + real_stock_data.py
+    python fetch_real_data.py --dry-run    # Fetch data, print summary, skip DB write
 
 Data source: Yahoo Finance via yfinance library.
+All financial values are converted to Crores INR (divide raw values by 1,00,00,000).
+
+=== WEEKLY STOCK ADDITION PROCESS ===
+
+Every week, add ~10 new pre-screened stocks with the following steps:
+
+1. ADD SYMBOLS: Add new NSE symbols to the STOCK_SYMBOLS list below.
+   Group them with a comment like "# Week N expansion (Month Year)".
+
+2. ADD LOGO MAPPINGS: For each new symbol, add a domain mapping to
+   frontend/src/components/stock-logo.tsx in the SYMBOL_TO_DOMAIN dict.
+   Find the company's website domain (e.g., SUZLON -> "suzlon.com").
+
+3. FETCH DATA: Run this script to pull financial data:
+   python fetch_real_data.py
+
+4. VERIFY: Check the output for any FAILED symbols.
+   Fix alternate tickers in TICKER_ALTERNATES if needed.
+
+5. DEPLOY: Push changes and redeploy backend (Render auto-deploys from main).
+   Frontend will pick up new stocks automatically via API.
+
+The screening happens automatically — the API evaluates each stock on request
+using the screening engine in app/services/halal_service.py.
+
+No cron jobs needed. This is a manual weekly process.
 """
 
 import argparse
@@ -36,31 +58,6 @@ CRORE = 1e7  # 1 Crore = 10,000,000
 RATE_LIMIT_SECONDS = 0.5
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
-
-# Exchange suffixes for yfinance
-EXCHANGE_SUFFIX = {
-    "NSE": ".NS",
-    "BSE": ".BO",
-    "US": "",       # NYSE/NASDAQ have no suffix
-    "LSE": ".L",
-    "TSE": ".T",    # Tokyo
-    "XETRA": ".DE", # Frankfurt
-    "ASX": ".AX",   # Australia
-}
-
-# Currency by exchange
-EXCHANGE_CURRENCY = {
-    "NSE": "INR", "BSE": "INR",
-    "US": "USD", "LSE": "GBP",
-    "TSE": "JPY", "XETRA": "EUR", "ASX": "AUD",
-}
-
-# Country by exchange
-EXCHANGE_COUNTRY = {
-    "NSE": "India", "BSE": "India",
-    "US": "United States", "LSE": "United Kingdom",
-    "TSE": "Japan", "XETRA": "Germany", "ASX": "Australia",
-}
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -338,104 +335,6 @@ STOCK_SYMBOLS = [
 # De-duplicate (BEL appears in both NIFTY NEXT 50 and Additional)
 STOCK_SYMBOLS = list(dict.fromkeys(STOCK_SYMBOLS))
 
-# ── US Stocks (S&P 500 representative subset) ──
-US_STOCK_SYMBOLS = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "BRK-B",
-    "UNH", "JNJ", "V", "XOM", "JPM", "PG", "MA", "HD", "CVX", "MRK",
-    "ABBV", "LLY", "PEP", "KO", "COST", "AVGO", "TMO", "WMT", "MCD",
-    "CSCO", "ACN", "ABT", "DHR", "NEE", "LIN", "TXN", "PM", "UNP",
-    "BMY", "RTX", "LOW", "AMGN", "HON", "QCOM", "COP", "ORCL", "IBM",
-    "SBUX", "CAT", "BA", "GE", "INTC", "AMD", "AMAT", "ADI", "ISRG",
-    "NOW", "BKNG", "ADP", "GILD", "MDLZ", "SYK", "PLD", "TJX", "REGN",
-    "VRTX", "CB", "MMC", "BDX", "ZTS", "CI", "SO", "DUK", "CL", "CME",
-    "PNC", "USB", "TFC", "SCHW", "AIG", "MS", "GS", "BLK", "C",
-    "NKE", "DE", "PYPL", "CRM", "ADBE", "NFLX", "DIS",
-    "PFE", "T", "VZ", "WFC", "BAC",
-]
-
-US_SECTOR_MAP = {
-    "AAPL": "Technology", "MSFT": "Technology", "GOOGL": "Technology",
-    "AMZN": "Consumer Cyclical", "NVDA": "Technology", "META": "Technology",
-    "TSLA": "Automobile", "BRK-B": "Financial Services", "UNH": "Healthcare",
-    "JNJ": "Healthcare", "V": "Financial Services", "XOM": "Energy",
-    "JPM": "Banking and Financial Services", "PG": "Consumer Goods",
-    "MA": "Financial Services", "HD": "Consumer Cyclical", "CVX": "Energy",
-    "MRK": "Pharmaceuticals", "ABBV": "Pharmaceuticals", "LLY": "Pharmaceuticals",
-    "PEP": "Consumer Goods", "KO": "Consumer Goods", "COST": "Consumer Cyclical",
-    "AVGO": "Technology", "TMO": "Healthcare", "WMT": "Consumer Cyclical",
-    "MCD": "Consumer Services", "CSCO": "Technology", "ACN": "Technology",
-    "ABT": "Healthcare", "DHR": "Healthcare", "NEE": "Energy",
-    "LIN": "Industrials", "TXN": "Technology", "PM": "Tobacco and Consumer Goods",
-    "UNP": "Industrials", "BMY": "Pharmaceuticals", "RTX": "Defence",
-    "LOW": "Consumer Cyclical", "AMGN": "Pharmaceuticals", "HON": "Industrials",
-    "QCOM": "Technology", "COP": "Energy", "ORCL": "Technology",
-    "IBM": "Technology", "SBUX": "Consumer Services", "CAT": "Industrials",
-    "BA": "Defence", "GE": "Industrials", "INTC": "Technology",
-    "AMD": "Technology", "AMAT": "Technology", "ADI": "Technology",
-    "ISRG": "Healthcare", "NOW": "Technology", "BKNG": "Consumer Services",
-    "ADP": "Technology", "GILD": "Pharmaceuticals", "MDLZ": "Consumer Goods",
-    "SYK": "Healthcare", "PLD": "Real Estate", "TJX": "Consumer Cyclical",
-    "REGN": "Pharmaceuticals", "VRTX": "Pharmaceuticals", "CB": "Insurance",
-    "MMC": "Financial Services", "BDX": "Healthcare", "ZTS": "Healthcare",
-    "CI": "Insurance", "SO": "Energy", "DUK": "Energy", "CL": "Consumer Goods",
-    "CME": "Financial Services", "PNC": "Banking and Financial Services",
-    "USB": "Banking and Financial Services", "TFC": "Banking and Financial Services",
-    "SCHW": "Financial Services", "AIG": "Insurance",
-    "MS": "Banking and Financial Services", "GS": "Banking and Financial Services",
-    "BLK": "Financial Services", "C": "Banking and Financial Services",
-    "NKE": "Consumer Goods", "DE": "Industrials", "PYPL": "Financial Services",
-    "CRM": "Technology", "ADBE": "Technology", "NFLX": "Consumer Services",
-    "DIS": "Consumer Services", "PFE": "Pharmaceuticals",
-    "T": "Telecom", "VZ": "Telecom",
-    "WFC": "Banking and Financial Services", "BAC": "Banking and Financial Services",
-}
-
-US_NAME_MAP = {
-    "AAPL": "Apple Inc.", "MSFT": "Microsoft Corporation", "GOOGL": "Alphabet Inc.",
-    "AMZN": "Amazon.com Inc.", "NVDA": "NVIDIA Corporation", "META": "Meta Platforms",
-    "TSLA": "Tesla Inc.", "BRK-B": "Berkshire Hathaway", "UNH": "UnitedHealth Group",
-    "JNJ": "Johnson & Johnson", "V": "Visa Inc.", "XOM": "Exxon Mobil",
-    "JPM": "JPMorgan Chase", "PG": "Procter & Gamble", "MA": "Mastercard",
-    "HD": "The Home Depot", "CVX": "Chevron Corporation", "MRK": "Merck & Co.",
-    "ABBV": "AbbVie Inc.", "LLY": "Eli Lilly", "PEP": "PepsiCo",
-    "KO": "The Coca-Cola Company", "COST": "Costco Wholesale", "AVGO": "Broadcom",
-    "TMO": "Thermo Fisher Scientific", "WMT": "Walmart", "MCD": "McDonald's",
-    "CSCO": "Cisco Systems", "ACN": "Accenture", "ABT": "Abbott Laboratories",
-    "NFLX": "Netflix Inc.", "DIS": "Walt Disney", "CRM": "Salesforce",
-    "ADBE": "Adobe Inc.", "NKE": "Nike Inc.", "BA": "Boeing",
-    "PYPL": "PayPal Holdings", "AMD": "Advanced Micro Devices",
-    "INTC": "Intel Corporation", "IBM": "IBM", "ORCL": "Oracle Corporation",
-    "GS": "Goldman Sachs", "MS": "Morgan Stanley", "BAC": "Bank of America",
-    "WFC": "Wells Fargo", "C": "Citigroup", "PFE": "Pfizer",
-    "T": "AT&T Inc.", "VZ": "Verizon Communications",
-}
-
-# ── UK Stocks (FTSE 100 subset) ──
-UK_STOCK_SYMBOLS = [
-    "AZN", "SHEL", "ULVR", "HSBA", "BP", "GSK", "RIO", "LSEG",
-    "DGE", "REL", "BATS", "NG", "VOD", "BARC", "LLOY", "RR",
-    "AAL", "ABF", "AHT", "BA",
-]
-
-UK_SECTOR_MAP = {
-    "AZN": "Pharmaceuticals", "SHEL": "Energy", "ULVR": "Consumer Goods",
-    "HSBA": "Banking and Financial Services", "BP": "Energy",
-    "GSK": "Pharmaceuticals", "RIO": "Metals & Mining", "LSEG": "Financial Services",
-    "DGE": "Consumer Goods", "REL": "Consumer Services",
-    "BATS": "Tobacco and Consumer Goods", "NG": "Energy",
-    "VOD": "Telecom", "BARC": "Banking and Financial Services",
-    "LLOY": "Banking and Financial Services", "RR": "Industrials",
-    "AAL": "Metals & Mining", "ABF": "Consumer Goods",
-    "AHT": "Consumer Services", "BA": "Defence",
-}
-
-# All exchange-symbol groups
-GLOBAL_STOCKS = {
-    "NSE": STOCK_SYMBOLS,
-    "US": US_STOCK_SYMBOLS,
-    "LSE": UK_STOCK_SYMBOLS,
-}
-
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -500,15 +399,12 @@ TICKER_ALTERNATES = {
 }
 
 
-def _yf_ticker(symbol, exchange="NSE"):
-    """Convert a symbol + exchange to a yfinance ticker string."""
-    suffix = EXCHANGE_SUFFIX.get(exchange, ".NS")
-    return f"{symbol}{suffix}"
-
-
 def _nse_ticker(symbol):
-    """Legacy helper — delegates to _yf_ticker."""
-    return _yf_ticker(symbol, "NSE")
+    """
+    Convert an NSE symbol to a yfinance ticker string.
+    Handles the M&M edge case and other special characters.
+    """
+    return f"{symbol}.NS"
 
 
 # ---------------------------------------------------------------------------
@@ -516,13 +412,13 @@ def _nse_ticker(symbol):
 # ---------------------------------------------------------------------------
 
 
-def fetch_stock_data(symbol, exchange="NSE"):
+def fetch_stock_data(symbol):
     """
-    Fetch financial data for a stock via yfinance.
+    Fetch financial data for a single NSE stock via yfinance.
     Returns a dict matching the Stock model fields, or None on failure.
     """
-    ticker_str = _yf_ticker(symbol, exchange)
-    log.info("Fetching %s (%s) [%s] ...", symbol, ticker_str, exchange)
+    ticker_str = _nse_ticker(symbol)
+    log.info("Fetching %s (%s) ...", symbol, ticker_str)
 
     try:
         ticker = yf.Ticker(ticker_str)
@@ -532,8 +428,8 @@ def fetch_stock_data(symbol, exchange="NSE"):
         if not info or (info.get("regularMarketPrice") is None and info.get("currentPrice") is None):
             log.warning("No price data for %s, attempting alternate tickers", symbol)
             found = False
-            # Try M&M URL-encoded version (NSE specific)
-            if "&" in symbol and exchange == "NSE":
+            # Try M&M URL-encoded version
+            if "&" in symbol:
                 alt_ticker = symbol.replace("&", "%26") + ".NS"
                 ticker = yf.Ticker(alt_ticker)
                 info = ticker.info or {}
@@ -662,71 +558,25 @@ def fetch_stock_data(symbol, exchange="NSE"):
         ])
         total_assets = _to_crores(total_assets_raw)
 
-        # Determine correct sector/name from exchange-specific maps
-        if exchange == "US":
-            sector = US_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
-            name = info.get("longName") or info.get("shortName") or US_NAME_MAP.get(symbol, symbol)
-        elif exchange == "LSE":
-            sector = UK_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
-            name = info.get("longName") or info.get("shortName") or symbol
-
-        # Investment metrics from info dict
-        beta_val = info.get("beta")
-        div_yield = info.get("dividendYield")
-        if div_yield and div_yield > 0:
-            div_yield = round(div_yield * 100, 2)
-        else:
-            div_yield = None
-        pe_val = info.get("trailingPE") or info.get("forwardPE")
-        eps_val = info.get("trailingEps")
-        w52_high = info.get("fiftyTwoWeekHigh")
-        w52_low = info.get("fiftyTwoWeekLow")
-        avg_vol = info.get("averageVolume")
-        shares_out = info.get("sharesOutstanding")
-        prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
-        price_chg_pct = None
-        if price and prev_close and prev_close > 0:
-            price_chg_pct = round(((price - prev_close) / prev_close) * 100, 2)
-
-        currency = EXCHANGE_CURRENCY.get(exchange, "USD")
-        country = EXCHANGE_COUNTRY.get(exchange, "Unknown")
-
-        # For non-INR stocks, don't convert to crores
-        use_crores = exchange in ("NSE", "BSE")
-        convert = _to_crores if use_crores else lambda v: round(v, 2) if v else 0.0
-
         stock_data = {
             "symbol": symbol,
             "name": name,
             "sector": sector,
-            "exchange": exchange,
-            "exchange_code": exchange,
-            "country": country,
-            "currency": currency,
-            "market_cap": _to_crores(market_cap_raw) if use_crores else round(market_cap_raw / 1e6, 2) if market_cap_raw else 0.0,
-            "average_market_cap_36m": average_market_cap_36m if use_crores else round((market_cap_raw or 0) * 0.9 / 1e6, 2),
-            "debt": debt if use_crores else convert(debt_raw),
-            "revenue": revenue if use_crores else convert(revenue_raw),
-            "total_business_income": total_business_income if use_crores else convert(revenue_raw + other_income_raw),
-            "interest_income": interest_income if use_crores else convert(interest_income_raw),
-            "non_permissible_income": non_permissible_income if use_crores else convert(interest_income_raw),
-            "accounts_receivable": accounts_receivable if use_crores else convert(receivables_raw),
-            "cash_and_equivalents": cash_and_equivalents if use_crores else convert(cash_raw),
-            "short_term_investments": short_term_investments if use_crores else convert(sti_raw),
-            "fixed_assets": fixed_assets if use_crores else convert(ppe_raw),
-            "total_assets": total_assets if use_crores else convert(total_assets_raw),
+            "exchange": "NSE",
+            "market_cap": market_cap,
+            "average_market_cap_36m": average_market_cap_36m,
+            "debt": debt,
+            "revenue": revenue,
+            "total_business_income": total_business_income,
+            "interest_income": interest_income,
+            "non_permissible_income": non_permissible_income,
+            "accounts_receivable": accounts_receivable,
+            "cash_and_equivalents": cash_and_equivalents,
+            "short_term_investments": short_term_investments,
+            "fixed_assets": fixed_assets,
+            "total_assets": total_assets,
             "price": round(price, 2),
             "data_source": "yahoo_finance",
-            "beta": round(beta_val, 4) if beta_val else None,
-            "dividend_yield": div_yield,
-            "pe_ratio": round(pe_val, 2) if pe_val else None,
-            "eps": round(eps_val, 2) if eps_val else None,
-            "week_52_high": round(w52_high, 2) if w52_high else None,
-            "week_52_low": round(w52_low, 2) if w52_low else None,
-            "avg_volume": float(avg_vol) if avg_vol else None,
-            "shares_outstanding": float(shares_out) if shares_out else None,
-            "price_change_pct": price_chg_pct,
-            "is_etf": False,
         }
 
         log.info(
@@ -799,15 +649,10 @@ def write_to_database(stocks):
 
     try:
         for payload in stocks:
-            sym = payload["symbol"]
-            exchange = payload.get("exchange", "NSE")
-            existing = db.query(Stock).filter(Stock.symbol == sym, Stock.exchange == exchange).first()
-            if not existing:
-                existing = db.query(Stock).filter(Stock.symbol == sym).first()
+            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
             if existing:
                 for key, value in payload.items():
-                    if hasattr(existing, key):
-                        setattr(existing, key, value)
+                    setattr(existing, key, value)
                 updated += 1
             else:
                 db.add(Stock(**payload))
@@ -829,26 +674,17 @@ def write_to_database(stocks):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fetch real financial data for global stocks from Yahoo Finance."
+        description="Fetch real financial data for Indian NSE stocks from Yahoo Finance."
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Fetch and display data without writing to the database.",
     )
-    parser.add_argument(
-        "--exchange",
-        type=str,
-        default=None,
-        help="Fetch only a specific exchange (NSE, US, LSE). Default: all.",
-    )
     args = parser.parse_args()
 
-    exchanges_to_fetch = [args.exchange.upper()] if args.exchange else list(GLOBAL_STOCKS.keys())
-    total_symbols = sum(len(GLOBAL_STOCKS.get(ex, [])) for ex in exchanges_to_fetch)
-
     log.info("=" * 70)
-    log.info("Fetching financial data for %d stocks across %s", total_symbols, ", ".join(exchanges_to_fetch))
+    log.info("Fetching real financial data for %d NSE stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -856,29 +692,31 @@ def main():
     successful = []
     failed = []
 
-    for exchange in exchanges_to_fetch:
-        symbols = GLOBAL_STOCKS.get(exchange, [])
-        log.info("── %s: %d symbols ──", exchange, len(symbols))
-        for i, symbol in enumerate(symbols):
-            stock_data = fetch_stock_data(symbol, exchange=exchange)
-            if stock_data:
-                successful.append(stock_data)
-            else:
-                failed.append(f"{symbol} ({exchange})")
-            if i < len(symbols) - 1:
-                time.sleep(RATE_LIMIT_SECONDS)
+    for i, symbol in enumerate(STOCK_SYMBOLS):
+        stock_data = fetch_stock_data(symbol)
 
+        if stock_data:
+            successful.append(stock_data)
+        else:
+            failed.append(symbol)
+
+        # Rate limiting between API calls
+        if i < len(STOCK_SYMBOLS) - 1:
+            time.sleep(RATE_LIMIT_SECONDS)
+
+    # ── Summary ──────────────────────────────────────────────────────────
     log.info("")
     log.info("=" * 70)
     log.info("FETCH COMPLETE")
     log.info("=" * 70)
-    log.info("Total attempted : %d", total_symbols)
+    log.info("Total attempted : %d", len(STOCK_SYMBOLS))
     log.info("Successful      : %d", len(successful))
     log.info("Failed          : %d", len(failed))
 
     if failed:
         log.warning("Failed symbols: %s", ", ".join(failed))
 
+    # Sector breakdown
     sector_counts = defaultdict(int)
     for s in successful:
         sector_counts[s["sector"]] += 1
@@ -888,14 +726,7 @@ def main():
     for sector, count in sorted(sector_counts.items(), key=lambda x: -x[1]):
         log.info("  %-40s %3d stocks", sector, count)
 
-    exchange_counts = defaultdict(int)
-    for s in successful:
-        exchange_counts[s["exchange"]] += 1
-    log.info("")
-    log.info("Exchange breakdown:")
-    for ex, count in sorted(exchange_counts.items(), key=lambda x: -x[1]):
-        log.info("  %-10s %3d stocks", ex, count)
-
+    # ── Write output file ────────────────────────────────────────────────
     if successful:
         write_output_file(successful)
 
@@ -903,6 +734,14 @@ def main():
             log.info("")
             log.info("DRY RUN: Skipping database write.")
             log.info("Data saved to %s only.", OUTPUT_FILE)
+
+            # Print sample data for verification
+            log.info("")
+            log.info("Sample data (first 3 stocks):")
+            for s in successful[:3]:
+                log.info("  %s (%s)", s["symbol"], s["name"])
+                log.info("    Price: %.2f | MCap: %.0f Cr | Debt: %.0f Cr", s["price"], s["market_cap"], s["debt"])
+                log.info("    Revenue: %.0f Cr | Total Assets: %.0f Cr", s["revenue"], s["total_assets"])
         else:
             write_to_database(successful)
             log.info("")
