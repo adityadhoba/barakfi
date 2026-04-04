@@ -36,9 +36,20 @@ export async function GET(
   const searchParams = request.nextUrl.searchParams;
   const range = searchParams.get("range") || "6mo";
   const interval = searchParams.get("interval") || "1d";
+  const exchange = (searchParams.get("exchange") || "").toUpperCase();
 
-  // Try NSE (.NS) first, then BSE (.BO)
-  const suffixes = [".NS", ".BO"];
+  const suffixes: string[] = (() => {
+    // If the DB already stores Yahoo-style suffixes (e.g. "AZN.L"), allow direct usage.
+    if (symbol.includes(".")) return [""];
+
+    if (exchange === "US" || exchange === "NYSE" || exchange === "NASDAQ") return [""];
+    if (exchange === "LSE") return [".L"];
+    if (exchange === "BSE") return [".BO"];
+    if (exchange === "NSE") return [".NS"];
+
+    // Fallback: India first, then global suffixes.
+    return [".NS", ".BO", ".L", ""];
+  })();
   for (const suffix of suffixes) {
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}${suffix}?range=${range}&interval=${interval}&includePrePost=false`;
@@ -76,7 +87,7 @@ export async function GET(
 
       return NextResponse.json({
         symbol,
-        exchange: suffix === ".NS" ? "NSE" : "BSE",
+        exchange: exchange || (suffix === ".NS" ? "NSE" : suffix === ".BO" ? "BSE" : suffix === ".L" ? "LSE" : "US"),
         range,
         interval,
         candles,

@@ -32,7 +32,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
     try {
       setLoading(true);
       setError(false);
-      const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?range=${cfg.value}&interval=${cfg.interval}`);
+      const qs = new URLSearchParams({ range: cfg.value, interval: cfg.interval });
+      const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?${qs.toString()}`);
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       return (data.candles || []) as Candle[];
