@@ -1,0 +1,43 @@
+# Render Blueprint — Barakfi Infrastructure
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: barakfi-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile.backend
+    region: singapore
+    plan: free
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
+      - key: MARKET_DATA_PROVIDER
+        value: auto_global
+      - key: APP_ENV
+        value: production
+
+  # Daily price update cron job
+  # Runs at 4:30 AM IST (23:00 UTC previous day) — after Indian market close
+  - type: cron
+    name: barakfi-daily-update
+    runtime: python
+    buildCommand: pip install httpx
+    startCommand: python scripts/daily_update.py --provider auto_global
+    schedule: "0 23 * * 1-5"
+    region: singapore
+    branch: main
+    plan: free
+    envVars:
+      - key: API_BASE_URL
+        fromService:
+          name: barakfi-api
+          type: web
+          property: hostport
+      - key: INTERNAL_SERVICE_TOKEN
+        sync: false
