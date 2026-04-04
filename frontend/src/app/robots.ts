@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://barakfi.in";
+const CANONICAL_DOMAIN = "https://barakfi.in";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,9 +8,34 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/workspace", "/account", "/governance"],
+        disallow: ["/api/", "/workspace", "/account", "/governance", "/admin", "/onboarding"],
+      },
+      {
+        userAgent: "GPTBot",
+        allow: "/",
+        disallow: ["/api/", "/workspace", "/account", "/governance", "/admin"],
+      },
+      {
+        userAgent: "ChatGPT-User",
+        allow: "/",
+      },
+      {
+        userAgent: "Google-Extended",
+        allow: "/",
+      },
+      {
+        userAgent: "Anthropic-AI",
+        allow: "/",
+      },
+      {
+        userAgent: "ClaudeBot",
+        allow: "/",
+      },
+      {
+        userAgent: "PerplexityBot",
+        allow: "/",
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: `${CANONICAL_DOMAIN}/sitemap.xml`,
   };
 }

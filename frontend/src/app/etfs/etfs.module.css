@@ -1,0 +1,22 @@
+.container { max-width: 900px; margin: 0 auto; padding: 24px 24px 64px; }
+.breadcrumb { display: flex; gap: 8px; font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 20px; }
+.breadcrumb a { color: var(--text-tertiary); text-decoration: none; }
+.breadcrumb a:hover { color: var(--emerald); }
+.header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
+.kicker { display: inline-flex; padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--emerald); background: var(--emerald-bg); border: 1px solid var(--emerald-border); margin-bottom: 12px; }
+.title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin: 0 0 8px; }
+.subtitle { font-size: 0.92rem; color: var(--text-secondary); margin: 0; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+@media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+.card { padding: 20px; border-radius: var(--radius-xl); border: 1px solid var(--line); background: var(--panel); transition: border-color 200ms, box-shadow 200ms; }
+.card:hover { border-color: var(--emerald-border); box-shadow: 0 4px 16px rgba(16,185,129,0.08); }
+.cardTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cardSymbol { font-size: 1rem; font-weight: 800; color: var(--emerald); font-family: var(--font-display); }
+.cardExchange { padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); background: var(--bg-soft); }
+.cardName { font-size: 0.88rem; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+.cardDesc { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px; }
+.cardStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); margin-bottom: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.statLabel { font-size: 0.68rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; }
+.statValue { font-size: 0.85rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.certified { display: inline-flex; padding: 4px 10px; border-radius: var(--radius-full); font-size: 0.68rem; font-weight: 700; color: var(--emerald); background: var(--emerald-bg); border: 1px solid var(--emerald-border); }

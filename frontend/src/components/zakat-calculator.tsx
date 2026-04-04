@@ -3,12 +3,27 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./zakat-calculator.module.css";
 
+const CURRENCIES = { INR: "₹", USD: "$", GBP: "£" } as const;
+type CurrencyCode = keyof typeof CURRENCIES;
+
+const DEFAULT_GOLD_PRICES: Record<CurrencyCode, string> = {
+  INR: "7500",
+  USD: "90",
+  GBP: "72",
+};
+
+const LOCALE_MAP: Record<CurrencyCode, string> = {
+  INR: "en-IN",
+  USD: "en-US",
+  GBP: "en-GB",
+};
+
 type Props = {
   portfolioValue?: number;
   holdingCount?: number;
 };
 
-function AnimatedValue({ value, prefix = "₹" }: { value: number; prefix?: string }) {
+function AnimatedValue({ value, prefix = "₹", locale = "en-IN" }: { value: number; prefix?: string; locale?: string }) {
   const [display, setDisplay] = useState(0);
   const rafRef = useRef(0);
 
@@ -30,13 +45,20 @@ function AnimatedValue({ value, prefix = "₹" }: { value: number; prefix?: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  return <>{prefix}{Math.round(display).toLocaleString("en-IN")}</>;
+  return <>{prefix}{Math.round(display).toLocaleString(locale)}</>;
 }
 
 export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props) {
+  const [currency, setCurrency] = useState<CurrencyCode>("INR");
+  const currencySymbol = CURRENCIES[currency];
+  const locale = LOCALE_MAP[currency];
   const [customValue, setCustomValue] = useState(portfolioValue > 0 ? String(Math.round(portfolioValue)) : "");
   const [goldPrice, setGoldPrice] = useState("7500");
   const [showNisab, setShowNisab] = useState(false);
+
+  useEffect(() => {
+    setGoldPrice(DEFAULT_GOLD_PRICES[currency]);
+  }, [currency]);
 
   const NISAB_GOLD_GRAMS = 87.48;
   const ZAKAT_RATE = 0.025;
@@ -65,11 +87,24 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
         </div>
       </div>
 
+      <div className={styles.currencySelector}>
+        {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
+          <button
+            key={code}
+            type="button"
+            className={`${styles.currencyBtn} ${currency === code ? styles.currencyBtnActive : ""}`}
+            onClick={() => setCurrency(code)}
+          >
+            {CURRENCIES[code]} {code}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.body}>
         <div className={styles.inputGroup}>
           <label className={styles.inputLabel}>Total portfolio value</label>
           <div className={styles.inputWrap}>
-            <span className={styles.inputPrefix}>₹</span>
+            <span className={styles.inputPrefix}>{currencySymbol}</span>
             <input
               type="number"
               className={styles.input}
@@ -85,7 +120,7 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
               className={styles.usePortfolioBtn}
               onClick={() => setCustomValue(String(Math.round(portfolioValue)))}
             >
-              Use portfolio value (₹{Math.round(portfolioValue).toLocaleString("en-IN")})
+              Use portfolio value ({currencySymbol}{Math.round(portfolioValue).toLocaleString(locale)})
             </button>
           )}
         </div>
@@ -107,9 +142,9 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
         <div className={`${styles.nisabPanel} ${showNisab ? styles.nisabOpen : ""}`}>
           <div className={styles.nisabInner}>
             <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Gold price per gram (₹)</label>
+              <label className={styles.inputLabel}>Gold price per gram ({currencySymbol})</label>
               <div className={styles.inputWrap}>
-                <span className={styles.inputPrefix}>₹</span>
+                <span className={styles.inputPrefix}>{currencySymbol}</span>
                 <input
                   type="number"
                   className={styles.input}
@@ -121,7 +156,7 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
             </div>
             <div className={styles.nisabInfo}>
               <span>Nisab threshold (87.48g gold)</span>
-              <strong>₹{Math.round(nisabThreshold).toLocaleString("en-IN")}</strong>
+              <strong>{currencySymbol}{Math.round(nisabThreshold).toLocaleString(locale)}</strong>
             </div>
           </div>
         </div>
@@ -133,7 +168,7 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
                 <div className={styles.resultMain}>
                   <span className={styles.resultLabel}>Zakat due (2.5%)</span>
                   <span className={styles.resultValue}>
-                    <AnimatedValue value={zakatDue} />
+                    <AnimatedValue value={zakatDue} prefix={currencySymbol} locale={locale} />
                   </span>
                 </div>
 
@@ -156,17 +191,17 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
                   <div className={styles.donutLegend}>
                     <div className={styles.legendItem}>
                       <span className={styles.legendDot} style={{ background: "var(--emerald)" }} />
-                      <span>Zakat: ₹{Math.round(zakatDue).toLocaleString("en-IN")}</span>
+                      <span>Zakat: {currencySymbol}{Math.round(zakatDue).toLocaleString(locale)}</span>
                     </div>
                     <div className={styles.legendItem}>
                       <span className={styles.legendDot} style={{ background: "var(--line)" }} />
-                      <span>Retained: ₹{Math.round(retainedAmount).toLocaleString("en-IN")}</span>
+                      <span>Retained: {currencySymbol}{Math.round(retainedAmount).toLocaleString(locale)}</span>
                     </div>
                   </div>
                 </div>
 
                 <p className={styles.resultNote}>
-                  On ₹{Math.round(portfolioVal).toLocaleString("en-IN")} portfolio value
+                  On {currencySymbol}{Math.round(portfolioVal).toLocaleString(locale)} portfolio value
                   {holdingCount > 0 && ` across ${holdingCount} holdings`}.
                   Applies to stocks held for one full lunar year.
                 </p>
@@ -189,14 +224,14 @@ export function ZakatCalculator({ portfolioValue = 0, holdingCount = 0 }: Props)
               <div className={styles.resultMain}>
                 <span className={styles.resultLabel}>Below Nisab</span>
                 <p className={styles.resultMuted}>
-                  Your portfolio value (₹{Math.round(portfolioVal).toLocaleString("en-IN")}) is below the Nisab threshold of ₹{Math.round(nisabThreshold).toLocaleString("en-IN")}. No zakat is due.
+                  Your portfolio value ({currencySymbol}{Math.round(portfolioVal).toLocaleString(locale)}) is below the Nisab threshold of {currencySymbol}{Math.round(nisabThreshold).toLocaleString(locale)}. No zakat is due.
                 </p>
               </div>
             )
           ) : (
             <div className={styles.resultMain}>
               <span className={styles.resultLabel}>Enter your portfolio value above</span>
-              <span className={styles.resultPlaceholder}>₹0</span>
+              <span className={styles.resultPlaceholder}>{currencySymbol}0</span>
             </div>
           )}
         </div>

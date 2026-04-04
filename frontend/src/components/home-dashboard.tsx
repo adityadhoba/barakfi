@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
@@ -49,7 +49,13 @@ type Props = {
 };
 
 export async function HomeDashboard({ isSignedIn }: Props) {
-  const stocks = await getStocks();
+  const [stocks, trendingStocks, collections, investors, etfs] = await Promise.all([
+    getStocks(),
+    getTrending("popular", undefined, 6),
+    getCollections(),
+    getSuperInvestors(),
+    getETFs(),
+  ]);
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -82,7 +88,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
           <h1 className={styles.heroTitle}>
             {isSignedIn ? (
-              <>Welcome back.</>
+              <>As-salamu alaykum.</>
             ) : (
               <>
                 Invest with <span className={styles.heroGradient}>clarity</span> and <span className={styles.heroGradient}>conviction</span>.
@@ -283,6 +289,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </h2>
           <Link href="/screener" className={styles.seeAll}>Full list &rarr;</Link>
         </div>
+        <p className={styles.sectionFootnote}>Based on S&P Shariah screening criteria</p>
         <div className={styles.stockGrid}>
           {topHalal.map((row) => {
             const scr = 'screening' in row ? (row as Screened) : null;
@@ -293,6 +300,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
                     symbol={row.symbol}
                     size={36}
                     status={scr?.screening.status}
+                    exchange={row.exchange}
                   />
                   <div className={styles.stockIdentity}>
                     <span className={styles.stockSymbol}>{row.symbol}</span>
@@ -345,6 +353,88 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </div>
       </section>
+
+      {/* ── Trending Preview ── */}
+      {trendingStocks.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Trending Stocks</h2>
+            <Link href="/trending" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.trendingGrid}>
+            {trendingStocks.slice(0, 6).map((stock, i) => (
+              <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.trendingCard}>
+                <span className={styles.trendingRank}>{i + 1}</span>
+                <div className={styles.trendingBody}>
+                  <span className={styles.trendingSymbol}>{stock.symbol}</span>
+                  <span className={styles.trendingName}>{stock.name}</span>
+                </div>
+                <span className={styles.trendingExchange}>{stock.exchange}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Collections Preview ── */}
+      {collections.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Halal Stock Collections</h2>
+            <Link href="/collections" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.collectionsGrid}>
+            {collections.slice(0, 4).map((coll) => (
+              <Link key={coll.slug} href={`/collections/${coll.slug}`} className={styles.collectionCard}>
+                <span className={styles.collectionIcon}>{coll.icon}</span>
+                <span className={styles.collectionName}>{coll.name}</span>
+                <span className={styles.collectionCount}>{coll.stock_count} stocks</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Super Investors Preview ── */}
+      {investors.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Super Investor Tracker</h2>
+            <Link href="/super-investors" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.investorsGrid}>
+            {investors.slice(0, 4).map((inv) => (
+              <Link key={inv.slug} href={`/super-investors/${inv.slug}`} className={styles.investorCard}>
+                <div className={styles.investorAvatar}>{inv.name.charAt(0)}</div>
+                <div className={styles.investorBody}>
+                  <span className={styles.investorName}>{inv.name}</span>
+                  <span className={styles.investorTitle}>{inv.title}</span>
+                </div>
+                <span className={styles.investorCountry}>{inv.country}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── ETFs Preview ── */}
+      {etfs.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Halal ETFs</h2>
+            <Link href="/etfs" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.etfsGrid}>
+            {etfs.slice(0, 4).map((etf) => (
+              <div key={etf.symbol} className={styles.etfCard}>
+                <span className={styles.etfSymbol}>{etf.symbol}</span>
+                <span className={styles.etfName}>{etf.name}</span>
+                <span className={styles.etfExchange}>{etf.exchange}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Halal Investing in India ── */}
       <section className={styles.section}>

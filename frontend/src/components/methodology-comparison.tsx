@@ -34,6 +34,7 @@ const PROFILE_LABELS: Record<string, { name: string; short: string; color: strin
   sp_shariah: { name: "S&P Shariah Indices", short: "S&P", color: "#1e40af" },
   aaoifi: { name: "AAOIFI Standards", short: "AAOIFI", color: "#7c3aed" },
   ftse_maxis: { name: "FTSE Yasaar (Maxis)", short: "FTSE", color: "#0d9488" },
+  khatkhatay: { name: "Khatkhatay Independent Norms", short: "Khatkhatay", color: "#f59e0b" },
 };
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {

@@ -1085,3 +1085,98 @@ export async function bootstrapAuthenticatedUser(
 
   return (await response.json()) as User;
 }
+
+export type TrendingStock = {
+  symbol: string;
+  name: string;
+  sector: string;
+  exchange: string;
+  country: string;
+  price: number;
+  market_cap: number;
+  currency: string;
+};
+
+export type Collection = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  stock_count: number;
+};
+
+export type CollectionDetail = Collection & {
+  stocks: TrendingStock[];
+};
+
+export type SuperInvestorSummary = {
+  id: number;
+  name: string;
+  slug: string;
+  title: string;
+  bio: string;
+  country: string;
+  investment_style: string;
+  image_url: string;
+  holding_count: number;
+};
+
+export type SuperInvestorDetail = SuperInvestorSummary & {
+  holdings: Array<{
+    symbol: string;
+    name: string;
+    sector: string;
+    exchange: string;
+    price: number;
+    market_cap: number;
+    weight_pct: number;
+  }>;
+};
+
+export type HalalETF = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  country: string;
+  expense_ratio: number;
+  aum_millions: number;
+  description: string;
+  provider: string;
+  is_shariah_certified: boolean;
+};
+
+export async function getTrending(category: string = "popular", exchange?: string, limit: number = 20): Promise<TrendingStock[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (exchange) params.set("exchange", exchange);
+  return apiFetch(`/trending/${category}?${params}`, []);
+}
+
+export async function getCollections(): Promise<Collection[]> {
+  return apiFetch("/collections", []);
+}
+
+export async function getCollection(slug: string): Promise<CollectionDetail | null> {
+  return apiFetch(`/collections/${slug}`, null);
+}
+
+export async function getSuperInvestors(): Promise<SuperInvestorSummary[]> {
+  return apiFetch("/super-investors", []);
+}
+
+export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetail | null> {
+  return apiFetch(`/super-investors/${slug}`, null);
+}
+
+export async function getETFs(exchange?: string): Promise<HalalETF[]> {
+  const params = exchange ? `?exchange=${exchange}` : "";
+  return apiFetch(`/etfs${params}`, []);
+}
+
+export async function getComplianceHistory(symbol: string): Promise<Array<{ status: string; profile_code: string; recorded_at: string }>> {
+  return apiFetch(`/compliance-history/${symbol}`, []);
+}
+
+export async function getInvestmentMetrics(symbol: string): Promise<Record<string, number>> {
+  return apiFetch(`/metrics/${symbol}`, {});
+}

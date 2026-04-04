@@ -654,6 +654,24 @@ export default async function StockDetailPage({
 
 
             </div>
+
+            <div style={{
+              marginTop: 16,
+              padding: "12px 16px",
+              borderRadius: "var(--radius-lg)",
+              background: "var(--bg-soft)",
+              border: "1px solid var(--line)",
+              fontSize: "0.75rem",
+              color: "var(--text-tertiary)",
+              lineHeight: 1.6,
+            }}>
+              Screening results indicate whether this stock meets specific methodology criteria.
+              They do not constitute a fatwa or religious ruling.
+              Consult a qualified Shariah scholar for definitive guidance.{" "}
+              <Link href="/methodology" style={{ color: "var(--emerald)", fontWeight: 600 }}>
+                View methodology
+              </Link>
+            </div>
           </div>
 
           {/* Tab 2: Financials */}

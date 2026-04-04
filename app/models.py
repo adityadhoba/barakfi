@@ -321,3 +321,105 @@ class ScreeningLog(Base):
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     stock = relationship("Stock")
+
+
+# ============================================================================
+# COMPLIANCE HISTORY, COLLECTIONS, SUPER INVESTORS, COVERAGE REQUESTS
+# ============================================================================
+
+class ComplianceHistory(Base):
+    __tablename__ = "compliance_history"
+
+    id = Column(Integer, primary_key=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    status = Column(String, nullable=False)
+    profile_code = Column(String, nullable=False, default="sp_shariah")
+    recorded_at = Column(DateTime, nullable=False, default=utc_now)
+
+    stock = relationship("Stock")
+
+
+class StockCollection(Base):
+    __tablename__ = "stock_collections"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    slug = Column(String, nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=False, default="")
+    icon = Column(String, nullable=False, default="")
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    entries = relationship("CollectionEntry", back_populates="collection", cascade="all, delete-orphan")
+
+
+class CollectionEntry(Base):
+    __tablename__ = "collection_entries"
+
+    id = Column(Integer, primary_key=True)
+    collection_id = Column(Integer, ForeignKey("stock_collections.id"), nullable=False, index=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    display_order = Column(Integer, nullable=False, default=0)
+
+    collection = relationship("StockCollection", back_populates="entries")
+    stock = relationship("Stock")
+
+
+class SuperInvestor(Base):
+    __tablename__ = "super_investors"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    slug = Column(String, nullable=False, unique=True, index=True)
+    title = Column(String, nullable=False, default="")
+    bio = Column(Text, nullable=False, default="")
+    country = Column(String, nullable=False, default="India")
+    investment_style = Column(String, nullable=False, default="")
+    image_url = Column(String, nullable=False, default="")
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    holdings = relationship("SuperInvestorHolding", back_populates="investor", cascade="all, delete-orphan")
+
+
+class SuperInvestorHolding(Base):
+    __tablename__ = "super_investor_holdings"
+
+    id = Column(Integer, primary_key=True)
+    investor_id = Column(Integer, ForeignKey("super_investors.id"), nullable=False, index=True)
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    weight_pct = Column(Float, nullable=False, default=0.0)
+
+    investor = relationship("SuperInvestor", back_populates="holdings")
+    stock = relationship("Stock")
+
+
+class CoverageRequest(Base):
+    __tablename__ = "coverage_requests"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    symbol = Column(String, nullable=False)
+    exchange = Column(String, nullable=False, default="NSE")
+    notes = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    user = relationship("User")
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    email = Column(String, nullable=False, default="")
+    name = Column(String, nullable=False, default="")
+    category = Column(String, nullable=False, default="general")
+    message = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default="new")
+    admin_notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    user = relationship("User", foreign_keys=[user_id])

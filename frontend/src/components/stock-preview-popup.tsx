@@ -96,7 +96,8 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
   }, []);
 
   useEffect(() => {
-    if (visible) computePosition();
+    // Avoid calling setState inside effect body (eslint rule). Use rAF instead.
+    if (visible) requestAnimationFrame(computePosition);
   }, [visible, computePosition]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);

@@ -49,6 +49,16 @@ def verify_clerk_token(token: str) -> dict:
     return claims
 
 
+def require_auth(authorization: str | None = Header(default=None)) -> str:
+    """Return the auth_subject (``sub`` claim) or raise 401."""
+    token = _extract_bearer_token(authorization)
+    claims = verify_clerk_token(token)
+    sub = claims.get("sub")
+    if not sub:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    return sub
+
+
 def get_current_auth_claims(authorization: str | None = Header(default=None)) -> dict:
     token = _extract_bearer_token(authorization)
     return verify_clerk_token(token)

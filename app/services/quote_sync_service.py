@@ -1,4 +1,4 @@
-"""Batch-update `Stock.price` from public Indian quote providers."""
+"""Batch-update `Stock.price` from public market quote providers (India, US, LSE)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,12 @@ from app.config import MARKET_DATA_PROVIDER
 from app.models import Stock
 from app.services.indian_market_client import fetch_quote_by_provider
 
-PUBLIC_INDIAN_MARKET_PROVIDERS = frozenset({"nse_public", "yahoo_india", "auto_india"})
+PUBLIC_MARKET_PROVIDERS = frozenset({
+    "nse_public", "yahoo_india", "auto_india",
+    "yahoo_global", "auto_global",
+})
+
+PUBLIC_INDIAN_MARKET_PROVIDERS = PUBLIC_MARKET_PROVIDERS
 
 
 def sync_all_stock_prices(
@@ -25,11 +30,11 @@ def sync_all_stock_prices(
     avoid hammering public endpoints.
     """
     code = (provider or MARKET_DATA_PROVIDER).strip().lower()
-    if code not in PUBLIC_INDIAN_MARKET_PROVIDERS:
+    if code not in PUBLIC_MARKET_PROVIDERS:
         return {
             "ok": False,
             "error": "unsupported_provider",
-            "detail": f"Use one of {sorted(PUBLIC_INDIAN_MARKET_PROVIDERS)} or set MARKET_DATA_PROVIDER.",
+            "detail": f"Use one of {sorted(PUBLIC_MARKET_PROVIDERS)} or set MARKET_DATA_PROVIDER.",
             "provider": code,
             "updated": 0,
             "failed_symbols": [],

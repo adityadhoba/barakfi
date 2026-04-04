@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./purification-calculator.module.css";
 
+const CURRENCIES = { INR: "₹", USD: "$", GBP: "£" } as const;
+type CurrencyCode = keyof typeof CURRENCIES;
+
 type Props = {
   holdings?: Array<{
     symbol: string;
@@ -38,6 +41,8 @@ function AnimatedValue({ value, prefix = "₹" }: { value: number; prefix?: stri
 }
 
 export function PurificationCalculator({ holdings = [] }: Props) {
+  const [currency, setCurrency] = useState<CurrencyCode>("INR");
+  const currencySymbol = CURRENCIES[currency];
   const [manualDividend, setManualDividend] = useState("");
   const [manualRatio, setManualRatio] = useState("");
   const [showPortfolio, setShowPortfolio] = useState(false);
@@ -71,12 +76,25 @@ export function PurificationCalculator({ holdings = [] }: Props) {
         </div>
       </div>
 
+      <div className={styles.currencySelector}>
+        {(Object.keys(CURRENCIES) as CurrencyCode[]).map((code) => (
+          <button
+            key={code}
+            type="button"
+            className={`${styles.currencyBtn} ${currency === code ? styles.currencyBtnActive : ""}`}
+            onClick={() => setCurrency(code)}
+          >
+            {CURRENCIES[code]} {code}
+          </button>
+        ))}
+      </div>
+
       <div className={styles.body}>
         <div className={styles.inputGrid}>
           <div className={styles.inputGroup}>
             <label className={styles.inputLabel}>Dividend received</label>
             <div className={styles.inputWrap}>
-              <span className={styles.inputPrefix}>₹</span>
+              <span className={styles.inputPrefix}>{currencySymbol}</span>
               <input
                 type="number"
                 className={styles.input}
@@ -123,7 +141,7 @@ export function PurificationCalculator({ holdings = [] }: Props) {
             )}
           </div>
           <span className={styles.resultValue}>
-            <AnimatedValue value={manualAmount} />
+            <AnimatedValue value={manualAmount} prefix={currencySymbol} />
           </span>
           {manualAmount > 0 && (
             <div className={styles.breakdownBar}>
@@ -167,7 +185,7 @@ export function PurificationCalculator({ holdings = [] }: Props) {
             {totalPurification > 0 && (
               <div className={styles.totalRow}>
                 <span>Total to purify</span>
-                <strong>₹{totalPurification.toFixed(2)}</strong>
+                <strong>{currencySymbol}{totalPurification.toFixed(2)}</strong>
               </div>
             )}
           </div>
