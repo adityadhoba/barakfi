@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN
+from app.services.auth_service import get_current_auth_claims as verify_clerk_token  # noqa: F401
 from app.models import (
     ComplianceOverride,
     ComplianceReviewCase,

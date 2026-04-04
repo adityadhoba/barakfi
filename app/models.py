@@ -407,3 +407,19 @@ class CoverageRequest(Base):
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     user = relationship("User")
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    email = Column(String, nullable=False, default="")
+    name = Column(String, nullable=False, default="")
+    category = Column(String, nullable=False, default="general")
+    message = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default="new")
+    admin_notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    user = relationship("User", foreign_keys=[user_id])

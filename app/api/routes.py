@@ -1892,3 +1892,134 @@ def list_coverage_requests(
         for r in requests
     ]
 
+
+# ═══════════════════════════════════════════════════════════════
+# FEEDBACK (public + admin)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/feedback")
+def submit_feedback(
+    email: str = Body(""),
+    name: str = Body(""),
+    category: str = Body("general"),
+    message: str = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Public endpoint — no auth required. Anyone can submit feedback."""
+    from app.models import Feedback
+    fb = Feedback(
+        email=email.strip(),
+        name=name.strip(),
+        category=category.strip(),
+        message=message.strip(),
+    )
+    db.add(fb)
+    db.commit()
+    return {"id": fb.id, "status": fb.status, "message": "Thank you for your feedback!"}
+
+
+@router.get("/admin/feedback")
+def admin_list_feedback(
+    status: str | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — list all feedback."""
+    helpers.require_admin(db, claims)
+    from app.models import Feedback
+    query = db.query(Feedback).order_by(Feedback.created_at.desc())
+    if status:
+        query = query.filter(Feedback.status == status)
+    items = query.limit(min(limit, 200)).all()
+    return [
+        {
+            "id": f.id,
+            "email": f.email,
+            "name": f.name,
+            "category": f.category,
+            "message": f.message,
+            "status": f.status,
+            "admin_notes": f.admin_notes,
+            "created_at": f.created_at.isoformat() if f.created_at else None,
+        }
+        for f in items
+    ]
+
+
+@router.patch("/admin/feedback/{feedback_id}")
+def admin_update_feedback(
+    feedback_id: int,
+    status: str | None = Body(None),
+    admin_notes: str | None = Body(None),
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — update feedback status and/or admin notes."""
+    helpers.require_admin(db, claims)
+    from app.models import Feedback
+    fb = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not fb:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    if status is not None:
+        fb.status = status
+    if admin_notes is not None:
+        fb.admin_notes = admin_notes
+    db.commit()
+    return {"id": fb.id, "status": fb.status, "admin_notes": fb.admin_notes}
+
+
+# ═══════════════════════════════════════════════════════════════
+# ADMIN: COVERAGE REQUESTS (all users)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/admin/coverage-requests")
+def admin_list_coverage_requests(
+    status: str | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — list ALL coverage requests from all users."""
+    helpers.require_admin(db, claims)
+    from app.models import CoverageRequest, User
+    query = (
+        db.query(CoverageRequest, User)
+        .outerjoin(User, CoverageRequest.user_id == User.id)
+        .order_by(CoverageRequest.created_at.desc())
+    )
+    if status:
+        query = query.filter(CoverageRequest.status == status)
+    items = query.limit(min(limit, 200)).all()
+    return [
+        {
+            "id": cr.id,
+            "symbol": cr.symbol,
+            "exchange": cr.exchange,
+            "notes": cr.notes,
+            "status": cr.status,
+            "created_at": cr.created_at.isoformat() if cr.created_at else None,
+            "user_email": u.email if u else "unknown",
+            "user_name": u.display_name if u else "unknown",
+        }
+        for cr, u in items
+    ]
+
+
+@router.patch("/admin/coverage-requests/{request_id}")
+def admin_update_coverage_request(
+    request_id: int,
+    status: str = Body(...),
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — update coverage request status."""
+    helpers.require_admin(db, claims)
+    from app.models import CoverageRequest
+    cr = db.query(CoverageRequest).filter(CoverageRequest.id == request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Coverage request not found")
+    cr.status = status
+    db.commit()
+    return {"id": cr.id, "status": cr.status}
+
