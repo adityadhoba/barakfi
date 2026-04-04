@@ -377,6 +377,8 @@ class SuperInvestor(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     slug = Column(String, nullable=False, unique=True, index=True)
+    # Production Postgres includes this as NOT NULL (source/organization).
+    firm = Column(String, nullable=False, default="")
     title = Column(String, nullable=False, default="")
     bio = Column(Text, nullable=False, default="")
     country = Column(String, nullable=False, default="India")
