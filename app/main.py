@@ -251,11 +251,9 @@ try:
         from app.services.investor_service import seed_investors
 
         count = seed_collections(_seed_db)
-        if count > 0:
-            log.info("Seeded %d collections", count)
+        log.info("Seeded %d collections", count)
         count = seed_investors(_seed_db)
-        if count > 0:
-            log.info("Seeded %d super investors", count)
+        log.info("Seeded %d super investors", count)
 
         try:
             if got_lock:
