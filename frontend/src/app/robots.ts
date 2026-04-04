@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://barakfi.in";
+const CANONICAL_DOMAIN = "https://barakfi.in";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -36,6 +36,6 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    sitemap: `${CANONICAL_DOMAIN}/sitemap.xml`,
   };
 }
