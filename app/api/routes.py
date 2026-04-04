@@ -97,7 +97,7 @@ from app.services.halal_service import (
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
-from app.services.quote_sync_service import PUBLIC_INDIAN_MARKET_PROVIDERS, sync_all_stock_prices
+from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal
 
@@ -195,10 +195,10 @@ def equity_quote_snapshot(
     """
     sym = symbol.upper().strip()
     effective = (provider or "auto_india").strip().lower()
-    if effective not in PUBLIC_INDIAN_MARKET_PROVIDERS:
+    if effective not in PUBLIC_MARKET_PROVIDERS:
         raise HTTPException(
             status_code=400,
-            detail=f"provider must be one of: {', '.join(sorted(PUBLIC_INDIAN_MARKET_PROVIDERS))}",
+            detail=f"provider must be one of: {', '.join(sorted(PUBLIC_MARKET_PROVIDERS))}",
         )
     row = (
         db.query(Stock).filter(Stock.symbol == sym, Stock.is_active.is_(True)).first()
