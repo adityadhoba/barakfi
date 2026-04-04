@@ -347,6 +347,9 @@ class StockCollection(Base):
     slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=False, default="")
     icon = Column(String, nullable=False, default="")
+    # Featured collections are highlighted on the homepage / discovery surfaces.
+    # This column exists in production Postgres; keep it non-null with a default.
+    is_featured = Column(Boolean, nullable=False, default=False)
     display_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
