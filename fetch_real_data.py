@@ -1,18 +1,25 @@
 """
-Fetch REAL financial data for 200+ Indian NSE stocks from Yahoo Finance.
+Fetch REAL financial data for global stocks from Yahoo Finance.
+
+Supports three exchanges:
+  - NSE (India): 200+ NIFTY 50 / Next 50 / Midcap 100 / Smallcap 100 stocks (INR, Crores)
+  - US  (S&P 500 representative subset): 100+ US stocks (USD, Millions)
+  - LSE (FTSE 100 representative subset): 40+ UK stocks (GBP, Millions)
 
 Usage:
     python fetch_real_data.py              # Fetch data and write to DB + real_stock_data.py
     python fetch_real_data.py --dry-run    # Fetch data, print summary, skip DB write
 
 Data source: Yahoo Finance via yfinance library.
-All financial values are converted to Crores INR (divide raw values by 1,00,00,000).
+NSE financials are converted to Crores INR (divide raw values by 1,00,00,000).
+US/LSE financials are converted to Millions (divide raw values by 1,000,000).
 
 === WEEKLY STOCK ADDITION PROCESS ===
 
 Every week, add ~10 new pre-screened stocks with the following steps:
 
-1. ADD SYMBOLS: Add new NSE symbols to the STOCK_SYMBOLS list below.
+1. ADD SYMBOLS: Add new symbols to the appropriate list below
+   (STOCK_SYMBOLS for NSE, US_STOCK_SYMBOLS for US, UK_STOCK_SYMBOLS for LSE).
    Group them with a comment like "# Week N expansion (Month Year)".
 
 2. ADD LOGO MAPPINGS: For each new symbol, add a domain mapping to
@@ -330,10 +337,97 @@ STOCK_SYMBOLS = [
     # Week 4 expansion
     "CUB", "KARURVYSYA", "SOUTHBANK", "TMB", "EQUITASBNK",
     "FINPIPE", "APLLTD", "JBCHEPHARM", "GLAXO", "PFIZER",
+    # NIFTY Smallcap 100 additions
+    "ROUTE", "FINEORG", "AFFLE", "DATAPATTNS", "CDSL", "BSE",
+    "ANGELONE", "IIFL", "CAMPUS", "APTUS", "AAVAS", "HOMEFIRST",
+    "CHALET", "GPIL", "GRSE", "COCHINSHIP", "GARDENREACH", "MAZAGON",
+    "BHEL", "TIINDIA", "ZEEL", "NYKAA", "CARTRADE", "POLICYBZR",
+    "PAYTM", "DELHIVERY", "MAPMYINDIA", "RAILTEL", "RVNL", "IRCON",
 ]
 
 # De-duplicate (BEL appears in both NIFTY NEXT 50 and Additional)
 STOCK_SYMBOLS = list(dict.fromkeys(STOCK_SYMBOLS))
+
+# S&P 500 representative subset (US stocks)
+US_STOCK_SYMBOLS = [
+    # Mega Cap Tech
+    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "CRM",
+    "ADBE", "AMD", "INTC", "CSCO", "QCOM", "TXN", "AMAT", "MU", "NOW", "PANW",
+    # Healthcare
+    "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE", "TMO", "ABT", "AMGN", "GILD",
+    "ISRG", "VRTX", "MDT", "ZTS", "REGN", "DXCM", "BSX", "EW", "SYK",
+    # Consumer
+    "PG", "KO", "PEP", "COST", "WMT", "MCD", "NKE", "SBUX", "TGT", "CL",
+    "EL", "MNST", "GIS", "KHC", "HSY", "HRL", "SJM", "MDLZ",
+    # Financials
+    "JPM", "BAC", "WFC", "GS", "MS", "BLK", "SCHW", "C", "AXP", "V", "MA",
+    # Industrials
+    "CAT", "DE", "HON", "UNP", "UPS", "RTX", "BA", "LMT", "GE", "MMM",
+    # Energy
+    "XOM", "CVX", "COP", "SLB", "EOG", "OXY", "PSX", "VLO", "MPC", "DVN",
+    # Real Estate & Materials
+    "AMT", "PLD", "CCI", "LIN", "APD", "ECL", "SHW", "NEM", "FCX",
+    # Communication
+    "DIS", "NFLX", "CMCSA", "T", "VZ", "TMUS", "CHTR",
+    # Other notable
+    "BRK-B", "MCO", "DVA", "SNOW", "PLTR", "UBER", "ABNB",
+]
+
+US_SECTOR_MAP = {
+    "AAPL": "Information Technology", "MSFT": "Information Technology", "GOOGL": "Information Technology",
+    "AMZN": "Consumer Discretionary", "NVDA": "Information Technology", "META": "Communication Services",
+    "TSLA": "Consumer Discretionary", "AVGO": "Information Technology", "ORCL": "Information Technology",
+    "CRM": "Information Technology", "ADBE": "Information Technology", "AMD": "Information Technology",
+    "INTC": "Information Technology", "CSCO": "Information Technology", "QCOM": "Information Technology",
+    "LLY": "Healthcare", "UNH": "Healthcare", "JNJ": "Healthcare", "ABBV": "Healthcare",
+    "MRK": "Healthcare", "PFE": "Healthcare", "TMO": "Healthcare", "ABT": "Healthcare",
+    "JPM": "Banking and Financial Services", "BAC": "Banking and Financial Services",
+    "WFC": "Banking and Financial Services", "GS": "Banking and Financial Services",
+    "V": "Financial Services", "MA": "Financial Services", "BLK": "Financial Services",
+    "XOM": "Energy", "CVX": "Energy", "COP": "Energy", "OXY": "Energy",
+    "PG": "Consumer Goods", "KO": "Consumer Goods", "PEP": "Consumer Goods",
+    "WMT": "Consumer Goods", "MCD": "Consumer Services", "NKE": "Consumer Goods",
+    "CAT": "Industrials", "HON": "Industrials", "BA": "Industrials", "LMT": "Defence",
+    "DIS": "Communication Services", "NFLX": "Communication Services",
+    "BRK-B": "Financial Services", "UBER": "Consumer Services", "ABNB": "Consumer Services",
+}
+
+US_NAME_MAP = {
+    "AAPL": "Apple Inc.", "MSFT": "Microsoft Corporation", "GOOGL": "Alphabet Inc.",
+    "AMZN": "Amazon.com Inc.", "NVDA": "NVIDIA Corporation", "META": "Meta Platforms",
+    "TSLA": "Tesla Inc.", "AVGO": "Broadcom Inc.", "LLY": "Eli Lilly and Company",
+    "JPM": "JPMorgan Chase & Co.", "V": "Visa Inc.", "MA": "Mastercard Inc.",
+    "UNH": "UnitedHealth Group", "XOM": "Exxon Mobil Corporation", "PG": "Procter & Gamble",
+    "KO": "The Coca-Cola Company", "PEP": "PepsiCo Inc.", "WMT": "Walmart Inc.",
+    "BA": "The Boeing Company", "DIS": "The Walt Disney Company",
+    "BRK-B": "Berkshire Hathaway Inc.", "NFLX": "Netflix Inc.", "UBER": "Uber Technologies",
+}
+
+# FTSE 100 representative subset (LSE stocks)
+UK_STOCK_SYMBOLS = [
+    "SHEL", "AZN", "ULVR", "RIO", "LSEG", "GSK", "DGE", "BP",
+    "HSBA", "REL", "AAL", "BHP", "GLEN", "VOD", "NG",
+    "AHT", "BA", "BATS", "CRH", "EXPN", "III", "IMB",
+    "RKT", "SGE", "SMT", "SVT", "TSCO", "WPP",
+    "ANTO", "FRES", "IAG", "JET", "MNDI", "PSON", "RR",
+    "BARC", "LLOY", "NWG", "STAN",
+]
+
+UK_SECTOR_MAP = {
+    "SHEL": "Energy", "AZN": "Healthcare", "ULVR": "Consumer Goods",
+    "RIO": "Metals & Mining", "LSEG": "Financial Services", "GSK": "Healthcare",
+    "DGE": "Consumer Goods", "BP": "Energy", "HSBA": "Banking and Financial Services",
+    "REL": "Information Technology", "BHP": "Metals & Mining", "GLEN": "Metals & Mining",
+    "VOD": "Telecom", "BATS": "Tobacco and Consumer Goods",
+    "BARC": "Banking and Financial Services", "LLOY": "Banking and Financial Services",
+}
+
+UK_NAME_MAP = {
+    "SHEL": "Shell plc", "AZN": "AstraZeneca plc", "ULVR": "Unilever plc",
+    "RIO": "Rio Tinto plc", "LSEG": "London Stock Exchange Group",
+    "GSK": "GSK plc", "DGE": "Diageo plc", "BP": "BP plc",
+    "HSBA": "HSBC Holdings plc", "REL": "RELX plc",
+}
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -412,39 +506,97 @@ def _nse_ticker(symbol):
 # ---------------------------------------------------------------------------
 
 
-def fetch_stock_data(symbol):
+def _build_ticker_str(symbol, exchange):
+    """Build the yfinance ticker string for a given symbol and exchange."""
+    if exchange == "NSE":
+        return _nse_ticker(symbol)
+    elif exchange == "LSE":
+        return f"{symbol}.L"
+    else:
+        return symbol
+
+
+def _convert_value(value, exchange):
+    """Convert a raw financial value to the appropriate unit for the exchange."""
+    if value is None or value == 0.0:
+        return 0.0
+    if exchange == "NSE":
+        return _to_crores(value)
+    # US and LSE: convert to millions
+    return round(value / 1e6, 2)
+
+
+def _get_sector_map(exchange):
+    """Return the sector fallback map for the given exchange."""
+    if exchange == "US":
+        return US_SECTOR_MAP
+    elif exchange == "LSE":
+        return UK_SECTOR_MAP
+    return SYMBOL_SECTOR_MAP
+
+
+def _get_name_map(exchange):
+    """Return the name fallback map for the given exchange."""
+    if exchange == "US":
+        return US_NAME_MAP
+    elif exchange == "LSE":
+        return UK_NAME_MAP
+    return SYMBOL_NAME_MAP
+
+
+def _get_currency(exchange):
+    """Return the currency code for the given exchange."""
+    if exchange == "US":
+        return "USD"
+    elif exchange == "LSE":
+        return "GBP"
+    return "INR"
+
+
+def fetch_stock_data(symbol, exchange="NSE"):
     """
-    Fetch financial data for a single NSE stock via yfinance.
+    Fetch financial data for a single stock via yfinance.
+
+    Args:
+        symbol: The stock ticker symbol.
+        exchange: One of "NSE", "US", or "LSE". Determines ticker suffix,
+                  currency, and unit conversion.
+
     Returns a dict matching the Stock model fields, or None on failure.
     """
-    ticker_str = _nse_ticker(symbol)
-    log.info("Fetching %s (%s) ...", symbol, ticker_str)
+    ticker_str = _build_ticker_str(symbol, exchange)
+    log.info("Fetching %s (%s, %s) ...", symbol, ticker_str, exchange)
+
+    sector_map = _get_sector_map(exchange)
+    name_map = _get_name_map(exchange)
+    currency = _get_currency(exchange)
 
     try:
         ticker = yf.Ticker(ticker_str)
         info = ticker.info or {}
 
-        # If yfinance returns almost nothing, try alternates
+        # If yfinance returns almost nothing, try alternates (NSE only)
         if not info or (info.get("regularMarketPrice") is None and info.get("currentPrice") is None):
             log.warning("No price data for %s, attempting alternate tickers", symbol)
             found = False
-            # Try M&M URL-encoded version
-            if "&" in symbol:
-                alt_ticker = symbol.replace("&", "%26") + ".NS"
-                ticker = yf.Ticker(alt_ticker)
-                info = ticker.info or {}
-                if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
-                    found = True
-            # Try configured alternates
-            if not found and symbol in TICKER_ALTERNATES:
-                for alt in TICKER_ALTERNATES[symbol]:
-                    time.sleep(RATE_LIMIT_SECONDS)
-                    ticker = yf.Ticker(alt)
+            if exchange == "NSE":
+                # Try M&M URL-encoded version
+                if "&" in symbol:
+                    alt_ticker = symbol.replace("&", "%26") + ".NS"
+                    ticker = yf.Ticker(alt_ticker)
                     info = ticker.info or {}
                     if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
-                        log.info("  Found data via alternate ticker: %s", alt)
                         found = True
-                        break
+                # Try configured alternates
+                if not found and symbol in TICKER_ALTERNATES:
+                    for alt in TICKER_ALTERNATES[symbol]:
+                        time.sleep(RATE_LIMIT_SECONDS)
+                        ticker = yf.Ticker(alt)
+                        info = ticker.info or {}
+                        if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
+                            log.info("  Found data via alternate ticker: %s", alt)
+                            found = True
+                            break
             if not found:
                 log.error("FAILED: %s - no data from Yahoo Finance (tried all alternates)", symbol)
                 return None
@@ -452,14 +604,14 @@ def fetch_stock_data(symbol):
         # -- Price --
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
 
-        # -- Market Cap (yfinance returns in actual INR, convert to Crores) --
+        # -- Market Cap --
         market_cap_raw = info.get("marketCap") or 0.0
-        market_cap = _to_crores(market_cap_raw)
+        market_cap = _convert_value(market_cap_raw, exchange)
         average_market_cap_36m = round(market_cap * 0.9, 2) if market_cap > 0 else 0.0
 
         # -- Name and Sector --
-        name = info.get("longName") or info.get("shortName") or SYMBOL_NAME_MAP.get(symbol, symbol)
-        sector = SYMBOL_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
+        name = info.get("longName") or info.get("shortName") or name_map.get(symbol, symbol)
+        sector = sector_map.get(symbol) or info.get("sector") or "Unknown"
 
         # -- Financial statements --
         balance_sheet = ticker.balance_sheet
@@ -481,14 +633,14 @@ def fetch_stock_data(symbol):
                 "Short Long Term Debt",
             ])
             debt_raw = lt_debt + st_debt
-        debt = _to_crores(debt_raw)
+        debt = _convert_value(debt_raw, exchange)
 
         # -- Revenue --
         revenue_raw = _safe_val(income_stmt, [
             "Total Revenue",
             "Operating Revenue",
         ])
-        revenue = _to_crores(revenue_raw)
+        revenue = _convert_value(revenue_raw, exchange)
 
         # -- Total Business Income (Total Revenue + Other Income) --
         other_income_raw = _safe_val(income_stmt, [
@@ -496,7 +648,7 @@ def fetch_stock_data(symbol):
             "Other Non Operating Income Expenses",
             "Special Income Charges",
         ])
-        total_business_income = _to_crores(revenue_raw + other_income_raw)
+        total_business_income = _convert_value(revenue_raw + other_income_raw, exchange)
 
         # -- Interest Income --
         interest_income_raw = _safe_val(income_stmt, [
@@ -511,7 +663,7 @@ def fetch_stock_data(symbol):
             ]) * 0.1  # Very rough: assume interest income is ~10% of interest expense
             if interest_income_raw < 0:
                 interest_income_raw = abs(interest_income_raw)
-        interest_income = _to_crores(interest_income_raw)
+        interest_income = _convert_value(interest_income_raw, exchange)
 
         # -- Non-Permissible Income (use interest_income as proxy) --
         non_permissible_income = interest_income
@@ -523,7 +675,7 @@ def fetch_stock_data(symbol):
             "Net Receivables",
             "Other Receivables",
         ])
-        accounts_receivable = _to_crores(receivables_raw)
+        accounts_receivable = _convert_value(receivables_raw, exchange)
 
         # -- Cash and Cash Equivalents --
         cash_raw = _safe_val(balance_sheet, [
@@ -532,7 +684,7 @@ def fetch_stock_data(symbol):
             "Cash Financial",
             "Cash",
         ])
-        cash_and_equivalents = _to_crores(cash_raw)
+        cash_and_equivalents = _convert_value(cash_raw, exchange)
 
         # -- Short Term Investments --
         sti_raw = _safe_val(balance_sheet, [
@@ -541,7 +693,7 @@ def fetch_stock_data(symbol):
             "Available For Sale Securities",
             "Investments And Advances",
         ])
-        short_term_investments = _to_crores(sti_raw)
+        short_term_investments = _convert_value(sti_raw, exchange)
 
         # -- Fixed Assets (Property, Plant & Equipment) --
         ppe_raw = _safe_val(balance_sheet, [
@@ -550,19 +702,22 @@ def fetch_stock_data(symbol):
             "Gross PPE",
             "Properties",
         ])
-        fixed_assets = _to_crores(ppe_raw)
+        fixed_assets = _convert_value(ppe_raw, exchange)
 
         # -- Total Assets --
         total_assets_raw = _safe_val(balance_sheet, [
             "Total Assets",
         ])
-        total_assets = _to_crores(total_assets_raw)
+        total_assets = _convert_value(total_assets_raw, exchange)
+
+        unit_label = "Cr" if exchange == "NSE" else "M"
 
         stock_data = {
             "symbol": symbol,
             "name": name,
             "sector": sector,
-            "exchange": "NSE",
+            "exchange": exchange,
+            "currency": currency,
             "market_cap": market_cap,
             "average_market_cap_36m": average_market_cap_36m,
             "debt": debt,
@@ -580,8 +735,8 @@ def fetch_stock_data(symbol):
         }
 
         log.info(
-            "  OK: %s | Price=%.2f | MCap=%.0f Cr | Debt=%.0f Cr | Rev=%.0f Cr",
-            symbol, price, market_cap, debt, revenue,
+            "  OK: %s | Price=%.2f | MCap=%.0f %s | Debt=%.0f %s | Rev=%.0f %s",
+            symbol, price, market_cap, unit_label, debt, unit_label, revenue, unit_label,
         )
         return stock_data
 
@@ -674,7 +829,7 @@ def write_to_database(stocks):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fetch real financial data for Indian NSE stocks from Yahoo Finance."
+        description="Fetch real financial data for global stocks from Yahoo Finance."
     )
     parser.add_argument(
         "--dry-run",
@@ -683,8 +838,18 @@ def main():
     )
     args = parser.parse_args()
 
+    exchanges = [
+        ("NSE", STOCK_SYMBOLS),
+        ("US", US_STOCK_SYMBOLS),
+        ("LSE", UK_STOCK_SYMBOLS),
+    ]
+
+    total_symbols = sum(len(syms) for _, syms in exchanges)
+
     log.info("=" * 70)
-    log.info("Fetching real financial data for %d NSE stocks", len(STOCK_SYMBOLS))
+    log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
+    log.info("  NSE: %d stocks | US: %d stocks | LSE: %d stocks",
+             len(STOCK_SYMBOLS), len(US_STOCK_SYMBOLS), len(UK_STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -692,29 +857,44 @@ def main():
     successful = []
     failed = []
 
-    for i, symbol in enumerate(STOCK_SYMBOLS):
-        stock_data = fetch_stock_data(symbol)
+    for exchange, symbols in exchanges:
+        log.info("")
+        log.info("─" * 50)
+        log.info("Fetching %s stocks (%d symbols) ...", exchange, len(symbols))
+        log.info("─" * 50)
 
-        if stock_data:
-            successful.append(stock_data)
-        else:
-            failed.append(symbol)
+        for i, symbol in enumerate(symbols):
+            stock_data = fetch_stock_data(symbol, exchange)
 
-        # Rate limiting between API calls
-        if i < len(STOCK_SYMBOLS) - 1:
-            time.sleep(RATE_LIMIT_SECONDS)
+            if stock_data:
+                successful.append(stock_data)
+            else:
+                failed.append(f"{symbol} ({exchange})")
+
+            # Rate limiting between API calls
+            if i < len(symbols) - 1:
+                time.sleep(RATE_LIMIT_SECONDS)
 
     # ── Summary ──────────────────────────────────────────────────────────
     log.info("")
     log.info("=" * 70)
     log.info("FETCH COMPLETE")
     log.info("=" * 70)
-    log.info("Total attempted : %d", len(STOCK_SYMBOLS))
+    log.info("Total attempted : %d", total_symbols)
     log.info("Successful      : %d", len(successful))
     log.info("Failed          : %d", len(failed))
 
     if failed:
         log.warning("Failed symbols: %s", ", ".join(failed))
+
+    # Exchange breakdown
+    exchange_counts = defaultdict(int)
+    for s in successful:
+        exchange_counts[s["exchange"]] += 1
+    log.info("")
+    log.info("Exchange breakdown:")
+    for ex, count in sorted(exchange_counts.items()):
+        log.info("  %-10s %3d stocks", ex, count)
 
     # Sector breakdown
     sector_counts = defaultdict(int)
@@ -735,13 +915,19 @@ def main():
             log.info("DRY RUN: Skipping database write.")
             log.info("Data saved to %s only.", OUTPUT_FILE)
 
-            # Print sample data for verification
+            # Print sample data for verification (one per exchange)
             log.info("")
-            log.info("Sample data (first 3 stocks):")
-            for s in successful[:3]:
-                log.info("  %s (%s)", s["symbol"], s["name"])
-                log.info("    Price: %.2f | MCap: %.0f Cr | Debt: %.0f Cr", s["price"], s["market_cap"], s["debt"])
-                log.info("    Revenue: %.0f Cr | Total Assets: %.0f Cr", s["revenue"], s["total_assets"])
+            log.info("Sample data (first stock per exchange):")
+            shown_exchanges = set()
+            for s in successful:
+                if s["exchange"] not in shown_exchanges:
+                    shown_exchanges.add(s["exchange"])
+                    unit = "Cr" if s["exchange"] == "NSE" else "M"
+                    log.info("  %s (%s) [%s, %s]", s["symbol"], s["name"], s["exchange"], s.get("currency", ""))
+                    log.info("    Price: %.2f | MCap: %.0f %s | Debt: %.0f %s",
+                             s["price"], s["market_cap"], unit, s["debt"], unit)
+                    log.info("    Revenue: %.0f %s | Total Assets: %.0f %s",
+                             s["revenue"], unit, s["total_assets"], unit)
         else:
             write_to_database(successful)
             log.info("")
