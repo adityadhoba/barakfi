@@ -135,6 +135,11 @@ def seed_investors(db: Session) -> int:
                         row.currency = stock.currency
                         row.country = stock.country
                         row.sector = stock.sector
+                        # Production schema may require these fields; default to 0.
+                        try:
+                            row.shares = int(getattr(row, "shares", 0) or 0)
+                        except Exception:
+                            row.shares = 0
                 else:
                     now = datetime.now(UTC)
                     db.add(SuperInvestorHolding(
@@ -148,6 +153,7 @@ def seed_investors(db: Session) -> int:
                         currency=stock.currency,
                         country=stock.country,
                         sector=stock.sector,
+                        shares=0,
                     ))
         seeded += 1
 
