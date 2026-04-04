@@ -79,6 +79,12 @@ def seed_investors(db: Session) -> int:
     """Seed super investors from app/data/super_investors.py."""
     from app.data.super_investors import SUPER_INVESTORS
 
+    def _safe_float(value: object, default: float = 0.0) -> float:
+        try:
+            return float(value) if value is not None else default
+        except Exception:
+            return default
+
     seeded = 0
     for inv_data in SUPER_INVESTORS:
         existing = db.query(SuperInvestor).filter(SuperInvestor.slug == inv_data["slug"]).first()
@@ -87,6 +93,7 @@ def seed_investors(db: Session) -> int:
             existing.firm = inv_data.get("firm", "") or ""
             existing.title = inv_data["title"]
             existing.bio = inv_data["bio"]
+            existing.source_url = inv_data.get("source_url", "") or ""
             existing.country = inv_data["country"]
             existing.investment_style = inv_data["investment_style"]
             existing.image_url = inv_data.get("image_url", "") or ""
@@ -98,6 +105,7 @@ def seed_investors(db: Session) -> int:
                 firm=inv_data.get("firm", "") or "",
                 title=inv_data["title"],
                 bio=inv_data["bio"],
+                source_url=inv_data.get("source_url", "") or "",
                 country=inv_data["country"],
                 investment_style=inv_data["investment_style"],
                 image_url=inv_data.get("image_url", "") or "",
@@ -135,11 +143,22 @@ def seed_investors(db: Session) -> int:
                         row.currency = stock.currency
                         row.country = stock.country
                         row.sector = stock.sector
+                        try:
+                            row.company_sector = _safe_str(getattr(stock, "sector", ""))
+                        except Exception:
+                            pass
                         # Production schema may require these fields; default to 0.
                         try:
                             row.shares = int(getattr(row, "shares", 0) or 0)
                         except Exception:
                             row.shares = 0
+                        # Some production schemas require value/pct_portfolio/as_of_date.
+                        if getattr(row, "value", None) is None:
+                            row.value = 0.0
+                        if getattr(row, "pct_portfolio", None) is None:
+                            row.pct_portfolio = _safe_float(row.weight_pct, 0.0)
+                        if getattr(row, "as_of_date", None) is None:
+                            row.as_of_date = datetime.now(UTC)
                 else:
                     now = datetime.now(UTC)
                     db.add(SuperInvestorHolding(
@@ -153,7 +172,11 @@ def seed_investors(db: Session) -> int:
                         currency=stock.currency,
                         country=stock.country,
                         sector=stock.sector,
+                        company_sector=_safe_str(getattr(stock, "sector", "")),
                         shares=0,
+                        value=0.0,
+                        pct_portfolio=_safe_float(h.get("weight_pct", 0.0), 0.0),
+                        as_of_date=now,
                     ))
         seeded += 1
 
