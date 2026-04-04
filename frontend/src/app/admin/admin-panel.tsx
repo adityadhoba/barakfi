@@ -1,371 +1,235 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useToast } from "@/components/toast";
-import s from "./admin-panel.module.css";
+import { useState, useEffect } from "react";
+import styles from "./admin-panel.module.css";
 
-interface AdminUser {
-  id: number;
-  email: string;
-  display_name: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  current_subscription_status: string | null;
-}
+type Tab = "overview" | "coverage" | "feedback" | "users";
 
-interface AdminRole {
-  code: string;
-  name: string;
-  description: string;
-  level: number;
-}
-
-const _ROLE_COLORS: Record<string, string> = {
-  admin: "purple",
-  reviewer: "gold",
-  developer: "blue",
-  user: "gray",
-};
-void _ROLE_COLORS;
-
-const ROLE_ICONS: Record<string, string> = {
-  admin: "👑",
-  reviewer: "✓",
-  developer: "⚙",
-  user: "👤",
+type Props = {
+  currentUserEmail: string;
 };
 
-export function AdminPanel({ currentUserEmail }: { currentUserEmail: string }) {
-  const { toast: showToast } = useToast();
+export function AdminPanel({ currentUserEmail }: Props) {
+  const [tab, setTab] = useState<Tab>("overview");
+  const [stats, setStats] = useState({ users: 0, stocks: 0, pendingRequests: 0, newFeedback: 0 });
+  const [coverageRequests, setCoverageRequests] = useState<any[]>([]);
+  const [feedbackItems, setFeedbackItems] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [roles, setRoles] = useState<AdminRole[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [limit] = useState(20);
-  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+  const apiBase = "/api";
 
-  // Confirmation dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    show: boolean;
-    userId: number;
-    userName: string;
-    action: "role" | "active";
-    newValue: string | boolean;
-  } | null>(null);
-
-  const fetchUsers = async (off: number = 0) => {
-    try {
-      const query = new URLSearchParams({
-        offset: off.toString(),
-        limit: limit.toString(),
-      });
-
-      // Call Next.js proxy route — avoids CORS / direct backend issues
-      const response = await fetch(`/api/admin/users?${query}`, {
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch users");
-      }
-
-      const data = await response.json();
-      setUsers(data.items);
-      setTotal(data.total);
-      setOffset(off);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      showToast("Failed to load users", "error");
-    }
-  };
-
-  const fetchRoles = async () => {
-    try {
-      // Call Next.js proxy route — avoids CORS / direct backend issues
-      const response = await fetch("/api/admin/roles", {
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch roles");
-      }
-
-      const data = await response.json();
-      setRoles(data.roles);
-    } catch (error) {
-      console.error("Error fetching roles:", error);
-      showToast("Failed to load roles", "error");
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      await Promise.all([fetchRoles()]);
-      await fetchUsers(0);
-      setLoading(false);
-    };
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleUpdateRole = (userId: number, userName: string, newRole: string) => {
-    setConfirmDialog({
-      show: true,
-      userId,
-      userName,
-      action: "role",
-      newValue: newRole,
-    });
-  };
-
-  const handleToggleActive = (userId: number, userName: string, newActive: boolean) => {
-    setConfirmDialog({
-      show: true,
-      userId,
-      userName,
-      action: "active",
-      newValue: newActive,
-    });
-  };
-
-  const confirmAction = async () => {
-    if (!confirmDialog) return;
-
-    try {
-      setUpdatingUserId(confirmDialog.userId);
-
-      if (confirmDialog.action === "role") {
-        // Check if trying to demote current user
-        const user = users.find((u) => u.id === confirmDialog.userId);
-        if (user?.email === currentUserEmail && confirmDialog.newValue !== "admin") {
-          showToast("Cannot demote your own admin role", "error");
-          setConfirmDialog(null);
-          setUpdatingUserId(null);
-          return;
-        }
-      }
-
-      const payload = confirmDialog.action === "role"
-        ? { userId: confirmDialog.userId, action: "role", role: confirmDialog.newValue }
-        : { userId: confirmDialog.userId, action: "active", is_active: confirmDialog.newValue };
-
-      // Call Next.js proxy route — avoids CORS / direct backend issues
-      const response = await fetch("/api/admin/users", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Update failed");
-      }
-
-      // Refresh users
-      await fetchUsers(offset);
-
-      const action = confirmDialog.action === "role" ? "role updated" : "status updated";
-      showToast(`User ${confirmDialog.userName} ${action}`, "success");
-      setConfirmDialog(null);
-    } catch (error: unknown) {
-      console.error("Error updating user:", error);
-      showToast(error instanceof Error ? error.message : "Failed to update user", "error");
-    } finally {
-      setUpdatingUserId(null);
-    }
-  };
-
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.display_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = !selectedRole || user.role === selectedRole;
-    return matchesSearch && matchesRole;
-  });
-
-  if (loading) {
-    return (
-      <div className={s.container}>
-        <div className={s.loadingState}>
-          <div className={s.spinner}></div>
-          <p>Loading admin panel...</p>
-        </div>
-      </div>
-    );
+  async function fetchWithAuth(path: string) {
+    const res = await fetch(`${apiBase}${path}`);
+    if (!res.ok) return null;
+    return res.json();
   }
 
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [crData, fbData, userData] = await Promise.all([
+        fetchWithAuth("/admin/coverage-requests"),
+        fetchWithAuth("/admin/feedback"),
+        fetchWithAuth("/admin/users"),
+      ]);
+      if (crData) setCoverageRequests(crData);
+      if (fbData) setFeedbackItems(fbData);
+      if (userData?.users) setUsers(userData.users);
+      setStats({
+        users: userData?.users?.length || 0,
+        stocks: 0,
+        pendingRequests: (crData || []).filter((r: any) => r.status === "pending").length,
+        newFeedback: (fbData || []).filter((f: any) => f.status === "new").length,
+      });
+    } catch (e) {
+      console.error("Failed to load admin data", e);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(); }, []);
+
+  async function updateCoverageStatus(id: number, status: string) {
+    await fetch(`${apiBase}/admin/coverage-requests/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    loadData();
+  }
+
+  async function updateFeedbackStatus(id: number, status: string, notes?: string) {
+    const body: Record<string, string> = { status };
+    if (notes !== undefined) body.admin_notes = notes;
+    await fetch(`${apiBase}/admin/feedback/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    loadData();
+  }
+
+  const TABS: { key: Tab; label: string; count?: number }[] = [
+    { key: "overview", label: "Overview" },
+    { key: "coverage", label: "Coverage Requests", count: stats.pendingRequests },
+    { key: "feedback", label: "Feedback", count: stats.newFeedback },
+    { key: "users", label: "Users", count: stats.users },
+  ];
+
   return (
-    <div className={s.container}>
-      {/* Filters section */}
-      <div className={s.filtersSection}>
-        <div className={s.searchBox}>
-          <input
-            type="text"
-            placeholder="Search by email or name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={s.searchInput}
-          />
-          <span className={s.searchIcon}>🔍</span>
-        </div>
-
-        <div className={s.roleFilters}>
+    <div className={styles.panel}>
+      <nav className={styles.tabs}>
+        {TABS.map((t) => (
           <button
-            className={`${s.roleFilter} ${!selectedRole ? s.roleFilterActive : ""}`}
-            onClick={() => setSelectedRole(null)}
+            key={t.key}
+            className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`}
+            onClick={() => setTab(t.key)}
           >
-            All Roles
+            {t.label}
+            {t.count !== undefined && t.count > 0 && (
+              <span className={styles.tabBadge}>{t.count}</span>
+            )}
           </button>
-          {roles.map((role) => (
-            <button
-              key={role.code}
-              className={`${s.roleFilter} ${selectedRole === role.code ? s.roleFilterActive : ""} ${
-                s[`roleFilter${role.code.charAt(0).toUpperCase() + role.code.slice(1)}`]
-              }`}
-              onClick={() => setSelectedRole(role.code)}
-              title={role.description}
-            >
-              {ROLE_ICONS[role.code]} {role.name}
-            </button>
-          ))}
-        </div>
-      </div>
+        ))}
+      </nav>
 
-      {/* Users table */}
-      <div className={s.tableWrapper}>
-        {filteredUsers.length === 0 ? (
-          <div className={s.emptyState}>
-            <p>No users found</p>
-          </div>
-        ) : (
-          <table className={s.table}>
-            <thead>
-              <tr>
-                <th className={s.colName}>Name</th>
-                <th className={s.colEmail}>Email</th>
-                <th className={s.colRole}>Role</th>
-                <th className={s.colStatus}>Status</th>
-                <th className={s.colPlan}>Plan</th>
-                <th className={s.colJoined}>Joined</th>
-                <th className={s.colActions}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className={!user.is_active ? s.rowInactive : ""}>
-                  <td className={s.colName}>
-                    <div className={s.userName}>{user.display_name}</div>
-                  </td>
-                  <td className={s.colEmail}>
-                    <code className={s.email}>{user.email}</code>
-                  </td>
-                  <td className={s.colRole}>
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleUpdateRole(user.id, user.display_name, e.target.value)}
-                      disabled={updatingUserId !== null}
-                      className={`${s.roleSelect} ${s[`roleSelect${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`]}`}
-                      title={ROLE_DESCRIPTIONS[user.role]}
-                    >
-                      {roles.map((role) => (
-                        <option key={role.code} value={role.code}>
-                          {role.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className={s.colStatus}>
-                    <button
-                      onClick={() => handleToggleActive(user.id, user.display_name, !user.is_active)}
-                      disabled={updatingUserId !== null}
-                      className={`${s.statusBadge} ${user.is_active ? s.statusActive : s.statusInactive}`}
-                      title={user.is_active ? "Click to disable" : "Click to enable"}
-                    >
-                      {user.is_active ? "Active" : "Inactive"}
-                    </button>
-                  </td>
-                  <td className={s.colPlan}>
-                    <span className={s.planBadge}>{user.current_subscription_status || "—"}</span>
-                  </td>
-                  <td className={s.colJoined}>
-                    <time dateTime={user.created_at} className={s.dateText}>
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </time>
-                  </td>
-                  <td className={s.colActions}>
-                    <button
-                      className={s.actionButton}
-                      onClick={() => handleToggleActive(user.id, user.display_name, !user.is_active)}
-                      disabled={updatingUserId !== null}
-                      title={user.is_active ? "Disable user" : "Enable user"}
-                    >
-                      {user.is_active ? "Disable" : "Enable"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <div className={styles.content}>
+        {loading && <div className={styles.loading}>Loading...</div>}
 
-      {/* Pagination */}
-      {total > limit && (
-        <div className={s.pagination}>
-          <button
-            onClick={() => fetchUsers(Math.max(0, offset - limit))}
-            disabled={offset === 0 || loading}
-            className={s.paginationButton}
-          >
-            ← Previous
-          </button>
-          <span className={s.paginationInfo}>
-            Showing {offset + 1}–{Math.min(offset + limit, total)} of {total}
-          </span>
-          <button
-            onClick={() => fetchUsers(offset + limit)}
-            disabled={offset + limit >= total || loading}
-            className={s.paginationButton}
-          >
-            Next →
-          </button>
-        </div>
-      )}
-
-      {/* Confirmation dialog */}
-      {confirmDialog?.show && (
-        <div className={s.confirmDialogOverlay} onClick={() => setConfirmDialog(null)}>
-          <div className={s.confirmDialog} onClick={(e) => e.stopPropagation()}>
-            <h3 className={s.confirmTitle}>Confirm Action</h3>
-            <p className={s.confirmMessage}>
-              {confirmDialog.action === "role"
-                ? `Change ${confirmDialog.userName}'s role to "${confirmDialog.newValue}"?`
-                : `${confirmDialog.newValue ? "Enable" : "Disable"} ${confirmDialog.userName}?`}
-            </p>
-            <div className={s.confirmActions}>
-              <button onClick={() => setConfirmDialog(null)} className={s.confirmCancel}>
-                Cancel
-              </button>
-              <button onClick={confirmAction} className={s.confirmOk}>
-                {confirmDialog.action === "role" ? "Update Role" : "Update Status"}
-              </button>
+        {tab === "overview" && !loading && (
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <span className={styles.statValue}>{stats.users}</span>
+              <span className={styles.statLabel}>Total Users</span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statValue}>{stats.pendingRequests}</span>
+              <span className={styles.statLabel}>Pending Requests</span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statValue}>{stats.newFeedback}</span>
+              <span className={styles.statLabel}>New Feedback</span>
+            </div>
+            <div className={styles.statCard}>
+              <span className={styles.statValue}>{coverageRequests.length}</span>
+              <span className={styles.statLabel}>Total Requests</span>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {tab === "coverage" && !loading && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Exchange</th>
+                  <th>User</th>
+                  <th>Notes</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverageRequests.map((r: any) => (
+                  <tr key={r.id}>
+                    <td className={styles.mono}>{r.symbol}</td>
+                    <td>{r.exchange}</td>
+                    <td>{r.user_email}</td>
+                    <td className={styles.truncate}>{r.notes}</td>
+                    <td><span className={`${styles.badge} ${styles[`badge_${r.status}`] || ""}`}>{r.status}</span></td>
+                    <td className={styles.date}>{r.created_at?.split("T")[0]}</td>
+                    <td className={styles.actions}>
+                      {r.status === "pending" && (
+                        <>
+                          <button className={styles.btnApprove} onClick={() => updateCoverageStatus(r.id, "approved")}>Approve</button>
+                          <button className={styles.btnReject} onClick={() => updateCoverageStatus(r.id, "rejected")}>Reject</button>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {coverageRequests.length === 0 && (
+                  <tr><td colSpan={7} className={styles.empty}>No coverage requests yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "feedback" && !loading && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Category</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feedbackItems.map((f: any) => (
+                  <tr key={f.id}>
+                    <td>{f.name || "Anonymous"}</td>
+                    <td>{f.email || "-"}</td>
+                    <td><span className={styles.categoryBadge}>{f.category}</span></td>
+                    <td className={styles.truncate}>{f.message}</td>
+                    <td><span className={`${styles.badge} ${styles[`badge_${f.status}`] || ""}`}>{f.status}</span></td>
+                    <td className={styles.date}>{f.created_at?.split("T")[0]}</td>
+                    <td className={styles.actions}>
+                      {f.status === "new" && (
+                        <button className={styles.btnApprove} onClick={() => updateFeedbackStatus(f.id, "reviewed")}>Mark Reviewed</button>
+                      )}
+                      {f.status !== "closed" && (
+                        <button className={styles.btnReject} onClick={() => updateFeedbackStatus(f.id, "closed")}>Close</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {feedbackItems.length === 0 && (
+                  <tr><td colSpan={7} className={styles.empty}>No feedback yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {tab === "users" && !loading && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((u: any) => (
+                  <tr key={u.id}>
+                    <td>{u.display_name}</td>
+                    <td>{u.email}</td>
+                    <td><span className={styles.roleBadge}>{u.role}</span></td>
+                    <td>{u.is_active ? "Active" : "Disabled"}</td>
+                    <td className={styles.date}>{u.created_at?.split("T")[0]}</td>
+                  </tr>
+                ))}
+                {users.length === 0 && (
+                  <tr><td colSpan={5} className={styles.empty}>No users yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  admin: "Full system access. Can manage users, roles, and all content.",
-  reviewer: "Can review and approve compliance cases and overrides.",
-  developer: "Can manage data sources and technical integrations.",
-  user: "Standard user access to screening, portfolio, and watchlist.",
-};

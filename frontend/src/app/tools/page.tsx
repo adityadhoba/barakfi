@@ -95,7 +95,7 @@ export default function ToolsPage() {
           <h2 className={styles.ctaTitle}>Need more tools?</h2>
           <p className={styles.ctaDesc}>
             We&apos;re building more Islamic finance tools. Have a suggestion?{" "}
-            <Link href="/request-coverage" className={styles.ctaLink}>Let us know</Link>.
+            <Link href="/feedback" className={styles.ctaLink}>Let us know</Link>.
           </p>
         </section>
       </div>
