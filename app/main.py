@@ -234,24 +234,34 @@ try:
     from app.database import SessionLocal as _SeedSession
     _seed_db = _SeedSession()
     try:
-        # Only one worker should seed on Postgres.
-        with engine.begin() as _conn:
-            if not _acquire_seed_lock(_conn):
-                log.info("Seed lock held by another worker; skipping seed step.")
-                # IMPORTANT: don't exit the worker process here (gunicorn multi-worker).
-                # We only want to skip the seeding work; the API should still boot.
-                seed_collections = None
-                seed_investors = None
+        # Best-effort: try to avoid multi-worker double-seeding on Postgres.
+        # IMPORTANT: never skip seeding entirely, because idempotent seeds are safe and
+        # Render can otherwise remain empty if the "lock holder" worker dies early.
+        try:
+            conn = _seed_db.connection()
+            got_lock = _acquire_seed_lock(conn)
+            if got_lock:
+                log.info("Acquired seed lock.")
             else:
-                from app.services.collection_service import seed_collections
-                from app.services.investor_service import seed_investors
-        if seed_collections and seed_investors:
-            count = seed_collections(_seed_db)
-            if count > 0:
-                log.info("Seeded %d collections", count)
-            count = seed_investors(_seed_db)
-            if count > 0:
-                log.info("Seeded %d super investors", count)
+                log.info("Seed lock held by another worker; continuing with idempotent seeding.")
+        except Exception:
+            got_lock = False
+
+        from app.services.collection_service import seed_collections
+        from app.services.investor_service import seed_investors
+
+        count = seed_collections(_seed_db)
+        if count > 0:
+            log.info("Seeded %d collections", count)
+        count = seed_investors(_seed_db)
+        if count > 0:
+            log.info("Seeded %d super investors", count)
+
+        try:
+            if got_lock:
+                _release_seed_lock(conn)
+        except Exception:
+            pass
 
         # Ensure a default admin user exists for tests + local admin workflows.
         # This is safe in dev/test, and in production the admin list is controlled
