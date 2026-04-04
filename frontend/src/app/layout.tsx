@@ -291,13 +291,25 @@ export default async function RootLayout({
                   <>
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
-                      <TopbarLink href="/compare" label="Compare" />
+                      <TopbarDropdown
+                        label="Explore"
+                        basePath="/collections"
+                        items={[
+                          { href: "/collections", label: "Collections" },
+                          { href: "/super-investors", label: "Super Investors" },
+                          { href: "/etfs", label: "Halal ETFs" },
+                          { href: "/academy", label: "Academy" },
+                          { href: "/news", label: "News" },
+                        ]}
+                      />
                       <TopbarDropdown
                         label="Tools"
                         basePath="/tools"
                         items={[
                           { href: "/tools/purification", label: "Purification Calculator" },
                           { href: "/tools/zakat", label: "Zakat Calculator" },
+                          { href: "/compare", label: "Compare Stocks" },
+                          { href: "/request-coverage", label: "Request Coverage" },
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />
@@ -315,13 +327,25 @@ export default async function RootLayout({
                   <>
                     <nav className="topbarNav" aria-label="Primary navigation">
                       <TopbarLink href="/screener" label="Screener" />
-                      <TopbarLink href="/compare" label="Compare" />
+                      <TopbarDropdown
+                        label="Explore"
+                        basePath="/collections"
+                        items={[
+                          { href: "/collections", label: "Collections" },
+                          { href: "/super-investors", label: "Super Investors" },
+                          { href: "/etfs", label: "Halal ETFs" },
+                          { href: "/academy", label: "Academy" },
+                          { href: "/news", label: "News" },
+                        ]}
+                      />
                       <TopbarDropdown
                         label="Tools"
                         basePath="/tools"
                         items={[
                           { href: "/tools/purification", label: "Purification Calculator" },
                           { href: "/tools/zakat", label: "Zakat Calculator" },
+                          { href: "/compare", label: "Compare Stocks" },
+                          { href: "/request-coverage", label: "Request Coverage" },
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />
