@@ -53,6 +53,7 @@ def _auto_migrate_columns():
     """
     inspector = inspect(engine)
     with engine.begin() as conn:
+        is_postgres = engine.dialect.name.lower() in {"postgresql", "postgres"}
         for table in Base.metadata.sorted_tables:
             if not inspector.has_table(table.name):
                 continue  # create_all() will handle brand-new tables
@@ -72,7 +73,11 @@ def _auto_migrate_columns():
                     if isinstance(default_val, str):
                         default_clause = f" DEFAULT '{default_val}'"
                     elif isinstance(default_val, bool):
-                        default_clause = f" DEFAULT {1 if default_val else 0}"
+                        # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
+                        if is_postgres:
+                            default_clause = f" DEFAULT {'TRUE' if default_val else 'FALSE'}"
+                        else:
+                            default_clause = f" DEFAULT {1 if default_val else 0}"
                     elif default_val is not None:
                         default_clause = f" DEFAULT {default_val}"
 
@@ -82,7 +87,8 @@ def _auto_migrate_columns():
                     if "INT" in str(col_type).upper() or "FLOAT" in str(col_type).upper():
                         default_clause = " DEFAULT 0"
                     elif "BOOL" in str(col_type).upper():
-                        default_clause = " DEFAULT 0"
+                        # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
+                        default_clause = " DEFAULT FALSE" if is_postgres else " DEFAULT 0"
                     else:
                         default_clause = " DEFAULT ''"
 
