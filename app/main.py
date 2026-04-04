@@ -70,6 +70,14 @@ def _auto_migrate_columns():
                     default_val = column.default.arg
                     if callable(default_val):
                         default_val = default_val({})
+                    # Postgres requires timestamp defaults to be quoted or expressions like CURRENT_TIMESTAMP.
+                    # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()), use CURRENT_TIMESTAMP.
+                    try:
+                        if is_postgres and "TIMESTAMP" in str(col_type).upper():
+                            default_clause = " DEFAULT CURRENT_TIMESTAMP"
+                            default_val = None
+                    except Exception:
+                        pass
                     if isinstance(default_val, str):
                         default_clause = f" DEFAULT '{default_val}'"
                     elif isinstance(default_val, bool):
@@ -86,6 +94,8 @@ def _auto_migrate_columns():
                 if not column.nullable and not default_clause:
                     if "INT" in str(col_type).upper() or "FLOAT" in str(col_type).upper():
                         default_clause = " DEFAULT 0"
+                    elif is_postgres and "TIMESTAMP" in str(col_type).upper():
+                        default_clause = " DEFAULT CURRENT_TIMESTAMP"
                     elif "BOOL" in str(col_type).upper():
                         # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
                         default_clause = " DEFAULT FALSE" if is_postgres else " DEFAULT 0"
