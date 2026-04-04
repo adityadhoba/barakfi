@@ -77,6 +77,7 @@ def seed_investors(db: Session) -> int:
         existing = db.query(SuperInvestor).filter(SuperInvestor.slug == inv_data["slug"]).first()
         if existing:
             existing.name = inv_data["name"]
+            existing.firm = inv_data.get("firm", "") or ""
             existing.title = inv_data["title"]
             existing.bio = inv_data["bio"]
             existing.country = inv_data["country"]
@@ -87,6 +88,7 @@ def seed_investors(db: Session) -> int:
             investor = SuperInvestor(
                 name=inv_data["name"],
                 slug=inv_data["slug"],
+                firm=inv_data.get("firm", "") or "",
                 title=inv_data["title"],
                 bio=inv_data["bio"],
                 country=inv_data["country"],
