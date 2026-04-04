@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from sqlalchemy.orm import Session
+from datetime import UTC, datetime
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
 
 
@@ -121,11 +122,25 @@ def seed_investors(db: Session) -> int:
                     )
                     if row:
                         row.weight_pct = h.get("weight_pct", 0.0)
+                        row.symbol = stock.symbol
+                        row.name = stock.name
+                        row.exchange = stock.exchange
+                        row.currency = stock.currency
+                        row.country = stock.country
+                        row.sector = stock.sector
                 else:
+                    now = datetime.now(UTC)
                     db.add(SuperInvestorHolding(
                         investor_id=investor.id,
                         stock_id=stock.id,
                         weight_pct=h.get("weight_pct", 0.0),
+                        symbol=stock.symbol,
+                        name=stock.name,
+                        exchange=stock.exchange,
+                        currency=stock.currency,
+                        country=stock.country,
+                        sector=stock.sector,
+                        added_at=now,
                     ))
         seeded += 1
 

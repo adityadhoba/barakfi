@@ -395,6 +395,13 @@ class SuperInvestorHolding(Base):
 
     id = Column(Integer, primary_key=True)
     investor_id = Column(Integer, ForeignKey("super_investors.id"), nullable=False, index=True)
+    # Production Postgres stores a denormalized snapshot of the holding for fast reads.
+    symbol = Column(String, nullable=False, default="")
+    name = Column(String, nullable=False, default="")
+    sector = Column(String, nullable=False, default="")
+    exchange = Column(String, nullable=False, default="")
+    currency = Column(String, nullable=False, default="")
+    country = Column(String, nullable=False, default="")
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
     weight_pct = Column(Float, nullable=False, default=0.0)
 
