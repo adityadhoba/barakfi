@@ -29,6 +29,7 @@ from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all 
     SuperInvestorHolding,
     CoverageRequest,
     Feedback,
+    NewsArticle,
 )
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)

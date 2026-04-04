@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCollections } from "@/lib/api";
 import styles from "./collections.module.css";
+import { CollectionIcon } from "@/components/collection-icon";
+import collectionsExtras from "./collections-icons.module.css";
 
 export const metadata: Metadata = {
   title: "Halal Stock Collections — Curated Shariah-Compliant Baskets",
@@ -33,7 +35,7 @@ export default async function CollectionsPage() {
         <div className={styles.grid}>
           {collections.map((coll) => (
             <Link key={coll.slug} href={`/collections/${coll.slug}`} className={styles.card}>
-              <span className={styles.cardIcon}>{coll.icon}</span>
+              <CollectionIcon slug={coll.slug} className={collectionsExtras.cardIconWrap} />
               <div className={styles.cardBody}>
                 <h2 className={styles.cardTitle}>{coll.name}</h2>
                 <p className={styles.cardDesc}>{coll.description}</p>
