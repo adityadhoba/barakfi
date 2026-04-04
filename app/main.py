@@ -135,6 +135,20 @@ def _auto_migrate_columns():
     logger.info("[auto-migrate] Schema check complete.")
 
 
+def _log_table_columns(table_name: str) -> None:
+    """Log live DB column names/types to help diagnose prod schema mismatches."""
+    try:
+        inspector = inspect(engine)
+        if not inspector.has_table(table_name):
+            logger.info("[schema] Table %s does not exist", table_name)
+            return
+        cols = inspector.get_columns(table_name)
+        formatted = ", ".join([f'{c.get("name")}:{c.get("type")}' for c in cols])
+        logger.info("[schema] %s columns: %s", table_name, formatted)
+    except Exception as exc:
+        logger.info("[schema] Failed to inspect %s: %s", table_name, exc)
+
+
 def _acquire_seed_lock(conn) -> bool:
     """
     Acquire a best-effort cross-process seed lock.
@@ -260,6 +274,14 @@ try:
     from app.database import SessionLocal as _SeedSession
     _seed_db = _SeedSession()
     try:
+        # Log live schema for prod debugging (safe: only column names/types).
+        # This helps when Render Postgres has extra NOT NULL fields.
+        if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+            _log_table_columns("stock_collections")
+            _log_table_columns("collection_entries")
+            _log_table_columns("super_investors")
+            _log_table_columns("super_investor_holdings")
+
         # Best-effort: try to avoid multi-worker double-seeding on Postgres.
         # IMPORTANT: never skip seeding entirely, because idempotent seeds are safe and
         # Render can otherwise remain empty if the "lock holder" worker dies early.
