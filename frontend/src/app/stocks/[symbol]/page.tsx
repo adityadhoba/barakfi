@@ -55,14 +55,23 @@ const STATUS_HERO: Record<string, string> = {
   NON_COMPLIANT: "fail",
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+function formatCurrency(value: number, currency: string = "INR") {
+  const cur = currency || "INR";
+  const locale = cur === "INR" ? "en-IN" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(value);
 }
 
-function formatMcap(value: number) {
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatCurrency(value);
+function formatMcap(value: number, currency: string = "INR") {
+  const cur = currency || "INR";
+  if (cur === "INR") {
+    if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
+    if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
+    return formatCurrency(value, cur);
+  }
+  const symbol = cur === "USD" ? "$" : cur === "GBP" ? "£" : "";
+  if (value >= 1e9) return `${symbol}${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e6) return `${symbol}${(value / 1e6).toFixed(0)}M`;
+  return formatCurrency(value, cur);
 }
 
 function formatRatio(value: number) {
@@ -145,7 +154,7 @@ export default async function StockDetailPage({
     getScreeningResult(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
-    getEquityQuote(symbol, "auto_india"),
+    getEquityQuote(symbol, "auto_global" as never),
     getStocks(),
     getMultiScreeningResult(symbol).catch(() => null),
   ]);
@@ -167,17 +176,18 @@ export default async function StockDetailPage({
     { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
   ];
 
+  const cur = stock.currency || "INR";
   const financials = [
-    { label: "Market Cap", value: formatMcap(stock.market_cap) },
-    { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m) },
-    { label: "Revenue", value: formatCurrency(stock.revenue) },
-    { label: "Total Business Income", value: formatCurrency(stock.total_business_income) },
-    { label: "Interest Income", value: formatCurrency(stock.interest_income) },
-    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income) },
-    { label: "Total Debt", value: formatCurrency(stock.debt) },
-    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable) },
-    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets) },
-    { label: "Total Assets", value: formatCurrency(stock.total_assets) },
+    { label: "Market Cap", value: formatMcap(stock.market_cap, cur) },
+    { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m, cur) },
+    { label: "Revenue", value: formatCurrency(stock.revenue, cur) },
+    { label: "Total Business Income", value: formatCurrency(stock.total_business_income, cur) },
+    { label: "Interest Income", value: formatCurrency(stock.interest_income, cur) },
+    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income, cur) },
+    { label: "Total Debt", value: formatCurrency(stock.debt, cur) },
+    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable, cur) },
+    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets, cur) },
+    { label: "Total Assets", value: formatCurrency(stock.total_assets, cur) },
   ];
 
   // Similar stocks from the same sector (excluding current)
