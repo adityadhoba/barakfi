@@ -15,6 +15,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Rakesh Jhunjhunwala",
         "slug": "rakesh-jhunjhunwala",
         "title": "The Big Bull of India",
+        "image_url": "",
         "bio": (
             "Legendary Indian investor and trader whose bold bets on Indian "
             "equities earned him the moniker 'The Big Bull'. Rakesh built a "
@@ -39,6 +40,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Radhakishan Damani",
         "slug": "radhakishan-damani",
         "title": "Founder of DMart",
+        "image_url": "",
         "bio": (
             "Reclusive billionaire and founder of Avenue Supermarts (DMart), "
             "India's most profitable hypermarket chain. Known for his patient, "
@@ -61,6 +63,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Dolly Khanna",
         "slug": "dolly-khanna",
         "title": "Small & Mid Cap Queen",
+        "image_url": "",
         "bio": (
             "Chennai-based investor renowned for uncovering hidden gems in "
             "India's small- and mid-cap universe. Dolly Khanna's portfolio, "
@@ -84,6 +87,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Vijay Kedia",
         "slug": "vijay-kedia",
         "title": "The Smiling Bull",
+        "image_url": "",
         "bio": (
             "Self-made Mumbai investor who turned a modest start into a "
             "formidable portfolio by backing under-researched growth stories "
@@ -106,6 +110,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Ashish Dhawan",
         "slug": "ashish-dhawan",
         "title": "Education Philanthropist & Investor",
+        "image_url": "",
         "bio": (
             "Former co-founder of ChrysCapital, one of India's premier PE "
             "firms, Ashish Dhawan pivoted to philanthropy through the Central "
@@ -128,6 +133,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Porinju Veliyath",
         "slug": "porinju-veliyath",
         "title": "Small Cap Czar",
+        "image_url": "",
         "bio": (
             "Kochi-based fund manager and founder of Equity Intelligence, "
             "Porinju is famous for deep-value contrarian bets in micro- and "
@@ -153,6 +159,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Warren Buffett",
         "slug": "warren-buffett",
         "title": "The Oracle of Omaha",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Warren_Buffett_KU_Visit.jpg/220px-Warren_Buffett_KU_Visit.jpg",
         "bio": (
             "Chairman and CEO of Berkshire Hathaway, Warren Buffett is widely "
             "regarded as the most successful investor in history. His value-"
@@ -177,6 +184,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Ray Dalio",
         "slug": "ray-dalio",
         "title": "Macro Maestro",
+        "image_url": "",
         "bio": (
             "Founder of Bridgewater Associates, the world's largest hedge fund. "
             "Ray Dalio pioneered the 'All Weather' portfolio strategy and is "
@@ -201,6 +209,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Howard Marks",
         "slug": "howard-marks",
         "title": "Distressed Debt Pioneer",
+        "image_url": "",
         "bio": (
             "Co-chairman of Oaktree Capital Management and author of 'The "
             "Most Important Thing'. Howard Marks is revered for his insightful "
@@ -223,6 +232,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Mohnish Pabrai",
         "slug": "mohnish-pabrai",
         "title": "The Dhandho Investor",
+        "image_url": "",
         "bio": (
             "Indian-American investor and author of 'The Dhandho Investor', "
             "Mohnish Pabrai runs the Pabrai Investment Funds with a concentrated, "

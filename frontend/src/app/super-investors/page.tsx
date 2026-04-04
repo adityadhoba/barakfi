@@ -33,9 +33,11 @@ export default async function SuperInvestorsPage() {
         <div className={styles.grid}>
           {investors.map((inv) => (
             <Link key={inv.slug} href={`/super-investors/${inv.slug}`} className={styles.card}>
-              <div className={styles.cardAvatar}>
-                {inv.name.charAt(0)}
-              </div>
+              {inv.image_url ? (
+                <img src={inv.image_url} alt={inv.name} className={styles.cardAvatarImg} />
+              ) : (
+                <div className={styles.cardAvatar}>{inv.name.charAt(0)}</div>
+              )}
               <div className={styles.cardBody}>
                 <h2 className={styles.cardName}>{inv.name}</h2>
                 <p className={styles.cardTitle}>{inv.title}</p>

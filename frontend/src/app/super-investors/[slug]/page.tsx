@@ -34,7 +34,11 @@ export default async function InvestorDetailPage({ params }: Props) {
           <span>{inv.name}</span>
         </nav>
         <header className={styles.header}>
-          <div className={styles.avatar}>{inv.name.charAt(0)}</div>
+          {inv.image_url ? (
+            <img src={inv.image_url} alt={inv.name} className={styles.avatarImg} />
+          ) : (
+            <div className={styles.avatar}>{inv.name.charAt(0)}</div>
+          )}
           <h1 className={styles.name}>{inv.name}</h1>
           <p className={styles.investorTitle}>{inv.title}</p>
           <div className={styles.tags}>
