@@ -15,7 +15,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Rakesh Jhunjhunwala",
         "slug": "rakesh-jhunjhunwala",
         "title": "The Big Bull of India",
-        "image_url": "",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/c/c4/Rj_in_office.jpg",
         "bio": (
             "Legendary Indian investor and trader whose bold bets on Indian "
             "equities earned him the moniker 'The Big Bull'. Rakesh built a "
@@ -87,7 +87,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Vijay Kedia",
         "slug": "vijay-kedia",
         "title": "The Smiling Bull",
-        "image_url": "",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/e/e3/VijayKedia.jpg",
         "bio": (
             "Self-made Mumbai investor who turned a modest start into a "
             "formidable portfolio by backing under-researched growth stories "
@@ -133,7 +133,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Porinju Veliyath",
         "slug": "porinju-veliyath",
         "title": "Small Cap Czar",
-        "image_url": "",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Porinju_Veliyath.jpg",
         "bio": (
             "Kochi-based fund manager and founder of Equity Intelligence, "
             "Porinju is famous for deep-value contrarian bets in micro- and "
@@ -159,7 +159,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Warren Buffett",
         "slug": "warren-buffett",
         "title": "The Oracle of Omaha",
-        "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Warren_Buffett_KU_Visit.jpg/220px-Warren_Buffett_KU_Visit.jpg",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/5/51/Warren_Buffett_KU_Visit.jpg",
         "bio": (
             "Chairman and CEO of Berkshire Hathaway, Warren Buffett is widely "
             "regarded as the most successful investor in history. His value-"
@@ -184,7 +184,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Ray Dalio",
         "slug": "ray-dalio",
         "title": "Macro Maestro",
-        "image_url": "",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/Ray_Dalio_Sept_23_2017_NYC.jpg",
         "bio": (
             "Founder of Bridgewater Associates, the world's largest hedge fund. "
             "Ray Dalio pioneered the 'All Weather' portfolio strategy and is "
@@ -209,7 +209,7 @@ SUPER_INVESTORS: list[dict] = [
         "name": "Howard Marks",
         "slug": "howard-marks",
         "title": "Distressed Debt Pioneer",
-        "image_url": "",
+        "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Howard_Marks_2.17.12_%28cropped%29.jpg",
         "bio": (
             "Co-chairman of Oaktree Capital Management and author of 'The "
             "Most Important Thing'. Howard Marks is revered for his insightful "
