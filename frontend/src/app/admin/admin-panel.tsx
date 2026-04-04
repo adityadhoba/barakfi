@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./admin-panel.module.css";
 
 type Tab = "overview" | "coverage" | "feedback" | "users";
@@ -9,29 +9,58 @@ type Props = {
   currentUserEmail: string;
 };
 
-export function AdminPanel({ currentUserEmail }: Props) {
+type CoverageRequest = {
+  id: number;
+  symbol: string;
+  exchange: string;
+  notes: string;
+  status: "pending" | "reviewed" | "added" | "rejected" | string;
+  created_at?: string | null;
+};
+
+type FeedbackItem = {
+  id: number;
+  name: string;
+  email: string;
+  category: string;
+  message: string;
+  status: "new" | "reviewed" | "closed" | string;
+  admin_notes?: string | null;
+  created_at?: string | null;
+};
+
+type AdminUser = {
+  id: number;
+  email: string;
+  display_name: string;
+  role?: string | null;
+  is_active: boolean;
+  created_at?: string | null;
+};
+
+export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState({ users: 0, stocks: 0, pendingRequests: 0, newFeedback: 0 });
-  const [coverageRequests, setCoverageRequests] = useState<any[]>([]);
-  const [feedbackItems, setFeedbackItems] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [coverageRequests, setCoverageRequests] = useState<CoverageRequest[]>([]);
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   const apiBase = "/api";
 
-  async function fetchWithAuth(path: string) {
+  const fetchWithAuth = useCallback(async <T,>(path: string): Promise<T | null> => {
     const res = await fetch(`${apiBase}${path}`);
     if (!res.ok) return null;
-    return res.json();
-  }
+    return (await res.json()) as T;
+  }, []);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [crData, fbData, userData] = await Promise.all([
-        fetchWithAuth("/admin/coverage-requests"),
-        fetchWithAuth("/admin/feedback"),
-        fetchWithAuth("/admin/users"),
+        fetchWithAuth<CoverageRequest[]>("/admin/coverage-requests"),
+        fetchWithAuth<FeedbackItem[]>("/admin/feedback"),
+        fetchWithAuth<{ users: AdminUser[] }>("/admin/users"),
       ]);
       if (crData) setCoverageRequests(crData);
       if (fbData) setFeedbackItems(fbData);
@@ -39,16 +68,19 @@ export function AdminPanel({ currentUserEmail }: Props) {
       setStats({
         users: userData?.users?.length || 0,
         stocks: 0,
-        pendingRequests: (crData || []).filter((r: any) => r.status === "pending").length,
-        newFeedback: (fbData || []).filter((f: any) => f.status === "new").length,
+        pendingRequests: (crData || []).filter((r) => r.status === "pending").length,
+        newFeedback: (fbData || []).filter((f) => f.status === "new").length,
       });
     } catch (e) {
       console.error("Failed to load admin data", e);
     }
     setLoading(false);
-  }
+  }, [fetchWithAuth]);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => void loadData(), 0);
+    return () => clearTimeout(t);
+  }, [loadData]);
 
   async function updateCoverageStatus(id: number, status: string) {
     await fetch(`${apiBase}/admin/coverage-requests/${id}`, {
@@ -56,7 +88,7 @@ export function AdminPanel({ currentUserEmail }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    loadData();
+    void loadData();
   }
 
   async function updateFeedbackStatus(id: number, status: string, notes?: string) {
@@ -67,7 +99,7 @@ export function AdminPanel({ currentUserEmail }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    loadData();
+    void loadData();
   }
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
@@ -133,11 +165,11 @@ export function AdminPanel({ currentUserEmail }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {coverageRequests.map((r: any) => (
+                {coverageRequests.map((r) => (
                   <tr key={r.id}>
                     <td className={styles.mono}>{r.symbol}</td>
                     <td>{r.exchange}</td>
-                    <td>{r.user_email}</td>
+                    <td>-</td>
                     <td className={styles.truncate}>{r.notes}</td>
                     <td><span className={`${styles.badge} ${styles[`badge_${r.status}`] || ""}`}>{r.status}</span></td>
                     <td className={styles.date}>{r.created_at?.split("T")[0]}</td>
@@ -174,7 +206,7 @@ export function AdminPanel({ currentUserEmail }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {feedbackItems.map((f: any) => (
+                {feedbackItems.map((f) => (
                   <tr key={f.id}>
                     <td>{f.name || "Anonymous"}</td>
                     <td>{f.email || "-"}</td>
@@ -213,7 +245,7 @@ export function AdminPanel({ currentUserEmail }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u: any) => (
+                {users.map((u) => (
                   <tr key={u.id}>
                     <td>{u.display_name}</td>
                     <td>{u.email}</td>
