@@ -77,7 +77,7 @@ def get_investor_detail(db: Session, slug: str) -> dict | None:
 
 def seed_investors(db: Session) -> int:
     """Seed super investors from app/data/super_investors.py."""
-    from app.data.super_investors import SUPER_INVESTORS
+    from app.data.super_investors import SUPER_INVESTORS, DEACTIVATED_SUPER_INVESTOR_SLUGS
 
     def _safe_float(value: object, default: float = 0.0) -> float:
         try:
@@ -179,6 +179,11 @@ def seed_investors(db: Session) -> int:
                         as_of_date=now,
                     ))
         seeded += 1
+
+    for slug in DEACTIVATED_SUPER_INVESTOR_SLUGS:
+        inactive = db.query(SuperInvestor).filter(SuperInvestor.slug == slug).first()
+        if inactive:
+            inactive.is_active = False
 
     db.commit()
     return seeded

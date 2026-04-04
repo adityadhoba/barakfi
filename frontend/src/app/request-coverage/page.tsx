@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./request.module.css";
+import { RequestCoverageForm } from "./request-coverage-form";
 
 export const metadata: Metadata = {
   title: "Request Stock Coverage — Get Any Stock Screened",
-  description: "Can't find a stock on Barakfi? Request us to add and screen it for Shariah compliance. We'll notify you when it's available.",
+  description:
+    "Can't find a stock on Barakfi? Request us to add and screen it for Shariah compliance. We'll notify you when it's available.",
   alternates: { canonical: "https://barakfi.in/request-coverage" },
 };
 
@@ -39,27 +41,24 @@ export default function RequestCoveragePage() {
               <span className={styles.stepNum}>2</span>
               <div>
                 <h3 className={styles.stepTitle}>Submit</h3>
-                <p className={styles.stepDesc}>Enter the stock symbol and exchange (NSE, US, or LSE).</p>
+                <p className={styles.stepDesc}>Enter the stock symbol and exchange (NSE, BSE, US, or LSE).</p>
               </div>
             </div>
             <div className={styles.step}>
               <span className={styles.stepNum}>3</span>
               <div>
-                <h3 className={styles.stepTitle}>We Screen</h3>
-                <p className={styles.stepDesc}>We fetch financial data and run Shariah screening within 48 hours.</p>
+                <h3 className={styles.stepTitle}>We screen</h3>
+                <p className={styles.stepDesc}>
+                  We fetch public financial data and run Shariah screening on a best-effort basis.
+                </p>
               </div>
             </div>
           </div>
 
-          <div className={styles.cta}>
-            <Link href="/sign-in?redirect_url=/request-coverage" className={styles.ctaButton}>
-              Sign in to request →
-            </Link>
-          </div>
+          <RequestCoverageForm />
 
           <p className={styles.note}>
-            Currently screening 160+ NSE stocks, 100+ US stocks, and 30+ LSE stocks.
-            We add new stocks every week.
+            We maintain a growing universe of NSE, US, and LSE names and add new stocks regularly.
           </p>
         </div>
       </div>

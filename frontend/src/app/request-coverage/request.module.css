@@ -17,3 +17,32 @@
 .ctaButton { display: inline-flex; padding: 12px 28px; border-radius: var(--radius-full); background: var(--emerald); color: #fff; font-weight: 700; font-size: 0.88rem; text-decoration: none; box-shadow: var(--shadow-emerald); transition: all 150ms; }
 .ctaButton:hover { background: var(--emerald-hover); transform: translateY(-1px); }
 .note { font-size: 0.78rem; color: var(--text-tertiary); text-align: center; margin: 0; }
+
+.form { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; color: var(--text-secondary); }
+.field input,
+.field select,
+.field textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+}
+.field textarea { resize: vertical; min-height: 72px; }
+.submitBtn {
+  align-self: flex-start;
+  padding: 12px 24px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--emerald);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-emerald);
+}
+.submitBtn:disabled { opacity: 0.65; cursor: not-allowed; }
+.formOk { font-size: 0.82rem; color: var(--emerald); margin: 0; }
+.formErr { font-size: 0.82rem; color: var(--red); margin: 0; }

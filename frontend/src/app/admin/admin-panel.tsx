@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import styles from "./admin-panel.module.css";
 
 type Tab = "overview" | "coverage" | "feedback" | "users";
@@ -16,6 +17,8 @@ type CoverageRequest = {
   notes: string;
   status: "pending" | "reviewed" | "added" | "rejected" | string;
   created_at?: string | null;
+  user_email?: string;
+  user_name?: string;
 };
 
 type FeedbackItem = {
@@ -39,6 +42,7 @@ type AdminUser = {
 };
 
 export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
+  const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState({ users: 0, stocks: 0, pendingRequests: 0, newFeedback: 0 });
   const [coverageRequests, setCoverageRequests] = useState<CoverageRequest[]>([]);
@@ -49,10 +53,14 @@ export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
   const apiBase = "/api";
 
   const fetchWithAuth = useCallback(async <T,>(path: string): Promise<T | null> => {
-    const res = await fetch(`${apiBase}${path}`);
+    const token = await getToken();
+    if (!token) return null;
+    const res = await fetch(`${apiBase}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) return null;
     return (await res.json()) as T;
-  }, []);
+  }, [getToken]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -60,13 +68,13 @@ export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
       const [crData, fbData, userData] = await Promise.all([
         fetchWithAuth<CoverageRequest[]>("/admin/coverage-requests"),
         fetchWithAuth<FeedbackItem[]>("/admin/feedback"),
-        fetchWithAuth<{ users: AdminUser[] }>("/admin/users"),
+        fetchWithAuth<{ items: AdminUser[]; total: number }>("/admin/users"),
       ]);
       if (crData) setCoverageRequests(crData);
       if (fbData) setFeedbackItems(fbData);
-      if (userData?.users) setUsers(userData.users);
+      if (userData?.items) setUsers(userData.items);
       setStats({
-        users: userData?.users?.length || 0,
+        users: userData?.total ?? (userData?.items?.length || 0),
         stocks: 0,
         pendingRequests: (crData || []).filter((r) => r.status === "pending").length,
         newFeedback: (fbData || []).filter((f) => f.status === "new").length,
@@ -83,20 +91,30 @@ export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
   }, [loadData]);
 
   async function updateCoverageStatus(id: number, status: string) {
+    const token = await getToken();
+    if (!token) return;
     await fetch(`${apiBase}/admin/coverage-requests/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ status }),
     });
     void loadData();
   }
 
   async function updateFeedbackStatus(id: number, status: string, notes?: string) {
+    const token = await getToken();
+    if (!token) return;
     const body: Record<string, string> = { status };
     if (notes !== undefined) body.admin_notes = notes;
     await fetch(`${apiBase}/admin/feedback/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify(body),
     });
     void loadData();
@@ -169,14 +187,14 @@ export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
                   <tr key={r.id}>
                     <td className={styles.mono}>{r.symbol}</td>
                     <td>{r.exchange}</td>
-                    <td>-</td>
+                    <td>{r.user_email || r.user_name || "—"}</td>
                     <td className={styles.truncate}>{r.notes}</td>
                     <td><span className={`${styles.badge} ${styles[`badge_${r.status}`] || ""}`}>{r.status}</span></td>
                     <td className={styles.date}>{r.created_at?.split("T")[0]}</td>
                     <td className={styles.actions}>
                       {r.status === "pending" && (
                         <>
-                          <button className={styles.btnApprove} onClick={() => updateCoverageStatus(r.id, "approved")}>Approve</button>
+                          <button className={styles.btnApprove} onClick={() => updateCoverageStatus(r.id, "reviewed")}>Approve</button>
                           <button className={styles.btnReject} onClick={() => updateCoverageStatus(r.id, "rejected")}>Reject</button>
                         </>
                       )}
