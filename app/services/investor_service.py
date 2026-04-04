@@ -5,6 +5,12 @@ from sqlalchemy.orm import Session
 from datetime import UTC, datetime
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
 
+def _safe_str(value: object) -> str:
+    try:
+        return str(value) if value is not None else ""
+    except Exception:
+        return ""
+
 
 def get_investors(db: Session) -> list[dict]:
     investors = (
@@ -123,7 +129,8 @@ def seed_investors(db: Session) -> int:
                     if row:
                         row.weight_pct = h.get("weight_pct", 0.0)
                         row.symbol = stock.symbol
-                        row.name = stock.name
+                        row.company_name = _safe_str(stock.name)
+                        row.name = _safe_str(getattr(stock, "name", ""))  # backward-compat field
                         row.exchange = stock.exchange
                         row.currency = stock.currency
                         row.country = stock.country
@@ -135,7 +142,8 @@ def seed_investors(db: Session) -> int:
                         stock_id=stock.id,
                         weight_pct=h.get("weight_pct", 0.0),
                         symbol=stock.symbol,
-                        name=stock.name,
+                        company_name=_safe_str(stock.name),
+                        name=_safe_str(getattr(stock, "name", "")),
                         exchange=stock.exchange,
                         currency=stock.currency,
                         country=stock.country,

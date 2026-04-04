@@ -398,7 +398,10 @@ class SuperInvestorHolding(Base):
     # Production Postgres stores a denormalized snapshot of the holding for fast reads.
     symbol = Column(String, nullable=False, default="")
     name = Column(String, nullable=False, default="")
+    # Some production schemas use company_name/company_sector; keep both populated.
+    company_name = Column(String, nullable=False, default="")
     sector = Column(String, nullable=False, default="")
+    company_sector = Column(String, nullable=False, default="")
     exchange = Column(String, nullable=False, default="")
     currency = Column(String, nullable=False, default="")
     country = Column(String, nullable=False, default="")
