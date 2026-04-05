@@ -52,7 +52,7 @@ export const metadata = {
 };
 
 export default async function AdminPage() {
-  const user = await checkAdminAccess();
+  await checkAdminAccess();
 
   return (
     <div className={s.adminPageContainer}>
@@ -60,7 +60,7 @@ export default async function AdminPage() {
         <h1>Admin Panel</h1>
         <p className={s.adminPageSubtitle}>User and role management</p>
       </div>
-      <AdminPanel currentUserEmail={user.email} />
+      <AdminPanel />
     </div>
   );
 }

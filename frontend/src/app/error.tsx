@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
+export default function GlobalError(props: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const { reset } = props;
   return (
     <main style={{ minHeight: "calc(100vh - 56px)", display: "grid", placeItems: "center", padding: 24 }}>
       <div

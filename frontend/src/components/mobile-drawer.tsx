@@ -120,6 +120,7 @@ export function MobileDrawer() {
         {userId && user && (
           <div className={s.userSection}>
             {user.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- Clerk-hosted avatar URL
               <img
                 src={user.imageUrl}
                 alt={user.firstName || "User"}

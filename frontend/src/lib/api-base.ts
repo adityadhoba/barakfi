@@ -17,7 +17,7 @@ export function getPublicApiBaseUrl(): string {
     return process.env.NODE_ENV === "production" ? PROD_API : LOCAL_DEFAULT;
   }
 
-  let normalized = stripTrailingSlashes(raw);
+  const normalized = stripTrailingSlashes(raw);
 
   try {
     const u = new URL(normalized);

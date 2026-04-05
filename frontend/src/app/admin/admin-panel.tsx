@@ -6,10 +6,6 @@ import styles from "./admin-panel.module.css";
 
 type Tab = "overview" | "coverage" | "feedback" | "users";
 
-type Props = {
-  currentUserEmail: string;
-};
-
 type CoverageRequest = {
   id: number;
   symbol: string;
@@ -41,7 +37,7 @@ type AdminUser = {
   created_at?: string | null;
 };
 
-export function AdminPanel({ currentUserEmail: _currentUserEmail }: Props) {
+export function AdminPanel() {
   const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [stats, setStats] = useState({ users: 0, stocks: 0, pendingRequests: 0, newFeedback: 0 });

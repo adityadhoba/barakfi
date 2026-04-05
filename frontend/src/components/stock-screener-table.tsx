@@ -47,7 +47,6 @@ const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
 };
 
 function formatPrice(value: number, currency?: string) {
-  const sym = currency === "GBP" ? "£" : currency === "USD" ? "$" : "₹";
   const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
   return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }

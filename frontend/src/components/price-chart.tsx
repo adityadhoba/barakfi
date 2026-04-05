@@ -62,7 +62,6 @@ export function PriceChart({ symbol, exchange }: { symbol: string; exchange?: st
       const text = cs.getPropertyValue("--text-secondary").trim() || "#4b5563";
       const line = cs.getPropertyValue("--line").trim() || "#e5e7eb";
       const emerald = cs.getPropertyValue("--emerald").trim() || "#059669";
-      const red = cs.getPropertyValue("--red").trim() || "#dc2626";
 
       // Remove old chart
       if (chartRef.current) {

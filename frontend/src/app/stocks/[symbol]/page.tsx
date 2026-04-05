@@ -49,11 +49,6 @@ const STATUS_LABELS: Record<string, string> = {
   CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
-const STATUS_HERO: Record<string, string> = {
-  HALAL: "halal",
-  CAUTIOUS: "review",
-  NON_COMPLIANT: "fail",
-};
 
 function formatCurrency(value: number, currency: string = "INR") {
   const cur = currency || "INR";

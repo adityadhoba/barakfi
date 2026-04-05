@@ -74,17 +74,17 @@ export function TopbarSearch() {
   }, []);
 
   const q = deferredValue.trim().toLowerCase();
-  const filtered =
-    q.length > 0
-      ? stocks
-          .filter(
-            (s) =>
-              s.symbol.toLowerCase().includes(q) ||
-              s.name.toLowerCase().includes(q) ||
-              s.sector.toLowerCase().includes(q)
-          )
-          .slice(0, 8)
-      : [];
+  const filtered = useMemo(() => {
+    if (q.length === 0) return [];
+    return stocks
+      .filter(
+        (s) =>
+          s.symbol.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          s.sector.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [q, stocks]);
 
   const recentSymbols = useMemo(() => getRecentSearches(), [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const recentStocks = useMemo(() => {
@@ -105,8 +105,13 @@ export function TopbarSearch() {
   const showResults = open && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
   const showDropdown = showEmpty || showResults;
 
-  const displayItems = q.length > 0 ? filtered : [];
-  const allDropdownItems = q.length > 0 ? displayItems : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))];
+  const allDropdownItems = useMemo(
+    () =>
+      q.length > 0
+        ? filtered
+        : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))],
+    [q.length, filtered, recentStocks, trendingStocks, recentSymbols]
+  );
 
   const navigate = useCallback(
     (symbol: string) => {
