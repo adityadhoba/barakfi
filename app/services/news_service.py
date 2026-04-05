@@ -112,55 +112,65 @@ def list_news(db: Session, limit: int = 24) -> list[dict]:
     ]
 
 
-def fetch_and_upsert_newsapi(db: Session, max_items: int = 40) -> int:
-    """Fetch from NewsAPI.org /v2/everything when NEWS_NEWSAPI_KEY is set."""
-    from app.config import NEWS_NEWSAPI_KEY, NEWS_NEWSAPI_QUERY
+def fetch_and_upsert_newsdata(db: Session, max_items: int = 40) -> int:
+    """Fetch from NewsData.io /api/1/latest when NEWSDATA_API_KEY is set."""
+    from app.config import NEWSDATA_API_KEY, NEWSDATA_Q
 
-    key = (NEWS_NEWSAPI_KEY or "").strip()
+    key = (NEWSDATA_API_KEY or "").strip()
     if not key:
         return 0
 
     import httpx
 
+    # Free tier allows at most 10 per request; paid plans allow up to 50 (raise cap later if needed).
+    size = min(max(1, max_items), 10)
     params = {
-        "q": NEWS_NEWSAPI_QUERY or "islamic finance",
+        "apikey": key,
+        "q": NEWSDATA_Q or "islamic finance",
         "language": "en",
-        "sortBy": "publishedAt",
-        "pageSize": min(max_items, 100),
-        "apiKey": key,
+        "image": "1",
+        "removeduplicate": "1",
+        "size": str(size),
     }
     try:
-        r = httpx.get("https://newsapi.org/v2/everything", params=params, timeout=35.0)
+        r = httpx.get("https://newsdata.io/api/1/latest", params=params, timeout=35.0)
         r.raise_for_status()
         payload = r.json()
     except Exception as exc:
-        logger.warning("NewsAPI request failed: %s", exc)
+        logger.warning("NewsData.io request failed: %s", exc)
         return 0
 
-    articles = payload.get("articles") or []
+    if (payload.get("status") or "").lower() != "success":
+        logger.warning("NewsData.io returned non-success: %s", payload.get("message") or payload)
+        return 0
+
+    articles = payload.get("results") or []
     n = 0
     for art in articles[:max_items]:
         title = (art.get("title") or "").strip()
-        link = (art.get("url") or "").strip()
+        link = (art.get("link") or "").strip()
         if not title or not link:
             continue
         desc = (art.get("description") or art.get("content") or "") or ""
         desc = re.sub(r"<[^>]+>", "", desc)[:2000]
-        img = (art.get("urlToImage") or "")[:2000]
-        src = ""
-        if isinstance(art.get("source"), dict):
-            src = (art.get("source") or {}).get("name") or ""
-        pub_s = art.get("publishedAt") or ""
+        img = (art.get("image_url") or "")[:2000]
+        src = (art.get("source_name") or "").strip()
+        pub_s = (art.get("pubDate") or "").strip()
         try:
-            pub = datetime.fromisoformat(pub_s.replace("Z", "+00:00"))
+            # e.g. "2026-04-05 06:31:08" (UTC per docs)
+            if "T" in pub_s:
+                pub = datetime.fromisoformat(pub_s.replace("Z", "+00:00"))
+            else:
+                pub = datetime.strptime(pub_s[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
         except Exception:
             pub = utc_now()
 
         row = db.query(NewsArticle).filter(NewsArticle.url == link).first()
+        label = src[:200] if src else "NewsData"
         if row:
             row.title = title[:500]
             row.summary = desc
-            row.source = src[:200] or "NewsAPI"
+            row.source = label
             if img:
                 row.image_url = img
             row.published_at = pub
@@ -172,7 +182,7 @@ def fetch_and_upsert_newsapi(db: Session, max_items: int = 40) -> int:
                     summary=desc,
                     url=link[:2000],
                     image_url=img,
-                    source=src[:200] or "NewsAPI",
+                    source=label,
                     published_at=pub,
                 )
             )

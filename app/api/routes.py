@@ -2127,12 +2127,12 @@ def sync_news_feed(
     x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
 ):
     from app.config import INTERNAL_SERVICE_TOKEN
-    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsapi
+    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
     if x_internal_service_token != INTERNAL_SERVICE_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
     n_rss = fetch_and_upsert_news(db)
-    n_api = fetch_and_upsert_newsapi(db)
-    return {"ok": True, "upserted_rss": n_rss, "upserted_newsapi": n_api, "upserted": n_rss + n_api}
+    n_nd = fetch_and_upsert_newsdata(db)
+    return {"ok": True, "upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd}
 
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth

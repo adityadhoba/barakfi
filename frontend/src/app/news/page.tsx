@@ -55,7 +55,7 @@ export default async function NewsPage() {
           <span className={styles.kicker}>Stay Informed</span>
           <h1 className={styles.title}>Islamic Finance News</h1>
           <p className={styles.subtitle}>
-            Islamic finance &amp; Shariah investing headlines (NewsAPI when configured, plus RSS). Opens in a new tab.
+            Islamic finance &amp; Shariah investing headlines (NewsData.io when configured, plus RSS). Opens in a new tab.
           </p>
         </header>
 
