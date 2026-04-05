@@ -15,11 +15,10 @@ const TABS = [
     guestHref: "/sign-in?redirect_url=/watchlist",
   },
   {
-    href: "/workspace",
-    label: "Portfolio",
+    href: "/news",
+    label: "News",
     icon: "\u25A6",
-    match: (p: string) => p.startsWith("/workspace"),
-    guestHref: "/sign-in?redirect_url=/workspace",
+    match: (p: string) => p.startsWith("/news"),
   },
 ] as const;
 

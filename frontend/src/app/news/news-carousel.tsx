@@ -9,7 +9,7 @@ export function NewsCarousel({ items }: { items: NewsItem[] }) {
   const list = items.filter((x) => x.title);
   useEffect(() => {
     if (list.length <= 1) return;
-    const t = setInterval(() => setI((v) => (v + 1) % list.length), 6500);
+    const t = setInterval(() => setI((v) => (v + 1) % list.length), 4500);
     return () => clearInterval(t);
   }, [list.length]);
 

@@ -37,7 +37,7 @@ export function BrokerOAuthBanner() {
         onClick={() => {
           setDismissedKey(bannerKey);
           if (typeof window !== "undefined") {
-            window.history.replaceState({}, "", "/workspace");
+            window.history.replaceState({}, "", "/watchlist");
           }
         }}
       >
