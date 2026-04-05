@@ -1,4 +1,5 @@
 import logging
+import os
 from time import perf_counter
 from pathlib import Path
 from datetime import datetime
@@ -483,11 +484,25 @@ def app_dashboard():
     return HTMLResponse(content=content)
 
 
-@app.get("/health")
-def health():
+def _health_payload() -> dict:
+    """Shared by /health and /api/health — RENDER_GIT_COMMIT confirms Render deploy revision."""
     return {
         "status": "ok",
         "service": APP_NAME,
         "environment": APP_ENV,
         "version": APP_VERSION,
+        "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
+        "git_branch": os.getenv("RENDER_GIT_BRANCH", ""),
+        "coverage_request_db_fix": "requested_at_column",
     }
+
+
+@app.get("/health")
+def health():
+    return _health_payload()
+
+
+@app.get("/api/health")
+def health_under_api_prefix():
+    """Same as /health — most clients expect everything under /api (see NEXT_PUBLIC_API_BASE_URL)."""
+    return _health_payload()

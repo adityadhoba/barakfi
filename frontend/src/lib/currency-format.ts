@@ -17,6 +17,41 @@ export function marketLabelForExchange(exchange: string | undefined | null): str
   return ex;
 }
 
+/**
+ * Prefer explicit `currency` from API when it is USD/GBP (fixes wrong `exchange` in DB).
+ * When currency is INR, still honor US/LSE exchange for labeling.
+ */
+export function resolveDisplayCurrency(
+  exchange: string | undefined | null,
+  currency: string | undefined | null,
+): "INR" | "USD" | "GBP" {
+  const cur = (currency || "").toUpperCase();
+  if (cur === "USD" || cur === "GBP") return cur;
+  if (cur === "INR") {
+    const ex = (exchange || "NSE").toUpperCase();
+    if (ex === "US" || ex === "NYSE" || ex === "NASDAQ") return "USD";
+    if (ex === "LSE" || ex === "LON") return "GBP";
+    return "INR";
+  }
+  return currencyForExchange(exchange);
+}
+
+/** Market pill: exchange first; fall back to currency when exchange looks wrong. */
+export function resolveMarketLabel(
+  exchange: string | undefined | null,
+  currency: string | undefined | null,
+): string {
+  const ex = (exchange || "NSE").toUpperCase();
+  if (ex === "NSE" || ex === "BSE") return "India";
+  if (ex === "US" || ex === "NYSE" || ex === "NASDAQ") return "US";
+  if (ex === "LSE" || ex === "LON") return "UK";
+  const cur = (currency || "").toUpperCase();
+  if (cur === "USD") return "US";
+  if (cur === "GBP") return "UK";
+  if (cur === "INR") return "India";
+  return ex;
+}
+
 export function formatMoney(value: number, currency: "INR" | "USD" | "GBP"): string {
   const locale = currency === "INR" ? "en-IN" : currency === "GBP" ? "en-GB" : "en-US";
   return new Intl.NumberFormat(locale, {

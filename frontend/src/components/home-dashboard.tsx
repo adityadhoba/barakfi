@@ -356,7 +356,7 @@ export async function HomeDashboard() {
           ) : (
             <p className={styles.newsHint}>
               {newsLoadStatus === "empty"
-                ? "No headlines in the database yet. On the API host, run POST /api/internal/news/sync (with X-Internal-Service-Token) to pull RSS and NewsData.io, and set NEWSDATA_API_KEY on Render for richer articles."
+                ? "No headlines in the database yet. Trigger POST /api/internal/news/sync on your API with the X-Internal-Service-Token header (INTERNAL_SERVICE_TOKEN on Render). RSS uses the default feed unless you set NEWS_RSS_URL; NEWSDATA_API_KEY adds NewsData.io articles."
                 : newsErrorHint ||
                   "News could not be loaded. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."}
             </p>

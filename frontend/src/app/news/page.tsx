@@ -84,7 +84,7 @@ export default async function NewsPage() {
             {loadStatus === "error"
               ? errorHint ||
                 "Could not load news from the API. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."
-              : "No headlines yet. On the API host, run POST /api/internal/news/sync with X-Internal-Service-Token to ingest RSS and NewsData.io. Set NEWS_RSS_URL and NEWSDATA_API_KEY on Render as needed."}
+              : "No headlines yet. Run POST /api/internal/news/sync with header X-Internal-Service-Token (same value as INTERNAL_SERVICE_TOKEN on Render). NEWS_RSS_URL is optional — a default Islamic-finance RSS is built in. Set NEWSDATA_API_KEY for NewsData.io."}
           </p>
         )}
 
