@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 
 /**
  * Batch quotes — optional exchange per symbol via pairs=SYM:EXC,SYM2:EXC2
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+const API_BASE = getPublicApiBaseUrl();
 
 type QuoteResult = {
   symbol: string;

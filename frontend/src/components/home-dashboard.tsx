@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNews } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNewsFeed } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
@@ -13,6 +13,7 @@ import {
 } from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
+import { HomeHeroAuth } from "@/components/home-hero-auth";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -61,19 +62,18 @@ async function loadScreenedUniverse(stocks: Stock[]): Promise<{
   return { screened, skippedFullStats: false };
 }
 
-type Props = {
-  isSignedIn: boolean;
-};
-
-export async function HomeDashboard({ isSignedIn }: Props) {
-  const [stocks, trendingStocks, collections, investors, etfs, newsFeed] = await Promise.all([
+export async function HomeDashboard() {
+  const [stocks, trendingStocks, collections, investors, etfs, newsResult] = await Promise.all([
     getStocks(),
     getTrending("popular", undefined, 6),
     getCollections(),
     getSuperInvestors(),
     getETFs(),
-    getNews(12),
+    getNewsFeed(12),
   ]);
+  const newsFeed = newsResult.items;
+  const newsLoadStatus = newsResult.loadStatus;
+  const newsErrorHint = newsResult.errorHint;
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -104,35 +104,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             <span className={styles.heroBadgeDot} />
             Shariah-Compliant Indian Equities
           </div>
-          <h1 className={styles.heroTitle}>
-            {isSignedIn ? (
-              <>As-salamu alaykum.</>
-            ) : (
-              <>
-                Invest with <span className={styles.heroGradient}>clarity</span> and <span className={styles.heroGradient}>conviction</span>.
-              </>
-            )}
-          </h1>
-          <p className={styles.heroSub}>
-            Screen Indian stocks using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
-            Multi-methodology compliance, real-time data, zero cost.
-          </p>
-          <div className={styles.heroCtas}>
-            <Link href="/screener" className={styles.heroCtaPrimary}>
-              Open Screener
-              <span className={styles.heroCtaArrow}>&rarr;</span>
-            </Link>
-            {!isSignedIn && (
-              <Link href="/sign-up" className={styles.heroCtaSecondary}>
-                Create free account
-              </Link>
-            )}
-            {isSignedIn && (
-              <Link href="/watchlist" className={styles.heroCtaSecondary}>
-                My Watchlist
-              </Link>
-            )}
-          </div>
+          <HomeHeroAuth />
 
           {/* Social Proof Numbers */}
           <div className={styles.socialProof}>
@@ -372,14 +344,23 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
       </section>
 
-      {/* ── Islamic finance headlines (RSS) ── */}
-      {newsFeed.length > 0 && (
+      {/* ── Islamic finance headlines ── */}
+      {(newsFeed.length > 0 || newsLoadStatus !== "ok") && (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Islamic finance headlines</h2>
-            <Link href="/news" className={styles.seeAll}>All news →</Link>
+            {newsFeed.length > 0 ? <Link href="/news" className={styles.seeAll}>All news →</Link> : null}
           </div>
-          <NewsCarousel items={newsFeed.slice(0, 8)} />
+          {newsFeed.length > 0 ? (
+            <NewsCarousel items={newsFeed.slice(0, 8)} />
+          ) : (
+            <p className={styles.newsHint}>
+              {newsLoadStatus === "empty"
+                ? "No headlines in the database yet. On the API host, run POST /api/internal/news/sync (with X-Internal-Service-Token) to pull RSS and NewsData.io, and set NEWSDATA_API_KEY on Render for richer articles."
+                : newsErrorHint ||
+                  "News could not be loaded. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."}
+            </p>
+          )}
         </section>
       )}
 

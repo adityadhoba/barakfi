@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { StockLogo } from "@/components/stock-logo";
 import styles from "./manual-screen-search.module.css";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 
 type ScreeningResult = {
   symbol: string;
@@ -44,7 +45,7 @@ const STATUS_CLASSES: Record<string, string> = {
   NON_COMPLIANT: "statusFail",
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+const apiBaseUrl = getPublicApiBaseUrl();
 
 export function ManualScreenSearch() {
   const [query, setQuery] = useState("");

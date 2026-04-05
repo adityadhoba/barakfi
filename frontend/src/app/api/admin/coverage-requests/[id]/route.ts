@@ -1,8 +1,9 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+const apiBaseUrl = getPublicApiBaseUrl();
 
 /** Proxy PATCH /api/admin/coverage-requests/:id → backend */
 export async function PATCH(

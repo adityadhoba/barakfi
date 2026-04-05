@@ -63,3 +63,15 @@ npm run build
 ```
 
 Both commands are currently passing.
+
+## Production (Vercel + Clerk)
+
+- **Root directory**: In Vercel → Project → Settings → General, set **Root Directory** to `frontend` (the folder that contains `src/middleware.ts`). If this is wrong, `clerkMiddleware()` may not run and routes that use `auth()` can fail.
+- **Clerk env (Production and Preview)**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. For preview deployments (`*.vercel.app`), add the host under **Clerk Dashboard → Domains** if sign-in fails on previews.
+- **API URL**: `NEXT_PUBLIC_API_BASE_URL` must be the FastAPI base URL **including `/api`**, e.g. `https://api.barakfi.in/api`. **Do not** set this to `https://barakfi.in` (that is the Vercel frontend). If you do, the app now falls back to `https://api.barakfi.in/api` in production when it detects the marketing hostname.
+
+## News feed (why the home/news pages can be empty)
+
+- The site reads **`GET {NEXT_PUBLIC_API_BASE_URL}/news`** (public). An empty array means no rows in `news_articles` yet, or the request failed (see on-page hints after deploy).
+- **Ingestion**: On the API (Render), call **`POST /api/internal/news/sync`** with header **`X-Internal-Service-Token`** set to the same value as **`INTERNAL_SERVICE_TOKEN`** in the API environment. That runs RSS (`NEWS_RSS_URL`) and NewsData.io when configured.
+- **NewsData.io**: Set **`NEWSDATA_API_KEY`** and optionally **`NEWSDATA_Q`** on the API service (not on Vercel). Legacy names **`NEWS_NEWSAPI_KEY`** / **`NEWS_NEWSAPI_QUERY`** are still read as fallbacks.

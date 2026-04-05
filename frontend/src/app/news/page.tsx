@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getNews } from "@/lib/api";
+import { getNewsFeed } from "@/lib/api";
 import { NewsCarousel } from "./news-carousel";
 import styles from "./news.module.css";
 
@@ -41,7 +41,7 @@ const GUIDE_ITEMS = [
 ];
 
 export default async function NewsPage() {
-  const feed = await getNews(24);
+  const { items: feed, loadStatus, errorHint } = await getNewsFeed(24);
 
   return (
     <main className="shellPage">
@@ -81,8 +81,10 @@ export default async function NewsPage() {
           </>
         ) : (
           <p className={styles.emptyFeed}>
-            News headlines will appear here after the server syncs the RSS feed. Ask your host to run the news sync job
-            or set <code>NEWS_RSS_URL</code> on the API.
+            {loadStatus === "error"
+              ? errorHint ||
+                "Could not load news from the API. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."
+              : "No headlines yet. On the API host, run POST /api/internal/news/sync with X-Internal-Service-Token to ingest RSS and NewsData.io. Set NEWS_RSS_URL and NEWSDATA_API_KEY on Render as needed."}
           </p>
         )}
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./feedback.module.css";
 
 const CATEGORIES = [
@@ -28,7 +29,7 @@ export default function FeedbackPage() {
     setLoading(true);
     setError("");
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+      const apiBase = getPublicApiBaseUrl();
       const res = await fetch(`${apiBase}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

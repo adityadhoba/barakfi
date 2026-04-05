@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 import { AdminPanel } from "./admin-panel";
 import s from "./admin.module.css";
 
@@ -19,7 +20,7 @@ async function checkAdminAccess() {
 
   // Fetch user details from API to check role
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+    const apiBase = getPublicApiBaseUrl();
     const response = await fetch(`${apiBase}/me`, {
       headers: {
         Authorization: `Bearer ${token}`,

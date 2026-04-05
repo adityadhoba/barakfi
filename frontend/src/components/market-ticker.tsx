@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./market-ticker.module.css";
 
 interface MarketIndex {
@@ -59,7 +60,7 @@ export function MarketTicker() {
     let cancelled = false;
     async function fetchLive() {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+        const apiBase = getPublicApiBaseUrl();
         const res = await fetch(`${apiBase}/market-data/indices`);
         if (!res.ok || cancelled) return;
         const data = await res.json();
