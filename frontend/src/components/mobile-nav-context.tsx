@@ -7,18 +7,39 @@ type MobileNavContextValue = {
   open: () => void;
   close: () => void;
   setOpen: (open: boolean) => void;
+  /** Full-screen stock search overlay (mobile compact top bar) */
+  searchOpen: boolean;
+  openSearch: () => void;
+  closeSearch: () => void;
 };
 
 const MobileNavContext = createContext<MobileNavContextValue | null>(null);
 
 export function MobileNavProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
-  const open = useCallback(() => setOpen(true), []);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const open = useCallback(() => {
+    setSearchOpen(false);
+    setOpen(true);
+  }, []);
   const close = useCallback(() => setOpen(false), []);
+  const openSearch = useCallback(() => {
+    setOpen(false);
+    setSearchOpen(true);
+  }, []);
+  const closeSearch = useCallback(() => setSearchOpen(false), []);
 
   const value = useMemo(
-    () => ({ isOpen, open, close, setOpen }),
-    [isOpen, open, close],
+    () => ({
+      isOpen,
+      open,
+      close,
+      setOpen,
+      searchOpen,
+      openSearch,
+      closeSearch,
+    }),
+    [isOpen, open, close, searchOpen, openSearch, closeSearch],
   );
 
   return <MobileNavContext.Provider value={value}>{children}</MobileNavContext.Provider>;

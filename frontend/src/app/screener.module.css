@@ -361,6 +361,7 @@
 .tableContainer {
   flex: 1;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
@@ -653,7 +654,11 @@
   width: 100%;
 }
 @media (max-width: 768px) {
-  .screenerContainer { padding: 16px 16px 80px; }
+  .screenerContainer { padding: 12px 12px 80px; }
+}
+
+@media (max-width: 380px) {
+  .screenerContainer { padding: 10px 10px 80px; }
 }
 
 /* ── Category Info Cards (Tickertape-style) ── */

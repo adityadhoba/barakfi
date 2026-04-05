@@ -116,6 +116,17 @@ export function MobileDrawer() {
           </button>
         </div>
 
+        {!userId && (
+          <div className={s.drawerAuthRow}>
+            <Link href="/sign-in" className={s.drawerAuthPrimary} onClick={() => setOpen(false)}>
+              Log in
+            </Link>
+            <Link href="/sign-up" className={s.drawerAuthSecondary} onClick={() => setOpen(false)}>
+              Get started
+            </Link>
+          </div>
+        )}
+
         {/* User avatar section */}
         {userId && user && (
           <div className={s.userSection}>
@@ -166,6 +177,18 @@ export function MobileDrawer() {
               </Link>
             );
           })}
+          {userId && (
+            <Link
+              href="/account"
+              className={`${s.drawerLink} ${pathname.startsWith("/account") ? s.drawerLinkActive : ""}`}
+              onClick={() => setOpen(false)}
+            >
+              <span className={s.drawerLinkIcon} aria-hidden="true">
+                &#x2699;
+              </span>
+              <span className={s.drawerLinkLabel}>Account</span>
+            </Link>
+          )}
         </div>
 
         {/* Legal links */}
