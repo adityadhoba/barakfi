@@ -134,6 +134,7 @@ export type WatchlistEntry = {
     sector: string;
     exchange?: string;
     currency?: string;
+    country?: string;
   };
 };
 

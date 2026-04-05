@@ -74,4 +74,11 @@ Both commands are currently passing.
 
 - The site reads **`GET {NEXT_PUBLIC_API_BASE_URL}/news`** (public). An empty array means no rows in `news_articles` yet, or the request failed (see on-page hints after deploy).
 - **Ingestion**: On the API (Render), call **`POST /api/internal/news/sync`** with header **`X-Internal-Service-Token`** set to the same value as **`INTERNAL_SERVICE_TOKEN`** in the API environment. That runs RSS (`NEWS_RSS_URL`) and NewsData.io when configured.
-- **NewsData.io**: Set **`NEWSDATA_API_KEY`** and optionally **`NEWSDATA_Q`** on the API service (not on Vercel). Legacy names **`NEWS_NEWSAPI_KEY`** / **`NEWS_NEWSAPI_QUERY`** are still read as fallbacks.
+- **NewsData.io**: Set **`NEWSDATA_API_KEY`** and optionally **`NEWSDATA_Q`** on the **API service** (not on Vercel — ingestion runs server-side). Legacy names **`NEWS_NEWSAPI_KEY`** / **`NEWS_NEWSAPI_QUERY`** are still read as fallbacks.
+- **`NEWS_RSS_URL`**: Optional. If unset, the API uses a built-in default Islamic-finance RSS URL in config. Override only when you want a different feed.
+- **Automation**: Add a Render **Cron Job** (or external scheduler) that runs periodically, e.g. `curl -X POST "https://YOUR_API_HOST/api/internal/news/sync" -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"` (use the same secret as in the API env; do not commit it). Without a scheduled sync, headlines stay empty until you trigger ingestion manually.
+
+## Watchlist market / currency (US vs India)
+
+- **`GET /api/me/watchlist`** returns each entry’s `stock` with **`exchange`**, **`currency`**, and **`country`** from the database. The watchlist page uses these for USD/GBP vs INR and the market pill.
+- If a US ticker still shows as India + rupees, fix the **`stocks`** row in PostgreSQL (`exchange`, `currency`) or run **`scripts/audit_stock_exchange.py`** on the API host.

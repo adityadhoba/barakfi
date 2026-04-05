@@ -467,10 +467,15 @@ class ComplianceRuleVersionRead(BaseModel):
 
 
 class HoldingStockSnapshot(BaseModel):
+    """Nested stock summary for watchlist, holdings, research notes — includes market fields for UI."""
+
     symbol: str
     name: str
     price: float
     sector: str
+    exchange: str = "NSE"
+    currency: str = "INR"
+    country: str = "India"
     model_config = ConfigDict(from_attributes=True)
 
 
