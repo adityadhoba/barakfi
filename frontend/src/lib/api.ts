@@ -1198,8 +1198,57 @@ export type NewsItem = {
   published_at: string | null;
 };
 
+export type NewsLoadStatus = "ok" | "error" | "empty";
+
+export type NewsFeedResult = {
+  items: NewsItem[];
+  loadStatus: NewsLoadStatus;
+  /** Present when loadStatus is "error" (wrong API URL, 5xx, timeout, etc.) */
+  errorHint?: string;
+};
+
+/**
+ * Fetches public news from the FastAPI `/news` endpoint and reports whether the list is empty vs failed.
+ */
+export async function getNewsFeed(limit: number = 24): Promise<NewsFeedResult> {
+  const path = `/news?limit=${limit}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const detail = await parseErrorDetail(response);
+      console.error(`[api] ${response.status} on GET ${path}: ${detail}`);
+      return {
+        items: [],
+        loadStatus: "error",
+        errorHint: `News API returned ${response.status}. Check NEXT_PUBLIC_API_BASE_URL points to your FastAPI base (e.g. https://api.example.com/api).`,
+      };
+    }
+    const data = (await response.json()) as NewsItem[];
+    if (!Array.isArray(data) || data.length === 0) {
+      return { items: [], loadStatus: "empty" };
+    }
+    return { items: data, loadStatus: "ok" };
+  } catch (err) {
+    console.error(`[api] Network error on GET ${path}:`, err);
+    return {
+      items: [],
+      loadStatus: "error",
+      errorHint:
+        "Could not reach the news API (timeout or network). Confirm the API is up and NEXT_PUBLIC_API_BASE_URL is set on Vercel.",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function getNews(limit: number = 24): Promise<NewsItem[]> {
-  return apiFetch(`/news?limit=${limit}`, []);
+  const r = await getNewsFeed(limit);
+  return r.items;
 }
 
 export async function getETFs(exchange?: string): Promise<HalalETF[]> {

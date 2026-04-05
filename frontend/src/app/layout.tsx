@@ -1,24 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import {
-  ClerkProvider,
-  UserButton,
-} from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
+import { ClerkProvider } from "@clerk/nextjs";
 import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileDrawer } from "@/components/mobile-drawer";
-import { TopbarLink } from "@/components/topbar-link";
-import { TopbarDropdown } from "@/components/topbar-dropdown";
 import { TopbarSearch } from "@/components/topbar-search";
 import { TopbarScroll } from "@/components/topbar-scroll";
 import { ToastProvider } from "@/components/toast";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
-import { AdminLink } from "@/components/admin-link";
 import { Logo } from "@/components/logo";
+import { TopbarAuth } from "@/components/topbar-auth";
 import "./globals.css";
 import "./shell.css";
 
@@ -249,13 +242,11 @@ const breadcrumbSchema = {
   ],
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -284,81 +275,7 @@ export default async function RootLayout({
 
               <MobileDrawer />
 
-              <div className="topbarActions">
-                {!userId ? (
-                  <>
-                    <nav className="topbarNav" aria-label="Primary navigation">
-                      <TopbarLink href="/screener" label="Screener" />
-                      <TopbarDropdown
-                        label="Explore"
-                        basePath="/collections"
-                        items={[
-                          { href: "/collections", label: "Collections" },
-                          { href: "/super-investors", label: "Super Investors" },
-                          { href: "/etfs", label: "Halal ETFs" },
-                          { href: "/academy", label: "Academy" },
-                          { href: "/news", label: "News" },
-                        ]}
-                      />
-                      <TopbarDropdown
-                        label="Tools"
-                        basePath="/tools"
-                        items={[
-                          { href: "/tools/purification", label: "Purification Calculator" },
-                          { href: "/tools/zakat", label: "Zakat Calculator" },
-                          { href: "/compare", label: "Compare Stocks" },
-                          { href: "/request-coverage", label: "Request Coverage" },
-                        ]}
-                      />
-                      <TopbarLink href="/watchlist" label="Watchlist" />
-                    </nav>
-                    <Link className="ghostButtonLink" href="/sign-in">
-                      Log in
-                    </Link>
-                    <Link className="solidButtonLink" href="/sign-up">
-                      Get started
-                    </Link>
-                    <ThemeToggle />
-                  </>
-                ) : (
-                  <>
-                    <nav className="topbarNav" aria-label="Primary navigation">
-                      <TopbarLink href="/screener" label="Screener" />
-                      <TopbarDropdown
-                        label="Explore"
-                        basePath="/collections"
-                        items={[
-                          { href: "/collections", label: "Collections" },
-                          { href: "/super-investors", label: "Super Investors" },
-                          { href: "/etfs", label: "Halal ETFs" },
-                          { href: "/academy", label: "Academy" },
-                          { href: "/news", label: "News" },
-                        ]}
-                      />
-                      <TopbarDropdown
-                        label="Tools"
-                        basePath="/tools"
-                        items={[
-                          { href: "/tools/purification", label: "Purification Calculator" },
-                          { href: "/tools/zakat", label: "Zakat Calculator" },
-                          { href: "/compare", label: "Compare Stocks" },
-                          { href: "/request-coverage", label: "Request Coverage" },
-                        ]}
-                      />
-                      <TopbarLink href="/watchlist" label="Watchlist" />
-                      <AdminLink />
-                    </nav>
-                    <UserButton
-                      appearance={{
-                        elements: {
-                          avatarBox: { width: 30, height: 30 },
-                        },
-                      }}
-                    />
-                    <ThemeToggle />
-                  </>
-                )}
-              </div>
+              <TopbarAuth />
             </header>
             <ToastProvider>
               <AnalyticsProvider>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNews } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNewsFeed } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
@@ -66,14 +66,17 @@ type Props = {
 };
 
 export async function HomeDashboard({ isSignedIn }: Props) {
-  const [stocks, trendingStocks, collections, investors, etfs, newsFeed] = await Promise.all([
+  const [stocks, trendingStocks, collections, investors, etfs, newsResult] = await Promise.all([
     getStocks(),
     getTrending("popular", undefined, 6),
     getCollections(),
     getSuperInvestors(),
     getETFs(),
-    getNews(12),
+    getNewsFeed(12),
   ]);
+  const newsFeed = newsResult.items;
+  const newsLoadStatus = newsResult.loadStatus;
+  const newsErrorHint = newsResult.errorHint;
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -372,14 +375,23 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         </div>
       </section>
 
-      {/* ── Islamic finance headlines (RSS) ── */}
-      {newsFeed.length > 0 && (
+      {/* ── Islamic finance headlines ── */}
+      {(newsFeed.length > 0 || newsLoadStatus !== "ok") && (
         <section className={styles.section}>
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Islamic finance headlines</h2>
-            <Link href="/news" className={styles.seeAll}>All news →</Link>
+            {newsFeed.length > 0 ? <Link href="/news" className={styles.seeAll}>All news →</Link> : null}
           </div>
-          <NewsCarousel items={newsFeed.slice(0, 8)} />
+          {newsFeed.length > 0 ? (
+            <NewsCarousel items={newsFeed.slice(0, 8)} />
+          ) : (
+            <p className={styles.newsHint}>
+              {newsLoadStatus === "empty"
+                ? "No headlines in the database yet. On the API host, run POST /api/internal/news/sync (with X-Internal-Service-Token) to pull RSS and NewsData.io, and set NEWSDATA_API_KEY on Render for richer articles."
+                : newsErrorHint ||
+                  "News could not be loaded. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."}
+            </p>
+          )}
         </section>
       )}
 
