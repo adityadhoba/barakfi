@@ -129,7 +129,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [isSavingFilter, setIsSavingFilter] = useState(false);
 
   const allSymbols = useMemo(() => screenedStocks.map((s) => s.symbol), [screenedStocks]);
-  const quotes = useBatchQuotes(allSymbols);
+  const exchangeBySymbol = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of screenedStocks) {
+      m[s.symbol] = s.exchange || "NSE";
+    }
+    return m;
+  }, [screenedStocks]);
+  const quotes = useBatchQuotes(allSymbols, exchangeBySymbol);
 
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {

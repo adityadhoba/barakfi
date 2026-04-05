@@ -6,7 +6,7 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { WatchlistActionButton } from "@/components/watchlist-action-button";
 import type { WatchlistEntry, ScreeningResult } from "@/lib/api";
 import styles from "./watchlist-dashboard.module.css";
-import { currencyForExchange, formatMoney, marketLabelForExchange } from "@/lib/currency-format";
+import { formatMoney, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
 
 interface EnrichedEntry extends WatchlistEntry {
   screening: ScreeningResult | null;
@@ -48,7 +48,10 @@ export function WatchlistDashboard({ entries }: Props) {
   const exchangeBySymbol = useMemo(() => {
     const m: Record<string, string> = {};
     for (const e of entries) {
-      m[e.stock.symbol] = e.stock.exchange || "NSE";
+      const ex = e.stock.exchange || "NSE";
+      const cur = resolveDisplayCurrency(ex, e.stock.currency);
+      m[e.stock.symbol] =
+        cur === "USD" ? "US" : cur === "GBP" ? "LSE" : ex;
     }
     return m;
   }, [entries]);
@@ -213,12 +216,17 @@ export function WatchlistDashboard({ entries }: Props) {
                     </Link>
                   </td>
                   <td className={styles.td}>
-                    <span className={styles.marketBadge}>{marketLabelForExchange(entry.stock.exchange)}</span>
+                    <span className={styles.marketBadge}>
+                      {resolveMarketLabel(entry.stock.exchange, entry.stock.currency)}
+                    </span>
                   </td>
                   <td className={styles.td}>{entry.stock.sector}</td>
                   <td className={styles.td}>
                     <span className={styles.priceText}>
-                      {formatMoney(currentPrice, currencyForExchange(entry.stock.exchange))}
+                      {formatMoney(
+                        currentPrice,
+                        resolveDisplayCurrency(entry.stock.exchange, entry.stock.currency),
+                      )}
                     </span>
                   </td>
                   <td className={styles.td}>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
-import { currencyForExchange, formatMoney, formatMcapShort, marketLabelForExchange } from "@/lib/currency-format";
+import { formatMoney, formatMcapShort, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -106,15 +106,17 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
     },
     {
       label: "Market",
-      values: (s) => <span className={styles.marketPill}>{marketLabelForExchange(s.exchange)}</span>,
+      values: (s) => (
+        <span className={styles.marketPill}>{resolveMarketLabel(s.exchange, s.currency)}</span>
+      ),
     },
     {
       label: "Price",
-      values: (s) => formatMoney(s.price, currencyForExchange(s.exchange)),
+      values: (s) => formatMoney(s.price, resolveDisplayCurrency(s.exchange, s.currency)),
     },
     {
       label: "Market Cap",
-      values: (s) => formatMcapShort(s.market_cap, currencyForExchange(s.exchange)),
+      values: (s) => formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency)),
     },
     { label: "Sector", values: (s) => <span className={styles.sectorBadge}>{s.sector}</span> },
     {
@@ -155,15 +157,15 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
     },
     {
       label: "Revenue",
-      values: (s) => formatMoney(s.revenue, currencyForExchange(s.exchange)),
+      values: (s) => formatMoney(s.revenue, resolveDisplayCurrency(s.exchange, s.currency)),
     },
     {
       label: "Total Debt",
-      values: (s) => formatMoney(s.debt, currencyForExchange(s.exchange)),
+      values: (s) => formatMoney(s.debt, resolveDisplayCurrency(s.exchange, s.currency)),
     },
     {
       label: "Total Assets",
-      values: (s) => formatMoney(s.total_assets, currencyForExchange(s.exchange)),
+      values: (s) => formatMoney(s.total_assets, resolveDisplayCurrency(s.exchange, s.currency)),
     },
   ];
 
