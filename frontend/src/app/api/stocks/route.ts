@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+const API_BASE = getPublicApiBaseUrl();
 
 /**
  * Proxy GET /api/stocks to the backend.
