@@ -60,3 +60,12 @@ NEWS_RSS_URL = os.getenv(
     "NEWS_RSS_URL",
     "https://news.google.com/rss/search?q=Islamic+finance+OR+Shariah+investing&hl=en-US&gl=US&ceid=US:en",
 )
+
+# Upstox OAuth (optional — for broker connect)
+UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY", "")
+UPSTOX_API_SECRET = os.getenv("UPSTOX_API_SECRET", "")
+# Must match the redirect URL registered in Upstox developer console (e.g. https://api.barakfi.in/api/me/integrations/upstox/callback)
+UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
+
+# OAuth redirects (broker callbacks) — set in production to your Vercel URL
+FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", "").strip() or (CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000")
