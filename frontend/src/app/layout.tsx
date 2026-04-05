@@ -15,6 +15,8 @@ import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
 import { Logo } from "@/components/logo";
 import { TopbarAuth } from "@/components/topbar-auth";
+import { PwaRegister } from "@/components/pwa-register";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import "./globals.css";
 import "./shell.css";
 
@@ -254,7 +256,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="google-adsense-account" content="ca-pub-1863162701433616" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
@@ -264,6 +266,7 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </head>
       <body suppressHydrationWarning>
+        <PwaRegister />
         <ClerkProvider>
           <ThemeProvider>
             <MobileNavProvider>
@@ -295,6 +298,7 @@ export default function RootLayout({
                 </AnalyticsProvider>
               </Suspense>
               <BottomNav />
+              <PwaInstallPrompt />
               <TopbarScroll />
             </ToastProvider>
             </MobileNavProvider>
