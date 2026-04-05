@@ -6,6 +6,7 @@ import Link from "next/link";
 import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
+import { currencyForExchange, formatMoney, formatMcapShort, marketLabelForExchange } from "@/lib/currency-format";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -25,20 +26,6 @@ const STATUS_CLASS: Record<string, string> = {
   CAUTIOUS: "statusReview",
   NON_COMPLIANT: "statusFail",
 };
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatCurrency(value);
-}
 
 function formatPct(value: number) {
   return `${(value * 100).toFixed(2)}%`;
@@ -117,8 +104,18 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
         </span>
       ),
     },
-    { label: "Price", values: (s) => formatCurrency(s.price) },
-    { label: "Market Cap", values: (s) => formatMcap(s.market_cap) },
+    {
+      label: "Market",
+      values: (s) => <span className={styles.marketPill}>{marketLabelForExchange(s.exchange)}</span>,
+    },
+    {
+      label: "Price",
+      values: (s) => formatMoney(s.price, currencyForExchange(s.exchange)),
+    },
+    {
+      label: "Market Cap",
+      values: (s) => formatMcapShort(s.market_cap, currencyForExchange(s.exchange)),
+    },
     { label: "Sector", values: (s) => <span className={styles.sectorBadge}>{s.sector}</span> },
     {
       label: "Debt Ratio",
@@ -156,9 +153,18 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
         <RatioBar value={s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio} threshold={0.33} max={0.6} />
       ),
     },
-    { label: "Revenue", values: (s) => formatCurrency(s.revenue) },
-    { label: "Total Debt", values: (s) => formatCurrency(s.debt) },
-    { label: "Total Assets", values: (s) => formatCurrency(s.total_assets) },
+    {
+      label: "Revenue",
+      values: (s) => formatMoney(s.revenue, currencyForExchange(s.exchange)),
+    },
+    {
+      label: "Total Debt",
+      values: (s) => formatMoney(s.debt, currencyForExchange(s.exchange)),
+    },
+    {
+      label: "Total Assets",
+      values: (s) => formatMoney(s.total_assets, currencyForExchange(s.exchange)),
+    },
   ];
 
   return (
@@ -191,7 +197,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
                   className={styles.pickerItem}
                   onClick={() => addStock(s.symbol)}
                 >
-                  <StockLogo symbol={s.symbol} size={28} />
+                  <StockLogo symbol={s.symbol} size={28} exchange={s.exchange} />
                   <span className={styles.pickerSymbol}>{s.symbol}</span>
                   <span className={styles.pickerName}>{s.name}</span>
                 </button>
@@ -230,7 +236,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
                   <th key={s.symbol} className={styles.stockCol}>
                     <div className={styles.stockHeader}>
                       <Link href={`/stocks/${encodeURIComponent(s.symbol)}`} className={styles.stockLink}>
-                        <StockLogo symbol={s.symbol} size={36} status={s.screening.status} />
+                        <StockLogo symbol={s.symbol} size={36} status={s.screening.status} exchange={s.exchange} />
                         <div className={styles.stockMeta}>
                           <span className={styles.stockSymbol}>{s.symbol}</span>
                           <span className={styles.stockName}>{s.name}</span>

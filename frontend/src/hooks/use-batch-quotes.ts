@@ -9,10 +9,9 @@ type QuoteMap = Record<string, {
 }>;
 
 /**
- * Fetches batch quotes for a list of symbols.
- * Batches into groups of 20 to avoid overloading.
+ * Batch quotes for symbols. Pass optional exchange per symbol (NSE, US, LSE, …) for correct FX.
  */
-export function useBatchQuotes(symbols: string[]): QuoteMap {
+export function useBatchQuotes(symbols: string[], exchangeBySymbol?: Record<string, string>): QuoteMap {
   const [quotes, setQuotes] = useState<QuoteMap>({});
 
   useEffect(() => {
@@ -21,7 +20,6 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
     let cancelled = false;
 
     async function fetchBatch() {
-      // Split into batches of 20
       const batches: string[][] = [];
       for (let i = 0; i < symbols.length; i += 20) {
         batches.push(symbols.slice(i, i + 20));
@@ -32,7 +30,13 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
       for (const batch of batches) {
         if (cancelled) break;
         try {
-          const res = await fetch(`/api/quotes?symbols=${batch.join(",")}`);
+          const pairs = batch
+            .map((sym) => {
+              const ex = exchangeBySymbol?.[sym] || "NSE";
+              return `${sym}:${ex}`;
+            })
+            .join(",");
+          const res = await fetch(`/api/quotes?pairs=${encodeURIComponent(pairs)}`);
           if (!res.ok) continue;
           const data = await res.json();
           for (const q of data.quotes || []) {
@@ -54,9 +58,8 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
 
     fetchBatch();
     return () => { cancelled = true; };
-    // Only re-fetch when the symbol list changes (by join comparison)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbols.join(",")]);
+  }, [symbols.join(","), exchangeBySymbol ? JSON.stringify(exchangeBySymbol) : ""]);
 
   return quotes;
 }

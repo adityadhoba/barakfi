@@ -108,6 +108,8 @@ export type Holding = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -129,6 +131,8 @@ export type WatchlistEntry = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -156,6 +160,8 @@ export type ResearchNote = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -215,6 +221,8 @@ export type ScreeningLog = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -298,6 +306,8 @@ export type ComplianceOverride = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -325,6 +335,8 @@ export type PublicReviewCase = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 

@@ -49,5 +49,5 @@ export default async function OnboardingPage() {
     );
   }
 
-  redirect("/workspace");
+  redirect("/watchlist");
 }

@@ -256,8 +256,6 @@ export default async function RootLayout({
 }>) {
   const { userId } = await auth();
 
-  const portfolioHref = userId ? "/workspace" : "/sign-in?redirect_url=/workspace";
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -313,7 +311,6 @@ export default async function RootLayout({
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />
-                      <TopbarLink href={portfolioHref} label="Portfolio" />
                     </nav>
                     <Link className="ghostButtonLink" href="/sign-in">
                       Log in
@@ -349,7 +346,6 @@ export default async function RootLayout({
                         ]}
                       />
                       <TopbarLink href="/watchlist" label="Watchlist" />
-                      <TopbarLink href={portfolioHref} label="Portfolio" />
                       <AdminLink />
                     </nav>
                     <UserButton
