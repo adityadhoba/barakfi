@@ -11,7 +11,7 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockPreviewPopup } from "@/components/stock-preview-popup";
 import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
-import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
+import { useIsMobileSidebarBreakpoint, useIsMobileScreenerCardLayout } from "@/hooks/use-is-mobile";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -118,7 +118,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const isMobileLayout = useIsMobileSidebarBreakpoint();
+  const mobileCardLayout = useIsMobileScreenerCardLayout();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const filterSheetMode = isMobileLayout && mobileCardLayout;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -128,6 +130,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    if (filterSheetMode && sidebarOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [filterSheetMode, sidebarOpen]);
   const listRef = useRef<HTMLDivElement>(null);
   const deferredQuery = useDeferredValue(query);
 
@@ -329,7 +341,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         />
       )}
       {/* ── Left Sidebar ── */}
-      <aside className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed}`}>
+      <aside
+        className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed} ${filterSheetMode ? styles.sidebarBottomSheet : ""}`}
+      >
+        {filterSheetMode && (
+          <div className={styles.sheetHeader}>
+            <h2 className={styles.sheetTitle}>Filters</h2>
+            <button type="button" className={styles.sheetDone} onClick={() => setSidebarOpen(false)}>
+              Done
+            </button>
+          </div>
+        )}
         <div className={styles.sidebarHeader}>
           <span className={styles.sidebarTitle}>
             {filterCount > 0 ? `${filterCount} filter${filterCount > 1 ? "s" : ""} applied` : "No filters applied"}
@@ -424,10 +446,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
-        {/* Sidebar toggle on mobile */}
-        <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
-          {sidebarOpen ? "Hide Filters" : "Show Filters"}
-        </button>
+        {/* Sidebar toggle on mobile (slide-over, not bottom sheet) */}
+        {!filterSheetMode && (
+          <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
+            {sidebarOpen ? "Hide Filters" : "Show Filters"}
+          </button>
+        )}
       </aside>
 
       {/* ── Main Content ── */}
@@ -503,8 +527,68 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         )}
 
-        {/* Table */}
-        <div className={styles.tableContainer} ref={listRef}>
+        {/* Table + mobile cards */}
+        <div
+          className={`${styles.tableContainer} ${mobileCardLayout ? styles.showMobileCards : ""}`}
+          ref={listRef}
+        >
+          {mobileCardLayout && (
+            <div className={styles.mobileCardList}>
+              {pageItems.map((s, idx) => {
+                const cfg = STATUS_CONFIG[s.screening.status] || STATUS_CONFIG.CAUTIOUS;
+                const b = s.screening.breakdown;
+                const globalIdx = pageStart + idx + 1;
+                return (
+                  <Link
+                    key={s.symbol}
+                    href={`/stocks/${encodeURIComponent(s.symbol)}`}
+                    className={styles.mobileCard}
+                    data-stock-idx={idx}
+                  >
+                    <div className={styles.mobileCardTop}>
+                      <StockLogo symbol={s.symbol} size={40} status={s.screening.status} exchange={s.exchange} />
+                      <div className={styles.mobileCardIdentity}>
+                        <div className={styles.mobileCardName}>{s.name}</div>
+                        <div className={styles.mobileCardSymbol}>
+                          {s.symbol}
+                          <span style={{ color: "var(--text-tertiary)", marginLeft: 6 }}>#{globalIdx}</span>
+                        </div>
+                        <div className={styles.mobileCardSector}>{s.sector}</div>
+                      </div>
+                      <span className={`${styles.statusBadge} ${styles[cfg.cls]}`}>{cfg.label}</span>
+                    </div>
+                    <div className={styles.mobileCardRow}>
+                      <div className={styles.mobileCardPriceBlock}>
+                        <span className={styles.mobileCardPrice}>
+                          {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
+                        </span>
+                        {quotes[s.symbol]?.change_percent != null && (
+                          <span className={(quotes[s.symbol].change_percent ?? 0) >= 0 ? styles.up : styles.down}>
+                            {(quotes[s.symbol].change_percent ?? 0) >= 0 ? "+" : ""}
+                            {(quotes[s.symbol].change_percent ?? 0).toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div className={styles.mobileCardMcap}>{formatMcap(s.market_cap, s.currency)}</div>
+                        <div className={styles.mobileCardMcap} style={{ marginTop: 4 }}>
+                          Debt {formatPct(b.debt_to_36m_avg_market_cap_ratio)}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+              {sorted.length === 0 && (
+                <p className={styles.emptyRow} style={{ border: "none", padding: 24 }}>
+                  No stocks match your filters.{" "}
+                  <button type="button" className={styles.clearAll} onClick={resetAllFilters}>
+                    Reset filters
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
           <table className={styles.table}>
             <thead>
               <tr>

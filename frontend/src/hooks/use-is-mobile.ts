@@ -20,3 +20,20 @@ export function useIsMobileSidebarBreakpoint(): boolean {
 
   return m;
 }
+
+const CARD_QUERY = "(max-width: 640px)";
+
+/** Screener: show result cards instead of table */
+export function useIsMobileScreenerCardLayout(): boolean {
+  const [m, setM] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia(CARD_QUERY);
+    const update = () => setM(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  return m;
+}

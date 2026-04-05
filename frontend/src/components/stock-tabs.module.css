@@ -6,6 +6,60 @@
   margin-bottom: 28px;
 }
 
+.mobileStickySummary {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .tabContainer {
+    position: sticky;
+    top: 52px;
+    z-index: 40;
+    margin-left: -12px;
+    margin-right: -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 8px;
+    margin-top: -8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .mobileStickySummary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+}
+
+.stickySummaryMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stickySummarySymbol {
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.stickySummaryPriceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .tabBar {
   display: flex;
   gap: 4px;

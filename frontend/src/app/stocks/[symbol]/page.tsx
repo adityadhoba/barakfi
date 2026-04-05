@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
+import stockTabStyles from "@/components/stock-tabs.module.css";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { MethodologyComparison } from "@/components/methodology-comparison";
@@ -600,9 +601,27 @@ export default async function StockDetailPage({
           <MethodologyComparison data={multiScreening} />
         )}
 
-        {/* Tabbed Content: Compliance | Financials | Actions */}
-        <StockTabs>
-          {/* Tab 1: Compliance */}
+        {/* Tabbed Content: Overview | Financials | Research | Actions */}
+        <StockTabs
+          stickySummary={
+            <>
+              <StockLogo symbol={stock.symbol} size={38} status={screening.status} exchange={stock.exchange} />
+              <div className={stockTabStyles.stickySummaryMeta}>
+                <span className={stockTabStyles.stickySummarySymbol}>{stock.symbol}</span>
+                <div className={stockTabStyles.stickySummaryPriceRow}>
+                  <span>{formatCurrency(liveQuote?.last_price ?? stock.price, quoteCur)}</span>
+                  {liveQuote?.change_percent != null && (
+                    <span className={liveQuote.change_percent >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown}>
+                      {liveQuote.change_percent >= 0 ? "+" : ""}
+                      {liveQuote.change_percent.toFixed(2)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            </>
+          }
+        >
+          {/* Tab 1: Overview (compliance detail) */}
           <div>
             <div className={styles.sectionHeading}>
               <h2 className={styles.sectionTitle}>Compliance check</h2>

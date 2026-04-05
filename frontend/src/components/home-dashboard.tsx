@@ -14,6 +14,7 @@ import {
 import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
+import { HomeQuickActions } from "@/components/home-quick-actions";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -142,6 +143,8 @@ export async function HomeDashboard() {
           </div>
         </div>
       </section>
+
+      <HomeQuickActions />
 
       {/* ── Ad: after hero ── */}
       <AdUnit format="responsive" />

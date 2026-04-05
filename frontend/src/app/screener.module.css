@@ -500,6 +500,139 @@
   font-size: 0.88rem;
 }
 
+/* Mobile result cards (narrow viewports) */
+.mobileCardList {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 0 8px;
+}
+
+.mobileCard {
+  display: block;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.mobileCard:active {
+  border-color: var(--emerald-border);
+}
+
+.mobileCardTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.mobileCardIdentity {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobileCardName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.mobileCardSymbol {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.mobileCardSector {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobileCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.mobileCardPriceBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobileCardPrice {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobileCardMcap {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sheetHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.sheetTitle {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text);
+}
+
+.sheetDone {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: var(--emerald);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .tableContainer.showMobileCards {
+    border: none;
+    background: transparent;
+    overflow: visible;
+  }
+  .tableContainer.showMobileCards .table {
+    display: none;
+  }
+  .tableContainer.showMobileCards .mobileCardList {
+    display: flex;
+  }
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════
    PAGINATION
@@ -609,7 +742,7 @@
 @media (max-width: 960px) {
   .sidebarOverlay {
     display: block;
-    top: 56px;
+    top: 0;
   }
   .screenerLayout { grid-template-columns: 1fr; }
   .sidebar {
@@ -626,6 +759,28 @@
   .sidebarCollapsed {
     display: flex;
     transform: translateX(-100%);
+  }
+  /* Bottom sheet filters on narrow viewports (class toggled in StockScreenerTable) */
+  .sidebar.sidebarBottomSheet {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: none;
+    height: min(88vh, 720px);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+  }
+  .sidebar.sidebarBottomSheet.sidebarCollapsed {
+    transform: translateY(105%);
+  }
+  .sidebar.sidebarBottomSheet:not(.sidebarCollapsed) {
+    transform: translateY(0);
   }
   .sidebarToggleMobile { display: inline-flex; }
 }

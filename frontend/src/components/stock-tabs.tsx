@@ -10,21 +10,24 @@ type Tab = {
 };
 
 const TABS: Tab[] = [
-  { id: "compliance", label: "Compliance", icon: "\u2713" },
+  { id: "compliance", label: "Overview", icon: "\u25CB" },
   { id: "financials", label: "Financials", icon: "\u25A6" },
   { id: "research", label: "Research", icon: "\u22EF" },
-  { id: "actions", label: "Actions", icon: "\u25B6" },
+  { id: "actions", label: "Actions", icon: "\u2606" },
 ];
 
 type Props = {
   children: React.ReactNode[];
+  /** Shown above tabs on small screens (e.g. symbol + live price) */
+  stickySummary?: React.ReactNode;
 };
 
-export function StockTabs({ children }: Props) {
+export function StockTabs({ children, stickySummary }: Props) {
   const [active, setActive] = useState("compliance");
 
   return (
     <div className={styles.tabContainer}>
+      {stickySummary ? <div className={styles.mobileStickySummary}>{stickySummary}</div> : null}
       <div className={styles.tabBar} role="tablist">
         {TABS.map((tab) => (
           <button
