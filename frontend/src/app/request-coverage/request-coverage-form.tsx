@@ -5,6 +5,18 @@ import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 import styles from "./request.module.css";
 
+function formatApiError(data: Record<string, unknown>): string {
+  const d = data.detail;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    return d.map((x) => (typeof x === "object" && x && "msg" in x ? String((x as { msg: string }).msg) : JSON.stringify(x))).join("; ");
+  }
+  if (d != null && typeof d === "object") return JSON.stringify(d);
+  const err = data.error;
+  if (typeof err === "string") return err;
+  return "Request failed. Try again.";
+}
+
 export function RequestCoverageForm() {
   const { isSignedIn, getToken } = useAuth();
   const [symbol, setSymbol] = useState("");
@@ -39,7 +51,7 @@ export function RequestCoverageForm() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setStatus("err");
-        setMessage(typeof data.detail === "string" ? data.detail : "Request failed. Try again.");
+        setMessage(formatApiError(data as Record<string, unknown>));
         return;
       }
       setStatus("ok");
