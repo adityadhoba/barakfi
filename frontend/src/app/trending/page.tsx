@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTrending } from "@/lib/api";
+import { TrendingStockRow } from "@/components/trending-stock-row";
 import styles from "./trending.module.css";
 
 export const metadata: Metadata = {
@@ -60,18 +61,16 @@ export default async function TrendingPage() {
 
         <div className={styles.grid}>
           {stocks.map((stock, i) => (
-            <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.card}>
-              <div className={styles.cardRank}>{i + 1}</div>
-              <div className={styles.cardBody}>
-                <div className={styles.cardSymbol}>{stock.symbol}</div>
-                <div className={styles.cardName}>{stock.name}</div>
-              </div>
-              <div className={styles.cardRight}>
-                <div className={styles.cardPrice}>{formatPrice(stock.price, stock.currency)}</div>
-                <div className={styles.cardMcap}>{formatMcap(stock.market_cap)}</div>
-              </div>
-              <span className={styles.cardExchange}>{stock.exchange}</span>
-            </Link>
+            <TrendingStockRow
+              key={stock.symbol}
+              href={`/stocks/${stock.symbol}`}
+              rank={i + 1}
+              symbol={stock.symbol}
+              name={stock.name}
+              exchange={stock.exchange}
+              priceLabel={formatPrice(stock.price, stock.currency)}
+              mcapLabel={formatMcap(stock.market_cap)}
+            />
           ))}
         </div>
       </div>

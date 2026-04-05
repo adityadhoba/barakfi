@@ -5,6 +5,12 @@ import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
+import {
+  StatIconAvoid,
+  StatIconCautious,
+  StatIconHalal,
+  StatIconUniverse,
+} from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
 import styles from "./home-dashboard.module.css";
@@ -219,7 +225,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
       {/* ── Stats Strip ── */}
       <section className={styles.statsGrid}>
         <Link href="/screener" className={styles.statCard}>
-          <span className={styles.statIcon}>&#x25A3;</span>
+          <StatIconUniverse />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Universe</span>
             <span className={styles.statValue}>{total}</span>
@@ -227,7 +233,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=HALAL" className={`${styles.statCard} ${styles.statCardHalal}`}>
-          <span className={`${styles.statIcon} ${styles.statIconHalal}`}>&#x2713;</span>
+          <StatIconHalal />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Halal</span>
             <span className={`${styles.statValue} ${styles.valueHalal}`}>{hasStats ? halal : "\u2014"}</span>
@@ -235,7 +241,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=CAUTIOUS" className={`${styles.statCard} ${styles.statCardReview}`}>
-          <span className={`${styles.statIcon} ${styles.statIconReview}`}>?</span>
+          <StatIconCautious />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Cautious</span>
             <span className={`${styles.statValue} ${styles.valueReview}`}>{hasStats ? review : "\u2014"}</span>
@@ -243,7 +249,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=NON_COMPLIANT" className={`${styles.statCard} ${styles.statCardFail}`}>
-          <span className={`${styles.statIcon} ${styles.statIconFail}`}>&#x2717;</span>
+          <StatIconAvoid />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Avoid</span>
             <span className={`${styles.statValue} ${styles.valueFail}`}>{hasStats ? fail : "\u2014"}</span>
@@ -388,6 +394,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             {trendingStocks.slice(0, 6).map((stock, i) => (
               <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.trendingCard}>
                 <span className={styles.trendingRank}>{i + 1}</span>
+                <StockLogo symbol={stock.symbol} size={40} exchange={stock.exchange} />
                 <div className={styles.trendingBody}>
                   <span className={styles.trendingSymbol}>{stock.symbol}</span>
                   <span className={styles.trendingName}>{stock.name}</span>

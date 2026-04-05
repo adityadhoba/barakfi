@@ -1,0 +1,47 @@
+.bannerOk,
+.bannerErr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--line);
+  font-size: 0.88rem;
+}
+
+.bannerOk {
+  background: var(--emerald-bg);
+  border-color: var(--emerald-border);
+  color: var(--text);
+}
+
+.bannerErr {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: var(--text);
+}
+
+.text {
+  margin: 0;
+  flex: 1;
+  min-width: 200px;
+}
+
+.dismiss {
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}

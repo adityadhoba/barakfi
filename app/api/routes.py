@@ -1,8 +1,10 @@
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import (
+    FRONTEND_APP_URL,
     ADMIN_AUTH_SUBJECTS,
     ADMIN_EMAILS,
     AUTH_GOOGLE_ENABLED,
@@ -11,6 +13,7 @@ from app.config import (
     CLERK_JWKS_URL,
     CLERK_PUBLISHABLE_KEY,
     CLERK_SECRET_KEY,
+    CORS_ORIGINS,
     INTERNAL_SERVICE_TOKEN,
     MARKET_DATA_PROVIDER,
 )
@@ -38,6 +41,7 @@ from app.models import (
     User,
     UserSettings,
     WatchlistEntry,
+    BrokerConnection,
 )
 from app.schemas import (
     ActionResponse,
@@ -2091,4 +2095,93 @@ def sync_news_feed(
         raise HTTPException(status_code=403, detail="Forbidden")
     n = fetch_and_upsert_news(db)
     return {"ok": True, "upserted": n}
+
+# ═══════════════════════════════════════════════════════════════
+# BROKER: Upstox OAuth
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/me/integrations/upstox/authorize-url")
+def upstox_authorize_url(auth_subject: str = Depends(require_auth)):
+    """Returns Upstox login URL with signed state (user must open in browser)."""
+    from app.config import UPSTOX_API_KEY, UPSTOX_REDIRECT_URI
+    from app.services.upstox_oauth import build_authorize_url, create_oauth_state
+    if not UPSTOX_API_KEY or not UPSTOX_REDIRECT_URI:
+        raise HTTPException(
+            status_code=503,
+            detail="Upstox is not configured. Set UPSTOX_API_KEY and UPSTOX_REDIRECT_URI on the API.",
+        )
+    state = create_oauth_state(auth_subject)
+    try:
+        url = build_authorize_url(state)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    return {"url": url}
+
+
+@router.get("/me/integrations/upstox/callback")
+def upstox_oauth_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """OAuth redirect from Upstox — exchanges code and stores encrypted token."""
+    from urllib.parse import quote
+    from app.models import BrokerConnection, User
+    from app.services.broker_token_store import encrypt_token
+    from app.services.upstox_oauth import exchange_code_for_token, verify_oauth_state
+
+    frontend = FRONTEND_APP_URL.rstrip("/")
+
+    def redirect_status(status: str, msg: str = "") -> RedirectResponse:
+        q = f"broker=upstox&status={quote(status)}"
+        if msg:
+            q += f"&message={quote(msg[:300])}"
+        return RedirectResponse(url=f"{frontend}/workspace?{q}", status_code=302)
+
+    if error:
+        return redirect_status("error", error_description or error)
+    if not code or not state:
+        return redirect_status("error", "Missing code or state")
+
+    auth_subject = verify_oauth_state(state)
+    if not auth_subject:
+        return redirect_status("error", "Invalid or expired state")
+
+    user = db.query(User).filter(User.auth_subject == auth_subject).first()
+    if not user:
+        return redirect_status("error", "User not found")
+
+    try:
+        token_payload = exchange_code_for_token(code)
+    except Exception as exc:
+        return redirect_status("error", str(exc)[:200])
+
+    access = token_payload.get("access_token") if isinstance(token_payload, dict) else None
+    if not access:
+        return redirect_status("error", "No access_token in Upstox response")
+
+    row = (
+        db.query(BrokerConnection)
+        .filter(BrokerConnection.user_id == user.id, BrokerConnection.broker_id == "upstox")
+        .first()
+    )
+    enc = encrypt_token(access)
+    if row:
+        row.access_token_enc = enc
+        row.status = "connected"
+        row.error_message = ""
+    else:
+        db.add(
+            BrokerConnection(
+                user_id=user.id,
+                broker_id="upstox",
+                broker_name="Upstox",
+                status="connected",
+                access_token_enc=enc,
+            )
+        )
+    db.commit()
+    return redirect_status("connected")
 
