@@ -68,3 +68,10 @@ UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
 
 # OAuth redirects (broker callbacks) — set in production to your Vercel URL
 FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", "").strip() or (CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000")
+
+# NewsAPI.org (optional — set NEWS_NEWSAPI_KEY for /internal/news/sync)
+NEWS_NEWSAPI_KEY = os.getenv("NEWS_NEWSAPI_KEY", "").strip()
+NEWS_NEWSAPI_QUERY = os.getenv(
+    "NEWS_NEWSAPI_QUERY",
+    "islamic finance OR sukuk OR shariah finance",
+)

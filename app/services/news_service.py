@@ -110,3 +110,72 @@ def list_news(db: Session, limit: int = 24) -> list[dict]:
         }
         for r in rows
     ]
+
+
+def fetch_and_upsert_newsapi(db: Session, max_items: int = 40) -> int:
+    """Fetch from NewsAPI.org /v2/everything when NEWS_NEWSAPI_KEY is set."""
+    from app.config import NEWS_NEWSAPI_KEY, NEWS_NEWSAPI_QUERY
+
+    key = (NEWS_NEWSAPI_KEY or "").strip()
+    if not key:
+        return 0
+
+    import httpx
+
+    params = {
+        "q": NEWS_NEWSAPI_QUERY or "islamic finance",
+        "language": "en",
+        "sortBy": "publishedAt",
+        "pageSize": min(max_items, 100),
+        "apiKey": key,
+    }
+    try:
+        r = httpx.get("https://newsapi.org/v2/everything", params=params, timeout=35.0)
+        r.raise_for_status()
+        payload = r.json()
+    except Exception as exc:
+        logger.warning("NewsAPI request failed: %s", exc)
+        return 0
+
+    articles = payload.get("articles") or []
+    n = 0
+    for art in articles[:max_items]:
+        title = (art.get("title") or "").strip()
+        link = (art.get("url") or "").strip()
+        if not title or not link:
+            continue
+        desc = (art.get("description") or art.get("content") or "") or ""
+        desc = re.sub(r"<[^>]+>", "", desc)[:2000]
+        img = (art.get("urlToImage") or "")[:2000]
+        src = ""
+        if isinstance(art.get("source"), dict):
+            src = (art.get("source") or {}).get("name") or ""
+        pub_s = art.get("publishedAt") or ""
+        try:
+            pub = datetime.fromisoformat(pub_s.replace("Z", "+00:00"))
+        except Exception:
+            pub = utc_now()
+
+        row = db.query(NewsArticle).filter(NewsArticle.url == link).first()
+        if row:
+            row.title = title[:500]
+            row.summary = desc
+            row.source = src[:200] or "NewsAPI"
+            if img:
+                row.image_url = img
+            row.published_at = pub
+            row.fetched_at = utc_now()
+        else:
+            db.add(
+                NewsArticle(
+                    title=title[:500],
+                    summary=desc,
+                    url=link[:2000],
+                    image_url=img,
+                    source=src[:200] or "NewsAPI",
+                    published_at=pub,
+                )
+            )
+        n += 1
+    db.commit()
+    return n

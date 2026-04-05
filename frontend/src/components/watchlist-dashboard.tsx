@@ -6,6 +6,7 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { WatchlistActionButton } from "@/components/watchlist-action-button";
 import type { WatchlistEntry, ScreeningResult } from "@/lib/api";
 import styles from "./watchlist-dashboard.module.css";
+import { currencyForExchange, formatMoney, marketLabelForExchange } from "@/lib/currency-format";
 
 interface EnrichedEntry extends WatchlistEntry {
   screening: ScreeningResult | null;
@@ -36,14 +37,6 @@ const STATUS_ORDER: Record<string, number> = {
   NON_COMPLIANT: 2,
 };
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 function formatPriceChange(change: number | null | undefined): string {
   if (change == null) return "—";
   const sign = change >= 0 ? "+" : "";
@@ -52,7 +45,15 @@ function formatPriceChange(change: number | null | undefined): string {
 
 export function WatchlistDashboard({ entries }: Props) {
   const symbols = useMemo(() => entries.map((e) => e.stock.symbol), [entries]);
-  const quotes = useBatchQuotes(symbols);
+  const exchangeBySymbol = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of entries) {
+      m[e.stock.symbol] = e.stock.exchange || "NSE";
+    }
+    return m;
+  }, [entries]);
+
+  const quotes = useBatchQuotes(symbols, exchangeBySymbol);
 
   const [sortKey, setSortKey] = useState<SortKey>("symbol");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -170,6 +171,7 @@ export function WatchlistDashboard({ entries }: Props) {
                   Stock{getSortIcon("symbol")}
                 </button>
               </th>
+              <th className={styles.th}>Market</th>
               <th className={styles.th}>Sector</th>
               <th className={styles.th}>
                 <button
@@ -210,9 +212,14 @@ export function WatchlistDashboard({ entries }: Props) {
                       <span className={styles.nameText}>{entry.stock.name}</span>
                     </Link>
                   </td>
+                  <td className={styles.td}>
+                    <span className={styles.marketBadge}>{marketLabelForExchange(entry.stock.exchange)}</span>
+                  </td>
                   <td className={styles.td}>{entry.stock.sector}</td>
                   <td className={styles.td}>
-                    <span className={styles.priceText}>{formatCurrency(currentPrice)}</span>
+                    <span className={styles.priceText}>
+                      {formatMoney(currentPrice, currencyForExchange(entry.stock.exchange))}
+                    </span>
                   </td>
                   <td className={styles.td}>
                     <span

@@ -1902,18 +1902,55 @@ def get_compliance_history(symbol: str, db: Session = Depends(get_db)):
 # COVERAGE REQUESTS
 # ═══════════════════════════════════════════════════════════════
 
+def _ensure_user_for_me(db: Session, claims: dict) -> User:
+    """Create user + workspace if missing (same pattern as GET /me/workspace)."""
+    auth_subject = claims.get("sub")
+    if not auth_subject:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+    if user:
+        return user
+    email = claims.get("email", "") or ""
+    display = email.split("@")[0] if email else auth_subject
+    try:
+        user = User(
+            email=email or f"{auth_subject}@example.local",
+            display_name=display,
+            auth_provider="clerk",
+            auth_subject=auth_subject,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        helpers.create_default_workspace(db, user)
+        if not user.settings:
+            db.add(
+                UserSettings(
+                    user_id=user.id,
+                    preferred_currency="INR",
+                    risk_profile="moderate",
+                    notifications_enabled=True,
+                    theme="dark",
+                )
+            )
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to auto-provision user")
+    return user
+
+
 @router.post("/me/coverage-requests")
 def create_coverage_request(
     symbol: str = Body(...),
     exchange: str = Body("NSE"),
     notes: str = Body(""),
     db: Session = Depends(get_db),
-    auth_subject: str = Depends(require_auth),
+    claims: dict = Depends(get_current_auth_claims_or_internal),
 ):
     from app.models import CoverageRequest
-    user = db.query(User).filter(User.auth_subject == auth_subject).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _ensure_user_for_me(db, claims)
     req = CoverageRequest(
         user_id=user.id,
         symbol=symbol.upper().strip(),
@@ -2090,11 +2127,12 @@ def sync_news_feed(
     x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
 ):
     from app.config import INTERNAL_SERVICE_TOKEN
-    from app.services.news_service import fetch_and_upsert_news
+    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsapi
     if x_internal_service_token != INTERNAL_SERVICE_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
-    n = fetch_and_upsert_news(db)
-    return {"ok": True, "upserted": n}
+    n_rss = fetch_and_upsert_news(db)
+    n_api = fetch_and_upsert_newsapi(db)
+    return {"ok": True, "upserted_rss": n_rss, "upserted_newsapi": n_api, "upserted": n_rss + n_api}
 
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth
@@ -2138,7 +2176,7 @@ def upstox_oauth_callback(
         q = f"broker=upstox&status={quote(status)}"
         if msg:
             q += f"&message={quote(msg[:300])}"
-        return RedirectResponse(url=f"{frontend}/workspace?{q}", status_code=302)
+        return RedirectResponse(url=f"{frontend}/watchlist?{q}", status_code=302)
 
     if error:
         return redirect_status("error", error_description or error)

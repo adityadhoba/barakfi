@@ -50,11 +50,16 @@ export default async function HalalStocksPage() {
   const screeningResults = await getBulkScreeningResults(symbols);
   const screeningMap = new Map(screeningResults.map((r) => [r.symbol, r]));
 
-  const halalStocks = stocks
+  const indian = stocks.filter((s) => {
+    const ex = (s.exchange || "").toUpperCase();
+    return ex === "NSE" || ex === "BSE";
+  });
+
+  const halalStocks = indian
     .filter((s) => screeningMap.get(s.symbol)?.status === "HALAL")
     .sort((a, b) => b.market_cap - a.market_cap);
 
-  const reviewStocks = stocks
+  const reviewStocks = indian
     .filter((s) => screeningMap.get(s.symbol)?.status === "CAUTIOUS")
     .sort((a, b) => b.market_cap - a.market_cap);
 
@@ -98,9 +103,9 @@ export default async function HalalStocksPage() {
           Halal Stocks in India <span className={styles.year}>2026</span>
         </h1>
         <p className={styles.subtitle}>
-          Complete list of {halalStocks.length} Shariah-compliant stocks on India&apos;s NSE.
-          Screened using S&amp;P Shariah methodology with real-time financial data.
-          {reviewStocks.length > 0 && ` Plus ${reviewStocks.length} cautious stocks.`}
+          Curated list of {halalStocks.length} Shariah-compliant NSE/BSE listings (India).
+          Screened using S&amp;P Shariah methodology with live data. US and UK listings are in the screener.
+          {reviewStocks.length > 0 ? ` ${reviewStocks.length} cautious NSE/BSE names need extra verification.` : ""}
         </p>
         <div className={styles.ctas}>
           <Link href="/screener" className={styles.ctaPrimary}>Open Full Screener</Link>
