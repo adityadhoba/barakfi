@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -263,7 +264,9 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ClerkProvider>
           <ThemeProvider>
-            <NavProgress />
+            <Suspense fallback={null}>
+              <NavProgress />
+            </Suspense>
             <a className="skipToContent" href="#main-content">Skip to content</a>
             <MarketTicker />
             <header className="topbar" role="banner">
@@ -278,11 +281,13 @@ export default function RootLayout({
               <TopbarAuth />
             </header>
             <ToastProvider>
-              <AnalyticsProvider>
-                <div id="main-content" role="main" aria-label="Page content">
-                  {children}
-                </div>
-              </AnalyticsProvider>
+              <Suspense fallback={null}>
+                <AnalyticsProvider>
+                  <div id="main-content" role="main" aria-label="Page content">
+                    {children}
+                  </div>
+                </AnalyticsProvider>
+              </Suspense>
               <BottomNav />
               <TopbarScroll />
             </ToastProvider>
