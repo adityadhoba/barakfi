@@ -11,6 +11,7 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockPreviewPopup } from "@/components/stock-preview-popup";
 import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
+import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -46,7 +47,6 @@ const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
 };
 
 function formatPrice(value: number, currency?: string) {
-  const sym = currency === "GBP" ? "£" : currency === "USD" ? "$" : "₹";
   const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
   return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }
@@ -117,7 +117,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobileLayout = useIsMobileSidebarBreakpoint();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 960px)");
+    const sync = () => setSidebarOpen(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const deferredQuery = useDeferredValue(query);
 
@@ -310,6 +320,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
 
   return (
     <div className={styles.screenerLayout}>
+      {isMobileLayout && sidebarOpen && (
+        <button
+          type="button"
+          className={styles.sidebarOverlay}
+          aria-label="Close filters"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* ── Left Sidebar ── */}
       <aside className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed}`}>
         <div className={styles.sidebarHeader}>

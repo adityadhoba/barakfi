@@ -32,7 +32,7 @@ function PrimaryNav() {
           { href: "/request-coverage", label: "Request Coverage" },
         ]}
       />
-      <TopbarLink href="/watchlist" label="Watchlist" />
+      <TopbarLink href="/watchlist" label="Watchlist" className="ghostLink topbarWatchlistLink" />
     </nav>
   );
 }

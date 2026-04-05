@@ -13,11 +13,10 @@ import {
   getAuthenticatedWorkspace,
   getBulkScreeningResults,
   getEquityQuote,
-  getMultiScreeningResult,
-  getScreeningResult,
-  getStock,
   getStocks,
 } from "@/lib/api";
+import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
+import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
@@ -49,11 +48,6 @@ const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
   CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
-};
-const STATUS_HERO: Record<string, string> = {
-  HALAL: "halal",
-  CAUTIOUS: "review",
-  NON_COMPLIANT: "fail",
 };
 
 function formatCurrency(value: number, currency: string = "INR") {
@@ -162,16 +156,22 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [stock, screening, watchlist, workspace, allStocks, multiScreening] = await Promise.all([
-    getStock(symbol),
-    getScreeningResult(symbol),
+  const [detail, watchlist, workspace, allStocks, multiScreening] = await Promise.all([
+    fetchStockAndScreenForPage(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
     getStocks(),
-    getMultiScreeningResult(symbol).catch(() => null),
+    fetchMultiScreeningForPage(symbol),
   ]);
 
-  if (!stock || !screening) notFound();
+  if (detail.kind === "not_found") {
+    notFound();
+  }
+  if (detail.kind === "error") {
+    return <StockDetailError message={detail.message} />;
+  }
+
+  const { stock, screening } = detail;
 
   const liveQuote = await getEquityQuote(symbol, "auto_global", stock.exchange);
 

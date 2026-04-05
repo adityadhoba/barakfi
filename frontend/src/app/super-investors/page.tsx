@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- remote investor avatars from API */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSuperInvestors } from "@/lib/api";

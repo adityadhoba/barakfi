@@ -127,6 +127,8 @@ export type WatchlistEntry = {
   id: number;
   owner_name: string;
   notes: string;
+  /** Latest research note line for this symbol (from GET /me/watchlist). */
+  latest_research_summary?: string;
   stock: {
     symbol: string;
     name: string;
@@ -134,6 +136,7 @@ export type WatchlistEntry = {
     sector: string;
     exchange?: string;
     currency?: string;
+    country?: string;
   };
 };
 

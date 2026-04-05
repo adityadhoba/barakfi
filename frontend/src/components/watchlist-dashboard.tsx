@@ -160,9 +160,9 @@ export function WatchlistDashboard({ entries }: Props) {
         </div>
       </div>
 
-      {/* Sortable Table */}
+      {/* Sortable Table (desktop) + cards (mobile) */}
       <div className={styles.tableContainer}>
-        <table className={styles.table}>
+        <table className={`${styles.table} ${styles.tableDesktop}`}>
           <thead>
             <tr>
               <th className={styles.th}>
@@ -250,7 +250,9 @@ export function WatchlistDashboard({ entries }: Props) {
                     </span>
                   </td>
                   <td className={styles.td}>
-                    {entry.notes ? (
+                    {entry.latest_research_summary ? (
+                      <span className={styles.notesText}>{entry.latest_research_summary}</span>
+                    ) : entry.notes ? (
                       <span className={styles.notesText}>{entry.notes}</span>
                     ) : (
                       <span className={styles.emptyText}>—</span>
@@ -274,6 +276,76 @@ export function WatchlistDashboard({ entries }: Props) {
             })}
           </tbody>
         </table>
+
+        <div className={styles.cardList} aria-label="Watchlist">
+          {sorted.map((entry) => {
+            const status = entry.screening?.status || "CAUTIOUS";
+            const badgeClass = STATUS_BADGE_CLASS[status] || "badgeReview";
+            const badgeLabel = STATUS_LABELS[status] || status;
+            const currentPrice = quotes[entry.stock.symbol]?.last_price ?? entry.stock.price;
+            const change = quotes[entry.stock.symbol]?.change_percent;
+            const noteText = entry.latest_research_summary || entry.notes;
+
+            return (
+              <article key={entry.id} className={styles.card}>
+                <div className={styles.cardTop}>
+                  <div className={styles.cardSymbolBlock}>
+                    <Link href={`/stocks/${encodeURIComponent(entry.stock.symbol)}`} className={styles.symbolLink}>
+                      <span className={styles.symbolText}>{entry.stock.symbol}</span>
+                      <span className={styles.nameText}>{entry.stock.name}</span>
+                    </Link>
+                  </div>
+                  <span className={`${styles.badge} ${styles[badgeClass]}`}>{badgeLabel}</span>
+                </div>
+                <div className={styles.cardMeta}>
+                  <span className={styles.marketBadge}>
+                    {resolveMarketLabel(entry.stock.exchange, entry.stock.currency)}
+                  </span>
+                  <span>{entry.stock.sector}</span>
+                </div>
+                <div className={styles.priceText} style={{ fontSize: "1.05rem", fontWeight: 700 }}>
+                  {formatMoney(
+                    currentPrice,
+                    resolveDisplayCurrency(entry.stock.exchange, entry.stock.currency),
+                  )}
+                  <span
+                    className={styles.changeText}
+                    style={{
+                      marginLeft: 10,
+                      color:
+                        change == null
+                          ? "var(--text-secondary)"
+                          : change >= 0
+                            ? "var(--emerald)"
+                            : "var(--red)",
+                    }}
+                  >
+                    {" "}
+                    {formatPriceChange(change)}
+                  </span>
+                </div>
+                {noteText ? (
+                  <p className={styles.notesText} style={{ margin: "8px 0 0", fontSize: "0.82rem" }}>
+                    {noteText}
+                  </p>
+                ) : null}
+                <div className={styles.cardRow}>
+                  <div className={styles.cardActions}>
+                    <Link href={`/stocks/${encodeURIComponent(entry.stock.symbol)}`} className={styles.detailsLink}>
+                      Details →
+                    </Link>
+                    <WatchlistActionButton
+                      symbol={entry.stock.symbol}
+                      initialInWatchlist
+                      removeLabel="Remove"
+                      addLabel="Add"
+                    />
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

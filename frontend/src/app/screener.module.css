@@ -51,6 +51,19 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+}
+
+/* Dim main content when filter drawer is open on tablet/mobile */
+.sidebarOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  background: rgba(0, 0, 0, 0.45);
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 /* ── Left Sidebar ── */
@@ -348,6 +361,7 @@
 .tableContainer {
   flex: 1;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
@@ -593,6 +607,10 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 @media (max-width: 960px) {
+  .sidebarOverlay {
+    display: block;
+    top: 56px;
+  }
   .screenerLayout { grid-template-columns: 1fr; }
   .sidebar {
     position: fixed;
@@ -636,7 +654,11 @@
   width: 100%;
 }
 @media (max-width: 768px) {
-  .screenerContainer { padding: 16px 16px 80px; }
+  .screenerContainer { padding: 12px 12px 80px; }
+}
+
+@media (max-width: 380px) {
+  .screenerContainer { padding: 10px 10px 80px; }
 }
 
 /* ── Category Info Cards (Tickertape-style) ── */

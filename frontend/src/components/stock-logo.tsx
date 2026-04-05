@@ -171,6 +171,7 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- dynamic multi-source logo fallbacks
     <img
       src={currentSrc}
       alt={`${symbol} logo`}

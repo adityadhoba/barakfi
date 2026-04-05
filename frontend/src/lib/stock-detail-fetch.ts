@@ -1,0 +1,109 @@
+/**
+ * Server-only stock detail loading: distinguishes 404 vs API errors,
+ * uses ISR revalidation for public GETs (faster repeat visits).
+ */
+
+import { getPublicApiBaseUrl } from "@/lib/api-base";
+import type { MultiMethodologyResult, ScreeningResult, Stock } from "@/lib/api";
+
+const REVALIDATE_SEC = 90;
+const FETCH_MS = 28_000;
+
+export type StockDetailFetchResult =
+  | { kind: "ok"; stock: Stock; screening: ScreeningResult }
+  | { kind: "not_found" }
+  | { kind: "error"; message: string };
+
+async function parseDetail(response: Response): Promise<string> {
+  try {
+    const body = await response.json();
+    return typeof body?.detail === "string" ? body.detail : response.statusText;
+  } catch {
+    return response.statusText;
+  }
+}
+
+/**
+ * Load stock + screening for the stock detail page. Uses next.revalidate for caching.
+ * Returns not_found only when the API reports 404 for both (stock missing in DB).
+ */
+export async function fetchStockAndScreenForPage(symbol: string): Promise<StockDetailFetchResult> {
+  const base = getPublicApiBaseUrl();
+  const enc = encodeURIComponent(symbol);
+  const pathStock = `${base}/stocks/${enc}`;
+  const pathScreen = `${base}/screen/${enc}`;
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), FETCH_MS);
+
+  try {
+    const [resStock, resScreen] = await Promise.all([
+      fetch(pathStock, { next: { revalidate: REVALIDATE_SEC }, signal: controller.signal }),
+      fetch(pathScreen, { next: { revalidate: REVALIDATE_SEC }, signal: controller.signal }),
+    ]);
+
+    const s404 = resStock.status === 404;
+    const c404 = resScreen.status === 404;
+
+    if (s404 && c404) {
+      return { kind: "not_found" };
+    }
+
+    if (s404 || c404) {
+      return {
+        kind: "error",
+        message:
+          "Stock data is inconsistent. Try again in a moment or return to the screener.",
+      };
+    }
+
+    if (!resStock.ok || !resScreen.ok) {
+      const d1 = !resStock.ok ? await parseDetail(resStock) : "";
+      const d2 = !resScreen.ok ? await parseDetail(resScreen) : "";
+      const detail = [d1, d2].filter(Boolean).join(" — ") || "Request failed";
+      return {
+        kind: "error",
+        message:
+          resStock.status >= 500 || resScreen.status >= 500
+            ? `The service is temporarily unavailable. (${detail})`
+            : `Could not load this stock. (${detail})`,
+      };
+    }
+
+    const stock = (await resStock.json()) as Stock;
+    const screening = (await resScreen.json()) as ScreeningResult;
+    return { kind: "ok", stock, screening };
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return {
+      kind: "error",
+      message: aborted
+        ? "The request timed out. The API may be waking up — try refreshing the page."
+        : "Could not reach the API. Check your connection and try again.",
+    };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/**
+ * Multi-methodology screening for stock page — cached briefly.
+ */
+export async function fetchMultiScreeningForPage(symbol: string): Promise<MultiMethodologyResult | null> {
+  const base = getPublicApiBaseUrl();
+  const enc = encodeURIComponent(symbol);
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), FETCH_MS);
+  try {
+    const res = await fetch(`${base}/screen/${enc}/multi`, {
+      next: { revalidate: REVALIDATE_SEC },
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as MultiMethodologyResult;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(t);
+  }
+}

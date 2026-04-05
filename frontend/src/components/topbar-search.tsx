@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo } from "react";
 import { StockLogo } from "@/components/stock-logo";
+import { useMobileNav } from "@/components/mobile-nav-context";
 
 type StockHit = {
   symbol: string;
@@ -44,6 +45,7 @@ function formatCurrency(value: number) {
 
 export function TopbarSearch() {
   const router = useRouter();
+  const { searchOpen, closeSearch } = useMobileNav();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);
@@ -74,19 +76,19 @@ export function TopbarSearch() {
   }, []);
 
   const q = deferredValue.trim().toLowerCase();
-  const filtered =
-    q.length > 0
-      ? stocks
-          .filter(
-            (s) =>
-              s.symbol.toLowerCase().includes(q) ||
-              s.name.toLowerCase().includes(q) ||
-              s.sector.toLowerCase().includes(q)
-          )
-          .slice(0, 8)
-      : [];
+  const filtered = useMemo(() => {
+    if (q.length === 0) return [];
+    return stocks
+      .filter(
+        (s) =>
+          s.symbol.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          s.sector.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [q, stocks]);
 
-  const recentSymbols = useMemo(() => getRecentSearches(), [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentSymbols = useMemo(() => getRecentSearches(), [open, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const recentStocks = useMemo(() => {
     if (!stocks.length) return [];
     return recentSymbols
@@ -101,12 +103,17 @@ export function TopbarSearch() {
       .slice(0, 5);
   }, [stocks]);
 
-  const showEmpty = open && q.length === 0 && stocks.length > 0;
-  const showResults = open && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
+  const showEmpty = (open || searchOpen) && q.length === 0 && stocks.length > 0;
+  const showResults = (open || searchOpen) && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
   const showDropdown = showEmpty || showResults;
 
-  const displayItems = q.length > 0 ? filtered : [];
-  const allDropdownItems = q.length > 0 ? displayItems : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))];
+  const allDropdownItems = useMemo(
+    () =>
+      q.length > 0
+        ? filtered
+        : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))],
+    [q.length, filtered, recentStocks, trendingStocks, recentSymbols]
+  );
 
   const navigate = useCallback(
     (symbol: string) => {
@@ -114,10 +121,11 @@ export function TopbarSearch() {
       setValue("");
       setOpen(false);
       setFocusIdx(-1);
+      closeSearch();
       inputRef.current?.blur();
       router.push(`/stocks/${encodeURIComponent(symbol)}`);
     },
-    [router]
+    [router, closeSearch]
   );
 
   const handleSubmit = useCallback(
@@ -131,11 +139,12 @@ export function TopbarSearch() {
       if (trimmed) {
         setValue("");
         setOpen(false);
+        closeSearch();
         inputRef.current?.blur();
         router.push(`/screener?q=${encodeURIComponent(trimmed)}`);
       }
     },
-    [value, router, focusIdx, allDropdownItems, navigate]
+    [value, router, focusIdx, allDropdownItems, navigate, closeSearch]
   );
 
   const handleKeyDown = useCallback(
@@ -149,10 +158,11 @@ export function TopbarSearch() {
       } else if (e.key === "Escape") {
         setOpen(false);
         setFocusIdx(-1);
+        closeSearch();
         inputRef.current?.blur();
       }
     },
-    [allDropdownItems.length]
+    [allDropdownItems.length, closeSearch]
   );
 
   useEffect(() => {
@@ -171,6 +181,19 @@ export function TopbarSearch() {
   }, [deferredValue]);
 
   useEffect(() => {
+    if (!searchOpen) return;
+    setOpen(true);
+    void fetchStocks();
+    const t = requestAnimationFrame(() => inputRef.current?.focus());
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      cancelAnimationFrame(t);
+      document.body.style.overflow = prev;
+    };
+  }, [searchOpen, fetchStocks]);
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
@@ -179,7 +202,9 @@ export function TopbarSearch() {
       }
       if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key === "k")) {
         e.preventDefault();
-        inputRef.current?.focus();
+        if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+          inputRef.current?.focus();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -189,7 +214,21 @@ export function TopbarSearch() {
   let dropdownIdx = 0;
 
   return (
-    <div ref={wrapRef} className="topbarSearch">
+    <div ref={wrapRef} className={`topbarSearch ${searchOpen ? "topbarSearchOverlay" : ""}`}>
+      {searchOpen && (
+        <button
+          type="button"
+          className="topbarSearchOverlayClose"
+          onClick={() => {
+            closeSearch();
+            setOpen(false);
+            setFocusIdx(-1);
+          }}
+          aria-label="Close search"
+        >
+          ✕
+        </button>
+      )}
       <form onSubmit={handleSubmit} role="search">
         <span className="topbarSearchIcon" aria-hidden>&#x2315;</span>
         <input

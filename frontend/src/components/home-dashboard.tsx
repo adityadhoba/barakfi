@@ -562,7 +562,7 @@ export async function HomeDashboard() {
               <span className={styles.footerColTitle}>Product</span>
               <Link href="/screener" className={styles.footerLink}>Screener</Link>
               <Link href="/watchlist" className={styles.footerLink}>Watchlist</Link>
-              <Link href="/watchlist" className={styles.footerLink}>Watchlist</Link>
+              <Link href="/trending" className={styles.footerLink}>Trending</Link>
             </div>
             <div className={styles.footerCol}>
               <span className={styles.footerColTitle}>Resources</span>

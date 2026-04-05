@@ -433,7 +433,8 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 # Avoid rate limiting in local/test runs; keep it in production-like environments.
 if not DEBUG and APP_ENV.lower() == "production":
-    app.add_middleware(RateLimitMiddleware, requests_per_minute=120, burst=30)
+    # Mobile users + SPAs can burst many API calls on first paint; keep generous limits.
+    app.add_middleware(RateLimitMiddleware, requests_per_minute=240, burst=60)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
