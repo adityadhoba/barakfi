@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import s from "@/app/loading.module.css";
 
 type Candle = {
   time: number;
@@ -228,16 +229,20 @@ export function PriceChart({ symbol, exchange }: { symbol: string; exchange?: st
             style={{
               position: "absolute",
               inset: 0,
-              display: "grid",
-              placeItems: "center",
               zIndex: 1,
               background: "var(--panel)",
               borderRadius: "var(--radius-lg)",
-              fontSize: "0.84rem",
-              color: "var(--text-tertiary)",
+              padding: 12,
             }}
+            aria-busy="true"
+            aria-label="Loading chart"
           >
-            Loading chart...
+            <div className={s.chartSkeletonToolbar} style={{ marginBottom: 8 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className={s.skeleton} style={{ width: 36, height: 28, borderRadius: 9999 }} />
+              ))}
+            </div>
+            <div className={s.chartSkeletonCanvas} />
           </div>
         )}
         {error && !loading && (

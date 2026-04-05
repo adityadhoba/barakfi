@@ -132,9 +132,11 @@ type Props = {
   status?: string;
   exchange?: string;
   className?: string;
+  /** Above-the-fold hero: eager load + decode (reduces LCP delay for logos) */
+  priority?: boolean;
 };
 
-export function StockLogo({ symbol, size = 32, status, exchange, className }: Props) {
+export function StockLogo({ symbol, size = 32, status, exchange, className, priority = false }: Props) {
   const [srcLevel, setSrcLevel] = useState(0);
 
   const tickerUrl = getTickerLogoUrl(symbol, exchange);
@@ -178,7 +180,9 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
       width={size}
       height={size}
       className={className}
-      loading="lazy"
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      fetchPriority={priority ? "high" : "low"}
       onError={() => setSrcLevel((prev) => prev + 1)}
       style={{
         borderRadius: size > 28 ? 10 : 6,

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import styles from "@/app/screener.module.css";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import { StockScreenerTable } from "@/components/stock-screener-table";
@@ -28,9 +27,7 @@ export default async function ScreenerPage() {
 
   return (
     <main className={styles.screenerPage}>
-      <Suspense fallback={<div className={styles.screenerFallback}>Loading screener&hellip;</div>}>
-        <StockScreenerTable screenedStocks={validStocks} />
-      </Suspense>
+      <StockScreenerTable screenedStocks={validStocks} />
     </main>
   );
 }

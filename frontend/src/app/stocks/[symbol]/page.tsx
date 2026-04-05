@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import nextDynamic from "next/dynamic";
 
 export const dynamic = "force-dynamic";
 
 import pageStyles from "@/app/page.module.css";
 import styles from "@/app/screener.module.css";
+import s from "@/app/loading.module.css";
 import { ResearchNoteForm } from "@/components/research-note-form";
 import { WatchlistActionButton } from "@/components/watchlist-action-button";
-import { StockResearchSection } from "@/components/stock-research-section";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import {
   getAuthenticatedWatchlist,
@@ -19,14 +21,35 @@ import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/st
 import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PriceChart } from "@/components/price-chart";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import stockTabStyles from "@/components/stock-tabs.module.css";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { MethodologyComparison } from "@/components/methodology-comparison";
 import { displayCountryForStock } from "@/lib/stock-display";
+
+const PriceChart = nextDynamic(
+  () => import("@/components/price-chart").then((m) => m.PriceChart),
+  { loading: () => <ChartSkeleton /> },
+);
+
+const MethodologyComparison = nextDynamic(
+  () => import("@/components/methodology-comparison").then((m) => m.MethodologyComparison),
+  {
+    loading: () => (
+      <div className={s.skeleton} style={{ height: 200, borderRadius: 12, marginBottom: 28 }} aria-hidden />
+    ),
+  },
+);
+
+const StockResearchSection = nextDynamic(
+  () => import("@/components/stock-research-section").then((m) => m.StockResearchSection),
+  {
+    loading: () => (
+      <div className={s.skeleton} style={{ height: 260, borderRadius: 12 }} aria-hidden />
+    ),
+  },
+);
 
 export async function generateMetadata({
   params,

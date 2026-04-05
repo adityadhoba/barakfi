@@ -119,3 +119,40 @@
   .loadingMetrics { grid-template-columns: 1fr; }
   .loadingPage { padding: 16px 16px 80px; }
 }
+
+/* Chart block (price-chart loading / dynamic fallback) */
+.chartSkeleton {
+  margin-bottom: 28px;
+}
+
+.chartSkeletonToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chartSkeletonCanvas {
+  composes: skeleton;
+  height: 320px;
+  width: 100%;
+}
+
+.newsCarouselSkeleton {
+  margin-top: 8px;
+}
+
+.newsCarouselHero {
+  composes: skeleton;
+  height: min(220px, 42vw);
+  min-height: 160px;
+  border-radius: var(--radius-xl);
+  width: 100%;
+}
+
+.newsCarouselDots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}

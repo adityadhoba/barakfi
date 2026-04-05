@@ -1,4 +1,5 @@
 import Link from "next/link";
+import nextDynamic from "next/dynamic";
 import { Logo } from "@/components/logo";
 import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNewsFeed } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
@@ -12,7 +13,12 @@ import {
   StatIconUniverse,
 } from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
-import { NewsCarousel } from "@/app/news/news-carousel";
+import { NewsCarouselSkeleton } from "@/components/news-carousel-skeleton";
+
+const NewsCarousel = nextDynamic(
+  () => import("@/app/news/news-carousel").then((m) => m.NewsCarousel),
+  { loading: () => <NewsCarouselSkeleton /> },
+);
 import { HomeHeroAuth } from "@/components/home-hero-auth";
 import { HomeQuickActions } from "@/components/home-quick-actions";
 import styles from "./home-dashboard.module.css";
