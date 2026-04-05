@@ -1,4 +1,5 @@
 import logging
+import os
 from time import perf_counter
 from pathlib import Path
 from datetime import datetime
@@ -485,9 +486,14 @@ def app_dashboard():
 
 @app.get("/health")
 def health():
+    """Use git_commit (RENDER_GIT_COMMIT on Render) to confirm the deployed revision."""
     return {
         "status": "ok",
         "service": APP_NAME,
         "environment": APP_ENV,
         "version": APP_VERSION,
+        "git_commit": os.getenv("RENDER_GIT_COMMIT", ""),
+        "git_branch": os.getenv("RENDER_GIT_BRANCH", ""),
+        # coverage_requests: requested_at NOT NULL fix is in commits >= 5f03811
+        "coverage_request_db_fix": "requested_at_column",
     }
