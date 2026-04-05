@@ -442,6 +442,8 @@ class CoverageRequest(Base):
     exchange = Column(String, nullable=False, default="NSE")
     notes = Column(Text, nullable=False, default="")
     status = Column(String, nullable=False, default="pending")
+    # Postgres schema uses requested_at NOT NULL; keep created_at for ordering/API
+    requested_at = Column(DateTime, nullable=False, default=utc_now)
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     user = relationship("User")
