@@ -817,8 +817,28 @@ input, select, textarea, button {
 .bottomNavItemActive { color: var(--emerald); }
 .bottomNavItem:hover { color: var(--text); }
 .bottomNavItemActive:hover { color: var(--emerald); }
-.bottomNavIcon { font-size: 1.2rem; line-height: 1; }
-.bottomNavLabel { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+.bottomNavIcon {
+  font-size: 1.2rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bottomNavIcon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex-shrink: 0;
+}
+.bottomNavLabel {
+  font-size: clamp(0.52rem, 1.65vw, 0.65rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .bottomNav button.bottomNavItem {
   font: inherit;
@@ -858,8 +878,8 @@ input, select, textarea, button {
   .wordmark { font-size: 0.92rem; }
   .topbarSearchInput { padding: 6px 12px 6px 32px; font-size: 0.78rem; }
   .topbarSearchIcon { left: 10px; font-size: 0.78rem; }
-  .bottomNavItem { padding: 6px 8px; }
-  .bottomNavLabel { font-size: 0.58rem; }
+  .bottomNavItem { padding: 6px 2px; }
+  .bottomNavIcon svg { width: 1.2rem; height: 1.2rem; }
   .marketTickerWrap { gap: 12px; padding: 8px 0; }
   .marketTickerItem { gap: 4px; font-size: 0.7rem; }
 }
