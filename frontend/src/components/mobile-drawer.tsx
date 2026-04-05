@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TopbarLink } from "@/components/topbar-link";
+import { useMobileNav } from "@/components/mobile-nav-context";
 import s from "./mobile-drawer.module.css";
 
 type DrawerLink = {
@@ -26,7 +26,7 @@ const DRAWER_LINKS: DrawerLink[] = [
 ];
 
 export function MobileDrawer() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, setOpen } = useMobileNav();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(true);
   const pathname = usePathname();
@@ -63,8 +63,8 @@ export function MobileDrawer() {
 
   // Close drawer when route changes
   useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
+    setOpen(false);
+  }, [pathname, setOpen]);
 
   // Prevent scroll when drawer is open
   useEffect(() => {
@@ -84,7 +84,7 @@ export function MobileDrawer() {
       {/* Hamburger button (mobile only) */}
       <button
         className={s.hamburger}
-        onClick={() => setIsOpen(true)}
+        onClick={() => setOpen(true)}
         aria-label="Open navigation menu"
         aria-expanded={isOpen}
       >
@@ -95,7 +95,7 @@ export function MobileDrawer() {
       {isOpen && (
         <div
           className={s.backdrop}
-          onClick={() => setIsOpen(false)}
+          onClick={() => setOpen(false)}
           aria-hidden="true"
         />
       )}
@@ -109,7 +109,7 @@ export function MobileDrawer() {
           <h2 className={s.drawerTitle}>Menu</h2>
           <button
             className={s.closeButton}
-            onClick={() => setIsOpen(false)}
+            onClick={() => setOpen(false)}
             aria-label="Close navigation menu"
           >
             <span className={s.closeIcon}>✕</span>
@@ -156,7 +156,7 @@ export function MobileDrawer() {
                 key={link.href}
                 href={link.href}
                 className={`${s.drawerLink} ${isActive ? s.drawerLinkActive : ""}`}
-                onClick={() => setIsOpen(false)}
+                onClick={() => setOpen(false)}
               >
                 <span className={s.drawerLinkIcon} aria-hidden="true">
                   {link.icon}

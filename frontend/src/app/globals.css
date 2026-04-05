@@ -570,6 +570,13 @@ input, select, textarea, button {
   font-weight: 600;
 }
 
+/* Hide duplicate Watchlist in top bar on small screens (Watchlist is in bottom nav + drawer) */
+@media (max-width: 768px) {
+  .topbarWatchlistLink {
+    display: none;
+  }
+}
+
 /* Buttons */
 .ghostButton,
 .solidButton {
@@ -693,6 +700,15 @@ input, select, textarea, button {
 .bottomNavItemActive:hover { color: var(--emerald); }
 .bottomNavIcon { font-size: 1.2rem; line-height: 1; }
 .bottomNavLabel { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+
+.bottomNav button.bottomNavItem {
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════

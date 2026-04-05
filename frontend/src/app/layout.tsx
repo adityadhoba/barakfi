@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { BottomNav } from "@/components/bottom-nav";
 import { MobileDrawer } from "@/components/mobile-drawer";
+import { MobileNavProvider } from "@/components/mobile-nav-context";
 import { TopbarSearch } from "@/components/topbar-search";
 import { TopbarScroll } from "@/components/topbar-scroll";
 import { ToastProvider } from "@/components/toast";
@@ -264,6 +265,7 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ClerkProvider>
           <ThemeProvider>
+            <MobileNavProvider>
             <Suspense fallback={null}>
               <NavProgress />
             </Suspense>
@@ -291,6 +293,7 @@ export default function RootLayout({
               <BottomNav />
               <TopbarScroll />
             </ToastProvider>
+            </MobileNavProvider>
           </ThemeProvider>
         </ClerkProvider>
       </body>

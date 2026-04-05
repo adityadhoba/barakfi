@@ -55,6 +55,13 @@ Backend bridge:
 - move the current founder dashboard into a full signed-in app over time
 - connect this frontend to real Clerk sessions once your keys are ready
 
+## Mobile UX
+
+- **Bottom nav**: Home, Screener, Watchlist, and **More** (opens the slide-out menu for News, Compare, Admin, etc.). This avoids duplicating **Watchlist** next to **News** on small screens.
+- **Top bar**: On viewports under 768px the **Watchlist** link is hidden in the header (still in bottom nav + drawer).
+- **Screener**: Filter sidebar starts **collapsed** on narrow screens; tap **Filters** to open; tap the dimmed overlay to close.
+- **Rate limits**: If you see “Too many requests” from the API on mobile, the backend rate limit was raised; ensure the latest API is deployed.
+
 ## Verify
 
 ```bash

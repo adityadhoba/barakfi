@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { useMobileNav } from "@/components/mobile-nav-context";
 
 const TABS = [
   { href: "/", label: "Home", icon: "\u2302", match: (p: string) => p === "/" },
@@ -14,17 +15,12 @@ const TABS = [
     match: (p: string) => p.startsWith("/watchlist"),
     guestHref: "/sign-in?redirect_url=/watchlist",
   },
-  {
-    href: "/news",
-    label: "News",
-    icon: "\u25A6",
-    match: (p: string) => p.startsWith("/news"),
-  },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
   const { userId } = useAuth();
+  const { open } = useMobileNav();
 
   return (
     <nav className="bottomNav" aria-label="Main navigation">
@@ -42,6 +38,15 @@ export function BottomNav() {
           </Link>
         );
       })}
+      <button
+        type="button"
+        className={`bottomNavItem ${pathname.startsWith("/news") || pathname.startsWith("/compare") || pathname.startsWith("/tools") ? "bottomNavItemActive" : ""}`}
+        onClick={open}
+        aria-label="Open menu for News, Compare, and more"
+      >
+        <span className="bottomNavIcon" aria-hidden>{"\u2630"}</span>
+        <span className="bottomNavLabel">More</span>
+      </button>
     </nav>
   );
 }
