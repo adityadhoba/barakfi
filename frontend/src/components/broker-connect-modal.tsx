@@ -2,6 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
+import { HiOutlineArrowLeft, HiOutlineBuildingLibrary, HiOutlineChartBar } from "react-icons/hi2";
 import { Logo } from "@/components/logo";
 import styles from "./broker-connect-modal.module.css";
 
@@ -56,6 +57,30 @@ const HOW_STEPS = [
 ];
 
 type BrokerId = (typeof PRIMARY_BROKERS)[number]["id"] | (typeof EXTRA_BROKERS)[number]["id"];
+type FlowStep = "asset" | "brokers" | "mf";
+
+function parseUpstoxAuthorizeError(status: number, data: Record<string, unknown>): string {
+  const detail = data.detail;
+  if (typeof detail === "string") {
+    if (status === 404) {
+      return "Broker connect is not available on this server yet. Deploy the latest API or check NEXT_PUBLIC_API_BASE_URL.";
+    }
+    if (status === 503) {
+      return detail;
+    }
+    return detail;
+  }
+  if (Array.isArray(detail) && detail[0] && typeof (detail[0] as { msg?: string }).msg === "string") {
+    return (detail[0] as { msg: string }).msg;
+  }
+  if (typeof data.error === "string") {
+    return data.error;
+  }
+  if (status === 404) {
+    return "Not found — confirm the API is deployed and NEXT_PUBLIC_API_BASE_URL points to your FastAPI /api base.";
+  }
+  return "Could not start Upstox login.";
+}
 
 function BrokerLogo({
   broker,
@@ -108,6 +133,8 @@ export function BrokerConnectButton() {
 
 function BrokerModal({ onClose }: { onClose: () => void }) {
   const { isSignedIn, getToken } = useAuth();
+  const [step, setStep] = useState<FlowStep>("asset");
+  const [assetChoice, setAssetChoice] = useState<"stocks" | "mutual_funds">("stocks");
   const [selected, setSelected] = useState<BrokerId | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [email, setEmail] = useState("");
@@ -119,6 +146,14 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
   const selectedBroker =
     PRIMARY_BROKERS.find((b) => b.id === selected) ||
     EXTRA_BROKERS.find((b) => b.id === selected);
+
+  function resetBrokerState() {
+    setSelected(null);
+    setShowMore(false);
+    setEmail("");
+    setSubmitted(false);
+    setUpstoxErr(null);
+  }
 
   async function startUpstoxOAuth() {
     setUpstoxErr(null);
@@ -134,18 +169,15 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       if (!res.ok) {
-        const msg =
-          typeof data.detail === "string"
-            ? data.detail
-            : data.error || "Could not start Upstox login.";
-        setUpstoxErr(msg);
+        setUpstoxErr(parseUpstoxAuthorizeError(res.status, data));
         setUpstoxLoading(false);
         return;
       }
-      if (data.url && typeof data.url === "string") {
-        window.location.href = data.url;
+      const url = data.url;
+      if (typeof url === "string" && url.length > 0) {
+        window.location.href = url;
         return;
       }
       setUpstoxErr("Invalid response from server.");
@@ -159,20 +191,18 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modalShell} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalWide}>
-          {/* Left: how it works */}
           <aside className={styles.leftPane} aria-label="How broker connect works">
             <p className={styles.leftTitle}>How does this work?</p>
             <ul className={styles.howList}>
-              {HOW_STEPS.map((step) => (
-                <li key={step.key} className={styles.howRow}>
-                  <div className={`${styles.howCircle} ${step.circleClass}`}>{step.icon}</div>
-                  <p className={styles.howText}>{step.text}</p>
+              {HOW_STEPS.map((s) => (
+                <li key={s.key} className={styles.howRow}>
+                  <div className={`${styles.howCircle} ${s.circleClass}`}>{s.icon}</div>
+                  <p className={styles.howText}>{s.text}</p>
                 </li>
               ))}
             </ul>
           </aside>
 
-          {/* Right: broker selection or detail */}
           <div className={styles.rightPane}>
             <div className={styles.rightTop}>
               <div className={styles.brandRow}>
@@ -188,8 +218,82 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
 
-            {selected && selectedBroker ? (
+            {step === "asset" && (
+              <div className={styles.flowStep}>
+                <h2 className={styles.mainHeading}>Import your portfolio</h2>
+                <p className={styles.flowSub}>Choose what you want to connect first.</p>
+                <div className={styles.assetChoices}>
+                  <button
+                    type="button"
+                    className={`${styles.assetCard} ${assetChoice === "stocks" ? styles.assetCardActive : ""}`}
+                    onClick={() => setAssetChoice("stocks")}
+                  >
+                    <HiOutlineChartBar className={styles.assetCardIcon} size={28} strokeWidth={1.5} aria-hidden />
+                    <span className={styles.assetCardTitle}>Stocks</span>
+                    <span className={styles.assetCardHint}>Connect your broker to sync demat holdings</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.assetCard} ${assetChoice === "mutual_funds" ? styles.assetCardActive : ""}`}
+                    onClick={() => setAssetChoice("mutual_funds")}
+                  >
+                    <HiOutlineBuildingLibrary className={styles.assetCardIcon} size={28} strokeWidth={1.5} aria-hidden />
+                    <span className={styles.assetCardTitle}>Mutual funds</span>
+                    <span className={styles.assetCardHint}>CAS / statement based import (coming to Barakfi)</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={styles.flowContinue}
+                  onClick={() => {
+                    resetBrokerState();
+                    if (assetChoice === "stocks") setStep("brokers");
+                    else setStep("mf");
+                  }}
+                >
+                  Continue
+                </button>
+              </div>
+            )}
+
+            {step === "mf" && (
+              <div className={styles.flowStep}>
+                <button type="button" className={styles.flowBack} onClick={() => setStep("asset")}>
+                  <HiOutlineArrowLeft size={18} aria-hidden /> Back
+                </button>
+                <h2 className={styles.mainHeading}>Mutual funds</h2>
+                <p className={styles.mfIntro}>
+                  Barakfi doesn&apos;t import mutual funds yet. You can use these services for your consolidated
+                  account statement; we may integrate MF APIs later.
+                </p>
+                <ul className={styles.mfModalList}>
+                  <li>
+                    <a href="https://www.mfcentral.com/" target="_blank" rel="noopener noreferrer">
+                      MF Central
+                    </a>
+                    <span> — official CAS access</span>
+                  </li>
+                  <li>
+                    <a href="https://mfapis.in/" target="_blank" rel="noopener noreferrer">
+                      MFAPIs.in
+                    </a>
+                    <span> — free MF data API for developers</span>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {step === "brokers" && selected && selectedBroker ? (
               <div className={styles.detailBody}>
+                <button
+                  type="button"
+                  className={styles.flowBack}
+                  onClick={() => {
+                    resetBrokerState();
+                  }}
+                >
+                  <HiOutlineArrowLeft size={18} aria-hidden /> All brokers
+                </button>
                 <h2 className={styles.mainHeading}>Login with your broker</h2>
                 <div className={styles.selectedCard}>
                   <div className={styles.selectedLogoWrap}>
@@ -252,21 +356,12 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
                     </>
                   )}
                 </div>
-                <button
-                  type="button"
-                  className={styles.backBtn}
-                  onClick={() => {
-                    setSelected(null);
-                    setEmail("");
-                    setSubmitted(false);
-                    setUpstoxErr(null);
-                  }}
-                >
-                  ← All brokers
-                </button>
               </div>
-            ) : (
+            ) : step === "brokers" ? (
               <>
+                <button type="button" className={styles.flowBack} onClick={() => { resetBrokerState(); setStep("asset"); }}>
+                  <HiOutlineArrowLeft size={18} aria-hidden /> Back
+                </button>
                 <h2 className={styles.mainHeading}>Login with your broker</h2>
                 <div className={styles.brokerGrid}>
                   {allBrokers.map((broker) => (
@@ -306,7 +401,7 @@ function BrokerModal({ onClose }: { onClose: () => void }) {
                   Open an account online
                 </a>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

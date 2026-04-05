@@ -14,8 +14,10 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const backendUrl = `${apiBaseUrl}/me/integrations/upstox/authorize-url`;
+
   try {
-    const response = await fetch(`${apiBaseUrl}/me/integrations/upstox/authorize-url`, {
+    const response = await fetch(backendUrl, {
       headers: buildBackendHeaders({
         token,
         actor: { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress },
@@ -24,6 +26,14 @@ export async function GET() {
     });
 
     const responseBody = await response.json().catch(() => ({ detail: "Backend returned non-JSON" }));
+
+    if (!response.ok) {
+      console.error("[upstox authorize-url] Backend error", {
+        status: response.status,
+        url: backendUrl,
+        detail: responseBody,
+      });
+    }
 
     return NextResponse.json(responseBody, { status: response.status });
   } catch (error) {

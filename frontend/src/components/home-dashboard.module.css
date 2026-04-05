@@ -423,6 +423,11 @@
   color: var(--text-secondary);
   flex-shrink: 0;
 }
+.statIconSvg svg {
+  display: block;
+  flex-shrink: 0;
+}
+
 .statIconHalal { background: var(--emerald-bg); color: var(--emerald); }
 .statIconReview { background: var(--gold-bg); color: var(--gold); }
 .statIconFail { background: var(--red-bg); color: var(--red); }

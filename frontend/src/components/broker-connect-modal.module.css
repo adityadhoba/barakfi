@@ -1,8 +1,8 @@
 .overlay {
   position: fixed;
   inset: 0;
-  z-index: 90;
-  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.76);
   backdrop-filter: blur(6px);
   display: grid;
   place-items: center;
@@ -20,6 +20,7 @@
 }
 
 .modalShell {
+  isolation: isolate;
   width: 100%;
   max-width: 920px;
   max-height: 92vh;
@@ -44,13 +45,14 @@
   border-radius: 16px;
   background: var(--bg-card);
   border: 1px solid var(--line);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   min-height: 420px;
 }
 
 /* ── Left pane ── */
 .leftPane {
+  background-color: var(--bg-soft);
   background: linear-gradient(165deg, rgba(16, 185, 129, 0.06) 0%, var(--bg-soft) 45%, var(--bg-soft) 100%);
   border-right: 1px solid var(--line);
   padding: 28px 22px;
@@ -143,6 +145,7 @@
 
 /* ── Right pane ── */
 .rightPane {
+  background-color: var(--bg-card);
   padding: 22px 26px 28px;
   display: flex;
   flex-direction: column;
@@ -544,4 +547,132 @@
   .brandTagline {
     max-width: none;
   }
+}
+
+
+.flowStep {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  min-height: 0;
+}
+
+.flowSub {
+  margin: -8px 0 4px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.assetChoices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .assetChoices {
+    grid-template-columns: 1fr;
+  }
+}
+
+.assetCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--bg-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.assetCard:hover {
+  border-color: var(--emerald-border);
+}
+
+.assetCardActive {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 1px var(--emerald);
+  background: var(--emerald-bg);
+}
+
+.assetCardIcon {
+  color: var(--emerald);
+  margin-bottom: 4px;
+}
+
+.assetCardTitle {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.assetCardHint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.flowContinue {
+  margin-top: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.flowContinue:hover {
+  background: #0f172a;
+}
+
+.flowBack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  margin: 0 0 8px;
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.flowBack:hover {
+  color: var(--text);
+}
+
+.mfIntro {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.mfModalList {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.mfModalList a {
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.mfModalList a:hover {
+  text-decoration: underline;
 }
