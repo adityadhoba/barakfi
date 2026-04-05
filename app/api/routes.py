@@ -1215,12 +1215,13 @@ def list_current_watchlist(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    return (
+    entries = (
         db.query(WatchlistEntry)
         .filter(WatchlistEntry.user_id == user.id)
         .order_by(WatchlistEntry.added_at.desc())
         .all()
     )
+    return helpers.build_watchlist_entry_reads(db, user.id, entries)
 
 
 @router.post("/me/watchlist", response_model=WatchlistEntryRead)
@@ -1263,7 +1264,8 @@ def create_current_watchlist_entry(
 
     db.commit()
     db.refresh(entry)
-    return entry
+    reads = helpers.build_watchlist_entry_reads(db, user.id, [entry])
+    return reads[0]
 
 
 @router.delete("/me/watchlist/{symbol}", response_model=ActionResponse)
@@ -1648,12 +1650,15 @@ def list_watchlist(
     claims: dict = Depends(get_current_auth_claims_or_internal),
     db: Session = Depends(get_db),
 ):
-    return (
+    entries = (
         db.query(WatchlistEntry)
         .filter(WatchlistEntry.owner_name == owner_name)
         .order_by(WatchlistEntry.added_at.desc())
         .all()
     )
+    if not entries:
+        return []
+    return helpers.build_watchlist_entry_reads(db, entries[0].user_id, entries)
 
 
 @router.get("/screening-logs", response_model=list[ScreeningLogRead])

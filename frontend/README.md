@@ -82,3 +82,16 @@ Both commands are currently passing.
 
 - **`GET /api/me/watchlist`** returns each entry’s `stock` with **`exchange`**, **`currency`**, and **`country`** from the database. The watchlist page uses these for USD/GBP vs INR and the market pill.
 - If a US ticker still shows as India + rupees, fix the **`stocks`** row in PostgreSQL (`exchange`, `currency`) or run **`scripts/audit_stock_exchange.py`** on the API host.
+- **`latest_research_summary`** on each watchlist row is the latest research note line for that symbol (see API response).
+
+## Stock detail 404 (e.g. M&M, AVGO)
+
+- The stock page calls **`GET /api/stocks/{symbol}`** and **`GET /api/screen/{symbol}`**. If the symbol is **missing** from the `stocks` table or **`is_active = false`**, the API returns **404** and the site shows “Page not found.”
+- On production Postgres, verify:
+
+```sql
+SELECT symbol, is_active, exchange FROM stocks WHERE symbol IN ('M&M', 'AVGO');
+```
+
+- If no rows are returned, **seed or import** those symbols (see repo seed data / `fetch_data.py` / your ETL). Symbols with **`&`** (e.g. `M&M`) must match exactly in the DB; the URL uses **`/stocks/M%26M`**, which decodes to `M&M`.
+- Slow loads followed by errors are often **API cold starts**; the stock page shows a **try again** state when the API times out or returns 5xx instead of a generic 404.

@@ -3,6 +3,7 @@ Shared helper functions used across API route modules.
 """
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN
@@ -20,6 +21,7 @@ from app.models import (
     UserSettings,
     WatchlistEntry,
 )
+from app.schemas import HoldingStockSnapshot, WatchlistEntryRead
 from app.services.halal_service import (
     PRIMARY_PROFILE,
     evaluate_stock,
@@ -115,6 +117,54 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
     ]
     updated["manual_review_flags"] = []
     return updated
+
+
+def research_note_display_line(n: ResearchNote) -> str:
+    head = f"[{n.note_type}] {n.summary}".strip() if n.summary else f"[{n.note_type}]"
+    body = (n.notes or "").strip()
+    if body:
+        snippet = body[:240] + ("…" if len(body) > 240 else "")
+        return f"{head} — {snippet}" if head else snippet
+    return head
+
+
+def build_watchlist_entry_reads(db: Session, user_id: int, entries: list[WatchlistEntry]) -> list[WatchlistEntryRead]:
+    """Batch-load latest research note per stock and return WatchlistEntryRead list."""
+    if not entries:
+        return []
+
+    inner = (
+        db.query(ResearchNote.stock_id, func.max(ResearchNote.id).label("max_id"))
+        .filter(ResearchNote.user_id == user_id)
+        .group_by(ResearchNote.stock_id)
+        .subquery()
+    )
+    latest_notes = (
+        db.query(ResearchNote)
+        .join(
+            inner,
+            (ResearchNote.stock_id == inner.c.stock_id) & (ResearchNote.id == inner.c.max_id),
+        )
+        .filter(ResearchNote.user_id == user_id)
+        .all()
+    )
+    research_by_stock: dict[int, ResearchNote] = {n.stock_id: n for n in latest_notes}
+
+    out: list[WatchlistEntryRead] = []
+    for w in entries:
+        rn = research_by_stock.get(w.stock_id)
+        latest = research_note_display_line(rn) if rn else ""
+        out.append(
+            WatchlistEntryRead(
+                id=w.id,
+                owner_name=w.owner_name,
+                notes=w.notes,
+                added_at=w.added_at,
+                stock=HoldingStockSnapshot.model_validate(w.stock),
+                latest_research_summary=latest,
+            )
+        )
+    return out
 
 
 def record_screening_log(db: Session, stock: Stock, result: dict) -> None:

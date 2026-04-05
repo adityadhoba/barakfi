@@ -250,7 +250,9 @@ export function WatchlistDashboard({ entries }: Props) {
                     </span>
                   </td>
                   <td className={styles.td}>
-                    {entry.notes ? (
+                    {entry.latest_research_summary ? (
+                      <span className={styles.notesText}>{entry.latest_research_summary}</span>
+                    ) : entry.notes ? (
                       <span className={styles.notesText}>{entry.notes}</span>
                     ) : (
                       <span className={styles.emptyText}>—</span>

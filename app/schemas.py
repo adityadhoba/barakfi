@@ -506,6 +506,7 @@ class WatchlistEntryRead(BaseModel):
     notes: str
     added_at: datetime
     stock: HoldingStockSnapshot
+    latest_research_summary: str = ""
     model_config = ConfigDict(from_attributes=True)
 
 
