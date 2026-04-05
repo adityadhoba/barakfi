@@ -1486,6 +1486,37 @@ def create_current_research_note(
         notes=payload.notes.strip(),
     )
     db.add(research_note)
+
+    # Mirror latest research note text on the user's watchlist row (same UX as portfolio notes).
+    summary = payload.summary.strip()
+    body = payload.notes.strip()
+    parts: list[str] = []
+    if summary:
+        parts.append(f"[{note_type}] {summary}")
+    else:
+        parts.append(f"[{note_type}]")
+    if body:
+        snippet = body[:400] + ("…" if len(body) > 400 else "")
+        parts.append(snippet)
+    watchlist_line = " ".join(p for p in parts if p).strip()[:2000] or f"[{note_type}] Research note"
+
+    wl = (
+        db.query(WatchlistEntry)
+        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .first()
+    )
+    if wl:
+        wl.notes = watchlist_line
+    else:
+        db.add(
+            WatchlistEntry(
+                user_id=user.id,
+                owner_name=(user.display_name or user.email or "user").lower().replace(" ", "-"),
+                stock_id=stock.id,
+                notes=watchlist_line,
+            )
+        )
+
     db.commit()
     db.refresh(research_note)
     return research_note
