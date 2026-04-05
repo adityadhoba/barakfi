@@ -1949,13 +1949,16 @@ def create_coverage_request(
     db: Session = Depends(get_db),
     claims: dict = Depends(get_current_auth_claims_or_internal),
 ):
-    from app.models import CoverageRequest
+    from app.models import CoverageRequest, utc_now
     user = _ensure_user_for_me(db, claims)
+    now = utc_now()
     req = CoverageRequest(
         user_id=user.id,
         symbol=symbol.upper().strip(),
         exchange=exchange.upper().strip(),
         notes=notes,
+        requested_at=now,
+        created_at=now,
     )
     db.add(req)
     db.commit()
