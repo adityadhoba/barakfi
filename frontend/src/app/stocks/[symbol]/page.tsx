@@ -27,6 +27,7 @@ import stockTabStyles from "@/components/stock-tabs.module.css";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { displayCountryForStock } from "@/lib/stock-display";
+import { ComplianceThresholdIntro, StockDataTrust } from "@/components/stock-data-trust";
 
 const PriceChart = nextDynamic(
   () => import("@/components/price-chart").then((m) => m.PriceChart),
@@ -339,6 +340,13 @@ export default async function StockDetailPage({
           <span className={styles.breadcrumbCurrent} aria-current="page">{stock.symbol}</span>
         </nav>
 
+        <StockDataTrust
+          symbol={stock.symbol}
+          dataSource={stock.data_source}
+          screeningProfile={screening.profile}
+          liveQuote={liveQuote ?? null}
+        />
+
         {/* Hero */}
         <div className={styles.complianceHero}>
           <div className={styles.complianceHeroLeft}>
@@ -390,6 +398,18 @@ export default async function StockDetailPage({
                 <span title={liveQuote.disclaimer}>
                   {liveQuote.source === "nse_india_public" ? "NSE (public)" : "Yahoo chart"}
                 </span>
+                {liveQuote.as_of && (
+                  <>
+                    {" · "}
+                    <time dateTime={liveQuote.as_of}>
+                      {new Date(liveQuote.as_of).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                        timeZone: "Asia/Kolkata",
+                      })}
+                    </time>
+                  </>
+                )}
               </p>
             )}
             <div className={styles.stockMeta} style={{ marginTop: 12, gap: 8 }}>
@@ -650,6 +670,7 @@ export default async function StockDetailPage({
               <h2 className={styles.sectionTitle}>Compliance check</h2>
               <p className={styles.sectionSub}>Green = safe, amber = close to limit, red = over the limit</p>
             </div>
+            <ComplianceThresholdIntro />
             <div className={styles.financialGrid} style={{ marginBottom: 28 }}>
               {ratios.map((r) => {
                 const pct = Math.min((r.value / r.max) * 100, 100);

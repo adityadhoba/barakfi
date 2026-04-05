@@ -1,0 +1,60 @@
+.strip {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.line {
+  margin: 0;
+}
+
+.line strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.disclaimer {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.complianceIntro {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--emerald-border);
+  background: var(--emerald-bg);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.complianceIntroTitle {
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px;
+  font-size: 0.82rem;
+}
+
+.complianceIntro ul {
+  margin: 8px 0 0;
+  padding-left: 1.1rem;
+}
+
+.complianceIntro li {
+  margin-bottom: 4px;
+}
