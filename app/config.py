@@ -60,7 +60,6 @@ NEWS_RSS_URL = os.getenv(
     "NEWS_RSS_URL",
     "https://news.google.com/rss/search?q=Islamic+finance+OR+Shariah+investing&hl=en-US&gl=US&ceid=US:en",
 )
-
 # Upstox OAuth (optional — for broker connect)
 UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY", "")
 UPSTOX_API_SECRET = os.getenv("UPSTOX_API_SECRET", "")

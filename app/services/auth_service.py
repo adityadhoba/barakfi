@@ -83,7 +83,8 @@ def verify_clerk_token(token: str) -> dict:
         if last_error and ("JWK" in exc_name or "Connection" in exc_name):
             hint = (
                 " Tried issuer JWKS and CLERK_JWKS_URL. Ensure the API can reach "
-                "your Clerk domain (egress/DNS), or set CLERK_JWKS_URL to the JWKS URL from Clerk Dashboard."
+                "your Clerk domain (egress/DNS), or set CLERK_JWKS_URL from Clerk Dashboard "
+                "(the default https://api.clerk.com/v1/jwks is usually wrong for session tokens)."
             )
         raise HTTPException(
             status_code=401,
