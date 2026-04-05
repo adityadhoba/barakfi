@@ -13,6 +13,7 @@ import {
 } from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
+import { HomeHeroAuth } from "@/components/home-hero-auth";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -61,11 +62,7 @@ async function loadScreenedUniverse(stocks: Stock[]): Promise<{
   return { screened, skippedFullStats: false };
 }
 
-type Props = {
-  isSignedIn: boolean;
-};
-
-export async function HomeDashboard({ isSignedIn }: Props) {
+export async function HomeDashboard() {
   const [stocks, trendingStocks, collections, investors, etfs, newsResult] = await Promise.all([
     getStocks(),
     getTrending("popular", undefined, 6),
@@ -107,35 +104,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             <span className={styles.heroBadgeDot} />
             Shariah-Compliant Indian Equities
           </div>
-          <h1 className={styles.heroTitle}>
-            {isSignedIn ? (
-              <>As-salamu alaykum.</>
-            ) : (
-              <>
-                Invest with <span className={styles.heroGradient}>clarity</span> and <span className={styles.heroGradient}>conviction</span>.
-              </>
-            )}
-          </h1>
-          <p className={styles.heroSub}>
-            Screen Indian stocks using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
-            Multi-methodology compliance, real-time data, zero cost.
-          </p>
-          <div className={styles.heroCtas}>
-            <Link href="/screener" className={styles.heroCtaPrimary}>
-              Open Screener
-              <span className={styles.heroCtaArrow}>&rarr;</span>
-            </Link>
-            {!isSignedIn && (
-              <Link href="/sign-up" className={styles.heroCtaSecondary}>
-                Create free account
-              </Link>
-            )}
-            {isSignedIn && (
-              <Link href="/watchlist" className={styles.heroCtaSecondary}>
-                My Watchlist
-              </Link>
-            )}
-          </div>
+          <HomeHeroAuth />
 
           {/* Social Proof Numbers */}
           <div className={styles.socialProof}>
