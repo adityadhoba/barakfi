@@ -82,6 +82,16 @@ class RulebookResponse(BaseModel):
     profiles: list[RuleProfile]
 
 
+class CheckStockResponse(BaseModel):
+    """Lightweight screening summary for GET /api/check-stock (product language)."""
+
+    name: str
+    status: str = Field(description='Halal | Doubtful | Haram')
+    score: int = Field(ge=0, le=100)
+    summary: str
+    details_available: bool
+
+
 class AuthStrategyResponse(BaseModel):
     provider: str
     google_enabled: bool

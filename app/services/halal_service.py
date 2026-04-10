@@ -510,3 +510,48 @@ def evaluate_stock_multi(stock: dict) -> dict:
             "total": len(ALL_PROFILE_CODES),
         },
     }
+
+
+def stock_check_details_available(stock: dict) -> bool:
+    """True when core fundamentals exist in the stock payload (enough to run ratios meaningfully)."""
+    return (
+        (stock.get("market_cap") or 0) > 0
+        and (stock.get("total_business_income") or 0) > 0
+        and (stock.get("total_assets") or 0) > 0
+    )
+
+
+def build_stock_check_payload(name: str, stock: dict, multi: dict) -> dict:
+    """
+    Compact check-stock API shape: product status labels, consensus score, one-line summary.
+
+    Expects `multi` from evaluate_stock_multi(stock).
+    """
+    consensus = multi["consensus_status"]
+    score = int(multi["screening_score"])
+    tallies = multi["summary"]
+    halal_count = tallies["halal_count"]
+    cautious_count = tallies["cautious_count"]
+    fail_count = tallies["non_compliant_count"]
+    total = tallies["total"] or len(ALL_PROFILE_CODES)
+
+    if consensus == "HALAL":
+        status = "Halal"
+        summary = "Consensus pass across four Shariah screening methodologies."
+    elif consensus == "NON_COMPLIANT":
+        status = "Haram"
+        summary = "Consensus fail on financial ratios or sector exclusion."
+    else:
+        status = "Doubtful"
+        summary = (
+            f"{halal_count} of {total} methodologies pass, {cautious_count} need review, "
+            f"{fail_count} fail — verify before investing."
+        )
+
+    return {
+        "name": name,
+        "status": status,
+        "score": max(0, min(100, score)),
+        "summary": summary,
+        "details_available": stock_check_details_available(stock),
+    }

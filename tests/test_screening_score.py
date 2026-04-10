@@ -3,10 +3,12 @@
 import pytest
 
 from app.services.halal_service import (
+    build_stock_check_payload,
     evaluate_stock,
     evaluate_stock_multi,
     screening_score_for_manual_override,
     screening_score_from_evaluation,
+    stock_check_details_available,
 )
 
 
@@ -148,3 +150,26 @@ def test_evaluate_stock_multi_includes_consensus_score():
 )
 def test_screening_score_for_manual_override(status, expected):
     assert screening_score_for_manual_override(status) == expected
+
+
+def test_build_stock_check_payload_halal():
+    stock = {
+        "sector": "TECHNOLOGY",
+        "market_cap": 1_000_000_000,
+        "average_market_cap_36m": 1_000_000_000,
+        "debt": 1,
+        "total_assets": 500_000_000,
+        "total_business_income": 100_000_000,
+        "interest_income": 0,
+        "non_permissible_income": 0,
+        "accounts_receivable": 10_000_000,
+        "cash_and_equivalents": 20_000_000,
+        "short_term_investments": 0,
+        "fixed_assets": 200_000_000,
+    }
+    multi = evaluate_stock_multi(stock)
+    out = build_stock_check_payload("TestCo", stock, multi)
+    assert out["name"] == "TestCo"
+    assert out["status"] == "Halal"
+    assert out["score"] == multi["screening_score"]
+    assert out["details_available"] is stock_check_details_available(stock)
