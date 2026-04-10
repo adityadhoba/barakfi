@@ -19,6 +19,7 @@ capitalisation) as the denominator for all financial ratios.
 Core Functions:
 - evaluate_stock(stock_dict, profile) -> screening result with status
 - evaluate_stock_multi(stock_dict) -> results for all four methodologies
+- screening_score_from_evaluation(result_dict) -> 0–100 from reasons/flags
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
@@ -168,6 +169,65 @@ PROFILES = {
 ALL_PROFILE_CODES = list(PROFILES.keys())
 
 FIXED_ASSETS_REVIEW_THRESHOLD = 0.25
+
+# Compliance score: start at 100, deduct by issue class (per methodology result).
+SCORE_START = 100
+SCORE_DEBT_BREACH = 30
+SCORE_INCOME_BREACH = 30
+SCORE_OTHER_ISSUE = 10
+
+
+def _reason_is_success_line(reason: str) -> bool:
+    return "Meets all screening criteria" in reason
+
+
+def screening_score_from_evaluation(result: dict) -> int:
+    """
+    Derive a 0–100 score from a single evaluate_stock() result dict.
+
+    Rules:
+    - Start at 100.
+    - Any debt ratio breach reason → −30 once (multiple debt lines still −30 total).
+    - Any non-permissible or interest income breach → −30 once for that bucket.
+    - Each other hard-rule reason (sector, receivables, cash/IB, unknown) → −10.
+    - Each manual_review_flags entry → −10.
+    """
+    reasons = list(result.get("reasons") or [])
+    flags = list(result.get("manual_review_flags") or [])
+
+    debt_hit = False
+    income_hit = False
+    other_hits = 0
+
+    for r in reasons:
+        if _reason_is_success_line(r):
+            continue
+        s = r.strip()
+        if s.startswith("Debt is"):
+            debt_hit = True
+        elif s.startswith("Non-permissible income") or s.startswith("Interest income"):
+            income_hit = True
+        else:
+            other_hits += 1
+
+    other_hits += len(flags)
+
+    score = SCORE_START
+    if debt_hit:
+        score -= SCORE_DEBT_BREACH
+    if income_hit:
+        score -= SCORE_INCOME_BREACH
+    score -= SCORE_OTHER_ISSUE * other_hits
+    return max(0, min(100, score))
+
+
+def screening_score_for_manual_override(status: str) -> int:
+    """When a human override replaces automated reasons, map status to a simple score."""
+    if status == "HALAL":
+        return 100
+    if status == "NON_COMPLIANT":
+        return 0
+    return 50
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -370,12 +430,17 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
             f"Meets all screening criteria under {p['label']} methodology."
         )
 
+    screening_score = screening_score_from_evaluation(
+        {"reasons": reasons, "manual_review_flags": manual_review_flags}
+    )
+
     return {
         "profile": profile,
         "status": status,
         "methodology_label": p["label"],
         "reasons": reasons,
         "manual_review_flags": manual_review_flags,
+        "screening_score": screening_score,
         "purification_ratio_pct": purification_pct,
         "disclaimer": SCREENING_DISCLAIMER,
         "breakdown": {
@@ -426,8 +491,16 @@ def evaluate_stock_multi(stock: dict) -> dict:
     else:
         consensus = "CAUTIOUS"
 
+    per_method_scores = [r["screening_score"] for r in results.values()]
+    if consensus == "CAUTIOUS":
+        consensus_score = int(round(sum(per_method_scores) / len(per_method_scores)))
+    else:
+        # HALAL or NON_COMPLIANT: use strictest methodology (lowest score).
+        consensus_score = min(per_method_scores)
+
     return {
         "consensus_status": consensus,
+        "screening_score": max(0, min(100, consensus_score)),
         "methodologies": results,
         "disclaimer": SCREENING_DISCLAIMER,
         "summary": {

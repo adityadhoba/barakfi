@@ -200,6 +200,8 @@ export type ScreeningResult = {
   status: string;
   reasons: string[];
   manual_review_flags: string[];
+  /** 0–100: starts at 100, −30 debt breach, −30 income breach, −10 per other issue / review flag */
+  screening_score: number;
   purification_ratio_pct: number | null;
   active_review_case: PublicReviewCase | null;
   recent_review_cases: PublicReviewCase[];
@@ -637,6 +639,8 @@ export type MultiMethodologyResult = {
   symbol: string;
   name: string;
   consensus_status: string;
+  /** 0–100 consensus score from methodology scores (see backend halal_service) */
+  screening_score: number;
   methodologies: Record<string, ScreeningResult>;
   summary: {
     halal_count: number;

@@ -54,6 +54,7 @@ class ScreeningResult(BaseModel):
     status: str
     reasons: list[str]
     manual_review_flags: list[str]
+    screening_score: int = Field(ge=0, le=100)
     purification_ratio_pct: float | None = None
     active_review_case: "PublicReviewCaseRead | None" = None
     recent_review_cases: list["PublicReviewCaseRead"] = []
