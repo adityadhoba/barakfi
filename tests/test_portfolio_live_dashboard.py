@@ -92,11 +92,9 @@ def test_portfolio_quote_cache_expires():
 
     mock_q = MagicMock()
     mock_q.last_price = 77.0
-    ttl = plp._CACHE_TTL_SECONDS
-    mono_vals = iter([0.0, 0.0, ttl + 1.0, ttl + 2.0])
-
     with patch.object(plp, "fetch_quote_by_provider", return_value=mock_q) as fetch:
-        with patch.object(plp.time, "monotonic", side_effect=lambda: next(mono_vals)):
+        # TTL 0 → next read treats entry as expired without brittle time.monotonic sequencing.
+        with patch.object(plp, "_CACHE_TTL_SECONDS", 0.0):
             helpers.build_dashboard_payload("t", [p], [])
             helpers.build_dashboard_payload("t", [p], [])
     assert fetch.call_count == 2

@@ -14,6 +14,8 @@ import {
   getBulkScreeningResults,
   getEquityQuote,
   getStocks,
+  type EquityQuote,
+  type WorkspaceBundle,
 } from "@/lib/api";
 import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
@@ -50,6 +52,34 @@ const STATUS_LABELS: Record<string, string> = {
   CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
+
+/** Coerce API numerics; avoids render crashes if JSON has string numbers. */
+function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
+  if (!raw) return null;
+  const n = (v: unknown): number | null => {
+    if (v == null) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const x = Number(v);
+      if (Number.isFinite(x)) return x;
+    }
+    return null;
+  };
+  const last = n(raw.last_price);
+  if (last == null || last <= 0) return null;
+  return {
+    ...raw,
+    last_price: last,
+    previous_close: n(raw.previous_close),
+    change: n(raw.change),
+    change_percent: n(raw.change_percent),
+    day_high: n(raw.day_high),
+    day_low: n(raw.day_low),
+    volume: n(raw.volume),
+    week_52_high: n(raw.week_52_high),
+    week_52_low: n(raw.week_52_low),
+  };
+}
 
 function formatCurrency(value: number, currency: string = "INR") {
   const cur = currency || "INR";
@@ -157,13 +187,21 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [detail, watchlist, workspace, allStocks, multiScreening] = await Promise.all([
+  const [detail, watchlist, allStocks, multiScreening] = await Promise.all([
     fetchStockAndScreenForPage(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
-    token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
     getStocks(),
     fetchMultiScreeningForPage(symbol),
   ]);
+
+  let workspace: WorkspaceBundle | null = null;
+  if (token) {
+    try {
+      workspace = await getAuthenticatedWorkspace(token, actor);
+    } catch {
+      workspace = null;
+    }
+  }
 
   if (detail.kind === "not_found") {
     notFound();
@@ -174,7 +212,7 @@ export default async function StockDetailPage({
 
   const { stock, screening } = detail;
 
-  const liveQuote = await getEquityQuote(symbol, "auto_global", stock.exchange);
+  const liveQuote = sanitizeEquityQuote(await getEquityQuote(symbol, "auto_global", stock.exchange));
 
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;
