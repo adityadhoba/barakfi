@@ -16,7 +16,7 @@ const statusOptions = [
   { value: "all", label: "All statuses" },
   { value: "halal", label: "Halal only" },
   { value: "requires_review", label: "Requires review" },
-  { value: "non_compliant", label: "Non-compliant" },
+  { value: "non_compliant", label: "Haram" },
 ];
 
 function formatStatus(value: string) {

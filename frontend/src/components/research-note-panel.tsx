@@ -2,6 +2,7 @@
 
 import styles from "./research-notes.module.css";
 import type { ResearchNote } from "@/lib/api";
+import { screeningStatusLabel } from "@/lib/screening-status-label";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -92,7 +93,7 @@ export function ResearchNotePanel({ notes }: Props) {
 
             <div className={styles.noteFooter}>
               <span className={styles.noteStatus}>
-                {note.status_snapshot.toLowerCase().replaceAll("_", " ")}
+                {screeningStatusLabel(note.status_snapshot)}
               </span>
             </div>
           </div>

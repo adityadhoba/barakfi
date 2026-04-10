@@ -196,7 +196,7 @@ export async function HomeDashboard() {
         <Link href="/screener?status=CAUTIOUS" className={`${styles.statCard} ${styles.statCardReview}`}>
           <StatIconCautious />
           <div className={styles.statBody}>
-            <span className={styles.statLabel}>Cautious</span>
+            <span className={styles.statLabel}>Doubtful</span>
             <span className={`${styles.statValue} ${styles.valueReview}`}>{hasStats ? review : "\u2014"}</span>
             <span className={styles.statSub}>Need verification</span>
           </div>
@@ -204,7 +204,7 @@ export async function HomeDashboard() {
         <Link href="/screener?status=NON_COMPLIANT" className={`${styles.statCard} ${styles.statCardFail}`}>
           <StatIconAvoid />
           <div className={styles.statBody}>
-            <span className={styles.statLabel}>Avoid</span>
+            <span className={styles.statLabel}>Haram</span>
             <span className={`${styles.statValue} ${styles.valueFail}`}>{hasStats ? fail : "\u2014"}</span>
             <span className={styles.statSub}>Outside rules</span>
           </div>

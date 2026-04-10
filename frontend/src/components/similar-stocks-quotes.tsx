@@ -25,8 +25,8 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 type Props = {

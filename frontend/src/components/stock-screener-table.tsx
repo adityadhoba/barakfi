@@ -24,8 +24,8 @@ const STATUS_ORDER: Record<string, number> = { HALAL: 0, CAUTIOUS: 1, NON_COMPLI
 const STATUS_OPTIONS = [
   { key: "all", label: "All Stocks" },
   { key: "HALAL", label: "Halal" },
-  { key: "CAUTIOUS", label: "Cautious" },
-  { key: "NON_COMPLIANT", label: "Non-Compliant" },
+  { key: "CAUTIOUS", label: "Doubtful" },
+  { key: "NON_COMPLIANT", label: "Haram" },
 ] as const;
 
 const MCAP_OPTIONS = [
@@ -44,8 +44,8 @@ const EXCHANGE_OPTIONS = [
 
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   HALAL: { cls: "statusHalal", label: "Halal" },
-  CAUTIOUS: { cls: "statusReview", label: "Cautious" },
-  NON_COMPLIANT: { cls: "statusFail", label: "Avoid" },
+  CAUTIOUS: { cls: "statusReview", label: "Doubtful" },
+  NON_COMPLIANT: { cls: "statusFail", label: "Haram" },
 };
 
 function formatPrice(value: number, currency?: string) {

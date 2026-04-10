@@ -1,5 +1,6 @@
 import styles from "@/app/page.module.css";
 import type { ComplianceQueueItem } from "@/lib/api";
+import { screeningStatusLabel } from "@/lib/screening-status-label";
 import Link from "next/link";
 
 type Props = {
@@ -24,7 +25,7 @@ export function ComplianceQueuePanel({ items }: Props) {
                   ? styles.statusCritical
                   : styles.statusWarning
             }>
-              {item.current_status.toLowerCase().replaceAll("_", " ")}
+              {screeningStatusLabel(item.current_status)}
             </span>
           </div>
           <p>

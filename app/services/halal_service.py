@@ -22,10 +22,12 @@ Core Functions:
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
-Status Values:
+Status Values (API / engine — unchanged):
 - HALAL: Meets all screening criteria under the given methodology
 - CAUTIOUS: Passes core criteria but has flags that need attention
 - NON_COMPLIANT: Fails one or more screening criteria
+
+Product UI labels (frontend): HALAL → Halal, CAUTIOUS → Doubtful, NON_COMPLIANT → Haram.
 """
 
 PRIMARY_PROFILE = "sp_shariah"

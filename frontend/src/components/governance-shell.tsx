@@ -7,6 +7,7 @@ import { GovernanceReviewCaseForm } from "@/components/governance-review-case-fo
 import { GovernanceReviewCaseUpdateForm } from "@/components/governance-review-case-update-form";
 import { GovernanceSupportNoteForm } from "@/components/governance-support-note-form";
 import { GovernanceUserStatusForm } from "@/components/governance-user-status-form";
+import { screeningStatusLabel } from "@/lib/screening-status-label";
 import Link from "next/link";
 
 function GovernanceDeniedState() {
@@ -293,7 +294,7 @@ export async function GovernanceShell() {
                     <strong>#{item.id} · {item.stock.symbol}</strong>
                     <span>
                       {item.status} · {item.priority}
-                      {item.review_outcome ? ` · ${item.review_outcome.toLowerCase().replaceAll("_", " ")}` : ""}
+                      {item.review_outcome ? ` · ${screeningStatusLabel(item.review_outcome)}` : ""}
                     </span>
                   </div>
                   <p>{item.summary}</p>
@@ -325,7 +326,7 @@ export async function GovernanceShell() {
                           ? styles.statusCritical
                           : styles.statusWarning
                     }>
-                      {item.decided_status.toLowerCase().replaceAll("_", " ")}
+                      {screeningStatusLabel(item.decided_status)}
                     </span>
                   </div>
                   <p>{item.rationale}</p>

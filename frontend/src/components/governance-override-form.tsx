@@ -68,8 +68,8 @@ export function GovernanceOverrideForm() {
           <span>Decision</span>
           <select onChange={(event) => setDecidedStatus(event.target.value)} value={decidedStatus}>
             <option value="HALAL">Halal</option>
-            <option value="CAUTIOUS">Cautious</option>
-            <option value="NON_COMPLIANT">Non-compliant</option>
+            <option value="CAUTIOUS">Doubtful</option>
+            <option value="NON_COMPLIANT">Haram</option>
           </select>
         </label>
 

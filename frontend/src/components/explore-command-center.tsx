@@ -7,6 +7,7 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { screeningStatusLabel } from "@/lib/screening-status-label";
 
 type Props = {
   stocks: Stock[];
@@ -23,7 +24,7 @@ function formatRatio(value: number) {
 }
 
 function formatStatus(value: string) {
-  return value.toLowerCase().replaceAll("_", " ");
+  return screeningStatusLabel(value, value.replaceAll("_", " "));
 }
 
 function matchesSearch(stock: Stock, query: string, sector: string) {

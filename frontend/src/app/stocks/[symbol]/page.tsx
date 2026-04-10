@@ -55,8 +55,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 /** Coerce API numerics; avoids render crashes if JSON has string numbers. */
@@ -305,7 +305,7 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: stock.name,
-    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Cautious"}`,
+    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Doubtful"}`,
     url: `https://barakfi.in/stocks/${stock.symbol}`,
     provider: {
       "@type": "Organization",
@@ -316,7 +316,7 @@ export default async function StockDetailPage({
       {
         "@type": "PropertyValue",
         name: "Shariah Status",
-        value: STATUS_LABELS[screening.status] || "Cautious",
+        value: STATUS_LABELS[screening.status] || "Doubtful",
       },
       {
         "@type": "PropertyValue",
@@ -404,7 +404,7 @@ export default async function StockDetailPage({
               <WatchlistActionButton symbol={stock.symbol} initialInWatchlist={isInWatchlist} />
               <ShareButton
                 title={`${stock.name} (${stock.symbol}) — Shariah Screening`}
-                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Cautious"}`}
+                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Doubtful"}`}
               />
             </div>
           </div>
