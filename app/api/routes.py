@@ -81,6 +81,7 @@ from app.schemas import (
     SavedScreenerRead,
     ScreeningLogRead,
     ScreeningResult,
+    CheckStockResponse,
     StockRead,
     UserSettingsRead,
     UserSettingsUpdateRequest,
@@ -93,6 +94,7 @@ from app.schemas import (
 )
 from app.services.halal_service import (
     PRIMARY_PROFILE,
+    build_stock_check_payload,
     evaluate_stock,
     evaluate_stock_multi,
     get_profile_version,
@@ -353,6 +355,34 @@ def get_stock(symbol: str, db: Session = Depends(get_db)):
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return stock
+
+
+@router.get("/check-stock", response_model=CheckStockResponse)
+def check_stock(
+    symbol: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Quick screening summary: product labels (Halal / Doubtful / Haram), consensus score, one line.
+
+    Auth: None (public). Uses four-methodology consensus (same engine as /screen/{symbol}/multi).
+    """
+    clean = symbol.strip().upper()
+    if not clean:
+        raise HTTPException(status_code=400, detail="symbol is required")
+
+    stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == clean, Stock.is_active.is_(True))
+        .first()
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    stock_data = helpers.stock_to_dict(stock)
+    multi = evaluate_stock_multi(stock_data)
+    payload = build_stock_check_payload(stock.name, stock_data, multi)
+    return payload
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)

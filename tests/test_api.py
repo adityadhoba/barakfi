@@ -105,6 +105,29 @@ def test_screen_stock():
     assert response.json()["active_review_case"] is None
 
 
+def test_check_stock_returns_compact_payload():
+    response = client.get("/api/check-stock", params={"symbol": "TCS"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"]
+    assert body["status"] in ("Halal", "Doubtful", "Haram")
+    assert isinstance(body["score"], int)
+    assert 0 <= body["score"] <= 100
+    assert isinstance(body["summary"], str) and len(body["summary"]) > 0
+    assert "details_available" in body
+    assert isinstance(body["details_available"], bool)
+
+
+def test_check_stock_404_unknown_symbol():
+    response = client.get("/api/check-stock", params={"symbol": "NOTREALSYM99"})
+    assert response.status_code == 404
+
+
+def test_check_stock_400_empty_symbol():
+    response = client.get("/api/check-stock", params={"symbol": "   "})
+    assert response.status_code == 400
+
+
 def test_screen_stock_includes_active_review_case():
     response = client.get("/api/screen/WIPRO")
     assert response.status_code == 200
