@@ -562,7 +562,11 @@ export default async function StockDetailPage({
 
         {/* Price Chart */}
         <div style={{ marginBottom: 28 }}>
-          <PriceChart symbol={stock.symbol} exchange={stock.exchange} />
+          <PriceChart
+            symbol={stock.symbol}
+            exchange={stock.exchange}
+            liveClose={liveQuote?.last_price ?? stock.price}
+          />
         </div>
 
         {/* 52-Week Range Visual + Volume Summary */}
