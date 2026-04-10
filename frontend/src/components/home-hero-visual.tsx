@@ -2,14 +2,8 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ShieldCheck, ArrowUpRight } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import styles from "./home-hero-visual.module.css";
-
-export type HomeHeroVisualProps = {
-  totalStocks: number;
-  sectorCount: number;
-  halalCount: number | null;
-};
 
 function MiniBars() {
   const heights = [22, 42, 68, 88];
@@ -67,140 +61,93 @@ function OrbitGraphic() {
   );
 }
 
-export function HomeHeroVisual({ totalStocks, sectorCount, halalCount }: HomeHeroVisualProps) {
-  const halalLabel =
-    halalCount == null ? "—" : halalCount > 0 ? `${halalCount}+` : "0";
-
+export function HomeHeroVisual() {
   return (
     <section
       className={styles.section}
       aria-label="Barakfi at a glance: screening, markets, and live market data"
     >
-      <div className={styles.grid}>
-        <div className={styles.left}>
-          <p className={styles.lead}>
-            Barakfi brings Shariah screening, live market context, and portfolio tools together — built for
-            investors who want compliance without guesswork.
-          </p>
-          <div className={styles.ctas}>
-            <Link href="/screener" className={styles.btnPrimary}>
-              Open screener
-              <ArrowUpRight className={styles.iconArrow} aria-hidden />
-            </Link>
-            <Link href="/sign-up" className={styles.btnGhost}>
-              Create free account
-            </Link>
-          </div>
-          <div className={styles.stats}>
-            <div>
-              <div className={styles.statValue}>{totalStocks}+</div>
-              <div className={styles.statLabel}>Stocks in universe</div>
-            </div>
-            <div>
-              <div className={styles.statValue}>{sectorCount}</div>
-              <div className={styles.statLabel}>Sectors covered</div>
-            </div>
-            <div>
-              <div className={styles.statValue}>{halalLabel}</div>
-              <div className={styles.statLabel}>Halal names (screened)</div>
-            </div>
-            <div>
-              <div className={styles.statValue}>5</div>
-              <div className={styles.statLabel}>Financial ratios</div>
-            </div>
-          </div>
-          <div className={styles.trust}>
-            <span>Methodology you can trace</span>
-            <div className={styles.trustNames}>
-              <span>S&amp;P-style ratios</span>
-              <span>NSE · US · LSE</span>
-              <span>Transparent flags</span>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.cards}>
-          <Link
-            href="/methodology"
-            className={styles.cardLink}
-            aria-label="Learn our Shariah screening methodology"
+      <div className={styles.cards}>
+        <Link
+          href="/methodology"
+          className={styles.cardLink}
+          aria-label="Learn our Shariah screening methodology"
+        >
+          <motion.div
+            className={styles.cardSecure}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.45 }}
           >
-            <motion.div
-              className={styles.cardSecure}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45 }}
-            >
-              <div className={styles.cardSecureInner}>
-                <div className={styles.cardSecureLabel}>
-                  <div className={styles.iconWrap}>
-                    <ShieldCheck className={styles.iconShield} aria-hidden />
-                  </div>
-                  <span className={styles.pill}>Screening first</span>
+            <div className={styles.cardSecureInner}>
+              <div className={styles.cardSecureLabel}>
+                <div className={styles.iconWrap}>
+                  <ShieldCheck className={styles.iconShield} aria-hidden />
                 </div>
-                <p className={styles.cardSecureTitle}>
-                  Rules-backed checks
-                  <br />
-                  before you allocate capital
-                </p>
-                <motion.div
-                  className={styles.pulseDot}
-                  animate={{
-                    boxShadow: [
-                      "0 0 0 0 rgba(16, 185, 129, 0.35)",
-                      "0 0 0 14px rgba(16, 185, 129, 0)",
-                    ],
-                  }}
-                  transition={{ duration: 2.4, repeat: Infinity }}
-                />
+                <span className={styles.pill}>Screening first</span>
               </div>
-            </motion.div>
-          </Link>
+              <p className={styles.cardSecureTitle}>
+                Rules-backed checks
+                <br />
+                before you allocate capital
+              </p>
+              <motion.div
+                className={styles.pulseDot}
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 rgba(16, 185, 129, 0.35)",
+                    "0 0 0 14px rgba(16, 185, 129, 0)",
+                  ],
+                }}
+                transition={{ duration: 2.4, repeat: Infinity }}
+              />
+            </div>
+          </motion.div>
+        </Link>
 
-          <Link
-            href="/screener"
-            className={styles.cardLink}
-            aria-label="Open the stock screener for NSE, US, and LSE listings"
+        <Link
+          href="/screener"
+          className={styles.cardLink}
+          aria-label="Open the stock screener for NSE, US, and LSE listings"
+        >
+          <motion.div
+            className={styles.cardGlobe}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.45, delay: 0.06 }}
           >
-            <motion.div
-              className={styles.cardGlobe}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45, delay: 0.06 }}
-            >
-              <OrbitGraphic />
-              <div className={styles.cardGlobeText}>
-                <div className={styles.cardGlobeKicker}>Markets</div>
-                <div className={styles.cardGlobeTitle}>
-                  India-first,
-                  <br />
-                  global where you need it
-                </div>
+            <OrbitGraphic />
+            <div className={styles.cardGlobeText}>
+              <div className={styles.cardGlobeKicker}>Markets</div>
+              <div className={styles.cardGlobeTitle}>
+                India-first,
+                <br />
+                global where you need it
               </div>
-            </motion.div>
-          </Link>
+            </div>
+          </motion.div>
+        </Link>
 
-          <Link
-            href="/trending"
-            className={styles.cardLink}
-            aria-label="See trending stocks with live quotes"
+        <Link
+          href="/trending"
+          className={styles.cardLink}
+          aria-label="See trending stocks with live quotes"
+        >
+          <motion.div
+            className={styles.cardGrowth}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.45, delay: 0.12 }}
           >
-            <motion.div
-              className={styles.cardGrowth}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.45, delay: 0.12 }}
-            >
-              <div className={styles.growthKicker}>Illustrative pulse</div>
-              <div className={styles.growthValue}>Live quotes</div>
-              <div className={styles.growthSub}>Charts &amp; batch prices stay in sync</div>
-              <MiniBars />
-            </motion.div>
-          </Link>
-        </div>
+            <div className={styles.growthKicker}>Illustrative pulse</div>
+            <div className={styles.growthValue}>Live quotes</div>
+            <div className={styles.growthSub}>Charts &amp; batch prices stay in sync</div>
+            <MiniBars />
+          </motion.div>
+        </Link>
       </div>
     </section>
   );
