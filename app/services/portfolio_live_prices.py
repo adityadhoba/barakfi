@@ -32,9 +32,12 @@ def _exchange_for_quote(stock: object) -> str:
 
 
 def _fetch_one(symbol: str, exchange: str) -> tuple[str, str, float | None]:
-    q = fetch_quote_by_provider(symbol, exchange, QUOTE_PROVIDER)
-    if q and q.last_price is not None and q.last_price > 0:
-        return symbol, exchange, float(q.last_price)
+    try:
+        q = fetch_quote_by_provider(symbol, exchange, QUOTE_PROVIDER)
+        if q and q.last_price is not None and q.last_price > 0:
+            return symbol, exchange, float(q.last_price)
+    except Exception:
+        pass
     return symbol, exchange, None
 
 
@@ -98,13 +101,22 @@ def build_live_last_price_by_symbol(holdings: list["PortfolioHolding"]) -> dict[
     if not to_fetch:
         return out
 
-    max_workers = min(16, len(to_fetch))
+    # Cap workers to avoid tripping Yahoo/NSE rate limits when many holdings refresh at once.
+    max_workers = min(4, len(to_fetch))
+    workspace_quote_wait_seconds = 25.0
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
         futures = {pool.submit(_fetch_one, sym, ex): (sym, ex) for sym, ex in to_fetch}
-        for fut in as_completed(futures):
-            sym, ex, px = fut.result()
-            if px is not None:
-                _cache_set_price(sym, ex, px)
-                out[sym] = px
+        try:
+            for fut in as_completed(futures, timeout=workspace_quote_wait_seconds):
+                try:
+                    sym, ex, px = fut.result()
+                except Exception:
+                    continue
+                if px is not None:
+                    _cache_set_price(sym, ex, px)
+                    out[sym] = px
+        except TimeoutError:
+            # Partial quotes + DB fallback for remaining symbols; avoids blocking workspace on slow vendors.
+            pass
 
     return out
