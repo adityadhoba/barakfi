@@ -19,6 +19,7 @@ capitalisation) as the denominator for all financial ratios.
 Core Functions:
 - evaluate_stock(stock_dict, profile) -> screening result with status
 - evaluate_stock_multi(stock_dict) -> results for all four methodologies
+- get_simple_result(stock_dict) -> {status, score, summary} for multi-methodology consensus
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
@@ -436,4 +437,48 @@ def evaluate_stock_multi(stock: dict) -> dict:
             "non_compliant_count": fail_count,
             "total": len(ALL_PROFILE_CODES),
         },
+    }
+
+
+def get_simple_result(stock: dict) -> dict:
+    """
+    Wrapper around evaluate_stock_multi: a compact consensus view for APIs or UI.
+
+    Returns only:
+        status: "Halal" | "Doubtful" | "Haram" (title case)
+        score: 0–100 (100 = Halal, 0 = Haram; Doubtful scales with methodology pass count)
+        summary: single-line explanation
+    """
+    multi = evaluate_stock_multi(stock)
+    consensus = multi["consensus_status"]
+    tallies = multi["summary"]
+    halal_count = tallies["halal_count"]
+    cautious_count = tallies["cautious_count"]
+    fail_count = tallies["non_compliant_count"]
+    total = tallies["total"] or len(ALL_PROFILE_CODES)
+
+    if consensus == "HALAL":
+        return {
+            "status": "Halal",
+            "score": 100,
+            "summary": "Consensus pass across four Shariah screening methodologies.",
+        }
+    if consensus == "NON_COMPLIANT":
+        return {
+            "status": "Haram",
+            "score": 0,
+            "summary": "Consensus fail on financial ratios or sector exclusion.",
+        }
+
+    # CAUTIOUS → Doubtful
+    score = int(round(100 * halal_count / total)) if total else 0
+    score = max(0, min(100, score))
+    summary = (
+        f"{halal_count} of {total} methodologies pass, {cautious_count} need review, "
+        f"{fail_count} fail — verify before investing."
+    )
+    return {
+        "status": "Doubtful",
+        "score": score,
+        "summary": summary,
     }
