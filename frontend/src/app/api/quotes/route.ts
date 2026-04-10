@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       try {
         const res = await fetch(
           `${API_BASE}/market-data/quote/${encodeURIComponent(symbol)}?provider=${provider}&exchange=${encodeURIComponent(exchange)}`,
-          { next: { revalidate: 120 } },
+          { next: { revalidate: 60 } },
         );
         if (!res.ok) return { symbol, last_price: null, change: null, change_percent: null };
         const data = await res.json();
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     { quotes },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },
     },
   );
