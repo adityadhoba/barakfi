@@ -73,6 +73,22 @@
 
 .pickerItem:hover { background: var(--bg-soft); }
 
+.pickerItemBestMatch {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--emerald) 12%, transparent) 0%,
+    transparent 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--emerald) 35%, var(--line));
+}
+.pickerItemBestMatch:hover {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--emerald) 20%, transparent) 0%,
+    var(--bg-soft) 100%
+  );
+}
+
 .pickerSymbol {
   font-size: 0.84rem;
   font-weight: 700;

@@ -7,6 +7,8 @@ import { useMobileNav } from "@/components/mobile-nav-context";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 
 type StockHit = {
   symbol: string;
@@ -77,15 +79,8 @@ export function TopbarSearch() {
   const q = deferredValue.trim().toLowerCase();
   const filtered = useMemo(() => {
     if (q.length === 0) return [];
-    return stocks
-      .filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q) ||
-          s.sector.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [q, stocks]);
+    return rankStocksForQuery(stocks, deferredValue.trim(), 8);
+  }, [q, stocks, deferredValue]);
 
   const recentSymbols = useMemo(() => getRecentSearches(), [open, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const recentStocks = useMemo(() => {
@@ -298,14 +293,18 @@ export function TopbarSearch() {
                     id={`search-opt-${i}`}
                     role="option"
                     aria-selected={i === focusIdx}
-                    className={`searchDropdownItem ${i === focusIdx ? "searchDropdownItemFocused" : ""}`}
+                    className={`searchDropdownItem ${i === focusIdx ? "searchDropdownItemFocused" : ""} ${i === 0 ? "searchDropdownItem--bestMatch" : ""}`}
                     onMouseEnter={() => setFocusIdx(i)}
                     onMouseDown={(e) => { e.preventDefault(); navigate(stock.symbol); }}
                   >
                     <StockLogo symbol={stock.symbol} size={28} />
                     <div className="searchDropdownLeft">
-                      <span className="searchDropdownSymbol">{stock.symbol}</span>
-                      <span className="searchDropdownName">{stock.name}</span>
+                      <span className="searchDropdownSymbol">
+                        <SearchMatchHighlight text={stock.symbol} query={deferredValue.trim()} />
+                      </span>
+                      <span className="searchDropdownName">
+                        <SearchMatchHighlight text={stock.name} query={deferredValue.trim()} />
+                      </span>
                     </div>
                     <div className="searchDropdownRight">
                       <span className="searchDropdownPrice">
