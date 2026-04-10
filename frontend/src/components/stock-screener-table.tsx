@@ -12,6 +12,7 @@ import { StockPreviewPopup } from "@/components/stock-preview-popup";
 import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
 import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -66,10 +67,14 @@ function formatPct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function getSortValue(s: ScreenedStock, key: SortKey): number | string {
+function getSortValue(
+  s: ScreenedStock,
+  key: SortKey,
+  livePrice?: number | null,
+): number | string {
   switch (key) {
     case "symbol": return s.symbol;
-    case "price": return s.price;
+    case "price": return livePrice ?? s.price;
     case "market_cap": return s.market_cap;
     case "status": return STATUS_ORDER[s.screening.status] ?? 9;
     case "debt_ratio": return s.screening.breakdown.debt_to_36m_avg_market_cap_ratio;
@@ -142,7 +147,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const exchangeBySymbol = useMemo(() => {
     const m: Record<string, string> = {};
     for (const s of screenedStocks) {
-      m[s.symbol] = s.exchange || "NSE";
+      m[s.symbol] = exchangeForBatchQuote(s.exchange, s.currency);
     }
     return m;
   }, [screenedStocks]);
@@ -214,13 +219,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const sorted = useMemo(() => {
     const arr = [...filtered];
     arr.sort((a, b) => {
-      const va = getSortValue(a, sortKey);
-      const vb = getSortValue(b, sortKey);
+      const va = getSortValue(a, sortKey, quotes[a.symbol]?.last_price);
+      const vb = getSortValue(b, sortKey, quotes[b.symbol]?.last_price);
       if (typeof va === "number" && typeof vb === "number") return sortDir === "asc" ? va - vb : vb - va;
       return sortDir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
     return arr;
-  }, [filtered, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir, quotes]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;

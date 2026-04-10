@@ -14,32 +14,10 @@ import {
 import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
+import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
-
-function formatPrice(value: number, currency: string = "INR") {
-  const cur = currency || "INR";
-  const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: cur,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatMcap(value: number, currency: string = "INR") {
-  const cur = currency || "INR";
-  if (cur === "INR") {
-    if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-    if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-    return formatPrice(value, cur);
-  }
-  const sym = cur === "USD" ? "$" : cur === "GBP" ? "\u00a3" : "";
-  if (value >= 1e9) return `${sym}${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `${sym}${(value / 1e6).toFixed(1)}M`;
-  return formatPrice(value, cur);
-}
 
 type Screened = Stock & { screening: ScreeningResult };
 
@@ -280,41 +258,7 @@ export async function HomeDashboard() {
           <Link href="/screener" className={styles.seeAll}>Full list &rarr;</Link>
         </div>
         <p className={styles.sectionFootnote}>Based on S&P Shariah screening criteria</p>
-        <div className={styles.stockGrid}>
-          {topHalal.map((row) => {
-            const scr = 'screening' in row ? (row as Screened) : null;
-            return (
-              <Link className={styles.stockItem} href={`/stocks/${encodeURIComponent(row.symbol)}`} key={row.symbol}>
-                <div className={styles.stockItemTop}>
-                  <StockLogo
-                    symbol={row.symbol}
-                    size={36}
-                    status={scr?.screening.status}
-                    exchange={row.exchange}
-                  />
-                  <div className={styles.stockIdentity}>
-                    <span className={styles.stockSymbol}>{row.symbol}</span>
-                    <span className={styles.stockName}>{row.name}</span>
-                  </div>
-                </div>
-                <div className={styles.stockItemBottom}>
-                  <div className={styles.stockPrice}>{formatPrice(row.price, row.currency || "INR")}</div>
-                  <div className={styles.stockMcap}>{formatMcap(row.market_cap, row.currency || "INR")}</div>
-                </div>
-                {scr && (
-                  <div className={styles.stockStatus}>
-                    <span className={`${styles.statusDot} ${
-                      scr.screening.status === 'HALAL' ? styles.statusDotHalal
-                      : scr.screening.status === 'CAUTIOUS' ? styles.statusDotReview
-                      : styles.statusDotFail
-                    }`} />
-                    {scr.screening.status === 'HALAL' ? 'Halal' : scr.screening.status === 'CAUTIOUS' ? 'Cautious' : 'Avoid'}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+        <HomeTopStocksLive rows={topHalal as (Stock & { screening?: ScreeningResult })[]} />
       </section>
 
       {/* ── Ad: between sections ── */}

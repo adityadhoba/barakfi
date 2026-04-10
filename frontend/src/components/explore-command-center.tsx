@@ -3,7 +3,10 @@
 import styles from "@/app/page.module.css";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import Link from "next/link";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useBatchQuotes } from "@/hooks/use-batch-quotes";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 
 type Props = {
   stocks: Stock[];
@@ -14,14 +17,6 @@ const STATUS_CLASS: Record<string, string> = {
   CAUTIOUS: "statusWarning",
   NON_COMPLIANT: "statusCritical",
 };
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatRatio(value: number) {
   return `${(value * 100).toFixed(1)}%`;
@@ -69,6 +64,16 @@ export function ExploreCommandCenter({ stocks }: Props) {
   const filteredStocks = stocks.filter((stock) => matchesSearch(stock, deferredQuery, activeSector));
   const selectedStock =
     filteredStocks.find((stock) => stock.symbol === selectedSymbol) || filteredStocks[0] || null;
+
+  const listSymbols = useMemo(() => filteredStocks.map((s) => s.symbol), [filteredStocks]);
+  const listExchangeBySymbol = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of filteredStocks) {
+      m[s.symbol] = exchangeForBatchQuote(s.exchange, s.currency);
+    }
+    return m;
+  }, [filteredStocks]);
+  const listQuotes = useBatchQuotes(listSymbols, listExchangeBySymbol);
 
   useEffect(() => {
     if (selectedStock && selectedStock.symbol !== selectedSymbol) {
@@ -161,7 +166,12 @@ export function ExploreCommandCenter({ stocks }: Props) {
                   <strong>{stock.symbol}</strong>
                   <span>{stock.name}</span>
                 </div>
-                <span className={styles.price}>{formatCurrency(stock.price)}</span>
+                <span className={styles.price}>
+                  {formatMoney(
+                    listQuotes[stock.symbol]?.last_price ?? stock.price,
+                    resolveDisplayCurrency(stock.exchange, stock.currency),
+                  )}
+                </span>
               </div>
               <div className={styles.stockSignalFooter}>
                 <span>{stock.sector}</span>
@@ -188,7 +198,12 @@ export function ExploreCommandCenter({ stocks }: Props) {
                   </div>
                 </div>
                 <div className={styles.signalPriceBlock}>
-                  <strong>{formatCurrency(selectedStock.price)}</strong>
+                  <strong>
+                    {formatMoney(
+                      listQuotes[selectedStock.symbol]?.last_price ?? selectedStock.price,
+                      resolveDisplayCurrency(selectedStock.exchange, selectedStock.currency),
+                    )}
+                  </strong>
                   {screening && (
                     <span className={styles[STATUS_CLASS[screening.status] || "statusNeutral"]}>
                       {formatStatus(screening.status)}

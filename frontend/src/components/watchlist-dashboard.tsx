@@ -7,6 +7,7 @@ import { WatchlistActionButton } from "@/components/watchlist-action-button";
 import type { WatchlistEntry, ScreeningResult } from "@/lib/api";
 import styles from "./watchlist-dashboard.module.css";
 import { formatMoney, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 
 interface EnrichedEntry extends WatchlistEntry {
   screening: ScreeningResult | null;
@@ -48,10 +49,7 @@ export function WatchlistDashboard({ entries }: Props) {
   const exchangeBySymbol = useMemo(() => {
     const m: Record<string, string> = {};
     for (const e of entries) {
-      const ex = e.stock.exchange || "NSE";
-      const cur = resolveDisplayCurrency(ex, e.stock.currency);
-      m[e.stock.symbol] =
-        cur === "USD" ? "US" : cur === "GBP" ? "LSE" : ex;
+      m[e.stock.symbol] = exchangeForBatchQuote(e.stock.exchange, e.stock.currency);
     }
     return m;
   }, [entries]);

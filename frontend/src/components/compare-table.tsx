@@ -7,6 +7,8 @@ import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { formatMoney, formatMcapShort, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
+import { useBatchQuotes } from "@/hooks/use-batch-quotes";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -69,6 +71,14 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
   const [showPicker, setShowPicker] = useState(false);
 
   const currentSymbols = compareStocks.map((s) => s.symbol);
+  const exchangeBySymbol = useMemo(
+    () =>
+      Object.fromEntries(
+        compareStocks.map((s) => [s.symbol, exchangeForBatchQuote(s.exchange, s.currency)]),
+      ),
+    [compareStocks],
+  );
+  const quotes = useBatchQuotes(currentSymbols, exchangeBySymbol);
 
   const suggestions = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -95,79 +105,86 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
     router.push(next ? `/compare?symbols=${next}` : "/compare");
   }
 
-  const rows: { label: string; values: (s: ScreenedStock) => React.ReactNode }[] = [
-    {
-      label: "Shariah Status",
-      values: (s) => (
-        <span className={`${styles.statusBadge} ${styles[STATUS_CLASS[s.screening.status] || "statusReview"]}`}>
-          {STATUS_LABELS[s.screening.status] || s.screening.status}
-        </span>
-      ),
-    },
-    {
-      label: "Market",
-      values: (s) => (
-        <span className={styles.marketPill}>{resolveMarketLabel(s.exchange, s.currency)}</span>
-      ),
-    },
-    {
-      label: "Price",
-      values: (s) => formatMoney(s.price, resolveDisplayCurrency(s.exchange, s.currency)),
-    },
-    {
-      label: "Market Cap",
-      values: (s) => formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency)),
-    },
-    { label: "Sector", values: (s) => <span className={styles.sectorBadge}>{s.sector}</span> },
-    {
-      label: "Debt Ratio",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.debt_to_36m_avg_market_cap_ratio} threshold={0.33} max={0.6} />
-      ),
-    },
-    {
-      label: "Current Debt Ratio",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.debt_to_market_cap_ratio} threshold={0.33} max={0.6} />
-      ),
-    },
-    {
-      label: "Non-Permissible Income",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.non_permissible_income_ratio} threshold={0.05} max={0.15} />
-      ),
-    },
-    {
-      label: "Interest Income",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.interest_income_ratio} threshold={0.05} max={0.15} />
-      ),
-    },
-    {
-      label: "Receivables Ratio",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.receivables_to_market_cap_ratio} threshold={0.33} max={0.6} />
-      ),
-    },
-    {
-      label: "Cash & IB / Assets",
-      values: (s) => (
-        <RatioBar value={s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio} threshold={0.33} max={0.6} />
-      ),
-    },
-    {
-      label: "Revenue",
-      values: (s) => formatMoney(s.revenue, resolveDisplayCurrency(s.exchange, s.currency)),
-    },
-    {
-      label: "Total Debt",
-      values: (s) => formatMoney(s.debt, resolveDisplayCurrency(s.exchange, s.currency)),
-    },
-    {
-      label: "Total Assets",
-      values: (s) => formatMoney(s.total_assets, resolveDisplayCurrency(s.exchange, s.currency)),
-    },
-  ];
+  const rows = useMemo(
+    (): { label: string; values: (s: ScreenedStock) => React.ReactNode }[] => [
+      {
+        label: "Shariah Status",
+        values: (s) => (
+          <span className={`${styles.statusBadge} ${styles[STATUS_CLASS[s.screening.status] || "statusReview"]}`}>
+            {STATUS_LABELS[s.screening.status] || s.screening.status}
+          </span>
+        ),
+      },
+      {
+        label: "Market",
+        values: (s) => (
+          <span className={styles.marketPill}>{resolveMarketLabel(s.exchange, s.currency)}</span>
+        ),
+      },
+      {
+        label: "Price",
+        values: (s) =>
+          formatMoney(
+            quotes[s.symbol]?.last_price ?? s.price,
+            resolveDisplayCurrency(s.exchange, s.currency),
+          ),
+      },
+      {
+        label: "Market Cap",
+        values: (s) => formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency)),
+      },
+      { label: "Sector", values: (s) => <span className={styles.sectorBadge}>{s.sector}</span> },
+      {
+        label: "Debt Ratio",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.debt_to_36m_avg_market_cap_ratio} threshold={0.33} max={0.6} />
+        ),
+      },
+      {
+        label: "Current Debt Ratio",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.debt_to_market_cap_ratio} threshold={0.33} max={0.6} />
+        ),
+      },
+      {
+        label: "Non-Permissible Income",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.non_permissible_income_ratio} threshold={0.05} max={0.15} />
+        ),
+      },
+      {
+        label: "Interest Income",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.interest_income_ratio} threshold={0.05} max={0.15} />
+        ),
+      },
+      {
+        label: "Receivables Ratio",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.receivables_to_market_cap_ratio} threshold={0.33} max={0.6} />
+        ),
+      },
+      {
+        label: "Cash & IB / Assets",
+        values: (s) => (
+          <RatioBar value={s.screening.breakdown.cash_and_interest_bearing_to_assets_ratio} threshold={0.33} max={0.6} />
+        ),
+      },
+      {
+        label: "Revenue",
+        values: (s) => formatMoney(s.revenue, resolveDisplayCurrency(s.exchange, s.currency)),
+      },
+      {
+        label: "Total Debt",
+        values: (s) => formatMoney(s.debt, resolveDisplayCurrency(s.exchange, s.currency)),
+      },
+      {
+        label: "Total Assets",
+        values: (s) => formatMoney(s.total_assets, resolveDisplayCurrency(s.exchange, s.currency)),
+      },
+    ],
+    [quotes],
+  );
 
   return (
     <div className={styles.compareContainer}>

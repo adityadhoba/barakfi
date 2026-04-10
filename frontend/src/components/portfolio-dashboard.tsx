@@ -4,12 +4,18 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import pd from "./portfolio-dashboard.module.css";
 import { StockLogo } from "@/components/stock-logo";
+import { useBatchQuotes } from "@/hooks/use-batch-quotes";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { livePriceFromQuoteOrDb } from "@/lib/live-price";
 
 type HoldingStock = {
   symbol: string;
   name: string;
   price: number;
   sector: string;
+  exchange?: string;
+  currency?: string;
 };
 
 type Holding = {
@@ -52,6 +58,19 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  const symbols = useMemo(() => holdings.map((h) => h.stock.symbol), [holdings]);
+  const exchangeBySymbol = useMemo(
+    () =>
+      Object.fromEntries(
+        holdings.map((h) => [
+          h.stock.symbol,
+          exchangeForBatchQuote(h.stock.exchange, h.stock.currency),
+        ]),
+      ),
+    [holdings],
+  );
+  const quotes = useBatchQuotes(symbols, exchangeBySymbol);
+
   const statusMap = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of screeningStatuses) m.set(s.symbol, s.status);
@@ -61,13 +80,14 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
   const enriched = useMemo(() => {
     return holdings.map((h) => {
       const invested = h.quantity * h.average_buy_price;
-      const currentValue = h.quantity * h.stock.price;
+      const ltp = livePriceFromQuoteOrDb(quotes, h.stock);
+      const currentValue = h.quantity * ltp;
       const pnl = currentValue - invested;
       const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
       const status = statusMap.get(h.stock.symbol) || "unknown";
-      return { ...h, invested, currentValue, pnl, pnlPct, complianceStatus: status };
+      return { ...h, invested, currentValue, pnl, pnlPct, complianceStatus: status, ltp };
     });
-  }, [holdings, statusMap]);
+  }, [holdings, statusMap, quotes]);
 
   const totalInvested = enriched.reduce((s, h) => s + h.invested, 0);
   const totalCurrent = enriched.reduce((s, h) => s + h.currentValue, 0);
@@ -224,7 +244,9 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
                     </td>
                     <td className={pd.tdRight}>{h.quantity}</td>
                     <td className={pd.tdRight}>{formatINR(h.average_buy_price)}</td>
-                    <td className={pd.tdRight}>{formatINR(h.stock.price)}</td>
+                    <td className={pd.tdRight}>
+                      {formatMoney(h.ltp, resolveDisplayCurrency(h.stock.exchange, h.stock.currency))}
+                    </td>
                     <td className={pd.tdRight}>{formatINR(h.currentValue)}</td>
                     <td className={`${pd.tdRight} ${h.pnl >= 0 ? pd.positive : pd.negative}`}>
                       {formatINR(h.pnl)}

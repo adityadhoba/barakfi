@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
-import { StockLogo } from "@/components/stock-logo";
+import { HalalStocksPriceTable } from "@/components/halal-stocks-price-table";
 import styles from "./halal-stocks.module.css";
 
 export const dynamic = "force-dynamic";
@@ -33,16 +33,6 @@ export const metadata: Metadata = {
     canonical: "https://barakfi.in/halal-stocks",
   },
 };
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
-}
 
 export default async function HalalStocksPage() {
   const stocks = await getStocks();
@@ -149,42 +139,7 @@ export default async function HalalStocksPage() {
       {/* Halal Stocks Table */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>All Halal-Compliant Stocks</h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Company</th>
-                <th>Sector</th>
-                <th className={styles.thRight}>Price</th>
-                <th className={styles.thRight}>Market Cap</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {halalStocks.map((s, i) => (
-                <tr key={s.symbol}>
-                  <td className={styles.tdNum}>{i + 1}</td>
-                  <td>
-                    <Link href={`/stocks/${encodeURIComponent(s.symbol)}`} className={styles.stockLink}>
-                      <StockLogo symbol={s.symbol} size={28} status="HALAL" />
-                      <div className={styles.stockInfo}>
-                        <strong>{s.name}</strong>
-                        <span>{s.symbol}</span>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className={styles.tdSector}>{s.sector}</td>
-                  <td className={styles.tdRight}>{formatPrice(s.price)}</td>
-                  <td className={styles.tdRight}>{formatMcap(s.market_cap)}</td>
-                  <td>
-                    <span className={styles.halalBadge}>Halal</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <HalalStocksPriceTable stocks={halalStocks} />
       </section>
 
       {/* SEO Content Section */}

@@ -20,6 +20,7 @@ import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
+import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
@@ -781,40 +782,12 @@ export default async function StockDetailPage({
                 {sameSecStocks.length > 0 ? `Other stocks in ${stock.sector}` : "Other stocks to explore"}
               </p>
             </div>
-            <div className={styles.similarGrid}>
-              {similarStocks.map((s, idx) => {
-                const peerData = peerComparison[idx];
-                const peerQuote = liveQuote; // Note: in production, you'd fetch quotes for all peers
-                return (
-                  <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
-                    <div className={styles.similarCardTop}>
-                      <StockLogo symbol={s.symbol} size={34} status={peerData?.status} exchange={s.exchange} />
-                      <div className={styles.similarIdentity}>
-                        <span className={styles.similarSymbol}>{s.symbol}</span>
-                        <span className={styles.similarName}>{s.name}</span>
-                      </div>
-                      {peerData && (
-                        <span className={`${styles.badge} ${styles[STATUS_BADGE[peerData.status] || "badgeReview"]} ${styles.similarBadge}`}>
-                          {STATUS_LABELS[peerData.status] || peerData.status}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.similarCardBottom}>
-                      <div>
-                        <span className={styles.similarPrice}>{formatCurrency(s.price, s.currency || "INR")}</span>
-                        {peerQuote?.change_percent != null && (
-                          <span className={peerQuote.change_percent >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown} style={{ fontSize: "0.75rem", marginLeft: 4 }}>
-                            {peerQuote.change_percent >= 0 ? "+" : ""}
-                            {peerQuote.change_percent.toFixed(2)}%
-                          </span>
-                        )}
-                      </div>
-                      <span className={styles.similarMcap}>{formatMcap(s.market_cap, s.currency || "INR")}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <SimilarStocksQuotes
+              peers={similarStocks}
+              peerComparison={peerComparison}
+              formatCurrency={formatCurrency}
+              formatMcap={formatMcap}
+            />
           </>
         )}
       </div>

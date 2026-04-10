@@ -1,15 +1,26 @@
 "use client";
 
+import { useMemo } from "react";
 import styles from "@/app/page.module.css";
 import type { WatchlistEntry } from "@/lib/api";
 import { WatchlistActionButton } from "@/components/watchlist-action-button";
 import Link from "next/link";
+import { useBatchQuotes } from "@/hooks/use-batch-quotes";
+import { exchangeMapFromRows, livePriceFromQuoteOrDb } from "@/lib/live-price";
+import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 
 type Props = {
   entries: WatchlistEntry[];
 };
 
 export function WatchlistPanel({ entries }: Props) {
+  const symbols = useMemo(() => entries.map((e) => e.stock.symbol), [entries]);
+  const exchangeBySymbol = useMemo(
+    () => exchangeMapFromRows(entries.map((e) => e.stock)),
+    [entries],
+  );
+  const quotes = useBatchQuotes(symbols, exchangeBySymbol);
+
   if (entries.length === 0) {
     return (
       <div className="emptyStateBlock">
@@ -33,6 +44,12 @@ export function WatchlistPanel({ entries }: Props) {
                 </Link>
               </strong>
               <span>{entry.stock.name}</span>
+              <span className={styles.watchlistPrice}>
+                {formatMoney(
+                  livePriceFromQuoteOrDb(quotes, entry.stock),
+                  resolveDisplayCurrency(entry.stock.exchange, entry.stock.currency),
+                )}
+              </span>
             </div>
             <WatchlistActionButton
               symbol={entry.stock.symbol}
