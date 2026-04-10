@@ -122,7 +122,7 @@ export async function HomeDashboard() {
         </div>
       </section>
 
-      <HomeHeroVisual totalStocks={total} sectorCount={sectorCount} halalCount={hasStats ? halal : null} />
+      <HomeHeroVisual />
 
       {/* ── Ad: after hero ── */}
       <AdUnit format="responsive" />
