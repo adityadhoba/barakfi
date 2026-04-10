@@ -15,6 +15,7 @@ import { CollectionIcon } from "@/components/collection-icon";
 import { NewsCarousel } from "@/app/news/news-carousel";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { HomeHeroVisual } from "@/components/home-hero-visual";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -120,6 +121,8 @@ export async function HomeDashboard() {
           </div>
         </div>
       </section>
+
+      <HomeHeroVisual totalStocks={total} sectorCount={sectorCount} halalCount={hasStats ? halal : null} />
 
       {/* ── Ad: after hero ── */}
       <AdUnit format="responsive" />
