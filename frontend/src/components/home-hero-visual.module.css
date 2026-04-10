@@ -37,16 +37,6 @@
   }
 }
 
-.headline {
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
-  color: var(--text);
-  margin: 0 0 14px;
-}
-
 .lead {
   margin: 0 auto 22px;
   max-width: 28rem;
@@ -117,6 +107,12 @@
   border-color: var(--line-strong);
 }
 
+.iconArrow {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -158,6 +154,26 @@
   }
 }
 
+.cardLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border-radius: var(--radius-xl);
+  outline: none;
+}
+
+.cardLink:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 3px;
+}
+
+.cardLink:hover .cardSecure,
+.cardLink:hover .cardGlobe,
+.cardLink:hover .cardGrowth {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
 .cardSecure {
   position: relative;
   overflow: hidden;
@@ -167,6 +183,7 @@
   background: linear-gradient(165deg, #0f5132 0%, var(--emerald) 100%);
   color: #ecfdf5;
   box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .cardSecureInner {
@@ -192,6 +209,12 @@
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.iconShield {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #fff;
 }
 
 .pill {
@@ -228,6 +251,7 @@
   background: linear-gradient(165deg, #0d9488 0%, var(--emerald) 90%);
   color: #fff;
   box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .cardGlobeText {
@@ -263,6 +287,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 @media (min-width: 640px) {
