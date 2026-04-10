@@ -24,6 +24,7 @@ class StockBase(BaseModel):
     country: str = "India"
     data_source: str = "internal_seed"
     is_active: bool = True
+    fundamentals_updated_at: datetime | None = None
 
 
 class StockCreate(StockBase):

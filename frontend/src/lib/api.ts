@@ -96,6 +96,8 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  /** When balance-sheet / income fundamentals were last written (ISO 8601), if known */
+  fundamentals_updated_at?: string | null;
 };
 
 export type Holding = {

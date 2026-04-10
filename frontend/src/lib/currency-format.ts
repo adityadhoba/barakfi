@@ -61,15 +61,17 @@ export function formatMoney(value: number, currency: "INR" | "USD" | "GBP"): str
   }).format(value);
 }
 
-/** Market cap in local units (Cr/L for INR; B/M for USD/GBP). */
+/**
+ * Market cap for list cells — **same units as DB** (`fetch_real_data`):
+ * - INR (NSE/BSE): **Crores** (not raw rupees)
+ * - USD / GBP: **Millions** in listing currency
+ */
 export function formatMcapShort(value: number, currency: "INR" | "USD" | "GBP"): string {
+  if (value == null || !Number.isFinite(value)) return "—";
   if (currency === "INR") {
-    if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
-    if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-    return formatMoney(value, "INR");
+    return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: value >= 100 ? 0 : 2 })} Cr`;
   }
   const sym = currency === "GBP" ? "£" : "$";
-  if (value >= 1e9) return `${sym}${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `${sym}${(value / 1e6).toFixed(1)}M`;
-  return formatMoney(value, currency);
+  if (value >= 1000) return `${sym}${(value / 1000).toFixed(2)}B`;
+  return `${sym}${value.toLocaleString("en-US", { maximumFractionDigits: value >= 100 ? 0 : 1 })}M`;
 }

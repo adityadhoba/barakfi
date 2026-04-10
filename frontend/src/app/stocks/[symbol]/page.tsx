@@ -29,6 +29,12 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { MethodologyComparison } from "@/components/methodology-comparison";
 import { displayCountryForStock } from "@/lib/stock-display";
+import {
+  capTierLabel,
+  formatFundamentalAmount,
+  formatFundamentalsAsOfLine,
+  fundamentalsUnitNote,
+} from "@/lib/fundamentals-format";
 
 export async function generateMetadata({
   params,
@@ -85,19 +91,6 @@ function formatCurrency(value: number, currency: string = "INR") {
   const cur = currency || "INR";
   const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
   return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(value);
-}
-
-function formatMcap(value: number, currency: string = "INR") {
-  const cur = currency || "INR";
-  if (cur === "INR") {
-    if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
-    if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-    return formatCurrency(value, cur);
-  }
-  const symbol = cur === "USD" ? "$" : cur === "GBP" ? "£" : "";
-  if (value >= 1e9) return `${symbol}${(value / 1e9).toFixed(1)}B`;
-  if (value >= 1e6) return `${symbol}${(value / 1e6).toFixed(0)}M`;
-  return formatCurrency(value, cur);
 }
 
 function formatVolumeShorthand(volume: number, currency: string) {
@@ -233,8 +226,8 @@ export default async function StockDetailPage({
   const quoteCur = liveQuote?.currency?.trim() || cur;
   const displayCountry = displayCountryForStock(stock.exchange, stock.country);
   const financials = [
-    { label: "Market Cap", value: formatMcap(stock.market_cap, cur) },
-    { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m, cur) },
+    { label: "Market Cap", value: formatFundamentalAmount(stock.market_cap, cur) },
+    { label: "36M Avg Market Cap", value: formatFundamentalAmount(stock.average_market_cap_36m, cur) },
     { label: "Revenue", value: formatCurrency(stock.revenue, cur) },
     { label: "Total Business Income", value: formatCurrency(stock.total_business_income, cur) },
     { label: "Interest Income", value: formatCurrency(stock.interest_income, cur) },
@@ -490,15 +483,15 @@ export default async function StockDetailPage({
         <div className={styles.keyMetricsStrip}>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Market Cap</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.market_cap, cur)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Revenue</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.revenue, cur)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Total Debt</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.debt, cur)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Debt / Mcap</span>
@@ -537,10 +530,10 @@ export default async function StockDetailPage({
             <span className={styles.categoryIcon} style={{ color: "#3b82f6" }}>&#x25B2;</span>
             <div className={styles.categoryContent}>
               <span className={styles.categoryTitle}>
-                {stock.market_cap >= 100000 ? "Large Cap" : stock.market_cap >= 20000 ? "Mid Cap" : "Small Cap"} &rsaquo;
+                {capTierLabel(stock.market_cap, cur)} &rsaquo;
               </span>
               <span className={styles.categorySub}>
-                Market cap of {formatMcap(stock.market_cap, cur)}
+                Market cap {formatFundamentalAmount(stock.market_cap, cur)} (size band is approximate)
               </span>
             </div>
           </div>
@@ -562,7 +555,11 @@ export default async function StockDetailPage({
 
         {/* Price Chart */}
         <div style={{ marginBottom: 28 }}>
-          <PriceChart symbol={stock.symbol} exchange={stock.exchange} />
+          <PriceChart
+            symbol={stock.symbol}
+            exchange={stock.exchange}
+            liveClose={liveQuote?.last_price ?? stock.price}
+          />
         </div>
 
         {/* 52-Week Range Visual + Volume Summary */}
@@ -771,7 +768,16 @@ export default async function StockDetailPage({
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
                   </tr>
                   <tr>
+                    <td>Fundamentals updated</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                      {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ?? (
+                        <span style={{ fontStyle: "italic" }}>Not recorded — run your fundamentals sync (e.g. fetch_real_data)</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
                     <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
+                      {fundamentalsUnitNote(cur)}{" "}
                       Fundamentals are derived from public market data (Yahoo Finance via our pipeline) and refreshed on a periodic schedule.
                       They are indicative and may lag; do not use as the sole basis for investment decisions.
                     </td>
