@@ -38,8 +38,8 @@ function getMcapCategory(mcap: number): string {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 const POPUP_WIDTH = 320;

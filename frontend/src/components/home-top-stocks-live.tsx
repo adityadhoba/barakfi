@@ -61,7 +61,7 @@ export function HomeTopStocksLive({ rows }: { rows: Row[] }) {
                         : styles.statusDotFail
                   }`}
                 />
-                {scr.status === "HALAL" ? "Halal" : scr.status === "CAUTIOUS" ? "Cautious" : "Avoid"}
+                {scr.status === "HALAL" ? "Halal" : scr.status === "CAUTIOUS" ? "Doubtful" : "Haram"}
               </div>
             )}
           </Link>

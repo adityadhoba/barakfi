@@ -111,7 +111,7 @@ export default async function HalalStocksPage() {
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>{reviewStocks.length}</span>
-          <span className={styles.statLabel}>Cautious</span>
+          <span className={styles.statLabel}>Doubtful</span>
         </div>
         <div className={styles.stat}>
           <span className={styles.statValue}>{Object.keys(sectorCounts).length}</span>

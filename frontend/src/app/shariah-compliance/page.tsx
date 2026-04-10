@@ -5,7 +5,7 @@ import styles from "./shariah-compliance.module.css";
 export const metadata: Metadata = {
   title: "Shariah Screening Methodology — Barakfi",
   description:
-    "Understand our Shariah screening methodology, data sources, and how we classify stocks as Halal, Cautious, or Non-Compliant using S&P, AAOIFI, and FTSE/Maxis standards.",
+    "Understand our Shariah screening methodology, data sources, and how we classify stocks as Halal, Doubtful, or Haram using S&P, AAOIFI, and FTSE/Maxis standards.",
 };
 
 const SCREENING_CRITERIA = [
@@ -124,7 +124,7 @@ export default function ShariahCompliancePage() {
           </p>
           <div className={styles.outcomeGrid}>
             <div className={`${styles.outcomeCard} ${styles.outcomeHalal}`}>
-              <span className={styles.outcomeBadge}>HALAL</span>
+              <span className={styles.outcomeBadge}>Halal</span>
               <p>
                 The stock passes both the sector screen and all financial ratio thresholds.
                 Based on available data and our automated methodology, the stock appears
@@ -133,7 +133,7 @@ export default function ShariahCompliancePage() {
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeReview}`}>
-              <span className={styles.outcomeBadge}>CAUTIOUS</span>
+              <span className={styles.outcomeBadge}>Doubtful</span>
               <p>
                 The stock passes core screening rules but carries flags that need attention:
                 borderline ratios (within 5% of a threshold), mixed business activities,
@@ -142,7 +142,7 @@ export default function ShariahCompliancePage() {
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeFail}`}>
-              <span className={styles.outcomeBadge}>NON-COMPLIANT</span>
+              <span className={styles.outcomeBadge}>Haram</span>
               <p>
                 The stock fails one or more screening criteria — either it operates in a
                 prohibited sector or one or more financial ratios exceed the permissible

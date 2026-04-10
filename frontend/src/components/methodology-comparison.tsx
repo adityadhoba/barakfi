@@ -39,8 +39,8 @@ const PROFILE_LABELS: Record<string, { name: string; short: string; color: strin
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   HALAL: { label: "Halal", className: "statusHalal" },
-  CAUTIOUS: { label: "Cautious", className: "statusCautious" },
-  NON_COMPLIANT: { label: "Non-Compliant", className: "statusFail" },
+  CAUTIOUS: { label: "Doubtful", className: "statusCautious" },
+  NON_COMPLIANT: { label: "Haram", className: "statusFail" },
 };
 
 function formatPct(value: number) {

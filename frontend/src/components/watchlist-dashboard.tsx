@@ -28,8 +28,8 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Avoid",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 const STATUS_ORDER: Record<string, number> = {
@@ -142,7 +142,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--gold)" }}>⚠</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Cautious</div>
+            <div className={styles.summaryLabel}>Doubtful</div>
             <div className={styles.summaryValue}>{summary.review}</div>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--red)" }}>✕</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Avoid</div>
+            <div className={styles.summaryLabel}>Haram</div>
             <div className={styles.summaryValue}>{summary.avoid}</div>
           </div>
         </div>

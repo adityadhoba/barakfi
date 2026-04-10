@@ -70,8 +70,8 @@ export default function DisclaimerPage() {
           </p>
           <ul className={styles.legalList}>
             <li>
-              The classification of a stock as &quot;Halal&quot;, &quot;Requires Review&quot;, or
-              &quot;Non-Compliant&quot; is an automated assessment, not a religious certification.
+              The classification of a stock as &quot;Halal&quot;, &quot;Doubtful&quot;, or
+              &quot;Haram&quot; is an automated assessment, not a religious certification.
             </li>
             <li>
               Users must independently verify compliance with their preferred school of Islamic
