@@ -7,6 +7,7 @@ import { StockLogo } from "@/components/stock-logo";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { livePriceFromQuoteOrDb } from "@/lib/live-price";
 
 type HoldingStock = {
   symbol: string;
@@ -45,15 +46,6 @@ function formatINR(value: number) {
   }).format(value);
 }
 
-function ltpForHolding(
-  h: Holding,
-  quotes: Record<string, { last_price: number | null }>,
-): number {
-  const q = quotes[h.stock.symbol]?.last_price;
-  if (q != null && q > 0) return q;
-  return h.stock.price;
-}
-
 function formatPct(value: number) {
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;
@@ -88,7 +80,7 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
   const enriched = useMemo(() => {
     return holdings.map((h) => {
       const invested = h.quantity * h.average_buy_price;
-      const ltp = ltpForHolding(h, quotes);
+      const ltp = livePriceFromQuoteOrDb(quotes, h.stock);
       const currentValue = h.quantity * ltp;
       const pnl = currentValue - invested;
       const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
