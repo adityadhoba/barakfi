@@ -4,7 +4,6 @@ import { ResearchNotePanel } from "@/components/research-note-panel";
 import { ComplianceCheckPanel } from "@/components/compliance-check-panel";
 import { WatchlistPanel } from "@/components/watchlist-panel";
 import { PortfolioDashboard } from "@/components/portfolio-dashboard";
-import { WorkspacePortfolioValue } from "@/components/workspace-portfolio-value";
 import { PortfolioTabs } from "@/components/portfolio-tabs";
 import { BrokerConnectButton } from "@/components/broker-connect-modal";
 import {
@@ -162,11 +161,12 @@ export async function WorkspaceShell() {
           <div className={ws.metricsRow}>
             <div className={ws.metricChip}>
               <span className={ws.metricChipLabel}>Value</span>
-              {hasHoldings && activePortfolio?.holdings ? (
-                <WorkspacePortfolioValue holdings={activePortfolio.holdings} />
-              ) : (
-                <span className={ws.metricChipValue}>{formatCurrency(dashboard.portfolio_market_value)}</span>
-              )}
+              <span
+                className={ws.metricChipValue}
+                title="Portfolio value uses live last prices where available (same source as charts); mixed-currency totals are approximate in INR."
+              >
+                {formatCurrency(dashboard.portfolio_market_value)}
+              </span>
             </div>
             <div className={ws.metricChip}>
               <span className={ws.metricChipLabel}>Halal</span>

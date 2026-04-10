@@ -27,6 +27,30 @@ from app.services.halal_service import (
     evaluate_stock,
     get_profile_version,
 )
+from app.services.portfolio_live_prices import build_live_last_price_by_symbol
+
+
+def _effective_price_for_holding(
+    holding: PortfolioHolding,
+    live_last_price_by_symbol: dict[str, float],
+) -> float:
+    sym = holding.stock.symbol.upper()
+    live = live_last_price_by_symbol.get(sym)
+    if live is not None and live > 0:
+        return live
+    return float(holding.stock.price or 0.0)
+
+
+def _total_market_value(
+    holdings: list[PortfolioHolding],
+    live_last_price_by_symbol: dict[str, float],
+) -> float:
+    return sum(holding.quantity * _effective_price_for_holding(holding, live_last_price_by_symbol) for holding in holdings)
+
+
+def live_last_prices_for_portfolios(portfolios: list[Portfolio]) -> dict[str, float]:
+    holdings = [h for p in portfolios for h in p.holdings]
+    return build_live_last_price_by_symbol(holdings)
 
 
 def require_admin(db: Session, claims: dict) -> str:
@@ -315,10 +339,18 @@ def upsert_override_for_review_case(
     )
 
 
-def build_dashboard_payload(owner_name: str, portfolios: list[Portfolio], watchlist_entries: list[WatchlistEntry]):
+def build_dashboard_payload(
+    owner_name: str,
+    portfolios: list[Portfolio],
+    watchlist_entries: list[WatchlistEntry],
+    live_last_price_by_symbol: dict[str, float] | None = None,
+):
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
 
-    total_market_value = round(sum(holding.quantity * holding.stock.price for holding in holdings), 2)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+
+    total_market_value = round(_total_market_value(holdings, live_last_price_by_symbol), 2)
     halal_holdings = 0
     non_compliant_holdings = 0
     review_holdings = 0
@@ -350,11 +382,14 @@ def build_alerts_payload(
     portfolios: list[Portfolio],
     watchlist_entries: list[WatchlistEntry],
     review_cases: list[dict] | None = None,
+    live_last_price_by_symbol: dict[str, float] | None = None,
 ) -> list[dict]:
     alerts: list[dict] = []
     review_cases = review_cases or []
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
-    total_market_value = sum(holding.quantity * holding.stock.price for holding in holdings)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+    total_market_value = _total_market_value(holdings, live_last_price_by_symbol)
 
     if user.settings and not user.settings.notifications_enabled:
         alerts.append({"level": "info", "title": "Notifications are paused", "message": "Compliance and portfolio alerts are turned off in account settings."})
@@ -367,7 +402,8 @@ def build_alerts_payload(
             alerts.append({"level": "warning", "title": f"{holding.stock.symbol} needs manual review", "message": "The automated rules flagged this holding for deeper compliance validation."})
 
         if total_market_value > 0:
-            weight = (holding.quantity * holding.stock.price / total_market_value) * 100
+            px = _effective_price_for_holding(holding, live_last_price_by_symbol)
+            weight = (holding.quantity * px / total_market_value) * 100
             if weight >= 45:
                 alerts.append({"level": "warning", "title": f"{holding.stock.symbol} concentration is high", "message": f"This position is {weight:.1f}% of the portfolio and may need rebalancing."})
 
@@ -384,14 +420,20 @@ def build_alerts_payload(
     return alerts[:6]
 
 
-def build_compliance_check(portfolios: list[Portfolio]) -> list[dict]:
+def build_compliance_check(
+    portfolios: list[Portfolio],
+    live_last_price_by_symbol: dict[str, float] | None = None,
+) -> list[dict]:
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
-    total_market_value = sum(holding.quantity * holding.stock.price for holding in holdings)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+    total_market_value = _total_market_value(holdings, live_last_price_by_symbol)
     suggestions: list[dict] = []
 
     for holding in holdings:
+        px = _effective_price_for_holding(holding, live_last_price_by_symbol)
         current_weight_pct = (
-            (holding.quantity * holding.stock.price / total_market_value) * 100 if total_market_value > 0 else 0
+            (holding.quantity * px / total_market_value) * 100 if total_market_value > 0 else 0
         )
         drift_pct = round(current_weight_pct - holding.target_allocation_pct, 2)
 
@@ -425,11 +467,21 @@ def build_activity_feed(
     watchlist_entries: list[WatchlistEntry],
     research_notes: list[ResearchNote],
     review_cases: list[dict] | None = None,
+    live_last_price_by_symbol: dict[str, float] | None = None,
 ) -> list[dict]:
     events: list[dict] = []
     review_cases = review_cases or []
+    holdings_flat = [holding for portfolio in portfolios for holding in portfolio.holdings]
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings_flat)
 
-    for alert in build_alerts_payload(user, portfolios, watchlist_entries, review_cases):
+    for alert in build_alerts_payload(
+        user,
+        portfolios,
+        watchlist_entries,
+        review_cases,
+        live_last_price_by_symbol=live_last_price_by_symbol,
+    ):
         events.append({"id": f"alert-{alert['title']}", "kind": "alert", "title": alert["title"], "detail": alert["message"], "created_at": user.created_at, "level": alert["level"], "symbol": None})
 
     for review_case in review_cases[:4]:

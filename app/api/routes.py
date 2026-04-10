@@ -916,20 +916,25 @@ def get_workspace(
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
 
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+
     return {
         "user": user,
-        "dashboard": helpers.build_dashboard_payload(user.display_name, portfolios, watchlist_entries),
+        "dashboard": helpers.build_dashboard_payload(
+            user.display_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+        ),
         "portfolios": portfolios,
         "watchlist": watchlist_entries,
         "saved_screeners": saved_screeners,
         "research_notes": research_notes,
-        "compliance_check": helpers.build_compliance_check(portfolios),
+        "compliance_check": helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px),
         "activity_feed": helpers.build_activity_feed(
             user=user,
             portfolios=portfolios,
             watchlist_entries=watchlist_entries,
             research_notes=research_notes,
             review_cases=review_cases,
+            live_last_price_by_symbol=live_px,
         ),
         "review_cases": review_cases,
     }
@@ -1106,20 +1111,25 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
             except Exception:
                 pass
 
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+
     return {
         "user": user,
-        "dashboard": helpers.build_dashboard_payload(user.display_name, portfolios, watchlist_entries),
+        "dashboard": helpers.build_dashboard_payload(
+            user.display_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+        ),
         "portfolios": portfolios,
         "watchlist": watchlist_entries,
         "saved_screeners": saved_screeners,
         "research_notes": research_notes,
-        "compliance_check": helpers.build_compliance_check(portfolios),
+        "compliance_check": helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px),
         "activity_feed": helpers.build_activity_feed(
             user=user,
             portfolios=portfolios,
             watchlist_entries=watchlist_entries,
             research_notes=research_notes,
             review_cases=review_cases,
+            live_last_price_by_symbol=live_px,
         ),
         "review_cases": review_cases,
     }
@@ -1143,7 +1153,10 @@ def get_current_alerts(claims: dict = Depends(get_current_auth_claims_or_interna
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, limit=4)
 
-    return helpers.build_alerts_payload(user, portfolios, watchlist_entries, review_cases)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_alerts_payload(
+        user, portfolios, watchlist_entries, review_cases, live_last_price_by_symbol=live_px
+    )
 
 
 @router.get("/me/compliance-queue", response_model=list[ComplianceQueueItemRead])
@@ -1556,7 +1569,8 @@ def get_current_compliance_check(
         .order_by(Portfolio.created_at.asc())
         .all()
     )
-    return helpers.build_compliance_check(portfolios)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px)
 
 
 @router.get("/me/saved-screeners", response_model=list[SavedScreenerRead])
@@ -1684,7 +1698,10 @@ def dashboard(
 ):
     portfolios = db.query(Portfolio).filter(Portfolio.owner_name == owner_name).all()
     watchlist_entries = db.query(WatchlistEntry).filter(WatchlistEntry.owner_name == owner_name).all()
-    return helpers.build_dashboard_payload(owner_name, portfolios, watchlist_entries)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_dashboard_payload(
+        owner_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+    )
 
 
 @router.get("/admin/roles", response_model=AdminRolesResponse)
