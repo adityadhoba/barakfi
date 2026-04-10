@@ -200,6 +200,8 @@ export type ScreeningResult = {
   status: string;
   reasons: string[];
   manual_review_flags: string[];
+  /** 0–100 methodology score from engine */
+  screening_score: number;
   purification_ratio_pct: number | null;
   active_review_case: PublicReviewCase | null;
   recent_review_cases: PublicReviewCase[];
@@ -212,7 +214,21 @@ export type ScreeningResult = {
     cash_and_interest_bearing_to_assets_ratio: number;
     fixed_assets_to_total_assets_ratio: number | null;
     sector_allowed: boolean;
+    debt_ratio_value?: number;
+    debt_ratio_threshold?: number;
+    receivables_ratio_value?: number;
+    receivables_ratio_threshold?: number;
+    cash_ib_ratio_threshold?: number;
   };
+};
+
+/** GET /api/check-stock — product-level halal check */
+export type CheckStockResponse = {
+  name: string;
+  status: "Halal" | "Doubtful" | "Haram" | string;
+  score: number;
+  summary: string;
+  details_available: boolean;
 };
 
 export type ScreeningLog = {
@@ -637,6 +653,7 @@ export type MultiMethodologyResult = {
   symbol: string;
   name: string;
   consensus_status: string;
+  screening_score: number;
   methodologies: Record<string, ScreeningResult>;
   summary: {
     halal_count: number;

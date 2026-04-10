@@ -26,6 +26,7 @@ from app.services.halal_service import (
     PRIMARY_PROFILE,
     evaluate_stock,
     get_profile_version,
+    screening_score_for_manual_override,
 )
 from app.services.portfolio_live_prices import build_live_last_price_by_symbol
 
@@ -140,6 +141,7 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
         f"Manual compliance override applied by {override.decided_by}: {override.rationale}"
     ]
     updated["manual_review_flags"] = []
+    updated["screening_score"] = screening_score_for_manual_override(override.decided_status)
     return updated
 
 

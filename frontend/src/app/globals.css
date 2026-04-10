@@ -533,6 +533,13 @@ input, select, textarea, button {
 .searchDropdownItemFocused {
   background: var(--bg-soft);
 }
+.searchMatchHighlight {
+  background: color-mix(in srgb, var(--emerald) 28%, transparent);
+  color: var(--text);
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 2px;
+}
 .searchDropdownLeft {
   display: flex;
   flex-direction: column;
@@ -986,6 +993,9 @@ input, select, textarea, button {
 }
 [data-theme="dark"] .searchDropdownItemFocused {
   background: rgba(16, 185, 129, 0.08);
+}
+[data-theme="dark"] .searchMatchHighlight {
+  background: rgba(16, 185, 129, 0.25);
 }
 
 
