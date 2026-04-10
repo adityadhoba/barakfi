@@ -27,7 +27,11 @@ import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { MethodologyComparison } from "@/components/methodology-comparison";
+import {
+  StockDetailTablesCollapsible,
+  type StockDetailMethodologyRow,
+  type StockDetailRatioRow,
+} from "@/components/stock-detail-tables-collapsible";
 import { displayCountryForStock } from "@/lib/stock-display";
 import {
   capTierLabel,
@@ -58,6 +62,51 @@ const STATUS_LABELS: Record<string, string> = {
   CAUTIOUS: "Cautious",
   NON_COMPLIANT: "Non-Compliant",
 };
+
+const METHODOLOGY_TABLE_ORDER = ["sp_shariah", "aaoifi", "ftse_maxis", "khatkhatay"] as const;
+
+const METHODOLOGY_TABLE_NAMES: Record<string, string> = {
+  sp_shariah: "S&P Shariah Indices",
+  aaoifi: "AAOIFI Standards",
+  ftse_maxis: "FTSE Yasaar (Maxis)",
+  khatkhatay: "Khatkhatay Independent Norms",
+};
+
+type BreakdownExtras = {
+  debt_ratio_value?: number;
+  debt_ratio_threshold?: number;
+  receivables_ratio_value?: number;
+  receivables_ratio_threshold?: number;
+  cash_ib_ratio_threshold?: number;
+};
+
+function buildMethodologyTableRows(
+  multi: NonNullable<Awaited<ReturnType<typeof fetchMultiScreeningForPage>>>,
+): StockDetailMethodologyRow[] {
+  const rows: StockDetailMethodologyRow[] = [];
+  for (const code of METHODOLOGY_TABLE_ORDER) {
+    const result = multi.methodologies[code];
+    if (!result) continue;
+    const br = result.breakdown as typeof result.breakdown & BreakdownExtras;
+    const debtVal = br.debt_ratio_value ?? 0;
+    const debtLim = br.debt_ratio_threshold ?? 0.33;
+    const recvVal = br.receivables_ratio_value ?? br.receivables_to_market_cap_ratio;
+    const recvLim = br.receivables_ratio_threshold ?? 0.33;
+    const cashLim = br.cash_ib_ratio_threshold ?? 0.33;
+    rows.push({
+      methodology: METHODOLOGY_TABLE_NAMES[code] ?? code,
+      status: result.status,
+      statusLabel: STATUS_LABELS[result.status] ?? result.status,
+      debt: `${formatRatio(debtVal)} / ${formatRatio(debtLim)}`,
+      nonPermIncome: `${formatRatio(br.non_permissible_income_ratio)} / ${formatRatio(0.05)}`,
+      interestIncome: `${formatRatio(br.interest_income_ratio)} / ${formatRatio(0.05)}`,
+      receivables: `${formatRatio(recvVal)} / ${formatRatio(recvLim)}`,
+      cashIb: `${formatRatio(br.cash_and_interest_bearing_to_assets_ratio)} / ${formatRatio(cashLim)}`,
+      sector: br.sector_allowed ? "Permitted" : "Excluded",
+    });
+  }
+  return rows;
+}
 
 /** Coerce API numerics; avoids render crashes if JSON has string numbers. */
 function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
@@ -221,6 +270,26 @@ export default async function StockDetailPage({
     { label: "Money owed to company", value: b.receivables_to_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%." },
     { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
   ];
+
+  const ratioRowsForCollapsible: StockDetailRatioRow[] = ratios.map((r) => ({
+    label: r.label,
+    value: formatRatio(r.value),
+    limit: formatRatio(r.threshold),
+  }));
+  if (b.fixed_assets_to_total_assets_ratio != null) {
+    ratioRowsForCollapsible.push({
+      label: "Fixed assets / total assets",
+      value: formatRatio(b.fixed_assets_to_total_assets_ratio),
+      limit: "—",
+    });
+  }
+
+  const methodologyRowsForCollapsible = multiScreening
+    ? buildMethodologyTableRows(multiScreening)
+    : null;
+  const methodologyCaptionForCollapsible = multiScreening
+    ? `Consensus: ${STATUS_LABELS[multiScreening.consensus_status] ?? multiScreening.consensus_status} — ${multiScreening.summary.halal_count} of ${multiScreening.summary.total} methodologies pass.`
+    : null;
 
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
@@ -631,10 +700,11 @@ export default async function StockDetailPage({
           </div>
         )}
 
-        {/* Multi-Methodology Comparison */}
-        {multiScreening && (
-          <MethodologyComparison data={multiScreening} />
-        )}
+        <StockDetailTablesCollapsible
+          ratioRows={ratioRowsForCollapsible}
+          methodologyCaption={methodologyCaptionForCollapsible}
+          methodologyRows={methodologyRowsForCollapsible}
+        />
 
         {/* Tabbed Content: Compliance | Financials | Actions */}
         <StockTabs>
