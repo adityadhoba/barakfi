@@ -1,9 +1,10 @@
 """Dashboard / alerts use live LTP when quote fetch succeeds."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from app.api import helpers
 from app.models import Portfolio, PortfolioHolding, Stock
+from app.services import portfolio_live_prices as plp
 
 
 def _minimal_stock(symbol: str, price: float) -> Stock:
@@ -65,3 +66,37 @@ def test_build_dashboard_fetches_live_when_map_omitted(mock_build):
     dash = helpers.build_dashboard_payload("t", [p], [])
     assert dash["portfolio_market_value"] == 99.0
     mock_build.assert_called_once()
+
+
+def test_portfolio_quote_cache_hits_on_second_build():
+    plp.clear_portfolio_quote_cache()
+    s = _minimal_stock("CACHE1", price=10.0)
+    h = PortfolioHolding(quantity=1.0, average_buy_price=1.0, target_allocation_pct=0.0, thesis="", stock=s)
+    p = Portfolio(owner_name="t", name="P", base_currency="INR", investment_objective="x", holdings=[h])
+
+    mock_q = MagicMock()
+    mock_q.last_price = 55.0
+    with patch.object(plp, "fetch_quote_by_provider", return_value=mock_q) as fetch:
+        dash1 = helpers.build_dashboard_payload("t", [p], [])
+        dash2 = helpers.build_dashboard_payload("t", [p], [])
+    assert dash1["portfolio_market_value"] == 55.0
+    assert dash2["portfolio_market_value"] == 55.0
+    assert fetch.call_count == 1
+
+
+def test_portfolio_quote_cache_expires():
+    plp.clear_portfolio_quote_cache()
+    s = _minimal_stock("CACHE2", price=10.0)
+    h = PortfolioHolding(quantity=1.0, average_buy_price=1.0, target_allocation_pct=0.0, thesis="", stock=s)
+    p = Portfolio(owner_name="t", name="P", base_currency="INR", investment_objective="x", holdings=[h])
+
+    mock_q = MagicMock()
+    mock_q.last_price = 77.0
+    ttl = plp._CACHE_TTL_SECONDS
+    mono_vals = iter([0.0, 0.0, ttl + 1.0, ttl + 2.0])
+
+    with patch.object(plp, "fetch_quote_by_provider", return_value=mock_q) as fetch:
+        with patch.object(plp.time, "monotonic", side_effect=lambda: next(mono_vals)):
+            helpers.build_dashboard_payload("t", [p], [])
+            helpers.build_dashboard_payload("t", [p], [])
+    assert fetch.call_count == 2
