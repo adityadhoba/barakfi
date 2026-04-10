@@ -5,6 +5,7 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { StockLogo } from "@/components/stock-logo";
 import type { Stock } from "@/lib/api";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "@/app/screener.module.css";
 
 type PeerRow = {
@@ -31,11 +32,15 @@ const STATUS_LABELS: Record<string, string> = {
 type Props = {
   peers: Stock[];
   peerComparison: PeerRow[];
-  formatCurrency: (value: number, currency?: string) => string;
-  formatMcap: (value: number, currency?: string) => string;
 };
 
-export function SimilarStocksQuotes({ peers, peerComparison, formatCurrency, formatMcap }: Props) {
+function parseChangePercent(v: number | null | undefined): number | null {
+  if (v == null) return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function SimilarStocksQuotes({ peers, peerComparison }: Props) {
   const symbols = peers.map((p) => p.symbol);
   const exchangeBySymbol = Object.fromEntries(
     peers.map((p) => [p.symbol, exchangeForBatchQuote(p.exchange, p.currency)]),
@@ -47,7 +52,8 @@ export function SimilarStocksQuotes({ peers, peerComparison, formatCurrency, for
       {peers.map((s, idx) => {
         const peerData = peerComparison[idx];
         const q = quotes[s.symbol];
-        const cur = s.currency || "INR";
+        const cur = resolveDisplayCurrency(s.exchange, s.currency);
+        const chPct = parseChangePercent(q?.change_percent);
         return (
           <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
             <div className={styles.similarCardTop}>
@@ -64,18 +70,18 @@ export function SimilarStocksQuotes({ peers, peerComparison, formatCurrency, for
             </div>
             <div className={styles.similarCardBottom}>
               <div>
-                <span className={styles.similarPrice}>{formatCurrency(q?.last_price ?? s.price, cur)}</span>
-                {q?.change_percent != null && (
+                <span className={styles.similarPrice}>{formatMoney(q?.last_price ?? s.price, cur)}</span>
+                {chPct != null && (
                   <span
-                    className={q.change_percent >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown}
+                    className={chPct >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown}
                     style={{ fontSize: "0.75rem", marginLeft: 4 }}
                   >
-                    {q.change_percent >= 0 ? "+" : ""}
-                    {q.change_percent.toFixed(2)}%
+                    {chPct >= 0 ? "+" : ""}
+                    {chPct.toFixed(2)}%
                   </span>
                 )}
               </div>
-              <span className={styles.similarMcap}>{formatMcap(s.market_cap, cur)}</span>
+              <span className={styles.similarMcap}>{formatMcapShort(s.market_cap, cur)}</span>
             </div>
           </Link>
         );

@@ -820,12 +820,7 @@ export default async function StockDetailPage({
                 {sameSecStocks.length > 0 ? `Other stocks in ${stock.sector}` : "Other stocks to explore"}
               </p>
             </div>
-            <SimilarStocksQuotes
-              peers={similarStocks}
-              peerComparison={peerComparison}
-              formatCurrency={formatCurrency}
-              formatMcap={formatMcap}
-            />
+            <SimilarStocksQuotes peers={similarStocks} peerComparison={peerComparison} />
           </>
         )}
       </div>
