@@ -9,6 +9,8 @@ import type { ScreeningResult, Stock } from "@/lib/api";
 import { formatMoney, formatMcapShort, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -81,16 +83,10 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
   const quotes = useBatchQuotes(currentSymbols, exchangeBySymbol);
 
   const suggestions = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (!q) return [];
-    return allStocks
-      .filter(
-        (s) =>
-          !currentSymbols.includes(s.symbol) &&
-          (s.symbol.toLowerCase().includes(q) ||
-            s.name.toLowerCase().includes(q)),
-      )
-      .slice(0, 8);
+    const pool = allStocks.filter((s) => !currentSymbols.includes(s.symbol));
+    return rankStocksForQuery(pool, q, 8);
   }, [query, allStocks, currentSymbols]);
 
   function addStock(symbol: string) {
@@ -209,16 +205,20 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
           </div>
           {showPicker && suggestions.length > 0 && (
             <div className={styles.pickerDropdown}>
-              {suggestions.map((s) => (
+              {suggestions.map((s, idx) => (
                 <button
                   key={s.symbol}
                   type="button"
-                  className={styles.pickerItem}
+                  className={`${styles.pickerItem} ${idx === 0 ? styles.pickerItemBestMatch : ""}`}
                   onClick={() => addStock(s.symbol)}
                 >
                   <StockLogo symbol={s.symbol} size={28} exchange={s.exchange} />
-                  <span className={styles.pickerSymbol}>{s.symbol}</span>
-                  <span className={styles.pickerName}>{s.name}</span>
+                  <span className={styles.pickerSymbol}>
+                    <SearchMatchHighlight text={s.symbol} query={query.trim()} />
+                  </span>
+                  <span className={styles.pickerName}>
+                    <SearchMatchHighlight text={s.name} query={query.trim()} />
+                  </span>
                 </button>
               ))}
             </div>

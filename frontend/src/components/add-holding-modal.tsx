@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ws from "./workspace-hero.module.css";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
 
 type StockOption = { symbol: string; name: string };
 
@@ -37,13 +39,10 @@ function AddHoldingModal({ stocks, onClose }: { stocks: StockOption[]; onClose: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const filtered = search.trim()
-    ? stocks.filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(search.toLowerCase()) ||
-          s.name.toLowerCase().includes(search.toLowerCase())
-      ).slice(0, 8)
-    : [];
+  const filtered = useMemo(
+    () => (search.trim() ? rankStocksForQuery(stocks, search.trim(), 8) : []),
+    [search, stocks],
+  );
 
   async function handleSubmit() {
     if (!symbol || !quantity || !avgPrice) {
@@ -108,15 +107,22 @@ function AddHoldingModal({ stocks, onClose }: { stocks: StockOption[]; onClose: 
             />
             {filtered.length > 0 && (
               <div style={dropdownStyle}>
-                {filtered.map((s) => (
+                {filtered.map((s, i) => (
                   <button
                     key={s.symbol}
                     type="button"
-                    style={dropdownItemStyle}
+                    style={{
+                      ...dropdownItemStyle,
+                      ...(i === 0 ? dropdownItemBestStyle : {}),
+                    }}
                     onClick={() => { setSymbol(s.symbol); setSearch(""); }}
                   >
-                    <strong>{s.symbol}</strong>
-                    <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem", marginLeft: 8 }}>{s.name}</span>
+                    <span style={{ fontWeight: 700 }}>
+                      <SearchMatchHighlight text={s.symbol} query={search.trim()} />
+                    </span>
+                    <span style={{ color: "var(--text-secondary)", fontSize: "0.78rem", marginLeft: 8 }}>
+                      <SearchMatchHighlight text={s.name} query={search.trim()} />
+                    </span>
                   </button>
                 ))}
               </div>
@@ -221,6 +227,13 @@ const dropdownItemStyle: React.CSSProperties = {
   border: "none", borderBottom: "1px solid var(--line)",
   cursor: "pointer", textAlign: "left", fontSize: "0.85rem",
   color: "var(--text)",
+};
+
+const dropdownItemBestStyle: React.CSSProperties = {
+  background:
+    "linear-gradient(90deg, color-mix(in srgb, var(--emerald) 12%, transparent) 0%, transparent 100%)",
+  borderBottom: "1px solid var(--line)",
+  boxShadow: "inset 0 0 0 1px color-mix(in srgb, var(--emerald) 35%, var(--line))",
 };
 
 const cancelBtnStyle: React.CSSProperties = {
