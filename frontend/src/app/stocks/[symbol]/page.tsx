@@ -32,6 +32,7 @@ import { displayCountryForStock } from "@/lib/stock-display";
 import {
   capTierLabel,
   formatFundamentalAmount,
+  formatFundamentalsAsOfLine,
   fundamentalsUnitNote,
 } from "@/lib/fundamentals-format";
 
@@ -765,6 +766,14 @@ export default async function StockDetailPage({
                   <tr>
                     <td>Data source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
+                  </tr>
+                  <tr>
+                    <td>Fundamentals updated</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                      {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ?? (
+                        <span style={{ fontStyle: "italic" }}>Not recorded — run your fundamentals sync (e.g. fetch_real_data)</span>
+                      )}
+                    </td>
                   </tr>
                   <tr>
                     <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>

@@ -62,6 +62,14 @@ export function capTierLabel(marketCap: number, currency: string = "INR"): "Larg
   return capTierLabelInrCrores(marketCap);
 }
 
+/** User-facing line for stock detail when API returns ISO timestamp. */
+export function formatFundamentalsAsOfLine(iso: string | null | undefined): string | null {
+  if (!iso || typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `Fundamentals as of ${d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC`;
+}
+
 export function fundamentalsUnitNote(currency: string = "INR"): string {
   const c = (currency || "INR").toUpperCase();
   if (c === "INR") {

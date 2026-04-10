@@ -805,7 +805,9 @@ def write_to_database(stocks):
     updated = 0
 
     try:
-        for payload in stocks:
+        now = datetime.now(UTC)
+        for raw in stocks:
+            payload = {**raw, "fundamentals_updated_at": now}
             existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
             if existing:
                 for key, value in payload.items():
