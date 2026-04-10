@@ -13,6 +13,7 @@ import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
 import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -52,17 +53,6 @@ function formatPrice(value: number, currency?: string) {
   return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }
 
-function formatMcap(value: number, currency?: string) {
-  const sym = currency === "GBP" ? "£" : currency === "USD" ? "$" : "₹";
-  if (currency && currency !== "INR") {
-    if (value >= 1000) return `${sym}${(value / 1000).toFixed(1)}B`;
-    return `${sym}${value.toFixed(0)}M`;
-  }
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return `₹${value.toFixed(0)}`;
-}
-
 function formatPct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -91,7 +81,7 @@ function exportToCsv(stocks: ScreenedStock[]) {
       `"${s.name.replace(/"/g, '""')}"`,
       `"${s.sector}"`,
       s.price.toFixed(2),
-      (s.market_cap / 100).toFixed(2),
+      s.market_cap.toFixed(2),
       s.screening.status,
       (b.debt_to_36m_avg_market_cap_ratio * 100).toFixed(2) + "%",
       (b.non_permissible_income_ratio * 100).toFixed(2) + "%",
@@ -551,7 +541,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       </StockPreviewPopup>
                     </td>
                     <td className={styles.tdSector}>{s.sector}</td>
-                    <td className={styles.tdRight}>{formatMcap(s.market_cap, s.currency)}</td>
+                    <td className={styles.tdRight}>
+                      {formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency))}
+                    </td>
                     <td className={styles.tdRight}>
                       {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
                       {quotes[s.symbol]?.change_percent != null && (

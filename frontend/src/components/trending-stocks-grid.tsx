@@ -4,14 +4,8 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { TrendingStockRow } from "@/components/trending-stock-row";
 import type { TrendingStock } from "@/lib/api";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
-import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "@/app/trending/trending.module.css";
-
-function formatMcap(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}L Cr`;
-  if (value >= 100) return `${(value / 100).toFixed(1)}K Cr`;
-  return `${value.toFixed(0)} Cr`;
-}
 
 type Props = { stocks: TrendingStock[] };
 
@@ -37,7 +31,7 @@ export function TrendingStocksGrid({ stocks }: Props) {
             name={stock.name}
             exchange={stock.exchange}
             priceLabel={priceLabel}
-            mcapLabel={formatMcap(stock.market_cap)}
+            mcapLabel={formatMcapShort(stock.market_cap, cur)}
           />
         );
       })}

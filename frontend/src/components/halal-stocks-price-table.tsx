@@ -4,15 +4,9 @@ import Link from "next/link";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { StockLogo } from "@/components/stock-logo";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
-import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "@/app/halal-stocks/halal-stocks.module.css";
 import type { Stock } from "@/lib/api";
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-  return formatMoney(value, "INR");
-}
 
 type Props = { stocks: Stock[] };
 
@@ -54,7 +48,7 @@ export function HalalStocksPriceTable({ stocks }: Props) {
                 </td>
                 <td className={styles.tdSector}>{s.sector}</td>
                 <td className={styles.tdRight}>{formatMoney(live ?? s.price, cur)}</td>
-                <td className={styles.tdRight}>{formatMcap(s.market_cap)}</td>
+                <td className={styles.tdRight}>{formatMcapShort(s.market_cap, cur)}</td>
                 <td>
                   <span className={styles.halalBadge}>Halal</span>
                 </td>
