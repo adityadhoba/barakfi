@@ -1,0 +1,112 @@
+.section {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+
+.sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  line-height: 1.45;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: block;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--emerald) 35%, var(--line));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.score {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.scoreSuffix {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.badgeHalal {
+  background: color-mix(in srgb, var(--emerald) 18%, transparent);
+  color: var(--emerald);
+}
+
+.badgeDoubt {
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: var(--gold);
+}
+
+.badgeHaram {
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+  color: var(--red);
+}
+
+@media (min-width: 480px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

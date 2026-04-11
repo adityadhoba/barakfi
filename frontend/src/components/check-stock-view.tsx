@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CheckStockDiscovery } from "@/components/check-stock-discovery";
 import { StockCheckFullDetails } from "@/components/stock-check-full-details";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
@@ -218,6 +219,8 @@ export function CheckStockView({ symbol }: Props) {
           This is an automated screening tool and not financial or religious advice
         </p>
       </section>
+
+      <CheckStockDiscovery excludeSymbol={stock.symbol} />
 
       {fullDetails ? (
         <div ref={detailsAnchorRef} className={styles.expandWrap}>
