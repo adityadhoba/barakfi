@@ -1,34 +1,37 @@
 .wrap {
   position: relative;
   width: 100%;
-  max-width: 560px;
+  max-width: min(100%, 720px);
   margin: 0 auto;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-@media (min-width: 520px) {
+@media (min-width: 560px) {
   .form {
     flex-direction: row;
     align-items: stretch;
+    gap: 12px;
   }
 }
 
 .input {
   flex: 1;
   min-width: 0;
-  padding: 14px 18px;
-  font-size: 0.95rem;
-  border: 1px solid var(--line);
+  min-height: 56px;
+  padding: 16px 22px;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  border: 2px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--panel);
   color: var(--text);
   outline: none;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .input::placeholder {
@@ -37,13 +40,16 @@
 
 .input:focus {
   border-color: var(--emerald);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--emerald) 15%, transparent);
+  box-shadow:
+    0 4px 28px rgba(0, 0, 0, 0.08),
+    0 0 0 4px color-mix(in srgb, var(--emerald) 18%, transparent);
 }
 
 .btn {
   flex-shrink: 0;
-  padding: 14px 22px;
-  font-size: 0.9rem;
+  min-height: 56px;
+  padding: 16px 28px;
+  font-size: clamp(0.95rem, 1.5vw, 1.05rem);
   font-weight: 700;
   border: none;
   border-radius: var(--radius-xl);
@@ -123,4 +129,51 @@
   text-align: center;
   font-size: 0.82rem;
   color: var(--text-tertiary);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 10px;
+  margin-top: 20px;
+}
+
+.chipsLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-tertiary);
+  margin-right: 2px;
+}
+
+.chip {
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 92%, var(--emerald));
+  border: 1px solid color-mix(in srgb, var(--emerald) 28%, var(--line));
+  border-radius: 9999px;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.chip:hover {
+  border-color: color-mix(in srgb, var(--emerald) 55%, var(--line));
+  background: color-mix(in srgb, var(--emerald) 12%, var(--panel));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
 }

@@ -12,6 +12,16 @@
   min-height: calc(100vh - 56px);
 }
 
+/* Homepage: single hero, minimal chrome — search is the focus */
+.shellPageHero {
+  padding-top: 8px;
+  padding-bottom: max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
+  min-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 @media (min-width: 640px) {
   .shellPage {
     padding: 18px 20px max(48px, calc(36px + env(safe-area-inset-bottom, 0px)));
