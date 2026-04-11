@@ -24,6 +24,8 @@ type Props = {
   ratioRows: StockDetailRatioRow[];
   methodologyCaption: string | null;
   methodologyRows: StockDetailMethodologyRow[] | null;
+  /** Primary screening reasons + review flags (passed through, not recomputed). */
+  reasonLines?: string[];
   /** Optional anchor id for scroll targets. */
   id?: string;
   open?: boolean;
@@ -40,6 +42,7 @@ export function StockDetailTablesCollapsible({
   ratioRows,
   methodologyCaption,
   methodologyRows,
+  reasonLines = [],
   id,
   open: openControlled,
   onOpenChange,
@@ -61,9 +64,9 @@ export function StockDetailTablesCollapsible({
       >
         <summary className={styles.summary}>
           <span className={styles.summaryLeft}>
-            <span className={styles.summaryTitle}>Financial ratios &amp; methodology</span>
+            <span className={styles.summaryTitle}>View details</span>
             <span className={styles.summaryHint}>
-              S&amp;P-style metrics and all four methodology outcomes — expand for full tables
+              Financial ratios, methodology results, and screening reasons
             </span>
           </span>
           <span className={styles.chevron} aria-hidden>
@@ -156,6 +159,23 @@ export function StockDetailTablesCollapsible({
               </div>
             ) : (
               <p className={styles.emptyNote}>Multi-methodology data is not available for this symbol.</p>
+            )}
+          </section>
+
+          <section className={styles.section} aria-labelledby="stock-detail-reasons-heading">
+            <h3 id="stock-detail-reasons-heading" className={styles.sectionTitle}>
+              Screening reasons
+            </h3>
+            {reasonLines.length > 0 ? (
+              <ul className={styles.reasonList}>
+                {reasonLines.map((line, i) => (
+                  <li key={i} className={styles.reasonItem}>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.emptyNote}>No detailed reasons were returned for this screen.</p>
             )}
           </section>
         </div>

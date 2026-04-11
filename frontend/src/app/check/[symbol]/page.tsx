@@ -48,6 +48,7 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
   const ratioRows = buildPrimaryRatioTableRows(screening);
   const methodologyRows = multi ? buildMethodologyTableRowsFromMulti(multi) : null;
   const methodologyCaption = multi ? methodologyTableCaption(multi) : null;
+  const reasonLines = [...screening.reasons, ...screening.manual_review_flags];
 
   return (
     <main className="shellPage">
@@ -63,6 +64,7 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
           ratioRows={ratioRows}
           methodologyCaption={methodologyCaption}
           methodologyRows={methodologyRows}
+          reasonLines={reasonLines}
         />
       </div>
     </main>

@@ -24,6 +24,8 @@ type Props = {
   ratioRows: StockDetailRatioRow[];
   methodologyCaption: string | null;
   methodologyRows: StockDetailMethodologyRow[] | null;
+  /** From primary screening API — reasons + manual_review_flags, not recomputed. */
+  reasonLines: string[];
 };
 
 function badgeClass(status: string): string {
@@ -39,6 +41,7 @@ export function StockCheckResultPanel({
   ratioRows,
   methodologyCaption,
   methodologyRows,
+  reasonLines,
 }: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -78,6 +81,7 @@ export function StockCheckResultPanel({
           ratioRows={ratioRows}
           methodologyCaption={methodologyCaption}
           methodologyRows={methodologyRows}
+          reasonLines={reasonLines}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
         />
