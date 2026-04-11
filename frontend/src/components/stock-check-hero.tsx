@@ -13,49 +13,65 @@ type StockHit = { symbol: string; name: string; sector: string };
 const DEBOUNCE_MS = 300;
 const SUGGEST_LIMIT = 5;
 
+function Spinner({ label }: { label: string }) {
+  return (
+    <span className={styles.spinnerWrap}>
+      <span className={styles.spinner} aria-hidden />
+      <span className={styles.spinnerLabel}>{label}</span>
+    </span>
+  );
+}
+
 export function StockCheckHero() {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);
-  const [usingMock, setUsingMock] = useState(false);
+  const [universeLoading, setUniverseLoading] = useState(false);
+  const [universeError, setUniverseError] = useState<string | null>(null);
   const [focusIdx, setFocusIdx] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const deferred = useDebouncedValue(value, DEBOUNCE_MS);
-  const loadAttempted = useRef(false);
+  const loadStarted = useRef(false);
 
-  const applyStockList = useCallback((data: StockHit[], source: "api" | "mock") => {
+  const applyStockList = useCallback((data: StockHit[]) => {
     const mapped = data.map((s) => ({
       symbol: s.symbol,
       name: s.name,
       sector: s.sector || "",
     }));
     setStocks(mapped);
-    setUsingMock(source === "mock");
-    console.log(`[StockCheckHero] stock universe loaded (${source}), count:`, mapped.length);
+    console.log("[StockCheckHero] stock universe applied, count:", mapped.length);
   }, []);
 
   const loadStocks = useCallback(async () => {
-    if (loadAttempted.current) return;
-    loadAttempted.current = true;
+    if (loadStarted.current) return;
+    loadStarted.current = true;
+    setUniverseLoading(true);
+    setUniverseError(null);
     try {
       const res = await fetch("/api/stocks");
       if (res.ok) {
         const data = (await res.json()) as StockHit[];
         if (Array.isArray(data) && data.length > 0) {
-          applyStockList(data, "api");
+          applyStockList(data);
+          setUniverseLoading(false);
           return;
         }
+        setUniverseError("Stock list was empty. Showing sample symbols.");
         console.warn("[StockCheckHero] /api/stocks returned empty — using mock list");
       } else {
-        console.warn("[StockCheckHero] /api/stocks failed:", res.status, "— using mock list");
+        setUniverseError(`Could not load stocks (${res.status}). Showing sample symbols.`);
+        console.warn("[StockCheckHero] /api/stocks failed:", res.status);
       }
     } catch (err) {
-      console.warn("[StockCheckHero] /api/stocks error — using mock list", err);
+      setUniverseError("Network error while loading stocks. Showing sample symbols.");
+      console.warn("[StockCheckHero] /api/stocks error", err);
     }
-    applyStockList(MOCK_STOCK_HITS as StockHit[], "mock");
+    applyStockList(MOCK_STOCK_HITS as StockHit[]);
+    setUniverseLoading(false);
   }, [applyStockList]);
 
   const q = deferred.trim();
@@ -92,8 +108,11 @@ export function StockCheckHero() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const showDropdown = open && value.trim().length > 0 && stocks.length > 0;
-  const showSuggestions = showDropdown && (typingPending || q.length > 0);
+  const trimmed = value.trim();
+  const hasQuery = trimmed.length > 0;
+  const showDropdown =
+    open && hasQuery && (stocks.length > 0 || universeLoading || typingPending);
+  const showSuggestions = showDropdown;
 
   return (
     <div ref={wrapRef} className={styles.wrap}>
@@ -101,11 +120,12 @@ export function StockCheckHero() {
         className={styles.form}
         onSubmit={(e) => {
           e.preventDefault();
+          if (universeLoading) return;
           if (activeIdx >= 0 && activeIdx < filtered.length) {
             goCheck(filtered[activeIdx].symbol);
             return;
           }
-          const t = value.trim().toUpperCase();
+          const t = trimmed.toUpperCase();
           if (t) goCheck(t);
         }}
       >
@@ -126,7 +146,21 @@ export function StockCheckHero() {
             void loadStocks();
           }}
           onKeyDown={(e) => {
-            if (!showSuggestions || maxIdx < 0) {
+            if (!showSuggestions) {
+              if (e.key === "Escape") {
+                setOpen(false);
+                inputRef.current?.blur();
+              }
+              return;
+            }
+            if (universeLoading && maxIdx < 0) {
+              if (e.key === "Escape") {
+                setOpen(false);
+                inputRef.current?.blur();
+              }
+              return;
+            }
+            if (maxIdx < 0 && !typingPending) {
               if (e.key === "Escape") {
                 setOpen(false);
                 inputRef.current?.blur();
@@ -135,6 +169,7 @@ export function StockCheckHero() {
             }
             if (e.key === "ArrowDown") {
               e.preventDefault();
+              if (maxIdx < 0) return;
               setFocusIdx((i) => (i < 0 ? 0 : Math.min(i + 1, maxIdx)));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
@@ -145,27 +180,41 @@ export function StockCheckHero() {
             }
           }}
           aria-label="Search stock symbol or company name"
+          aria-busy={typingPending || (universeLoading && stocks.length === 0)}
           role="combobox"
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-expanded={showSuggestions}
           autoComplete="off"
         />
-        <button type="submit" className={styles.btn}>
-          Check halal status
+        <button type="submit" className={styles.btn} disabled={universeLoading}>
+          {universeLoading ? (
+            <>
+              <span className={styles.btnSpinner} aria-hidden />
+              <span>Loading…</span>
+            </>
+          ) : (
+            "Check halal status"
+          )}
         </button>
       </form>
 
-      {usingMock && stocks.length > 0 ? (
-        <p className={styles.mockHint} role="status">
-          Showing sample stocks — connect the API for the full list.
+      {universeError ? (
+        <p className={styles.errorBanner} role="alert">
+          {universeError}
         </p>
       ) : null}
 
       {showSuggestions && (
         <ul className={styles.dropdown} id={listboxId} role="listbox">
-          {typingPending && filtered.length === 0 ? (
-            <li className={styles.hint}>Searching…</li>
+          {universeLoading && stocks.length === 0 ? (
+            <li className={styles.hint}>
+              <Spinner label="Loading suggestions…" />
+            </li>
+          ) : typingPending ? (
+            <li className={styles.hint}>
+              <Spinner label="Searching…" />
+            </li>
           ) : filtered.length > 0 ? (
             filtered.map((s, i) => (
               <li key={s.symbol}>
@@ -188,7 +237,7 @@ export function StockCheckHero() {
               </li>
             ))
           ) : (
-            <li className={styles.empty}>No match for &ldquo;{value.trim()}&rdquo;</li>
+            <li className={styles.empty}>No results found</li>
           )}
         </ul>
       )}

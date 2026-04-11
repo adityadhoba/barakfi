@@ -42,6 +42,10 @@
 
 .btn {
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   padding: 14px 22px;
   font-size: 0.9rem;
   font-weight: 700;
@@ -55,9 +59,63 @@
   white-space: nowrap;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   filter: brightness(1.05);
   transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btnSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: stockCheckSpin 0.65s linear infinite;
+}
+
+@keyframes stockCheckSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.errorBanner {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-md);
+}
+
+.spinnerWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid color-mix(in srgb, var(--emerald) 25%, var(--line));
+  border-top-color: var(--emerald);
+  border-radius: 50%;
+  animation: stockCheckSpin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinnerLabel {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
 }
 
 .dropdown {
@@ -130,23 +188,17 @@
 }
 
 .hint {
-  padding: 14px;
-  text-align: center;
-  font-size: 0.82rem;
-  color: var(--text-tertiary);
-}
-
-.mockHint {
-  margin: 8px 0 0;
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  text-align: center;
-  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 14px;
+  list-style: none;
 }
 
 .empty {
-  padding: 14px;
+  padding: 16px 14px;
   text-align: center;
-  font-size: 0.82rem;
-  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
