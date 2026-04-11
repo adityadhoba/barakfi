@@ -402,6 +402,14 @@ def _confidence_bullets_non_compliant(reasons: list[str]) -> list[dict[str, str]
                 "text": "One or more core Shariah checks did not pass for this company.",
             }
         )
+    # Product/tests expect 2–3 lines for consistent UI; pad when only one hard rule fired.
+    if len(out) < 2:
+        out.append(
+            {
+                "tone": "error",
+                "text": "Review the ratio breakdown and methodology notes below for full context.",
+            }
+        )
     return out[:3]
 
 
