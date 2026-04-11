@@ -85,3 +85,44 @@ export function methodologyTableCaption(multi: MultiMethodologyResult): string {
   const label = ENGINE_TO_PRODUCT[consensus] ?? consensus;
   return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass.`;
 }
+
+/** Minimal ratio rows for /check “View details” (debt, non-halal income, receivables). */
+export type CheckSimpleRatioRow = { label: string; value: string; limit: string };
+
+export function buildCheckPageSimpleRatioRows(screening: ScreeningResult): CheckSimpleRatioRow[] {
+  const b = screening.breakdown;
+  const debtVal = b.debt_ratio_value ?? b.debt_to_36m_avg_market_cap_ratio;
+  const debtLim = b.debt_ratio_threshold ?? 0.33;
+  const recvVal = b.receivables_ratio_value ?? b.receivables_to_market_cap_ratio;
+  const recvLim = b.receivables_ratio_threshold ?? 0.33;
+  const nonHalalValue = `${formatRatio(b.non_permissible_income_ratio)} non-perm. · ${formatRatio(b.interest_income_ratio)} interest`;
+  return [
+    { label: "Debt ratio", value: formatRatio(debtVal), limit: formatRatio(debtLim) },
+    { label: "Non-halal income", value: nonHalalValue, limit: formatRatio(0.05) },
+    { label: "Receivables", value: formatRatio(recvVal), limit: formatRatio(recvLim) },
+  ];
+}
+
+export type CheckMethodologyPassRow = {
+  code: string;
+  label: string;
+  engineStatus: "HALAL" | "CAUTIOUS" | "NON_COMPLIANT" | string;
+};
+
+const CHECK_PAGE_METHOD_ORDER: { code: "aaoifi" | "sp_shariah" | "ftse_maxis"; label: string }[] = [
+  { code: "aaoifi", label: "AAOIFI" },
+  { code: "sp_shariah", label: "S&P" },
+  { code: "ftse_maxis", label: "FTSE" },
+];
+
+/** AAOIFI, S&P, FTSE only — for simplified Pass/Fail table on /check. */
+export function buildCheckPageMethodologyPassRows(multi: MultiMethodologyResult | null): CheckMethodologyPassRow[] {
+  return CHECK_PAGE_METHOD_ORDER.map(({ code, label }) => {
+    const result = multi?.methodologies[code];
+    return {
+      code,
+      label,
+      engineStatus: result?.status ?? "CAUTIOUS",
+    };
+  });
+}

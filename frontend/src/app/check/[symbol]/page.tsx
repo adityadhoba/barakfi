@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
-import { StockCheckResultActions } from "@/components/stock-check-result-actions";
+import { StockCheckResultPanel } from "@/components/stock-check-result-panel";
 import { fetchCheckStockPageData } from "@/lib/check-stock-fetch";
 import {
-  buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
+  buildCheckPageMethodologyPassRows,
+  buildCheckPageSimpleRatioRows,
 } from "@/lib/stock-detail-screening-tables";
 import styles from "./page.module.css";
 
@@ -23,12 +21,6 @@ export async function generateMetadata({
     title: `${symbol} — Halal check | Barakfi`,
     description: `Instant Shariah screening result for ${symbol}.`,
   };
-}
-
-function badgeClass(status: string): string {
-  if (status === "Halal") return styles.badgeHalal;
-  if (status === "Haram") return styles.badgeHaram;
-  return styles.badgeDoubt;
 }
 
 export default async function CheckStockPage({ params }: { params: Promise<{ symbol: string }> }) {
@@ -52,39 +44,28 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
   }
 
   const { check, stock, screening, multi } = data;
-  const ratioRows = buildPrimaryRatioTableRows(screening);
-  const methodologyRows = multi ? buildMethodologyTableRowsFromMulti(multi) : null;
-  const methodologyCaption = multi ? methodologyTableCaption(multi) : null;
+  const simpleRatioRows = buildCheckPageSimpleRatioRows(screening);
+  const methodologyPassRows = buildCheckPageMethodologyPassRows(multi);
+  const reasons = [...screening.reasons, ...screening.manual_review_flags];
 
   return (
-    <main className="shellPage">
+    <main className={`shellPage ${styles.checkMain}`}>
       <div className={styles.page}>
         <Link href="/" className={styles.back}>
-          ← Back to check
+          ← Back
         </Link>
 
-        <div className={styles.card}>
-          <div className={styles.symbol}>{stock.symbol}</div>
-          <h1 className={styles.name}>{check.name}</h1>
-          <div className={`${styles.badge} ${badgeClass(check.status)}`}>{check.status}</div>
-          <div className={styles.score}>{check.score}</div>
-          <div className={styles.scoreSuffix}>/ 100 compliance score</div>
-          <p className={styles.summary}>{check.summary}</p>
-          {!check.details_available && (
-            <p className={styles.detailsNote}>
-              Some fundamentals are missing — treat this score as indicative and open full analysis for context.
-            </p>
-          )}
-          <StockCheckResultActions symbol={stock.symbol} />
-        </div>
-
-        <div className={styles.expandWrap}>
-          <StockDetailTablesCollapsible
-            ratioRows={ratioRows}
-            methodologyCaption={methodologyCaption}
-            methodologyRows={methodologyRows}
-          />
-        </div>
+        <StockCheckResultPanel
+          name={check.name}
+          symbol={stock.symbol}
+          status={check.status}
+          score={check.score}
+          summary={check.summary}
+          detailsAvailable={check.details_available}
+          simpleRatioRows={simpleRatioRows}
+          methodologyPassRows={methodologyPassRows}
+          reasons={reasons}
+        />
       </div>
     </main>
   );
