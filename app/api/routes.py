@@ -2542,46 +2542,81 @@ def daily_refresh(
     db: Session = Depends(get_db),
     x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
     screen_chunk_size: int = Query(default=150, ge=50, le=500, description="Symbols per bulk-screen chunk (max 500)."),
+    max_price_stocks: int | None = Query(
+        default=None,
+        ge=1,
+        le=5000,
+        description="Cap equity price sync size; omit for full universe (slow).",
+    ),
+    max_screen_symbols: int | None = Query(
+        default=None,
+        ge=1,
+        le=20000,
+        description="Cap screening warm-up to first N symbols after sort; omit for full universe (slow).",
+    ),
+    skip_prices: bool = Query(default=False, description="Skip price sync (combine with other skips for split crons)."),
+    skip_news: bool = Query(default=False),
+    skip_screen: bool = Query(default=False),
 ):
     """
     One-shot pipeline for cron: sync all equity prices, upsert news, warm screening cache in chunks.
 
     Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
+    External pingers (e.g. cron-job.org) often cap HTTP time (~30s): use ``skip_*`` and/or ``max_*`` to split work,
+    or raise the job timeout to the provider maximum.
     """
     helpers.require_internal_token(x_internal_service_token)
     eff = MARKET_DATA_PROVIDER.strip().lower()
-    price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
-    if not price_result["ok"]:
-        raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
 
-    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
-
-    n_rss = fetch_and_upsert_news(db)
-    n_nd = fetch_and_upsert_newsdata(db)
-
-    symbols = [
-        row[0]
-        for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
-    ]
-    screen_chunks = 0
-    screen_rows = 0
-    for i in range(0, len(symbols), screen_chunk_size):
-        chunk = symbols[i : i + screen_chunk_size]
-        rows = _screen_stocks_bulk_impl(chunk, db)
-        screen_chunks += 1
-        screen_rows += len(rows)
-
-    return {
-        "ok": True,
-        "prices": {
+    prices_payload: dict
+    if skip_prices:
+        prices_payload = {"skipped": True}
+    else:
+        price_result = sync_all_stock_prices(db, provider=eff, max_stocks=max_price_stocks)
+        if not price_result["ok"]:
+            raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
+        prices_payload = {
             "provider": price_result["provider"],
             "updated": price_result["updated"],
             "failed_symbols": price_result["failed_symbols"],
             "total": price_result["total"],
-        },
-        "news": {"upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd},
-        "screening": {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows},
+        }
+
+    news_payload: dict
+    if skip_news:
+        news_payload = {"skipped": True}
+    else:
+        from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
+
+        n_rss = fetch_and_upsert_news(db)
+        n_nd = fetch_and_upsert_newsdata(db)
+        news_payload = {"upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd}
+
+    screening_payload: dict
+    if skip_screen:
+        screening_payload = {"skipped": True}
+    else:
+        symbols = [
+            row[0]
+            for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
+        ]
+        if max_screen_symbols is not None:
+            symbols = symbols[:max_screen_symbols]
+        screen_chunks = 0
+        screen_rows = 0
+        for i in range(0, len(symbols), screen_chunk_size):
+            chunk = symbols[i : i + screen_chunk_size]
+            rows = _screen_stocks_bulk_impl(chunk, db)
+            screen_chunks += 1
+            screen_rows += len(rows)
+        screening_payload = {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows}
+
+    return {
+        "ok": True,
+        "prices": prices_payload,
+        "news": news_payload,
+        "screening": screening_payload,
     }
 
 # ═══════════════════════════════════════════════════════════════

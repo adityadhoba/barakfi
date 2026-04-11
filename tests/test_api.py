@@ -671,3 +671,19 @@ def test_daily_refresh_forbidden_wrong_token():
         headers={"X-Internal-Service-Token": "not-the-token"},
     )
     assert r.status_code == 403
+
+
+def test_daily_refresh_screen_only_small_cap():
+    """Split-cron / short-timeout shape: no prices, no news, cap symbols screened."""
+    r = client.post(
+        "/api/internal/daily-refresh?skip_prices=true&skip_news=true&max_screen_symbols=8&screen_chunk_size=50",
+        headers={"X-Internal-Service-Token": INTERNAL_SERVICE_TOKEN},
+    )
+    assert r.status_code == 200
+    body = api_json(r)
+    assert body["ok"] is True
+    assert body["prices"]["skipped"] is True
+    assert body["news"]["skipped"] is True
+    sc = body["screening"]
+    assert sc["symbols_total"] <= 8
+    assert sc["rows_cached"] >= 1

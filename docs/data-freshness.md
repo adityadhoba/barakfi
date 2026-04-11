@@ -26,6 +26,27 @@ This document describes how Barakfi refreshes **prices**, **fundamentals**, **ne
 **Query**
 
 - `screen_chunk_size` (optional, 50–500): symbols per bulk-screen chunk.
+- `max_price_stocks` (optional, 1–5000): cap how many stocks get a price quote update (omit = entire active universe).
+- `max_screen_symbols` (optional): cap screening warm-up to the first *N* symbols (sorted by symbol); omit = all active stocks.
+- `skip_prices=true` | `skip_news=true` | `skip_screen=true`: run only the remaining steps (useful when an HTTP client enforces a short timeout).
+
+**Short timeouts (e.g. cron-job.org test at 30s)**
+
+A **full** refresh usually needs **many minutes**. Either:
+
+1. Set the cron job **timeout to the maximum** your plan allows, **or**
+2. **Split into multiple jobs** (same header on each), for example:
+   - **Prices only:**  
+     `POST .../daily-refresh?skip_news=true&skip_screen=true`
+   - **News only:**  
+     `POST .../daily-refresh?skip_prices=true&skip_screen=true`
+   - **Screening only (full universe):**  
+     `POST .../daily-refresh?skip_prices=true&skip_news=true`  
+     (still long if you have hundreds of symbols — add `max_screen_symbols` and use several jobs with offsets later if needed), **or**
+3. Combine **caps** for a single quick smoke test, e.g.  
+   `?max_price_stocks=50&max_screen_symbols=50` (still depends on provider speed).
+
+For **production** full runs, **Render Cron** (or another worker) calling this endpoint with a **long** HTTP or process timeout is more reliable than a 30s-limited URL pinger.
 
 ### Invoking from Vercel Cron
 
