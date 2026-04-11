@@ -67,6 +67,7 @@ class Stock(Base):
     country = Column(String, nullable=False, default="India")
     data_source = Column(String, nullable=False, default="internal_seed")
     is_active = Column(Boolean, nullable=False, default=True)
+    is_etf = Column(Boolean, nullable=False, default=False)
     fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     stock_index_links = relationship(

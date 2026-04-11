@@ -291,6 +291,38 @@ def screening_score_for_manual_override(status: str) -> int:
     return 50
 
 
+def calculate_compliance_rating(breakdown: dict, status: str) -> int:
+    """
+    1–5 compliance rating from ratio headroom vs thresholds.
+    5 = strong headroom, 1 = non-compliant status.
+    """
+    if status == "NON_COMPLIANT":
+        return 1
+
+    ratios = [
+        (breakdown.get("debt_ratio_value", 0), breakdown.get("debt_ratio_threshold", 0.33)),
+        (breakdown.get("non_permissible_income_ratio", 0), 0.05),
+        (breakdown.get("interest_income_ratio", 0), 0.05),
+        (breakdown.get("receivables_ratio_value", 0), breakdown.get("receivables_ratio_threshold", 0.33)),
+        (breakdown.get("cash_and_interest_bearing_to_assets_ratio", 0), breakdown.get("cash_ib_ratio_threshold", 0.33)),
+    ]
+
+    if status == "CAUTIOUS":
+        max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
+        return 3 if max_pct < 0.7 else 2
+
+    max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
+    avg_pct = sum(v / t if t > 0 else 0 for v, t in ratios) / len(ratios) if ratios else 0
+
+    if max_pct < 0.3 and avg_pct < 0.2:
+        return 5
+    if max_pct < 0.5 and avg_pct < 0.35:
+        return 5
+    if max_pct < 0.7:
+        return 4
+    return 3
+
+
 def _shorten_reason(text: str, max_len: int = 130) -> str:
     text = text.strip()
     if len(text) <= max_len:
