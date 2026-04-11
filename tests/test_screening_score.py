@@ -74,7 +74,7 @@ def test_get_simple_result_product_labels():
     s = get_simple_result(stock)
     assert s["status"] == "Halal"
     assert s["score"] == evaluate_stock_multi(stock)["screening_score"]
-    assert len(s["summary"]) > 20
+    assert s["summary"] == "Meets most Shariah compliance criteria"
 
 
 @pytest.mark.parametrize(
