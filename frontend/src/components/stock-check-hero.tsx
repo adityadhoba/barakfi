@@ -17,6 +17,7 @@ export function StockCheckHero() {
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);
   const [focusIdx, setFocusIdx] = useState(-1);
+  const [navigating, setNavigating] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
@@ -46,22 +47,27 @@ export function StockCheckHero() {
   const goCheck = useCallback(
     async (symbol: string) => {
       const sym = symbol.trim().toUpperCase();
-      if (!sym) return;
+      if (!sym || navigating) return;
+      setNavigating(true);
       setValue("");
       setOpen(false);
       setFocusIdx(-1);
-      const result = await fetchCheckStockPageDataBrowser(sym);
-      if (result.kind === "ok") {
-        setSessionPayload({
-          check: result.check,
-          stock: result.stock,
-          screening: result.screening,
-          multi: result.multi,
-        });
+      try {
+        const result = await fetchCheckStockPageDataBrowser(sym);
+        if (result.kind === "ok") {
+          setSessionPayload({
+            check: result.check,
+            stock: result.stock,
+            screening: result.screening,
+            multi: result.multi,
+          });
+        }
+        router.push(`/check/${encodeURIComponent(sym)}`);
+      } finally {
+        setNavigating(false);
       }
-      router.push(`/check/${encodeURIComponent(sym)}`);
     },
-    [router, setSessionPayload],
+    [navigating, router, setSessionPayload],
   );
 
   useEffect(() => {
@@ -81,6 +87,7 @@ export function StockCheckHero() {
         className={styles.form}
         onSubmit={(e) => {
           e.preventDefault();
+          if (navigating) return;
           if (focusIdx >= 0 && focusIdx < filtered.length) {
             void goCheck(filtered[focusIdx].symbol);
             return;
@@ -93,6 +100,7 @@ export function StockCheckHero() {
           ref={inputRef}
           type="search"
           className={styles.input}
+          disabled={navigating}
           placeholder="Search Reliance, TCS, INFY, Tesla…"
           value={value}
           onChange={(e) => {
@@ -124,8 +132,15 @@ export function StockCheckHero() {
           aria-expanded={open && q.length > 0 && stocks.length > 0}
           autoComplete="off"
         />
-        <button type="submit" className={styles.btn}>
-          Check halal status
+        <button type="submit" className={styles.btn} disabled={navigating}>
+          {navigating ? (
+            <>
+              <span className={styles.btnSpinner} aria-hidden />
+              <span>Checking…</span>
+            </>
+          ) : (
+            "Check halal status"
+          )}
         </button>
       </form>
 
@@ -138,6 +153,7 @@ export function StockCheckHero() {
                   type="button"
                   role="option"
                   aria-selected={i === focusIdx}
+                  disabled={navigating}
                   className={`${styles.item} ${i === focusIdx ? styles.itemFocus : ""} ${i === 0 ? styles.itemBest : ""}`}
                   onMouseEnter={() => setFocusIdx(i)}
                   onMouseDown={(e) => e.preventDefault()}

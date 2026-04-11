@@ -121,23 +121,15 @@ export function CheckStockView({ symbol }: Props) {
     return () => cancelAnimationFrame(id);
   }, [fullDetails]);
 
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.loading}>Loading…</p>
-      </div>
-    );
-  }
-
-  if (!data) {
+  if (!loading && !data) {
     return null;
   }
 
-  if (data.kind === "not_found") {
+  if (!loading && data?.kind === "not_found") {
     notFound();
   }
 
-  if (data.kind === "error") {
+  if (!loading && data?.kind === "error") {
     return (
       <div className={styles.page}>
         <p style={{ color: "var(--red)" }}>{data.message}</p>
@@ -148,7 +140,7 @@ export function CheckStockView({ symbol }: Props) {
     );
   }
 
-  const { check, stock, screening, multi } = data;
+  const okData = !loading && data?.kind === "ok" ? data : null;
 
   return (
     <div className={styles.page}>
@@ -156,75 +148,100 @@ export function CheckStockView({ symbol }: Props) {
         ← Back to check
       </Link>
 
-      <div className={styles.card}>
-        <h1 className={styles.name}>{check.name}</h1>
-        <div className={styles.symbolMuted}>{stock.symbol}</div>
-        <div className={`${styles.statusLine} ${badgeClass(check.status)}`}>
-          <span className={styles.statusEmoji} aria-hidden>
-            {statusIcon(check.status)}
-          </span>
-          <span className={styles.statusLabel}>{check.status}</span>
+      {loading ? (
+        <div className={styles.skeletonCard} aria-busy="true" aria-live="polite">
+          <div className={styles.spinnerRow}>
+            <span className={styles.spinner} aria-hidden />
+            <span className={styles.spinnerLabel}>Checking screening…</span>
+          </div>
+          <div className={`${styles.skelPulse} ${styles.skelTitle}`} />
+          <div className={`${styles.skelPulse} ${styles.skelLineShort}`} />
+          <div className={`${styles.skelPulse} ${styles.skelPill}`} />
+          <div className={`${styles.skelPulse} ${styles.skelScore}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={styles.skelActions}>
+            <div className={`${styles.skelPulse} ${styles.skelBtn}`} />
+            <div className={`${styles.skelPulse} ${styles.skelBtn}`} />
+          </div>
+          <p className={styles.delayHint}>Large universes or cold servers can take a few seconds — hang tight.</p>
         </div>
-        <div className={styles.scoreBlock}>
-          <span className={styles.score}>{check.score}</span>
-          <span className={styles.scoreSuffix}>/ 100</span>
-        </div>
-        {summaryBullets && summaryBullets.bullets.length > 0 ? (
-          <ul className={styles.bulletList}>
-            {summaryBullets.bullets.map((line) => (
-              <li key={line} className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}>
-                <span className={styles.bulletMark} aria-hidden>
-                  {bulletMark(summaryBullets.variant)}
+      ) : null}
+
+      {okData ? (
+        <div className={styles.resultStack}>
+          <div className={styles.card}>
+            <h1 className={styles.name}>{okData.check.name}</h1>
+            <div className={styles.symbolMuted}>{okData.stock.symbol}</div>
+            <div className={`${styles.statusLine} ${badgeClass(okData.check.status)}`}>
+              <span className={styles.statusEmoji} aria-hidden>
+                {statusIcon(okData.check.status)}
+              </span>
+              <span className={styles.statusLabel}>{okData.check.status}</span>
+            </div>
+            <div className={styles.scoreBlock}>
+              <span className={styles.score}>{okData.check.score}</span>
+              <span className={styles.scoreSuffix}>/ 100</span>
+            </div>
+            {summaryBullets && summaryBullets.bullets.length > 0 ? (
+              <ul className={styles.bulletList}>
+                {summaryBullets.bullets.map((line) => (
+                  <li key={line} className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}>
+                    <span className={styles.bulletMark} aria-hidden>
+                      {bulletMark(summaryBullets.variant)}
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <StockCheckResultActions
+              symbol={okData.stock.symbol}
+              name={okData.check.name}
+              score={okData.check.score}
+              status={okData.check.status}
+              detailsOpen={fullDetails}
+              onToggleDetails={() => setFullDetails((o) => !o)}
+            />
+          </div>
+
+          <section className={styles.trustCard} aria-labelledby="check-trust-heading">
+            <h2 id="check-trust-heading" className={styles.trustTitle}>
+              How we determine Halal status
+            </h2>
+            <ul className={styles.trustList}>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
                 </span>
-                <span>{line}</span>
+                <span>Based on AAOIFI, S&amp;P Shariah standards</span>
               </li>
-            ))}
-          </ul>
-        ) : null}
-        <StockCheckResultActions
-          symbol={stock.symbol}
-          name={check.name}
-          score={check.score}
-          status={check.status}
-          detailsOpen={fullDetails}
-          onToggleDetails={() => setFullDetails((o) => !o)}
-        />
-      </div>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
+                </span>
+                <span>Uses financial ratios like debt and income</span>
+              </li>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
+                </span>
+                <span>Regularly updated data</span>
+              </li>
+            </ul>
+            <p className={styles.trustDisclaimer}>
+              This is an automated screening tool and not financial or religious advice
+            </p>
+          </section>
 
-      <section className={styles.trustCard} aria-labelledby="check-trust-heading">
-        <h2 id="check-trust-heading" className={styles.trustTitle}>
-          How we determine Halal status
-        </h2>
-        <ul className={styles.trustList}>
-          <li className={styles.trustItem}>
-            <span className={styles.trustCheck} aria-hidden>
-              ✔
-            </span>
-            <span>Based on AAOIFI, S&amp;P Shariah standards</span>
-          </li>
-          <li className={styles.trustItem}>
-            <span className={styles.trustCheck} aria-hidden>
-              ✔
-            </span>
-            <span>Uses financial ratios like debt and income</span>
-          </li>
-          <li className={styles.trustItem}>
-            <span className={styles.trustCheck} aria-hidden>
-              ✔
-            </span>
-            <span>Regularly updated data</span>
-          </li>
-        </ul>
-        <p className={styles.trustDisclaimer}>
-          This is an automated screening tool and not financial or religious advice
-        </p>
-      </section>
+          <CheckStockDiscovery excludeSymbol={okData.stock.symbol} />
 
-      <CheckStockDiscovery excludeSymbol={stock.symbol} />
-
-      {fullDetails ? (
-        <div ref={detailsAnchorRef} className={styles.expandWrap}>
-          <StockCheckFullDetails screening={screening} multi={multi} />
+          {fullDetails ? (
+            <div ref={detailsAnchorRef} className={styles.expandWrap}>
+              <StockCheckFullDetails screening={okData.screening} multi={okData.multi} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

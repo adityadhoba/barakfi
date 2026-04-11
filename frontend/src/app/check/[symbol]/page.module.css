@@ -19,6 +19,21 @@
   color: var(--emerald);
 }
 
+.resultStack {
+  animation: checkFadeIn 420ms ease-out both;
+}
+
+@keyframes checkFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .card {
   border-radius: var(--radius-xl);
   border: 1px solid var(--line);
@@ -213,4 +228,119 @@
   font-size: 0.95rem;
   color: var(--text-secondary);
   padding: 24px 0;
+}
+
+.skeletonCard {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 28px 22px 22px;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 8px;
+}
+
+.spinnerRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid color-mix(in srgb, var(--emerald) 25%, var(--line));
+  border-top-color: var(--emerald);
+  border-radius: 50%;
+  animation: checkSpin 0.75s linear infinite;
+}
+
+@keyframes checkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinnerLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.delayHint {
+  margin: 18px 0 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.skelPulse {
+  background: linear-gradient(
+    90deg,
+    var(--bg-soft) 0%,
+    color-mix(in srgb, var(--panel) 70%, var(--line)) 50%,
+    var(--bg-soft) 100%
+  );
+  background-size: 200% 100%;
+  animation: skelShimmer 1.2s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skelShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.skelTitle {
+  height: 1.75rem;
+  max-width: 85%;
+  margin: 0 auto 12px;
+}
+
+.skelLineShort {
+  height: 0.72rem;
+  max-width: 36%;
+  margin: 0 auto 20px;
+}
+
+.skelPill {
+  height: 2.25rem;
+  width: 140px;
+  margin: 0 auto 18px;
+  border-radius: 9999px;
+}
+
+.skelScore {
+  height: 3rem;
+  width: 100px;
+  margin: 0 auto 20px;
+}
+
+.skelBullet {
+  height: 0.85rem;
+  max-width: 90%;
+  margin: 0 auto 10px;
+}
+
+.skelActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.skelBtn {
+  height: 46px;
+  width: 140px;
+  border-radius: var(--radius-xl);
 }

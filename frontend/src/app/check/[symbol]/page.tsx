@@ -19,7 +19,7 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
   const { symbol } = await params;
   return (
     <main className="shellPage">
-      <CheckStockView symbol={symbol} />
+      <CheckStockView key={symbol} symbol={symbol} />
     </main>
   );
 }
