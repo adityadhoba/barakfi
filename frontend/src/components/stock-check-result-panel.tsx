@@ -1,12 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import { StockCheckDetailsExpand } from "@/components/stock-check-details-expand";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
-import type {
-  StockDetailMethodologyRow,
-  StockDetailRatioRow,
-} from "@/components/stock-detail-tables-collapsible";
+import type { CheckMethodologyPassRow, CheckSimpleRatioRow } from "@/lib/stock-detail-screening-tables";
 import styles from "./stock-check-result-panel.module.css";
 
 type Props = {
@@ -16,9 +13,9 @@ type Props = {
   score: number;
   summary: string;
   detailsAvailable: boolean;
-  ratioRows: StockDetailRatioRow[];
-  methodologyCaption: string | null;
-  methodologyRows: StockDetailMethodologyRow[] | null;
+  simpleRatioRows: CheckSimpleRatioRow[];
+  methodologyPassRows: CheckMethodologyPassRow[];
+  reasons: string[];
 };
 
 function badgeClass(status: string): string {
@@ -34,9 +31,9 @@ export function StockCheckResultPanel({
   score,
   summary,
   detailsAvailable,
-  ratioRows,
-  methodologyCaption,
-  methodologyRows,
+  simpleRatioRows,
+  methodologyPassRows,
+  reasons,
 }: Props) {
   const [detailsMounted, setDetailsMounted] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -75,10 +72,10 @@ export function StockCheckResultPanel({
 
       {detailsMounted ? (
         <div className={styles.detailsSlot}>
-          <StockDetailTablesCollapsible
-            ratioRows={ratioRows}
-            methodologyCaption={methodologyCaption}
-            methodologyRows={methodologyRows}
+          <StockCheckDetailsExpand
+            ratioRows={simpleRatioRows}
+            methodologyRows={methodologyPassRows}
+            reasons={reasons}
             open={detailsOpen}
             onOpenChange={setDetailsOpen}
           />

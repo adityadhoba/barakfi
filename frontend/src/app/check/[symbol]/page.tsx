@@ -4,9 +4,8 @@ import { notFound } from "next/navigation";
 import { StockCheckResultPanel } from "@/components/stock-check-result-panel";
 import { fetchCheckStockPageData } from "@/lib/check-stock-fetch";
 import {
-  buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
+  buildCheckPageMethodologyPassRows,
+  buildCheckPageSimpleRatioRows,
 } from "@/lib/stock-detail-screening-tables";
 import styles from "./page.module.css";
 
@@ -45,9 +44,9 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
   }
 
   const { check, stock, screening, multi } = data;
-  const ratioRows = buildPrimaryRatioTableRows(screening);
-  const methodologyRows = multi ? buildMethodologyTableRowsFromMulti(multi) : null;
-  const methodologyCaption = multi ? methodologyTableCaption(multi) : null;
+  const simpleRatioRows = buildCheckPageSimpleRatioRows(screening);
+  const methodologyPassRows = buildCheckPageMethodologyPassRows(multi);
+  const reasons = [...screening.reasons, ...screening.manual_review_flags];
 
   return (
     <main className={`shellPage ${styles.checkMain}`}>
@@ -63,9 +62,9 @@ export default async function CheckStockPage({ params }: { params: Promise<{ sym
           score={check.score}
           summary={check.summary}
           detailsAvailable={check.details_available}
-          ratioRows={ratioRows}
-          methodologyCaption={methodologyCaption}
-          methodologyRows={methodologyRows}
+          simpleRatioRows={simpleRatioRows}
+          methodologyPassRows={methodologyPassRows}
+          reasons={reasons}
         />
       </div>
     </main>
