@@ -92,9 +92,13 @@
   transition: background var(--transition-fast);
 }
 
-.item:hover,
-.itemFocus {
+.item:hover {
   background: var(--bg-soft);
+}
+
+.itemFocus {
+  background: color-mix(in srgb, var(--emerald) 12%, var(--bg-soft));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--emerald) 45%, transparent);
 }
 
 .itemBest {
@@ -106,16 +110,38 @@
   );
 }
 
-.sym {
-  font-weight: 800;
-  font-size: 0.85rem;
-  font-family: var(--font-display);
+.itemBest.itemFocus {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--emerald) 55%, transparent);
+}
+
+.nameLine {
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--text);
 }
 
-.name {
+.symLine {
+  font-weight: 800;
   font-size: 0.78rem;
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--text-secondary);
+}
+
+.hint {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+}
+
+.mockHint {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.4;
 }
 
 .empty {
