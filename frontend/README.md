@@ -1,4 +1,4 @@
-This is the premium Next.js frontend for the Barakfi platform.
+This is the Next.js frontend for **Halal Stock Checker** (Barakfi) — check if a stock is Halal; instant Halal status.
 
 ## Local setup
 

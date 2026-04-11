@@ -101,7 +101,7 @@ export function StockCheckHero() {
           type="search"
           className={styles.input}
           disabled={navigating}
-          placeholder="Search Reliance, TCS, INFY, Tesla…"
+          placeholder="Type a company or ticker — instant Halal status"
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -139,7 +139,7 @@ export function StockCheckHero() {
               <span>Checking…</span>
             </>
           ) : (
-            "Check halal status"
+            "Check if Halal"
           )}
         </button>
       </form>

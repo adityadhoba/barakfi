@@ -46,7 +46,7 @@ export function CheckStockDiscovery({ excludeSymbol }: Props) {
       <h2 id="check-discovery-heading" className={styles.title}>
         Top Halal stocks today
       </h2>
-      <p className={styles.sub}>People also checked these — tap a stock to screen it.</p>
+      <p className={styles.sub}>People also checked these — tap for instant Halal status.</p>
       <ul className={styles.grid}>
         {picks.map((p) => (
           <li key={p.symbol}>

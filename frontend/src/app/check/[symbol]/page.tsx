@@ -10,8 +10,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { symbol } = await params;
   return {
-    title: `${symbol} — Halal check | Barakfi`,
-    description: `Instant Shariah screening result for ${symbol}.`,
+    title: `${symbol} — Instant Halal status | Halal Stock Checker`,
+    description: `Check if ${symbol} is Halal — instant Halal status from Halal Stock Checker.`,
   };
 }
 

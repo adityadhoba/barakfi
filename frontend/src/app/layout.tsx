@@ -20,11 +20,11 @@ import "./shell.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Barakfi — Free Halal Stock Screener India | Shariah-Compliant Investing",
-    template: "%s | Barakfi",
+    default: "Halal Stock Checker — Check if a stock is Halal | Instant Halal status",
+    template: "%s | Halal Stock Checker",
   },
   description:
-    "India's #1 free halal stock screener. Screen 160+ NSE stocks for Shariah compliance using S&P, AAOIFI & FTSE methodologies. Track your halal portfolio, compare stocks, purification & zakat calculators. Built for Indian Muslim investors.",
+    "Halal Stock Checker: check if a stock is Halal in seconds — instant Halal status using trusted financial ratios (S&P Shariah, AAOIFI, FTSE). Free for Indian and global stocks.",
   keywords: [
     "halal stocks India",
     "shariah compliant stocks India",
@@ -56,21 +56,21 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Barakfi",
+    title: "Halal Stock Checker",
   },
   openGraph: {
-    title: "Barakfi — India's Free Halal Stock Screener | Screen 160+ NSE Stocks",
-    description: "Screen Indian stocks for Shariah compliance using S&P, AAOIFI & FTSE methodologies. Track halal portfolios, compare stocks, calculate zakat & purification. Free, transparent, and built for Indian Muslim investors.",
+    title: "Halal Stock Checker — Check if a stock is Halal",
+    description: "Instant Halal status for NSE and more. Simple answer first; open full details when you need them.",
     type: "website",
     locale: "en_IN",
-    siteName: "Barakfi",
+    siteName: "Halal Stock Checker",
     url: "https://barakfi.in",
-    images: [{ url: "https://barakfi.in/og-image.png", width: 1200, height: 630, alt: "Barakfi — Free Halal Stock Screener for Indian Investors" }],
+    images: [{ url: "https://barakfi.in/og-image.png", width: 1200, height: 630, alt: "Halal Stock Checker — instant Halal status" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Barakfi — India's Free Halal Stock Screener",
-    description: "Screen 160+ NSE stocks for Shariah compliance. S&P, AAOIFI & FTSE methodologies. Free halal portfolio tracker for Indian investors.",
+    title: "Halal Stock Checker — instant Halal status",
+    description: "Check if a stock is Halal. Trusted ratios; simple result in seconds.",
     images: ["https://barakfi.in/og-image.png"],
   },
   alternates: {
@@ -97,9 +97,9 @@ export const viewport: Viewport = {
 const webAppSchema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Barakfi",
+  name: "Halal Stock Checker",
   url: "https://barakfi.in",
-  description: "India's free halal stock screener. Screen 160+ NSE stocks for Shariah compliance using S&P, AAOIFI, and FTSE methodologies. Track halal portfolios, compare stocks, and invest with confidence.",
+  description: "Check if a stock is Halal — instant Halal status using trusted financial screening (S&P Shariah, AAOIFI, FTSE).",
   applicationCategory: "FinanceApplication",
   operatingSystem: "All",
   browserRequirements: "Requires JavaScript",
@@ -107,7 +107,7 @@ const webAppSchema = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "INR",
-    description: "Free halal stock screening for Indian investors",
+    description: "Free instant Halal status checks",
   },
   creator: {
     "@type": "Organization",
@@ -115,9 +115,9 @@ const webAppSchema = {
     url: "https://barakfi.in",
   },
   featureList: [
-    "Shariah stock screening using S&P, AAOIFI, FTSE methodologies",
-    "160+ NSE stocks screened",
-    "Halal portfolio tracker",
+    "Instant Halal status for stocks",
+    "Halal check using S&P Shariah, AAOIFI, FTSE-style ratios",
+    "160+ NSE stocks and more",
     "Purification calculator",
     "Zakat calculator",
     "Stock comparison tool",
@@ -125,7 +125,7 @@ const webAppSchema = {
     "Watchlist & alerts",
   ],
   screenshot: "https://barakfi.in/og-image.png",
-  keywords: "halal stocks India, shariah compliant stocks, Islamic finance India, halal investment, NSE halal stocks, Barakfi, shariah stock screener",
+  keywords: "halal stock checker, check if stock is halal, instant halal status, halal stocks India, NSE halal stocks, Barakfi",
   inLanguage: "en-IN",
   audience: {
     "@type": "Audience",
@@ -143,7 +143,7 @@ const orgSchema = {
   name: "Barakfi",
   url: "https://barakfi.in",
   logo: "https://barakfi.in/icons/icon-512.svg",
-  description: "Shariah-compliant equity screening platform for the Indian stock market. Free halal stock screener using S&P, AAOIFI, and FTSE methodologies.",
+  description: "Halal Stock Checker — check if a stock is Halal. Instant Halal status using S&P Shariah, AAOIFI, and FTSE-style ratios.",
   foundingDate: "2026",
   knowsAbout: [
     "Shariah-compliant investing",
@@ -158,10 +158,10 @@ const orgSchema = {
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Barakfi",
-  alternateName: ["Barakfi Halal Screener", "Barakfi India"],
+  name: "Halal Stock Checker",
+  alternateName: ["Barakfi", "Barakfi Halal Checker"],
   url: "https://barakfi.in",
-  description: "India's free halal stock screener for Shariah-compliant investing",
+  description: "Check if a stock is Halal — instant Halal status",
   potentialAction: {
     "@type": "SearchAction",
     target: {
@@ -178,10 +178,10 @@ const faqSchema = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "What is Barakfi?",
+      name: "What is Halal Stock Checker?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Barakfi is India's free halal stock screener. It screens 160+ NSE-listed Indian stocks for Shariah compliance using globally recognized methodologies including S&P, AAOIFI, and FTSE/Maxis standards. It's completely free to use and designed for Indian Muslim investors.",
+        text: "Halal Stock Checker (Barakfi) helps you check if a stock is Halal and see instant Halal status. It uses trusted financial ratios aligned with standards such as S&P Shariah, AAOIFI, and FTSE/Maxis. It's free to use.",
       },
     },
     {
@@ -197,7 +197,7 @@ const faqSchema = {
       name: "Is Barakfi free to use?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes, Barakfi is completely free. You can screen stocks, track your halal portfolio, use the purification calculator, zakat calculator, and compare stocks — all without any payment.",
+        text: "Yes. Halal Stock Checker is free. You can check stocks, use calculators, and compare — all without payment.",
       },
     },
     {
@@ -240,7 +240,7 @@ const breadcrumbSchema = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: "https://barakfi.in" },
-    { "@type": "ListItem", position: 2, name: "Screener", item: "https://barakfi.in/screener" },
+    { "@type": "ListItem", position: 2, name: "Stocks", item: "https://barakfi.in/screener" },
     { "@type": "ListItem", position: 3, name: "Tools", item: "https://barakfi.in/tools" },
   ],
 };

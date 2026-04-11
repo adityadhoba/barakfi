@@ -12,7 +12,7 @@ export default function SavedStocksPage() {
     <main className="shellPage">
       <div className={styles.page}>
         <h1 className={styles.title}>Saved stocks</h1>
-        <p className={styles.sub}>Quick list stored on this device — sign in and use the watchlist for sync across devices.</p>
+        <p className={styles.sub}>Saved on this device. Search home to check more stocks.</p>
 
         {items.length === 0 ? (
           <div className={styles.empty}>

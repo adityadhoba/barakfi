@@ -152,7 +152,7 @@ export function CheckStockView({ symbol }: Props) {
         <div className={styles.skeletonCard} aria-busy="true" aria-live="polite">
           <div className={styles.spinnerRow}>
             <span className={styles.spinner} aria-hidden />
-            <span className={styles.spinnerLabel}>Checking screening…</span>
+            <span className={styles.spinnerLabel}>Getting instant Halal status…</span>
           </div>
           <div className={`${styles.skelPulse} ${styles.skelTitle}`} />
           <div className={`${styles.skelPulse} ${styles.skelLineShort}`} />

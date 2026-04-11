@@ -18,7 +18,7 @@ type DrawerLink = {
 
 const DRAWER_LINKS: DrawerLink[] = [
   { href: "/", label: "Home", icon: "\u2302" },
-  { href: "/screener", label: "Screener", icon: "\u2315" },
+  { href: "/screener", label: "Stocks", icon: "\u2315" },
   { href: "/compare", label: "Compare", icon: "\u229E" },
   { href: "/watchlist", label: "Watchlist", icon: "\u2606", auth: true },
   { href: "/news", label: "News", icon: "\u25A6" },

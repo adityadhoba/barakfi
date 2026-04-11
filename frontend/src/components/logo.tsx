@@ -83,7 +83,7 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
             lineHeight: 1,
           }}
         >
-          Barakfi
+          Halal Stock Checker
         </span>
       )}
     </span>

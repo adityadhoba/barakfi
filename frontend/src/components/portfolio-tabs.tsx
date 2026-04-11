@@ -72,7 +72,7 @@ export function PortfolioTabs({ children }: Props) {
                 <a href="https://www.tarrakki.com/" target="_blank" rel="noopener noreferrer">
                   Tarrakki
                 </a>
-                <span className={styles.mfHint}> — mutual fund platform (check their API / partnership terms)</span>
+                <span className={styles.mfHint}> — mutual fund company website (check their API / partnership terms)</span>
               </li>
             </ul>
             <p className={styles.mfFootnote}>
