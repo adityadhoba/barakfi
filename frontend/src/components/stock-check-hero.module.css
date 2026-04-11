@@ -55,9 +55,100 @@
   white-space: nowrap;
 }
 
-.btn:hover {
+.btn:hover:not(:disabled) {
   filter: brightness(1.05);
   transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.input:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid var(--red-border);
+  border-radius: var(--radius-md);
+}
+
+.resultPreview {
+  margin-top: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.previewRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.previewName {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.previewSym {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.previewMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.previewScore {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.previewStatus {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--emerald);
+}
+
+.previewSummary {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.previewLink {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--emerald);
+  text-decoration: none;
+}
+
+.previewLink:hover {
+  text-decoration: underline;
 }
 
 .dropdown {
