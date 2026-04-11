@@ -8,23 +8,27 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  width: 100%;
 }
 
 @media (min-width: 520px) {
   .form {
     flex-direction: row;
     align-items: stretch;
+    gap: 12px;
   }
 }
 
 .input {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  min-height: 48px;
   padding: 14px 18px;
-  font-size: 0.95rem;
+  font-size: 1rem;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   background: var(--panel);
   color: var(--text);
   outline: none;
@@ -51,17 +55,25 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
+  min-height: 48px;
   padding: 14px 22px;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   border: none;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   background: linear-gradient(135deg, var(--emerald) 0%, #0d9668 100%);
   color: #fff;
   cursor: pointer;
   box-shadow: var(--shadow-emerald);
   transition: transform var(--transition-fast), filter var(--transition-fast), opacity var(--transition-fast);
   white-space: nowrap;
+}
+
+@media (min-width: 520px) {
+  .btn {
+    width: auto;
+  }
 }
 
 .btn:hover:not(:disabled) {
@@ -97,11 +109,11 @@
   right: 0;
   z-index: 50;
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   list-style: none;
   background: var(--panel-solid);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-2xl);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
   max-height: 280px;
   overflow-y: auto;

@@ -75,7 +75,7 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
       {showText && (
         <span
           style={{
-            fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 800,
             fontSize: size * 0.65,
             letterSpacing: "-0.03em",

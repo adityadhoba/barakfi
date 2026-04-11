@@ -1,9 +1,10 @@
 .wrap {
-  margin-top: 4px;
+  margin-top: 0;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   background: var(--panel);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .section {
@@ -53,7 +54,7 @@
 .ratioTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.86rem;
+  font-size: 0.9375rem;
 }
 
 .ratioTable th,
@@ -116,24 +117,27 @@
 }
 
 .outcomePass {
-  background: color-mix(in srgb, var(--emerald) 18%, transparent);
-  color: var(--emerald);
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
 }
 
 .outcomeFail {
-  background: color-mix(in srgb, var(--red) 18%, transparent);
-  color: var(--red);
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border: 1px solid var(--status-haram-border);
 }
 
 .outcomeReview {
-  background: color-mix(in srgb, var(--gold) 22%, transparent);
-  color: var(--gold);
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border: 1px solid var(--status-doubtful-border);
 }
 
 .reasonList {
   margin: 0;
   padding-left: 1.15rem;
-  font-size: 0.88rem;
+  font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--text-secondary);
 }
