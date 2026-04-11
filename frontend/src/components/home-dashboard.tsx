@@ -451,51 +451,33 @@ export async function HomeDashboard() {
         </div>
       </section>
 
-      {/* ── Trust & Methodology Bar ── */}
-      <section className={styles.trustBar}>
-        <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </span>
-          <div className={styles.trustText}>
-            <span className={styles.trustTitle}>Multi-Standard Screening</span>
-            <span className={styles.trustDesc}>S&amp;P, AAOIFI &amp; FTSE methodologies</span>
-          </div>
-        </div>
-        <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </span>
-          <div className={styles.trustText}>
-            <span className={styles.trustTitle}>Secure &amp; Private</span>
-            <span className={styles.trustDesc}>Your portfolio data stays yours</span>
-          </div>
-        </div>
-        <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </span>
-          <div className={styles.trustText}>
-            <span className={styles.trustTitle}>Real-Time Data</span>
-            <span className={styles.trustDesc}>Live prices from NSE &amp; Yahoo Finance</span>
-          </div>
-        </div>
-        <div className={styles.trustItem}>
-          <span className={styles.trustIcon}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16" />
-            </svg>
-          </span>
-          <div className={styles.trustText}>
-            <span className={styles.trustTitle}>Responsive web</span>
-            <span className={styles.trustDesc}>Fast on phone and desktop — no app install</span>
+      {/* ── How we determine Halal status (trust) ── */}
+      <section className={styles.authoritySection} aria-labelledby="halal-status-method-heading">
+        <div className={styles.authorityCard}>
+          <h2 id="halal-status-method-heading" className={styles.authorityTitle}>
+            How we determine Halal status
+          </h2>
+          <div className={styles.authorityBody}>
+            <div className={styles.authorityBlock}>
+              <p className={styles.authorityIntro}>Based on globally recognized Shariah standards:</p>
+              <ul className={styles.authorityList}>
+                <li>AAOIFI Shariah Standard</li>
+                <li>S&amp;P Shariah Index</li>
+                <li>FTSE Shariah Screening</li>
+              </ul>
+            </div>
+            <div className={styles.authorityBlock}>
+              <p className={styles.authorityIntro}>Uses financial ratios such as:</p>
+              <ul className={styles.authorityList}>
+                <li>Debt levels</li>
+                <li>Non-permissible income</li>
+                <li>Liquidity screening</li>
+              </ul>
+            </div>
+            <p className={styles.authorityHighlight}>Used in Islamic finance benchmarks worldwide.</p>
+            <p className={styles.authorityDisclaimer}>
+              This is an automated screening tool and not financial or religious advice
+            </p>
           </div>
         </div>
       </section>

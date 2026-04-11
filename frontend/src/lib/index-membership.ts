@@ -81,8 +81,21 @@ export function getIndexMembership(symbol: string): string[] {
   return indices;
 }
 
-export function matchesIndex(symbol: string, indexKey: string): boolean {
+/** Maps UI filter keys to API `index_memberships` codes from the backend. */
+const API_INDEX_CODE: Record<string, string> = {
+  nifty50: "NIFTY_50",
+  nifty100: "NIFTY_100",
+  nifty_midcap100: "NIFTY_MIDCAP_100",
+  nifty_smallcap100: "NIFTY_SMALLCAP_100",
+  nifty500: "NIFTY_500",
+};
+
+export function matchesIndex(symbol: string, indexKey: string, apiMemberships?: string[]): boolean {
   if (indexKey === "all") return true;
+  const code = API_INDEX_CODE[indexKey];
+  if (code && apiMemberships && apiMemberships.length > 0) {
+    return apiMemberships.includes(code);
+  }
   switch (indexKey) {
     case "nifty50": return nifty50Set.has(symbol);
     case "nifty100": return nifty100Set.has(symbol);

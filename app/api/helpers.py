@@ -24,6 +24,7 @@ from app.models import (
 from app.schemas import HoldingStockSnapshot, WatchlistEntryRead
 from app.services.halal_service import (
     PRIMARY_PROFILE,
+    build_confidence_bullets,
     evaluate_stock,
     get_profile_version,
     screening_score_for_manual_override,
@@ -142,6 +143,12 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
     ]
     updated["manual_review_flags"] = []
     updated["screening_score"] = screening_score_for_manual_override(override.decided_status)
+    updated["confidence_bullets"] = build_confidence_bullets(
+        updated["status"],
+        updated["breakdown"],
+        updated["reasons"],
+        updated["manual_review_flags"],
+    )
     return updated
 
 

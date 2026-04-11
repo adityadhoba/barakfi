@@ -4,6 +4,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 from datetime import UTC, datetime
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
+from app.services.halal_service import evaluate_stock
 
 def _safe_str(value: object) -> str:
     try:
@@ -187,3 +188,71 @@ def seed_investors(db: Session) -> int:
 
     db.commit()
     return seeded
+
+
+def get_investor_with_compliance(db: Session, slug: str) -> dict | None:
+    """Get an investor's holdings with Shariah screening cross-reference."""
+    inv = db.query(SuperInvestor).filter(SuperInvestor.slug == slug).first()
+    if not inv:
+        return None
+
+    holdings_with_compliance = []
+    halal_count = 0
+    total_value = 0
+
+    from app.services.stock_lookup import resolve_stock
+
+    for h in inv.holdings:
+        stock = resolve_stock(db, h.symbol, "US", active_only=True) or resolve_stock(db, h.symbol, None, active_only=True)
+        compliance_status = "UNKNOWN"
+        compliance_rating = None
+
+        if stock:
+            sd = {
+                "symbol": stock.symbol, "name": stock.name,
+                "sector": stock.sector, "market_cap": stock.market_cap,
+                "average_market_cap_36m": stock.average_market_cap_36m,
+                "debt": stock.debt, "revenue": stock.revenue,
+                "total_business_income": stock.total_business_income,
+                "interest_income": stock.interest_income,
+                "non_permissible_income": stock.non_permissible_income,
+                "accounts_receivable": stock.accounts_receivable,
+                "cash_and_equivalents": stock.cash_and_equivalents,
+                "short_term_investments": stock.short_term_investments,
+                "fixed_assets": stock.fixed_assets,
+                "total_assets": stock.total_assets,
+                "price": stock.price,
+            }
+            result = evaluate_stock(sd)
+            compliance_status = result["status"]
+            compliance_rating = result.get("compliance_rating")
+            if compliance_status == "HALAL":
+                halal_count += 1
+
+        total_value += h.value
+        holdings_with_compliance.append({
+            "symbol": h.symbol,
+            "company_name": h.company_name,
+            "shares": h.shares,
+            "value": h.value,
+            "pct_portfolio": h.pct_portfolio,
+            "compliance_status": compliance_status,
+            "compliance_rating": compliance_rating,
+        })
+
+    total = len(inv.holdings)
+    halal_pct = round((halal_count / total) * 100, 1) if total > 0 else 0
+
+    return {
+        "name": inv.name,
+        "firm": inv.firm,
+        "slug": inv.slug,
+        "bio": inv.bio,
+        "image_url": inv.image_url,
+        "source_url": inv.source_url,
+        "total_holdings": total,
+        "halal_pct": halal_pct,
+        "halal_count": halal_count,
+        "total_value": total_value,
+        "holdings": holdings_with_compliance,
+    }

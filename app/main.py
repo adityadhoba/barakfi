@@ -201,11 +201,8 @@ def _auto_seed_stocks():
         added = 0
         updated = 0
         for payload in stock_data:
-            # IMPORTANT: `stocks.symbol` is unique in our schema.
             # Some tickers collide across exchanges (e.g. "BA" is Boeing on US exchanges
-            # and BAE Systems on LSE as "BA.L"). To avoid collisions while keeping
-            # NSE symbols clean (e.g. "INFY"), we disambiguate LSE tickers by storing
-            # their Yahoo-style suffix in `symbol`.
+            # and BAE Systems on LSE as "BA.L"). Disambiguate LSE tickers with Yahoo-style suffix.
             try:
                 ex = (payload.get("exchange") or "").upper()
                 sym = (payload.get("symbol") or "").upper()
@@ -214,12 +211,9 @@ def _auto_seed_stocks():
                 elif ex == "NSE" and sym.endswith(".NS"):
                     payload = {**payload, "symbol": sym.removesuffix(".NS")}
             except Exception:
-                # Never fail seeding on a normalization edge-case
                 pass
 
-            # Some providers (Yahoo) can return negative values for certain income lines
-            # depending on reporting conventions. Our API schema expects non-negative
-            # magnitudes for these screening inputs.
+            # Yahoo can return negative magnitudes for some income lines; screening expects non-negative.
             try:
                 ii = float(payload.get("interest_income") or 0)
                 npi = float(payload.get("non_permissible_income") or 0)
@@ -232,7 +226,16 @@ def _auto_seed_stocks():
             except Exception:
                 pass
 
-            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+            existing = (
+                db.query(Stock)
+                .filter(
+                    Stock.symbol == payload["symbol"],
+                    Stock.exchange == payload.get("exchange", "NSE"),
+                )
+                .first()
+            )
+            if not existing:
+                existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
             if existing:
                 for key, value in payload.items():
                     setattr(existing, key, value)
@@ -266,6 +269,43 @@ APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="u
 
 # 1. Create any brand-new tables
 Base.metadata.create_all(bind=engine)
+
+
+def _sqlite_migrate_stocks_composite_unique():
+    """Drop legacy SQLite UNIQUE(symbol) after adding UNIQUE(exchange, symbol)."""
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA index_list('stocks')")).fetchall()
+        names = {r[1] for r in rows}
+        if "uq_stocks_exchange_symbol" in names:
+            return
+        try:
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_stocks_exchange_symbol "
+                    "ON stocks (exchange, symbol)"
+                )
+            )
+        except Exception as exc:
+            logger.warning("[sqlite-migrate] Could not add composite unique on stocks: %s", exc)
+            return
+        for r in rows:
+            idx_name, unique = r[1], r[2]
+            if not unique or not str(idx_name).startswith("sqlite_autoindex_stocks"):
+                continue
+            info = conn.execute(text(f"PRAGMA index_info('{idx_name}')")).fetchall()
+            cols = [x[2] for x in info]
+            if cols == ["symbol"]:
+                try:
+                    conn.execute(text(f'DROP INDEX "{idx_name}"'))
+                    logger.info("[sqlite-migrate] Dropped legacy unique index %s", idx_name)
+                except Exception as exc:
+                    logger.warning("[sqlite-migrate] Could not drop %s: %s", idx_name, exc)
+
+
+_sqlite_migrate_stocks_composite_unique()
+
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
 # 3. Auto-seed stocks if the database is empty
@@ -305,6 +345,13 @@ try:
         log.info("Seeded %d collections", count)
         count = seed_investors(_seed_db)
         log.info("Seeded %d super investors", count)
+
+        try:
+            from app.services.index_membership_service import seed_index_memberships
+
+            seed_index_memberships(_seed_db)
+        except Exception as idx_exc:
+            log.warning("Index membership seed skipped: %s", idx_exc)
 
         try:
             if got_lock:

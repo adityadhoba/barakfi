@@ -84,6 +84,10 @@
   box-shadow: var(--shadow-emerald-lg);
   transform: translateY(-1px);
 }
+.primaryCta:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-emerald);
+}
 .primaryCta:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -98,10 +102,23 @@
 .secondaryCta:hover {
   background: var(--bg-muted);
   border-color: var(--line-strong);
+  box-shadow: var(--shadow-xs);
+}
+.secondaryCta:active:not(:disabled) {
+  transform: scale(0.98);
 }
 .secondaryCta:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryCta:hover,
+  .primaryCta:active:not(:disabled),
+  .secondaryCta:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .marketingGrid {

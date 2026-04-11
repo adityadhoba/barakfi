@@ -847,67 +847,87 @@
 
 
 /* ══════════════════════════════════════════
-   Trust & Methodology Bar
+   Halal methodology trust card
    ══════════════════════════════════════════ */
-.trustBar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+.authoritySection {
   margin-bottom: 32px;
-  padding: 24px;
+}
+
+.authorityCard {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 28px 32px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: var(--shadow-xs);
 }
 
-@media (max-width: 900px) {
-  .trustBar { grid-template-columns: repeat(2, 1fr); }
-}
-
 @media (max-width: 480px) {
-  .trustBar {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 20px 16px;
+  .authorityCard {
+    padding: 22px 20px;
   }
 }
 
-.trustItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.authorityTitle {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+  line-height: 1.25;
 }
 
-.trustIcon {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-sm);
-  background: var(--emerald-bg);
-  color: var(--emerald);
-}
-
-.trustText {
+.authorityBody {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 18px;
 }
 
-.trustTitle {
-  font-size: 0.82rem;
-  font-weight: 700;
+.authorityBlock {
+  margin: 0;
+}
+
+.authorityIntro {
+  font-size: 0.84rem;
+  font-weight: 600;
   color: var(--text);
-  line-height: 1.3;
+  margin: 0 0 8px;
+  line-height: 1.45;
 }
 
-.trustDesc {
-  font-size: 0.72rem;
+.authorityList {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.authorityList li {
+  margin-bottom: 4px;
+}
+
+.authorityList li:last-child {
+  margin-bottom: 0;
+}
+
+.authorityHighlight {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.authorityDisclaimer {
+  font-size: 0.74rem;
   color: var(--text-tertiary);
-  line-height: 1.4;
+  line-height: 1.5;
+  margin: 4px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 
 

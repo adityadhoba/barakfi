@@ -30,7 +30,11 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
   white-space: nowrap;
   flex: 1;
   justify-content: center;
@@ -39,6 +43,10 @@
 .tab:hover {
   color: var(--text);
   background: var(--panel-hover);
+}
+
+.tab:active {
+  transform: scale(0.97);
 }
 
 .tabActive {
@@ -53,12 +61,21 @@
 }
 
 .tabPanel {
-  animation: tabFadeIn 0.2s ease-out;
+  animation: tabFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes tabFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tabPanel {
+    animation: none;
+  }
+  .tab:active {
+    transform: none;
+  }
 }
 
 @media (max-width: 480px) {

@@ -98,6 +98,18 @@ export type Stock = {
   is_active: boolean;
   /** When balance-sheet / income fundamentals were last written (ISO 8601), if known */
   fundamentals_updated_at?: string | null;
+  beta?: number | null;
+  dividend_yield?: number | null;
+  pe_ratio?: number | null;
+  eps?: number | null;
+  week_52_high?: number | null;
+  week_52_low?: number | null;
+  avg_volume?: number | null;
+  price_change_pct?: number | null;
+  compliance_rating?: number | null;
+  exchange_code?: string | null;
+  is_etf?: boolean;
+  index_memberships?: string[];
 };
 
 export type Holding = {
@@ -193,6 +205,13 @@ export type Rulebook = {
   }>;
 };
 
+export type ConfidenceBulletTone = "success" | "warning" | "error";
+
+export type ConfidenceBullet = {
+  tone: ConfidenceBulletTone;
+  text: string;
+};
+
 export type ScreeningResult = {
   symbol: string;
   name: string;
@@ -220,6 +239,7 @@ export type ScreeningResult = {
     receivables_ratio_threshold?: number;
     cash_ib_ratio_threshold?: number;
   };
+  confidence_bullets?: ConfidenceBullet[];
 };
 
 /** GET /api/check-stock — product-level halal check */
@@ -661,6 +681,7 @@ export type MultiMethodologyResult = {
     non_compliant_count: number;
     total: number;
   };
+  confidence_bullets?: ConfidenceBullet[];
 };
 
 export function getMultiScreeningResult(symbol: string) {
@@ -1177,18 +1198,6 @@ export type SuperInvestorDetail = SuperInvestorSummary & {
   }>;
 };
 
-export type HalalETF = {
-  symbol: string;
-  name: string;
-  exchange: string;
-  country: string;
-  expense_ratio: number;
-  aum_millions: number;
-  description: string;
-  provider: string;
-  is_shariah_certified: boolean;
-};
-
 export async function getTrending(category: string = "popular", exchange?: string, limit: number = 20): Promise<TrendingStock[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (exchange) params.set("exchange", exchange);
@@ -1228,6 +1237,49 @@ export type NewsFeedResult = {
   loadStatus: NewsLoadStatus;
   /** Present when loadStatus is "error" (wrong API URL, 5xx, timeout, etc.) */
   errorHint?: string;
+};
+
+export type ETFListItem = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  country: string;
+  price: number;
+  market_cap: number;
+  halal_pct?: number | null;
+  status?: string | null;
+  holdings_count?: number | null;
+};
+
+export type ETFHoldingsRow = {
+  symbol: string;
+  name: string;
+  weight_pct: number | null;
+  status: string;
+  rating: number | null;
+  mapped: boolean;
+  underlying_symbol?: string;
+  underlying_exchange?: string;
+};
+
+export type ETFDetail = {
+  symbol: string;
+  name: string;
+  exchange: string;
+  halal_pct: number | null;
+  cautious_pct?: number | null;
+  non_compliant_pct?: number | null;
+  unknown_pct?: number | null;
+  total_holdings_checked: number;
+  halal_count: number;
+  non_compliant_count: number;
+  cautious_count: number;
+  unknown_count: number;
+  status: string;
+  holdings: ETFHoldingsRow[];
+  holdings_as_of: string | null;
+  holdings_source?: string;
+  data_note?: string;
 };
 
 /**
@@ -1274,9 +1326,14 @@ export async function getNews(limit: number = 24): Promise<NewsItem[]> {
   return r.items;
 }
 
-export async function getETFs(exchange?: string): Promise<HalalETF[]> {
-  const params = exchange ? `?exchange=${exchange}` : "";
+export async function getETFs(exchange?: string): Promise<ETFListItem[]> {
+  const params = exchange ? `?exchange=${encodeURIComponent(exchange)}` : "";
   return apiFetch(`/etfs${params}`, []);
+}
+
+export function getETFDetail(symbol: string, exchange?: string) {
+  const q = exchange ? `?exchange=${encodeURIComponent(exchange)}` : "";
+  return apiFetch<ETFDetail | null>(`/etfs/${encodeURIComponent(symbol)}${q}`, null);
 }
 
 export async function getComplianceHistory(symbol: string): Promise<Array<{ status: string; profile_code: string; recorded_at: string }>> {

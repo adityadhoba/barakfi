@@ -2,14 +2,16 @@
 
 import { useCallback, useState } from "react";
 import { useToast } from "@/components/toast";
+import styles from "./share-button.module.css";
 
 type Props = {
   title: string;
   text: string;
   url?: string;
+  className?: string;
 };
 
-export function ShareButton({ title, text, url }: Props) {
+export function ShareButton({ title, text, url, className }: Props) {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -41,21 +43,7 @@ export function ShareButton({ title, text, url }: Props) {
     <button
       onClick={handleShare}
       type="button"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "7px 14px",
-        borderRadius: 8,
-        border: "1px solid var(--line)",
-        background: "var(--panel)",
-        color: "var(--text-secondary)",
-        fontSize: "0.82rem",
-        fontWeight: 500,
-        fontFamily: "inherit",
-        cursor: "pointer",
-        transition: "all 150ms ease",
-      }}
+      className={[styles.btn, className].filter(Boolean).join(" ")}
       aria-label="Share this page"
     >
       <span aria-hidden="true" style={{ fontSize: "0.9rem" }}>

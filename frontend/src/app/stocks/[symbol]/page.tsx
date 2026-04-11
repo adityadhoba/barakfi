@@ -15,6 +15,7 @@ import {
   getEquityQuote,
   getStocks,
   type EquityQuote,
+  type ScreeningResult,
   type WorkspaceBundle,
 } from "@/lib/api";
 import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
@@ -63,6 +64,34 @@ const STATUS_LABELS: Record<string, string> = {
   CAUTIOUS: "Doubtful",
   NON_COMPLIANT: "Haram",
 };
+
+const CONFIDENCE_ICONS: Record<string, string> = {
+  success: "✔",
+  warning: "⚠",
+  error: "✖",
+};
+
+/** Order matches backend `ALL_PROFILE_CODES` (halal_service.PROFILES). */
+const METHODOLOGY_CODES = ["sp_shariah", "aaoifi", "ftse_maxis", "khatkhatay"] as const;
+
+const METHODOLOGY_LABEL: Record<(typeof METHODOLOGY_CODES)[number], string> = {
+  sp_shariah: "S&P Shariah",
+  aaoifi: "AAOIFI",
+  ftse_maxis: "FTSE Yasaar",
+  khatkhatay: "Khatkhatay norms",
+};
+
+/** Curated “popular” tickers for “People also checked” (merged with live screening when available). */
+const PEOPLE_ALSO_SYMBOLS = [
+  "RELIANCE",
+  "TCS",
+  "INFY",
+  "HDFCBANK",
+  "ITC",
+  "ICICIBANK",
+  "SBIN",
+  "BHARTIARTL",
+] as const;
 
 /** Coerce API numerics; avoids render crashes if JSON has string numbers. */
 function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
@@ -265,10 +294,61 @@ export default async function StockDetailPage({
     : [];
   const similarStocks = [...sameSecStocks, ...otherStocks];
 
-  // Fetch screening data for similar stocks (for Research tab peer comparison)
-  const peerScreenings = similarStocks.length > 0
-    ? await getBulkScreeningResults(similarStocks.map((s) => s.symbol)).catch(() => [])
+  const curSymU = stock.symbol.toUpperCase();
+  const popularOrdered = PEOPLE_ALSO_SYMBOLS.filter((s) => s !== curSymU);
+  const topByMcapSymbols = allStocks
+    .filter((s) => s.symbol.toUpperCase() !== curSymU)
+    .sort((a, b) => b.market_cap - a.market_cap)
+    .slice(0, 12)
+    .map((s) => s.symbol);
+  const peoplePickPool = [...new Set([...popularOrdered, ...topByMcapSymbols])].slice(0, 16);
+  const peerSyms = similarStocks.map((s) => s.symbol);
+  const mergedScreenSyms = [...new Set([...peerSyms, ...peoplePickPool])];
+  const mergedScreenings =
+    mergedScreenSyms.length > 0
+      ? await getBulkScreeningResults(mergedScreenSyms).catch(() => [])
+      : [];
+
+  const peerScreenings = peerSyms.length
+    ? peerSyms
+        .map((sym) =>
+          mergedScreenings.find((r) => r.symbol.toUpperCase() === sym.toUpperCase())
+        )
+        .filter((x): x is ScreeningResult => x != null)
     : [];
+
+  const peopleBulk = mergedScreenings;
+
+  const scoreFromScreening = (sc: ScreeningResult) => {
+    if (typeof sc.screening_score === "number") return sc.screening_score;
+    const bb = sc.breakdown;
+    return calculateComplianceScore(
+      bb.debt_to_36m_avg_market_cap_ratio,
+      bb.debt_to_market_cap_ratio,
+      bb.non_permissible_income_ratio,
+      bb.interest_income_ratio,
+      bb.receivables_to_market_cap_ratio,
+      bb.cash_and_interest_bearing_to_assets_ratio
+    );
+  };
+
+  const peopleAlsoChecked: Array<{ symbol: string; name: string; status: string; score: number }> = [];
+  const pushPeopleAlso = (sym: string) => {
+    if (peopleAlsoChecked.length >= 5) return;
+    const su = sym.toUpperCase();
+    const sc = peopleBulk.find((r) => r.symbol.toUpperCase() === su);
+    const row = allStocks.find((s) => s.symbol.toUpperCase() === su);
+    if (!sc || !row) return;
+    if (peopleAlsoChecked.some((p) => p.symbol === row.symbol)) return;
+    peopleAlsoChecked.push({
+      symbol: row.symbol,
+      name: row.name,
+      status: sc.status,
+      score: scoreFromScreening(sc),
+    });
+  };
+  for (const s of popularOrdered) pushPeopleAlso(s);
+  for (const s of topByMcapSymbols) pushPeopleAlso(s);
 
   const complianceScore =
     typeof screening.screening_score === "number"
@@ -281,6 +361,23 @@ export default async function StockDetailPage({
           b.receivables_to_market_cap_ratio,
           b.cash_and_interest_bearing_to_assets_ratio,
         );
+
+  const confidenceBullets = screening.confidence_bullets ?? [];
+
+  const consensusSummary = multiScreening?.summary;
+  const methodologyIcons =
+    consensusSummary && multiScreening?.methodologies
+      ? METHODOLOGY_CODES.map((code) => {
+          const st = multiScreening.methodologies[code]?.status;
+          const passed = st === "HALAL";
+          return {
+            code,
+            label: METHODOLOGY_LABEL[code],
+            passed,
+            status: st ?? "—",
+          };
+        })
+      : null;
 
   // Count status breakdown for donut chart
   let passCount = 0,
@@ -475,24 +572,113 @@ export default async function StockDetailPage({
           : screening.status === "CAUTIOUS" ? styles.verdictReview
           : styles.verdictFail
         }`}>
-          <div className={styles.verdictLeft}>
-            <span className={styles.verdictScore}>{complianceScore}</span>
-            <span className={styles.verdictScoreSuffix}>/100</span>
+          <div className={styles.verdictTop}>
+            <div className={styles.verdictLeft}>
+              <span className={styles.verdictScore}>{complianceScore}</span>
+              <span className={styles.verdictScoreSuffix}>/100</span>
+            </div>
+            <div className={styles.verdictBody}>
+              <div className={styles.verdictStatus}>
+                <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                  {STATUS_LABELS[screening.status] || screening.status}
+                </span>
+                {screening.purification_ratio_pct != null && screening.status === "HALAL" && (
+                  <span className={styles.verdictPurification}>
+                    Purification: {screening.purification_ratio_pct}%
+                  </span>
+                )}
+              </div>
+              <p className={styles.verdictText}>{takeaway}</p>
+            </div>
           </div>
-          <div className={styles.verdictBody}>
-            <div className={styles.verdictStatus}>
-              <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                {STATUS_LABELS[screening.status] || screening.status}
+          {consensusSummary && (
+            <div className={styles.verdictConsensus} role="status">
+              <span>
+                Consensus: {consensusSummary.halal_count} of {consensusSummary.total} standards passed
               </span>
-              {screening.purification_ratio_pct != null && screening.status === "HALAL" && (
-                <span className={styles.verdictPurification}>
-                  Purification: {screening.purification_ratio_pct}%
+              {methodologyIcons && methodologyIcons.length > 0 && (
+                <span className={styles.verdictConsensusIcons} aria-hidden="true">
+                  {methodologyIcons.map(({ code, label, passed, status }) => (
+                    <span
+                      key={code}
+                      className={styles.verdictConsensusIcon}
+                      title={`${label}: ${status}`}
+                    >
+                      {passed ? "✔" : "✖"}
+                    </span>
+                  ))}
                 </span>
               )}
             </div>
-            <p className={styles.verdictText}>{takeaway}</p>
-          </div>
+          )}
+          {confidenceBullets.length > 0 && (
+            <ul className={styles.confidenceBullets} aria-label="Why this screening result">
+              {confidenceBullets.map((bullet, idx) => (
+                <li key={idx} className={styles.confidenceBullet}>
+                  <span className={styles.confidenceIcon} aria-hidden>
+                    {CONFIDENCE_ICONS[bullet.tone] ?? "•"}
+                  </span>
+                  <span className={styles.confidenceText}>{bullet.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+
+        <p className={styles.retentionHint}>
+          Halal status may change based on financial updates. Check regularly.
+        </p>
+
+        <div className={styles.resultNextSteps} role="navigation" aria-label="Next steps">
+          <Link
+            href="/screener#stock-search"
+            className={`${styles.resultNextStepBtn} ${styles.resultNextStepGhost}`}
+          >
+            Check another stock
+          </Link>
+          <Link
+            href="/screener?status=HALAL"
+            className={`${styles.resultNextStepBtn} ${styles.resultNextStepPrimary}`}
+          >
+            Explore top halal stocks
+          </Link>
+        </div>
+
+        {peopleAlsoChecked.length > 0 && (
+          <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">
+            <h2 id="people-also-heading" className={styles.peopleAlsoTitle}>
+              People also checked
+            </h2>
+            <div className={styles.peopleAlsoGrid}>
+              {peopleAlsoChecked.map((item) => (
+                <Link
+                  key={item.symbol}
+                  href={`/stocks/${encodeURIComponent(item.symbol)}`}
+                  className={styles.peopleAlsoCard}
+                >
+                  <div className={styles.peopleAlsoCardTop}>
+                    <StockLogo symbol={item.symbol} size={36} status={item.status} />
+                    <div className={styles.peopleAlsoIdentity}>
+                      <span className={styles.peopleAlsoName}>{item.name}</span>
+                      <span className={styles.peopleAlsoSymbol}>{item.symbol}</span>
+                    </div>
+                  </div>
+                  <div className={styles.peopleAlsoMeta}>
+                    <div className={styles.peopleAlsoScoreWrap}>
+                      <span className={styles.peopleAlsoScore}>{item.score}</span>
+                      <span className={styles.peopleAlsoScoreSuffix}>/100</span>
+                    </div>
+                    <span
+                      className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
+                    >
+                      {STATUS_LABELS[item.status] || item.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Key Metrics Strip */}
         <div className={styles.keyMetricsStrip}>

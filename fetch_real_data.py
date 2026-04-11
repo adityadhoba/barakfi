@@ -350,32 +350,37 @@ STOCK_SYMBOLS = [
 # De-duplicate (BEL appears in both NIFTY NEXT 50 and Additional)
 STOCK_SYMBOLS = list(dict.fromkeys(STOCK_SYMBOLS))
 
-# S&P 500 representative subset (US stocks)
-US_STOCK_SYMBOLS = [
-    # Mega Cap Tech
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "CRM",
-    "ADBE", "AMD", "INTC", "CSCO", "QCOM", "TXN", "AMAT", "MU", "NOW", "PANW",
-    # Healthcare
-    "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE", "TMO", "ABT", "AMGN", "GILD",
-    "ISRG", "VRTX", "MDT", "ZTS", "REGN", "DXCM", "BSX", "EW", "SYK",
-    # Consumer
-    "PG", "KO", "PEP", "COST", "WMT", "MCD", "NKE", "SBUX", "TGT", "CL",
-    "EL", "MNST", "GIS", "KHC", "HSY", "HRL", "SJM", "MDLZ",
-    # Financials
-    "JPM", "BAC", "WFC", "GS", "MS", "BLK", "SCHW", "C", "AXP", "V", "MA",
-    # Industrials
-    "CAT", "DE", "HON", "UNP", "UPS", "RTX", "BA", "LMT", "GE", "MMM",
-    # Energy
-    "XOM", "CVX", "COP", "SLB", "EOG", "OXY", "PSX", "VLO", "MPC", "DVN",
-    # Real Estate & Materials
-    "AMT", "PLD", "CCI", "LIN", "APD", "ECL", "SHW", "NEM", "FCX",
-    # Communication
-    "DIS", "NFLX", "CMCSA", "T", "VZ", "TMUS", "CHTR",
-    # Other notable
-    "BRK-B", "MCO", "DVA", "SNOW", "PLTR", "UBER", "ABNB",
-]
+# S&P 500 representative subset (US stocks) — broad list plus flagship ETFs first
+US_STOCK_SYMBOLS = list(
+    dict.fromkeys(
+        [
+            "SPY", "QQQ", "VTI", "VOO", "IVV",
+            # Mega Cap Tech
+            "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "CRM",
+            "ADBE", "AMD", "INTC", "CSCO", "QCOM", "TXN", "AMAT", "MU", "NOW", "PANW",
+            # Healthcare
+            "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE", "TMO", "ABT", "AMGN", "GILD",
+            "ISRG", "VRTX", "MDT", "ZTS", "REGN", "DXCM", "BSX", "EW", "SYK",
+            # Consumer
+            "PG", "KO", "PEP", "COST", "WMT", "MCD", "NKE", "SBUX", "TGT", "CL",
+            "EL", "MNST", "GIS", "KHC", "HSY", "HRL", "SJM", "MDLZ",
+            # Financials
+            "JPM", "BAC", "WFC", "GS", "MS", "BLK", "SCHW", "C", "AXP", "V", "MA",
+            # Industrials
+            "CAT", "DE", "HON", "UNP", "UPS", "RTX", "BA", "LMT", "GE", "MMM",
+            # Energy
+            "XOM", "CVX", "COP", "SLB", "EOG", "OXY", "PSX", "VLO", "MPC", "DVN",
+            # Real Estate & Materials
+            "AMT", "PLD", "CCI", "LIN", "APD", "ECL", "SHW", "NEM", "FCX",
+            # Communication
+            "DIS", "NFLX", "CMCSA", "T", "VZ", "TMUS", "CHTR",
+            # Other notable
+            "BRK-B", "MCO", "DVA", "SNOW", "PLTR", "UBER", "ABNB",
+        ]
+    )
+)
 
-US_SECTOR_MAP = {
+_US_SECTOR_MAIN = {
     "AAPL": "Information Technology", "MSFT": "Information Technology", "GOOGL": "Information Technology",
     "AMZN": "Consumer Discretionary", "NVDA": "Information Technology", "META": "Communication Services",
     "TSLA": "Consumer Discretionary", "AVGO": "Information Technology", "ORCL": "Information Technology",
@@ -393,8 +398,12 @@ US_SECTOR_MAP = {
     "DIS": "Communication Services", "NFLX": "Communication Services",
     "BRK-B": "Financial Services", "UBER": "Consumer Services", "ABNB": "Consumer Services",
 }
+_US_SECTOR_ETF = {"SPY": "ETF", "QQQ": "ETF", "VTI": "ETF", "VOO": "ETF", "IVV": "ETF"}
+US_SECTOR_MAP = {**_US_SECTOR_MAIN, **_US_SECTOR_ETF}
 
 US_NAME_MAP = {
+    "SPY": "SPDR S&P 500 ETF Trust", "QQQ": "Invesco QQQ Trust", "VTI": "Vanguard Total Stock Market ETF",
+    "VOO": "Vanguard S&P 500 ETF", "IVV": "iShares Core S&P 500 ETF",
     "AAPL": "Apple Inc.", "MSFT": "Microsoft Corporation", "GOOGL": "Alphabet Inc.",
     "AMZN": "Amazon.com Inc.", "NVDA": "NVIDIA Corporation", "META": "Meta Platforms",
     "TSLA": "Tesla Inc.", "AVGO": "Broadcom Inc.", "LLY": "Eli Lilly and Company",
@@ -429,6 +438,20 @@ UK_NAME_MAP = {
     "RIO": "Rio Tinto plc", "LSEG": "London Stock Exchange Group",
     "GSK": "GSK plc", "DGE": "Diageo plc", "BP": "BP plc",
     "HSBA": "HSBC Holdings plc", "REL": "RELX plc",
+}
+
+# Known ETF tickers per venue (plus yfinance quoteType == ETF)
+ETF_TICKERS_BY_EXCHANGE = {
+    "US": frozenset({"SPY", "QQQ", "VTI", "VOO", "IVV", "IWM", "EFA", "EEM"}),
+    "NSE": frozenset({"NIFTYBEES", "BANKBEES", "GOLDBEES", "ITBEES", "MON100", "JUNIORBEES", "SETFNIF50"}),
+    "LSE": frozenset(),
+}
+
+EXCHANGE_COUNTRY = {
+    "NSE": "India",
+    "BSE": "India",
+    "US": "United States",
+    "LSE": "United Kingdom",
 }
 
 # ---------------------------------------------------------------------------
@@ -712,6 +735,38 @@ def fetch_stock_data(symbol, exchange="NSE"):
         ])
         total_assets = _convert_value(total_assets_raw, exchange)
 
+        if exchange == "US":
+            sector = US_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
+            name = info.get("longName") or info.get("shortName") or US_NAME_MAP.get(symbol, symbol)
+        elif exchange == "LSE":
+            sector = UK_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
+            name = info.get("longName") or info.get("shortName") or symbol
+
+        beta_val = info.get("beta")
+        div_yield = info.get("dividendYield")
+        if div_yield and div_yield > 0:
+            div_yield = round(div_yield * 100, 2)
+        else:
+            div_yield = None
+        pe_val = info.get("trailingPE") or info.get("forwardPE")
+        eps_val = info.get("trailingEps")
+        w52_high = info.get("fiftyTwoWeekHigh")
+        w52_low = info.get("fiftyTwoWeekLow")
+        avg_vol = info.get("averageVolume")
+        shares_out = info.get("sharesOutstanding")
+        prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
+        price_chg_pct = None
+        if price and prev_close and prev_close > 0:
+            price_chg_pct = round(((price - prev_close) / prev_close) * 100, 2)
+
+        country = EXCHANGE_COUNTRY.get(exchange, "India")
+
+        sym_base = symbol.upper().replace(".NS", "").replace(".L", "").split(".")[0]
+        is_etf = (
+            (info.get("quoteType") or "").upper() == "ETF"
+            or sym_base in ETF_TICKERS_BY_EXCHANGE.get(exchange, frozenset())
+        )
+
         unit_label = "Cr" if exchange == "NSE" else "M"
 
         stock_data = {
@@ -720,6 +775,7 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "sector": sector,
             "exchange": exchange,
             "currency": currency,
+            "country": country,
             "market_cap": market_cap,
             "average_market_cap_36m": average_market_cap_36m,
             "debt": debt,
@@ -734,6 +790,16 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "total_assets": total_assets,
             "price": round(price, 2),
             "data_source": "yahoo_finance",
+            "beta": round(beta_val, 4) if beta_val else None,
+            "dividend_yield": div_yield,
+            "pe_ratio": round(pe_val, 2) if pe_val else None,
+            "eps": round(eps_val, 2) if eps_val else None,
+            "week_52_high": round(w52_high, 2) if w52_high else None,
+            "week_52_low": round(w52_low, 2) if w52_low else None,
+            "avg_volume": float(avg_vol) if avg_vol else None,
+            "shares_outstanding": float(shares_out) if shares_out else None,
+            "price_change_pct": price_chg_pct,
+            "is_etf": is_etf,
         }
 
         log.info(
@@ -803,6 +869,7 @@ def write_to_database(stocks):
     db = SessionLocal()
     created = 0
     updated = 0
+    touched_ids: set[int] = set()
 
     try:
         now = datetime.now(UTC)
@@ -813,9 +880,25 @@ def write_to_database(stocks):
                 for key, value in payload.items():
                     setattr(existing, key, value)
                 updated += 1
+                touched_ids.add(existing.id)
             else:
-                db.add(Stock(**payload))
+                row = Stock(**payload)
+                db.add(row)
+                db.flush()
+                touched_ids.add(row.id)
                 created += 1
+
+        from app.api import helpers
+        from app.services.compliance_history_service import record_compliance_change_if_needed
+        from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock
+
+        for sid in touched_ids:
+            stock = db.query(Stock).filter(Stock.id == sid).first()
+            if not stock:
+                continue
+            r = evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)
+            record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
+
         db.commit()
         log.info("Database updated: %d created, %d updated", created, updated)
     except Exception as exc:

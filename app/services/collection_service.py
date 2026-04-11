@@ -94,10 +94,10 @@ def seed_collections(db: Session) -> int:
         # Idempotent: reset entries and rebuild
         db.query(CollectionEntry).filter(CollectionEntry.collection_id == collection.id).delete()
 
+        from app.services.stock_lookup import resolve_stock
+
         for j, sym in enumerate(coll_data["symbols"]):
-            # Symbols may be stored with Yahoo suffixes for LSE (e.g. "AZN.L").
-            # Prefer exact match; fall back to LSE-suffixed match.
-            stock = db.query(Stock).filter(Stock.symbol == sym).first()
+            stock = resolve_stock(db, sym, "NSE", active_only=True) or resolve_stock(db, sym, None, active_only=True)
             if not stock and coll_data["slug"].startswith("ftse100"):
                 stock = db.query(Stock).filter(Stock.symbol == f"{sym}.L").first()
             if stock:

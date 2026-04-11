@@ -291,6 +291,355 @@ def screening_score_for_manual_override(status: str) -> int:
     return 50
 
 
+def calculate_compliance_rating(breakdown: dict, status: str) -> int:
+    """
+    1–5 compliance rating from ratio headroom vs thresholds.
+    5 = strong headroom, 1 = non-compliant status.
+    """
+    if status == "NON_COMPLIANT":
+        return 1
+
+    ratios = [
+        (breakdown.get("debt_ratio_value", 0), breakdown.get("debt_ratio_threshold", 0.33)),
+        (breakdown.get("non_permissible_income_ratio", 0), 0.05),
+        (breakdown.get("interest_income_ratio", 0), 0.05),
+        (breakdown.get("receivables_ratio_value", 0), breakdown.get("receivables_ratio_threshold", 0.33)),
+        (breakdown.get("cash_and_interest_bearing_to_assets_ratio", 0), breakdown.get("cash_ib_ratio_threshold", 0.33)),
+    ]
+
+    if status == "CAUTIOUS":
+        max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
+        return 3 if max_pct < 0.7 else 2
+
+    max_pct = max((v / t if t > 0 else 0) for v, t in ratios)
+    avg_pct = sum(v / t if t > 0 else 0 for v, t in ratios) / len(ratios) if ratios else 0
+
+    if max_pct < 0.3 and avg_pct < 0.2:
+        return 5
+    if max_pct < 0.5 and avg_pct < 0.35:
+        return 5
+    if max_pct < 0.7:
+        return 4
+    return 3
+
+
+def _shorten_reason(text: str, max_len: int = 130) -> str:
+    text = text.strip()
+    if len(text) <= max_len:
+        return text
+    cut = text[: max_len - 1].rsplit(" ", 1)[0]
+    return cut + "…"
+
+
+def build_confidence_bullets(
+    status: str,
+    breakdown: dict,
+    reasons: list[str],
+    manual_review_flags: list[str],
+) -> list[dict[str, str]]:
+    """
+    Human-readable lines (2–3) explaining the screening outcome.
+    Each item: {"tone": "success"|"warning"|"error", "text": "..."} for UI icons.
+    """
+    joined_reasons = " ".join(reasons)
+    if "Manual compliance override" in joined_reasons:
+        tone = {"HALAL": "success", "CAUTIOUS": "warning", "NON_COMPLIANT": "error"}.get(
+            status, "warning"
+        )
+        bullets: list[dict[str, str]] = [
+            {"tone": tone, "text": "Final status follows an approved manual compliance decision."},
+            {"tone": "warning", "text": "Read the reviewer notes in the reasons list for full context."},
+        ]
+        if status == "HALAL":
+            bullets.insert(
+                0,
+                {
+                    "tone": "success",
+                    "text": "Automated ratios below are kept for transparency alongside the override.",
+                },
+            )
+        return bullets[:3]
+
+    if status == "NON_COMPLIANT":
+        return _confidence_bullets_non_compliant(reasons)
+    if status == "CAUTIOUS":
+        return _confidence_bullets_cautious(breakdown, manual_review_flags)
+    return _confidence_bullets_halal(breakdown)
+
+
+def _confidence_bullets_non_compliant(reasons: list[str]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for reason in reasons:
+        r = reason.lower()
+        key: str | None = None
+        text: str | None = None
+        if "sector" in r and ("non-compliant" in r or "prohibited" in r or "business" in r):
+            key, text = "sector", "Business falls in a sector our rules treat as non-permissible."
+        elif r.startswith("debt") or "debt is" in r:
+            key, text = "debt", "Debt is too high compared with the screening benchmark."
+        elif "non-permissible" in r:
+            key, text = "npi", "Non-halal income is larger than the small amount Islamic screens usually allow."
+        elif "interest income" in r:
+            key, text = "int", "Interest-based income exceeds the permitted ceiling."
+        elif "receivables" in r:
+            key, text = "recv", "Receivables are above the allowed limit versus assets or market value."
+        elif "cash" in r and "interest-bearing" in r:
+            key, text = "cash", "Cash and interest-bearing investments exceed the permitted share of the balance sheet."
+        else:
+            key = f"other:{reason[:40]}"
+            text = _shorten_reason(reason)
+        if key is None or text is None or key in seen:
+            continue
+        seen.add(key)
+        out.append({"tone": "error", "text": text})
+        if len(out) >= 3:
+            break
+    if not out:
+        out.append(
+            {
+                "tone": "error",
+                "text": "One or more core Shariah checks did not pass for this company.",
+            }
+        )
+    # Product/tests expect 2–3 lines for consistent UI; pad when only one hard rule fired.
+    if len(out) < 2:
+        out.append(
+            {
+                "tone": "error",
+                "text": "Review the ratio breakdown and methodology notes below for full context.",
+            }
+        )
+    return out[:3]
+
+
+def _confidence_bullets_cautious(breakdown: dict, flags: list[str]) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    joined = " ".join(flags).lower()
+    if "missing" in joined or "zero data" in joined:
+        out.append(
+            {
+                "tone": "warning",
+                "text": "Some key financial numbers are missing or zero, so we cannot fully confirm the screen.",
+            }
+        )
+    if "fixed-asset" in joined or "fixed assets" in joined:
+        out.append(
+            {
+                "tone": "warning",
+                "text": "Very few hard assets are reported, which often leads to extra scholar review.",
+            }
+        )
+    if not out:
+        out.append(
+            {
+                "tone": "warning",
+                "text": "Hard rules passed, but review flags mean we label this cautious, not fully verified.",
+            }
+        )
+    if breakdown.get("sector_allowed", True):
+        out.append(
+            {
+                "tone": "success",
+                "text": "Sector screening did not hit an automatic exclusion on this run.",
+            }
+        )
+    if len(out) < 3:
+        out.append(
+            {
+                "tone": "warning",
+                "text": "Compare the ratios below with a qualified advisor before sizing a position.",
+            }
+        )
+    return out[:3]
+
+
+def _confidence_bullets_halal(breakdown: dict) -> list[dict[str, str]]:
+    bullets: list[dict[str, str]] = []
+    if breakdown.get("sector_allowed", True):
+        bullets.append(
+            {"tone": "success", "text": "Passed the sector and business-line screen."}
+        )
+
+    dr = float(breakdown.get("debt_ratio_value") or 0)
+    dt = float(breakdown.get("debt_ratio_threshold") or 0.33)
+    if dt > 0:
+        if dr <= dt * 0.6:
+            bullets.append(
+                {"tone": "success", "text": "Debt is comfortably inside the allowed limit."}
+            )
+        elif dr <= dt:
+            bullets.append(
+                {"tone": "success", "text": "Debt is within acceptable limits for this methodology."}
+            )
+        else:
+            bullets.append(
+                {
+                    "tone": "success",
+                    "text": "Debt meets this profile’s automated rule (check the methodology tab for nuance).",
+                }
+            )
+
+    npi = float(breakdown.get("non_permissible_income_ratio") or 0)
+    intr = float(breakdown.get("interest_income_ratio") or 0)
+    if npi <= 0.025 and intr <= 0.025:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Non-halal and interest-linked income are both very small versus revenue.",
+            }
+        )
+    elif npi <= 0.05:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Non-permissible income stays under the usual screening cap.",
+            }
+        )
+    else:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Income purity checks did not trigger a hard fail on this run.",
+            }
+        )
+
+    if len(bullets) > 3:
+        return bullets[:3]
+
+    recv = float(breakdown.get("receivables_ratio_value") or 0)
+    rt = float(breakdown.get("receivables_ratio_threshold") or 0.33)
+    if len(bullets) < 3 and rt > 0 and recv <= rt:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Receivables look reasonable against the benchmark.",
+            }
+        )
+    cash = float(breakdown.get("cash_and_interest_bearing_to_assets_ratio") or 0)
+    cit = float(breakdown.get("cash_ib_ratio_threshold") or 0.33)
+    if len(bullets) < 3 and cit > 0 and cash <= cit:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Cash and interest-bearing balances sit below the asset-based ceiling.",
+            }
+        )
+    while len(bullets) < 3:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": "Overall, the automated checks did not flag a hard breach.",
+            }
+        )
+    return bullets[:3]
+
+
+def build_consensus_confidence_bullets(payload: dict) -> list[dict[str, str]]:
+    """Short explanation for multi-methodology consensus (2–3 bullets)."""
+    consensus = payload["consensus_status"]
+    summ = payload["summary"]
+    halal_count = summ["halal_count"]
+    cautious_count = summ["cautious_count"]
+    non_compliant_count = summ["non_compliant_count"]
+    total = summ["total"]
+
+    if consensus == "HALAL" and halal_count == total:
+        return [
+            {
+                "tone": "success",
+                "text": "All three methodologies return halal on the same automated rules.",
+            },
+            {
+                "tone": "success",
+                "text": "No methodology raised a hard-rule breach in this combined view.",
+            },
+            {
+                "tone": "success",
+                "text": "You should still confirm sector fit and personal guidance before investing.",
+            },
+        ]
+    if consensus == "HALAL":
+        bullets = [
+            {
+                "tone": "success",
+                "text": f"{halal_count} of {total} methodologies give a halal outcome on this data.",
+            },
+            {
+                "tone": "warning",
+                "text": "Standards disagree in places — open each methodology card to see what moved.",
+            },
+        ]
+        if cautious_count:
+            bullets.append(
+                {
+                    "tone": "warning",
+                    "text": "At least one methodology stayed cautious because of data gaps or borderline ratios.",
+                }
+            )
+        else:
+            bullets.append(
+                {
+                    "tone": "warning",
+                    "text": "One methodology may use stricter denominators or limits than the others.",
+                }
+            )
+        return bullets[:3]
+    if consensus == "NON_COMPLIANT":
+        bullets = [
+            {
+                "tone": "error",
+                "text": f"{non_compliant_count} of {total} methodologies fail at least one hard rule.",
+            },
+            {
+                "tone": "error",
+                "text": "When several standards agree on a fail, debt, income purity, or sector usually drive it.",
+            },
+        ]
+        if halal_count:
+            bullets.append(
+                {
+                    "tone": "warning",
+                    "text": "One view may still pass — read each tab before treating the name as cleared.",
+                }
+            )
+        else:
+            bullets.append(
+                {
+                    "tone": "error",
+                    "text": "Treat this as non-compliant until the failing checks are resolved or reviewed.",
+                }
+            )
+        return bullets[:3]
+
+    # CAUTIOUS consensus
+    bullets = [
+        {
+            "tone": "warning",
+            "text": "No confident halal majority: mixed compliance across methodologies on this screen.",
+        },
+        {
+            "tone": "warning",
+            "text": "This often happens when data is thin or financial ratios sit right on the edge.",
+        },
+    ]
+    if halal_count >= 1:
+        bullets.append(
+            {
+                "tone": "success",
+                "text": f"{halal_count} methodology view(s) still look acceptable on paper — pair with manual review.",
+            }
+        )
+    else:
+        bullets.append(
+            {
+                "tone": "warning",
+                "text": "Prioritise better fundamentals or scholar review before taking a position.",
+            }
+        )
+    return bullets[:3]
+
+
 # ============================================================================
 # SCREENING ENGINE
 # ============================================================================
@@ -428,6 +777,33 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
         {"reasons": reasons, "manual_review_flags": manual_review_flags}
     )
 
+    bd = {
+        "debt_to_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("market_cap", 0) or 0), 4),
+        "debt_to_36m_avg_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("average_market_cap_36m", 0) or 0), 4),
+        "interest_income_ratio": round(interest_income_ratio, 4),
+        "non_permissible_income_ratio": round(non_permissible_ratio, 4),
+        "receivables_to_market_cap_ratio": round(_safe_ratio(stock["accounts_receivable"], stock.get("market_cap", 0) or 0), 4),
+        "cash_and_interest_bearing_to_assets_ratio": round(cash_to_assets, 4),
+        "fixed_assets_to_total_assets_ratio": (
+            round(fixed_assets_ratio, 4) if fixed_assets_ratio is not None else None
+        ),
+        "sector_allowed": sector_allowed,
+        "debt_ratio_value": round(debt_ratio, 4),
+        "debt_ratio_threshold": t["debt_ratio"],
+        "receivables_ratio_value": round(receivables_ratio, 4),
+        "receivables_ratio_threshold": t["receivables_ratio"],
+        "cash_ib_ratio_threshold": t["cash_ib_ratio"],
+    }
+    rating_input = {
+        "debt_ratio_value": debt_ratio,
+        "debt_ratio_threshold": t["debt_ratio"],
+        "non_permissible_income_ratio": non_permissible_ratio,
+        "interest_income_ratio": interest_income_ratio,
+        "receivables_ratio_value": receivables_ratio,
+        "receivables_ratio_threshold": t["receivables_ratio"],
+        "cash_and_interest_bearing_to_assets_ratio": cash_to_assets,
+        "cash_ib_ratio_threshold": t["cash_ib_ratio"],
+    }
     return {
         "profile": profile,
         "status": status,
@@ -437,23 +813,9 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
         "screening_score": screening_score,
         "purification_ratio_pct": purification_pct,
         "disclaimer": SCREENING_DISCLAIMER,
-        "breakdown": {
-            "debt_to_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("market_cap", 0) or 0), 4),
-            "debt_to_36m_avg_market_cap_ratio": round(_safe_ratio(stock["debt"], stock.get("average_market_cap_36m", 0) or 0), 4),
-            "interest_income_ratio": round(interest_income_ratio, 4),
-            "non_permissible_income_ratio": round(non_permissible_ratio, 4),
-            "receivables_to_market_cap_ratio": round(_safe_ratio(stock["accounts_receivable"], stock.get("market_cap", 0) or 0), 4),
-            "cash_and_interest_bearing_to_assets_ratio": round(cash_to_assets, 4),
-            "fixed_assets_to_total_assets_ratio": (
-                round(fixed_assets_ratio, 4) if fixed_assets_ratio is not None else None
-            ),
-            "sector_allowed": sector_allowed,
-            "debt_ratio_value": round(debt_ratio, 4),
-            "debt_ratio_threshold": t["debt_ratio"],
-            "receivables_ratio_value": round(receivables_ratio, 4),
-            "receivables_ratio_threshold": t["receivables_ratio"],
-            "cash_ib_ratio_threshold": t["cash_ib_ratio"],
-        },
+        "breakdown": bd,
+        "compliance_rating": calculate_compliance_rating(rating_input, status),
+        "confidence_bullets": build_confidence_bullets(status, bd, reasons, manual_review_flags),
     }
 
 
@@ -491,7 +853,7 @@ def evaluate_stock_multi(stock: dict) -> dict:
     else:
         consensus_score = min(per_method_scores)
 
-    return {
+    payload = {
         "consensus_status": consensus,
         "screening_score": max(0, min(100, consensus_score)),
         "methodologies": results,
@@ -503,6 +865,8 @@ def evaluate_stock_multi(stock: dict) -> dict:
             "total": len(ALL_PROFILE_CODES),
         },
     }
+    payload["confidence_bullets"] = build_consensus_confidence_bullets(payload)
+    return payload
 
 
 def _simple_summary_from_multi(multi: dict) -> str:
