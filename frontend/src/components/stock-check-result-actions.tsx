@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
-import { addLocalWatchlist } from "@/lib/local-watchlist";
+import { addLocalWatchlist, isInLocalWatchlist } from "@/lib/local-watchlist";
 import styles from "./stock-check-result-actions.module.css";
 
 type Props = {
@@ -26,6 +26,7 @@ export function StockCheckResultActions({ symbol, name, score, status, onViewDet
         type="button"
         className={styles.primary}
         onClick={() => {
+          const wasSaved = isInLocalWatchlist(symbol);
           if (
             addLocalWatchlist({
               symbol,
@@ -34,7 +35,7 @@ export function StockCheckResultActions({ symbol, name, score, status, onViewDet
               status,
             })
           ) {
-            toast("Added to Watchlist", "success");
+            toast(wasSaved ? "Watchlist updated" : "Added to Watchlist", "success");
             router.push("/saved-stocks");
           } else {
             toast("Could not save — try again", "error");
