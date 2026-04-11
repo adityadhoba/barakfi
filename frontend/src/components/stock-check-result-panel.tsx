@@ -65,7 +65,11 @@ export function StockCheckResultPanel({
             </button>
           </div>
           <div className={styles.actionCell}>
-            <StockCheckResultActions symbol={symbol} variant="watchlistOnly" />
+            <StockCheckResultActions
+              symbol={symbol}
+              variant="watchlistOnly"
+              watchlistSnapshot={{ name, score, status }}
+            />
           </div>
         </div>
       </div>

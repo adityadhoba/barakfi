@@ -1,5 +1,5 @@
 .page {
-  max-width: 520px;
+  max-width: 560px;
   margin: 0 auto;
   padding: 32px 20px 80px;
 }
@@ -40,58 +40,135 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 12px 16px;
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
 }
 
-.sym {
-  font-weight: 800;
-  font-size: 1rem;
-  font-family: var(--font-display);
-  color: var(--text);
-  text-decoration: none;
+@media (max-width: 520px) {
+  .row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .mainLink {
+    grid-column: 1 / -1;
+  }
+
+  .meta {
+    justify-self: start;
+  }
+
+  .remove {
+    justify-self: end;
+  }
 }
 
-.sym:hover {
+.mainLink {
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.mainLink:hover .name {
   color: var(--emerald);
 }
 
-.actions {
+.name {
+  display: block;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.25;
+  transition: color var(--transition-fast);
+}
+
+.symbol {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.meta {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.secondary {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-decoration: none;
+.score {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
-.secondary:hover {
+.scoreSuffix {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  margin-left: 2px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.badgeHalal {
+  background: var(--emerald-bg);
   color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+
+.badgeDoubt {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+.badgeHaram {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+}
+
+.badgeMuted {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
 }
 
 .remove {
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--bg-soft);
   color: var(--text-secondary);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .remove:hover {

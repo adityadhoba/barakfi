@@ -5,33 +5,50 @@ import { useState } from "react";
 import { getLocalWatchlist, removeLocalWatchlist, type LocalWatchlistEntry } from "@/lib/local-watchlist";
 import styles from "./saved-stocks.module.css";
 
+function badgeClass(status: string): string {
+  if (status === "Halal") return styles.badgeHalal;
+  if (status === "Haram") return styles.badgeHaram;
+  return styles.badgeDoubt;
+}
+
 export default function SavedStocksPage() {
   const [items, setItems] = useState<LocalWatchlistEntry[]>(() => getLocalWatchlist());
 
   return (
     <main className="shellPage">
       <div className={styles.page}>
-        <h1 className={styles.title}>Saved stocks</h1>
-        <p className={styles.sub}>Quick list stored on this device — sign in and use the watchlist for sync across devices.</p>
+        <h1 className={styles.title}>Watchlist</h1>
+        <p className={styles.sub}>Saved on this device only — no sign-in. For sync across devices, use the account watchlist after you log in.</p>
 
         {items.length === 0 ? (
           <div className={styles.empty}>
-            <p>No saved stocks yet.</p>
+            <p>Nothing saved yet.</p>
             <Link href="/" className={styles.link}>
               Check a stock →
             </Link>
           </div>
         ) : (
           <ul className={styles.list}>
-            {items.map((e) => (
-              <li key={e.symbol} className={styles.row}>
-                <Link href={`/check/${encodeURIComponent(e.symbol)}`} className={styles.sym}>
-                  {e.symbol}
-                </Link>
-                <div className={styles.actions}>
-                  <Link href={`/stocks/${encodeURIComponent(e.symbol)}`} className={styles.secondary}>
-                    Details
+            {items.map((e) => {
+              const displayName = e.name ?? e.symbol;
+              const hasStatus = Boolean(e.status);
+              return (
+                <li key={e.symbol} className={styles.row}>
+                  <Link href={`/check/${encodeURIComponent(e.symbol)}`} className={styles.mainLink}>
+                    <span className={styles.name}>{displayName}</span>
+                    <span className={styles.symbol}>{e.symbol}</span>
                   </Link>
+                  <div className={styles.meta}>
+                    <span className={styles.score} aria-label="Compliance score">
+                      {typeof e.score === "number" ? e.score : "—"}
+                      {typeof e.score === "number" ? <span className={styles.scoreSuffix}>/100</span> : null}
+                    </span>
+                    {hasStatus ? (
+                      <span className={`${styles.badge} ${badgeClass(e.status!)}`}>{e.status}</span>
+                    ) : (
+                      <span className={styles.badgeMuted}>—</span>
+                    )}
+                  </div>
                   <button
                     type="button"
                     className={styles.remove}
@@ -42,9 +59,9 @@ export default function SavedStocksPage() {
                   >
                     Remove
                   </button>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
