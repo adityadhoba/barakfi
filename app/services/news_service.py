@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import feedparser
 from sqlalchemy.orm import Session
@@ -20,12 +20,12 @@ UA = "BarakfiNewsBot/1.0 (+https://barakfi.in)"
 def _parse_published(entry) -> datetime:
     if getattr(entry, "published_parsed", None):
         try:
-            return datetime(*entry.published_parsed[:6], tzinfo=UTC)
+            return datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
         except Exception:
             pass
     if getattr(entry, "updated_parsed", None):
         try:
-            return datetime(*entry.updated_parsed[:6], tzinfo=UTC)
+            return datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
         except Exception:
             pass
     return utc_now()
@@ -161,7 +161,7 @@ def fetch_and_upsert_newsdata(db: Session, max_items: int = 40) -> int:
             if "T" in pub_s:
                 pub = datetime.fromisoformat(pub_s.replace("Z", "+00:00"))
             else:
-                pub = datetime.strptime(pub_s[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+                pub = datetime.strptime(pub_s[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         except Exception:
             pub = utc_now()
 

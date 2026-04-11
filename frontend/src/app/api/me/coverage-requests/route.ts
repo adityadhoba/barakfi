@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
@@ -26,7 +26,7 @@ export async function GET() {
 
     const responseBody = await response.json().catch(() => ({ detail: "Backend returned non-JSON" }));
 
-    return NextResponse.json(responseBody, { status: response.status });
+    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), { status: response.status });
   } catch (error) {
     console.error("[me/coverage-requests GET] Proxy error:", error);
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const responseBody = await response.json().catch(() => ({ detail: "Backend returned non-JSON" }));
 
-    return NextResponse.json(responseBody, { status: response.status });
+    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), { status: response.status });
   } catch (error) {
     console.error("[me/coverage-requests POST] Proxy error:", error);
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });

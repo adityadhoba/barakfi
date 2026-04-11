@@ -119,6 +119,10 @@ class CheckStockResponse(BaseModel):
     details_available: bool
 
 
+class TrackSymbolRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=64)
+
+
 class AuthStrategyResponse(BaseModel):
     provider: str
     google_enabled: bool

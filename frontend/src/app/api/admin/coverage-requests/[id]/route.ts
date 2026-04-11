@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
@@ -38,7 +38,7 @@ export async function PATCH(
       console.error("[admin/coverage-requests PATCH] Backend error:", response.status, responseBody);
     }
 
-    return NextResponse.json(responseBody, { status: response.status });
+    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), { status: response.status });
   } catch (error) {
     console.error("[admin/coverage-requests PATCH] Proxy error:", error);
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });

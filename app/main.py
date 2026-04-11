@@ -21,6 +21,7 @@ from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_UR
 from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_PUBLISHABLE_KEY
 from app.database import Base, engine
 from app.api.routes import router
+from app.middleware.api_envelope import ApiEnvelopeMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all tables
     ComplianceHistory,
@@ -42,6 +43,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all: always return JSON so frontend proxies can parse the response."""
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     detail = str(exc) if DEBUG else "Internal server error"
+    if request.url.path.startswith("/api"):
+        from app.api.envelope import api_error
+
+        return JSONResponse(status_code=500, content=api_error(detail))
     return JSONResponse(
         status_code=500,
         content={"detail": detail},
@@ -489,6 +494,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Internal-Service-Token", "X-Actor-Auth-Subject", "X-Actor-Email"],
 )
+# Outermost: normalize /api JSON into { success, data, error }
+app.add_middleware(ApiEnvelopeMiddleware)
 
 
 @app.middleware("http")

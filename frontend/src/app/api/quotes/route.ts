@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, unwrapBackendEnvelope } from "@/lib/api-base";
 
 /**
  * Batch quotes — optional exchange per symbol via pairs=SYM:EXC,SYM2:EXC2
@@ -67,7 +67,11 @@ export async function GET(request: NextRequest) {
           { next: { revalidate: 60 } },
         );
         if (!res.ok) return { symbol, last_price: null, change: null, change_percent: null };
-        const data = await res.json();
+        const data = unwrapBackendEnvelope<{
+          last_price?: number | null;
+          change?: number | null;
+          change_percent?: number | null;
+        }>(await res.json());
         return {
           symbol,
           last_price: data.last_price ?? null,
