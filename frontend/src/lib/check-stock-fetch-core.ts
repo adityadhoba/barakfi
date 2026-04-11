@@ -1,3 +1,4 @@
+import { parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
 import type { CheckStockResponse, MultiMethodologyResult, ScreeningResult, Stock } from "@/lib/api";
 
 export type CheckStockPageResult =
@@ -6,12 +7,7 @@ export type CheckStockPageResult =
   | { kind: "error"; message: string };
 
 async function parseDetail(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    return typeof body?.detail === "string" ? body.detail : response.statusText;
-  } catch {
-    return response.statusText;
-  }
+  return parseFastapiFetchError(response);
 }
 
 type FetchInit = RequestInit & { next?: { revalidate?: number } };
@@ -57,10 +53,10 @@ export async function fetchCheckStockPageDataWithBase(
       return { kind: "error", message: parts.join(" — ") || "Could not load screening." };
     }
 
-    const check = (await resCheck.json()) as CheckStockResponse;
-    const stock = (await resStock.json()) as Stock;
-    const screening = (await resScreen.json()) as ScreeningResult;
-    const multi = resMulti.ok ? ((await resMulti.json()) as MultiMethodologyResult) : null;
+    const check = unwrapBackendEnvelope<CheckStockResponse>(await resCheck.json());
+    const stock = unwrapBackendEnvelope<Stock>(await resStock.json());
+    const screening = unwrapBackendEnvelope<ScreeningResult>(await resScreen.json());
+    const multi = resMulti.ok ? unwrapBackendEnvelope<MultiMethodologyResult>(await resMulti.json()) : null;
 
     return { kind: "ok", check, stock, screening, multi };
   } catch (err) {

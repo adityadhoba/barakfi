@@ -29,10 +29,29 @@ export function unwrapBackendEnvelope<T = unknown>(body: unknown): T {
   return body as T;
 }
 
-/**
- * Normalize backend JSON for Next.js route handlers: unwrap 2xx payloads; map
- * enveloped errors to `{ detail }` so existing UI error parsing keeps working.
- */
+/** Parse FastAPI JSON error body (envelope or legacy `{ detail }`). */
+export function messageFromFastapiJsonBody(body: unknown, fallback: string): string {
+  if (body !== null && typeof body === "object") {
+    const o = body as Record<string, unknown>;
+    if (typeof o.detail === "string") return o.detail;
+    if (o.error !== null && typeof o.error === "object" && o.error !== undefined) {
+      const m = (o.error as { message?: string }).message;
+      if (typeof m === "string" && m.length > 0) return m;
+    }
+  }
+  return fallback;
+}
+
+/** Read JSON from a failed fetch and extract a human-readable message. */
+export async function parseFastapiFetchError(response: Response): Promise<string> {
+  try {
+    const body: unknown = await response.json();
+    return messageFromFastapiJsonBody(body, response.statusText);
+  } catch {
+    return response.statusText;
+  }
+}
+
 export function adaptBackendJsonForProxy(body: unknown, ok: boolean): unknown {
   if (body !== null && typeof body === "object") {
     const o = body as Record<string, unknown>;
