@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo, useId } from "react";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
+import { fetchCheckStockPageDataBrowser } from "@/lib/check-stock-fetch-browser";
+import { useCheckStockSession } from "@/stores/check-stock-session";
 import styles from "./stock-check-hero.module.css";
 
 type StockHit = { symbol: string; name: string; sector: string };
 
 export function StockCheckHero() {
   const router = useRouter();
+  const setSessionPayload = useCheckStockSession((s) => s.setPayload);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);
@@ -41,15 +44,24 @@ export function StockCheckHero() {
   }, [q, stocks]);
 
   const goCheck = useCallback(
-    (symbol: string) => {
+    async (symbol: string) => {
       const sym = symbol.trim().toUpperCase();
       if (!sym) return;
       setValue("");
       setOpen(false);
       setFocusIdx(-1);
+      const result = await fetchCheckStockPageDataBrowser(sym);
+      if (result.kind === "ok") {
+        setSessionPayload({
+          check: result.check,
+          stock: result.stock,
+          screening: result.screening,
+          multi: result.multi,
+        });
+      }
       router.push(`/check/${encodeURIComponent(sym)}`);
     },
-    [router],
+    [router, setSessionPayload],
   );
 
   useEffect(() => {
@@ -70,11 +82,11 @@ export function StockCheckHero() {
         onSubmit={(e) => {
           e.preventDefault();
           if (focusIdx >= 0 && focusIdx < filtered.length) {
-            goCheck(filtered[focusIdx].symbol);
+            void goCheck(filtered[focusIdx].symbol);
             return;
           }
           const t = value.trim().toUpperCase();
-          if (t) goCheck(t);
+          if (t) void goCheck(t);
         }}
       >
         <input
@@ -129,7 +141,7 @@ export function StockCheckHero() {
                   className={`${styles.item} ${i === focusIdx ? styles.itemFocus : ""} ${i === 0 ? styles.itemBest : ""}`}
                   onMouseEnter={() => setFocusIdx(i)}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => goCheck(s.symbol)}
+                  onClick={() => void goCheck(s.symbol)}
                 >
                   <span className={styles.sym}>
                     <SearchMatchHighlight text={s.symbol} query={q} />

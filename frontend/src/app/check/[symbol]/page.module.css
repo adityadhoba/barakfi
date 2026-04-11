@@ -107,3 +107,9 @@
   margin-top: 8px;
   text-align: left;
 }
+
+.loading {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  padding: 24px 0;
+}
