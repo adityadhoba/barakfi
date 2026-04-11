@@ -53,7 +53,7 @@
 .loadingSidebar {
   composes: skeleton;
   height: 80px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
 }
 
 .loadingContent {

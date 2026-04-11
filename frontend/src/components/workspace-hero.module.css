@@ -173,7 +173,7 @@
   align-items: center;
   text-align: center;
   padding: 40px 24px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px dashed var(--line-strong);

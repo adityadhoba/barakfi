@@ -263,21 +263,21 @@
 }
 
 .badgeHalal {
-  background: var(--emerald-bg);
-  color: var(--emerald);
-  border-color: var(--emerald-border);
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border-color: var(--status-halal-border);
 }
 
 .badgeReview {
-  background: var(--gold-bg);
-  color: var(--gold);
-  border-color: var(--gold-border);
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border-color: var(--status-doubtful-border);
 }
 
 .badgeFail {
-  background: var(--red-bg);
-  color: var(--red);
-  border-color: var(--red-border);
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border-color: var(--status-haram-border);
 }
 
 /* ── Notes Column ── */

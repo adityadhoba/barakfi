@@ -7,20 +7,20 @@
 .shellPage {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 12px 12px max(72px, calc(40px + env(safe-area-inset-bottom, 0px)));
+  padding: 16px 14px max(72px, calc(40px + env(safe-area-inset-bottom, 0px)));
   width: 100%;
   min-height: calc(100vh - 56px);
 }
 
 @media (min-width: 640px) {
   .shellPage {
-    padding: 18px 20px max(48px, calc(36px + env(safe-area-inset-bottom, 0px)));
+    padding: 20px 20px max(48px, calc(36px + env(safe-area-inset-bottom, 0px)));
   }
 }
 
 @media (min-width: 1024px) {
   .shellPage {
-    padding: 24px 24px max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
+    padding: 28px 24px max(48px, calc(32px + env(safe-area-inset-bottom, 0px)));
   }
 }
 
@@ -80,9 +80,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--emerald);
-  background: var(--emerald-bg);
-  border: 1px solid var(--emerald-border);
+  color: var(--status-halal-fg);
+  background: var(--status-halal-bg);
+  border: 1px solid var(--status-halal-border);
 }
 
 .shellBack {
@@ -105,28 +105,28 @@
 .shellHero {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 20px;
+  margin-bottom: var(--section-gap);
 }
 
 @media (min-width: 900px) {
   .shellHero {
     grid-template-columns: 1.25fr 0.75fr;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 24px;
+    margin-bottom: var(--section-gap-lg);
   }
 }
 
 .shellHeroSingle {
   display: block;
-  margin-bottom: 28px;
+  margin-bottom: var(--section-gap-lg);
 }
 
 /* ── Card Base ── */
 .shellCard {
   padding: 16px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
   box-shadow: var(--shadow-xs);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -151,7 +151,7 @@
 
 /* ── Sections ── */
 .shellSection {
-  margin-bottom: 28px;
+  margin-bottom: var(--section-gap-lg);
 }
 
 .shellSectionHead {
@@ -185,7 +185,7 @@
 .shellDivider {
   height: 1px;
   background: var(--line);
-  margin: 24px 0;
+  margin: var(--section-gap) 0;
   border: none;
 }
 
@@ -213,7 +213,7 @@
 
 .shellStripCard {
   padding: 16px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--card-radius);
   border: 1px solid var(--line);
   background: var(--panel);
   text-decoration: none;
@@ -260,10 +260,10 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--emerald-border);
-  background: var(--emerald-bg);
-  margin-bottom: 24px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--status-halal-border);
+  background: var(--status-halal-bg);
+  margin-bottom: var(--section-gap);
 }
 
 .shellMoodIcon {
@@ -366,7 +366,7 @@
 /* ── Tables ── */
 .shellTableWrap {
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--card-radius);
   background: var(--panel);
   overflow-x: auto;
   overflow-y: hidden;
@@ -454,7 +454,7 @@
 /* ── Link List ── */
 .shellList {
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--card-radius);
   background: var(--panel);
   overflow: hidden;
   box-shadow: var(--shadow-xs);

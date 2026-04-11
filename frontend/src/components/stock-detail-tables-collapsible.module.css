@@ -152,6 +152,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 9999px;
+  border: 1px solid transparent;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -159,18 +160,21 @@
 }
 
 .badgeHalal {
-  background: color-mix(in srgb, var(--emerald) 18%, transparent);
-  color: var(--emerald);
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
 }
 
 .badgeReview {
-  background: color-mix(in srgb, var(--gold) 22%, transparent);
-  color: var(--gold);
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border: 1px solid var(--status-doubtful-border);
 }
 
 .badgeFail {
-  background: color-mix(in srgb, var(--red) 18%, transparent);
-  color: var(--red);
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border: 1px solid var(--status-haram-border);
 }
 
 .emptyNote {

@@ -32,7 +32,7 @@
   display: block;
   text-decoration: none;
   color: inherit;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   outline: none;
   min-height: 100%;
 }
@@ -52,7 +52,7 @@
 .cardSecure {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   padding: 22px;
   min-height: 220px;
   height: 100%;
@@ -128,7 +128,7 @@
 .cardGlobe {
   position: relative;
   overflow: hidden;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   padding: 22px;
   min-height: 220px;
   height: 100%;
@@ -165,7 +165,7 @@
 }
 
 .cardGrowth {
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   padding: 22px;
   min-height: 220px;
   height: 100%;

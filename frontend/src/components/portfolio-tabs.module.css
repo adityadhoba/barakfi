@@ -59,7 +59,7 @@
   text-align: center;
   padding: 48px 24px;
   border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
 }

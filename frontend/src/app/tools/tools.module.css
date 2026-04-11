@@ -86,7 +86,7 @@
   align-items: center;
   gap: 16px;
   padding: 20px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--line);
   background: var(--panel);
   text-decoration: none;
@@ -174,7 +174,7 @@
 .cta {
   margin-top: 40px;
   padding: 24px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--emerald-bg);
   border: 1px solid var(--emerald-border);
   text-align: center;

@@ -100,6 +100,8 @@
 
   --section-gap: 2rem;
   --section-gap-lg: 2.75rem;
+  /* Default card / panel corner radius across the app */
+  --card-radius: var(--radius-2xl);
 
   color-scheme: light;
 }

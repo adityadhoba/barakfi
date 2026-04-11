@@ -8,7 +8,7 @@
 .subtitle { font-size: 0.92rem; color: var(--text-secondary); margin: 0; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
 @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
-.card { padding: 20px; border-radius: var(--radius-xl); border: 1px solid var(--line); background: var(--panel); transition: border-color 200ms, box-shadow 200ms; }
+.card { padding: 20px; border-radius: var(--card-radius); border: 1px solid var(--line); background: var(--panel); transition: border-color 200ms, box-shadow 200ms; }
 .card:hover { border-color: var(--emerald-border); box-shadow: 0 4px 16px rgba(16,185,129,0.08); }
 .cardTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cardSymbol { font-size: 1rem; font-weight: 800; color: var(--emerald); font-family: var(--font-display); }

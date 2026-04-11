@@ -17,7 +17,7 @@
 .summaryCard {
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
   box-shadow: var(--shadow-xs);
   transition: border-color var(--transition-fast);
@@ -107,7 +107,7 @@
 .sectorPanel {
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
   box-shadow: var(--shadow-xs);
 }

@@ -100,7 +100,7 @@
 .stat {
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
   text-align: center;
 }
@@ -253,9 +253,9 @@
   display: inline-flex;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: var(--emerald-bg);
-  color: var(--emerald);
-  border: 1px solid var(--emerald-border);
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
   font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -293,7 +293,7 @@
 .faqItem {
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
 }
 .faqItem h3 {

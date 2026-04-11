@@ -115,7 +115,7 @@
 /* ── Introduction Card ── */
 .introCard {
   padding: 24px 28px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   background: var(--panel);
   border: 1px solid var(--line);
 }
@@ -155,7 +155,7 @@
 .comparisonTableWrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--line);
   background: var(--panel);
 }
@@ -234,7 +234,7 @@
 
 .colCard {
   padding: 22px 24px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--line);
   background: var(--panel);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -337,7 +337,7 @@
 
 .prohibitedCard {
   padding: 20px 16px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--line);
   background: var(--panel);
   text-align: center;
@@ -379,7 +379,7 @@
 /* ── Purification Card ── */
 .purificationCard {
   padding: 28px 28px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--emerald-border);
   border-left: 4px solid var(--emerald);
   background: var(--panel);
@@ -463,7 +463,7 @@
 
 .disclaimerCard {
   padding: 22px 20px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--card-radius);
   border: 1px solid var(--gold-border);
   background: var(--gold-bg);
 }
