@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.services.halal_service import (
     PRIMARY_PROFILE,
+    build_confidence_bullets,
     evaluate_stock,
     get_profile_version,
 )
@@ -112,6 +113,12 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
         f"Manual compliance override applied by {override.decided_by}: {override.rationale}"
     ]
     updated["manual_review_flags"] = []
+    updated["confidence_bullets"] = build_confidence_bullets(
+        updated["status"],
+        updated["breakdown"],
+        updated["reasons"],
+        updated["manual_review_flags"],
+    )
     return updated
 
 

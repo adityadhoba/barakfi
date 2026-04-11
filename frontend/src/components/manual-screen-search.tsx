@@ -46,6 +46,13 @@ const STATUS_CLASSES: Record<string, string> = {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
 
+const EXAMPLE_STOCK_CHIPS = [
+  { label: "Reliance", value: "RELIANCE" },
+  { label: "TCS", value: "TCS" },
+  { label: "Tesla", value: "TSLA" },
+  { label: "Infosys", value: "INFY" },
+] as const;
+
 export function ManualScreenSearch() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,8 +60,8 @@ export function ManualScreenSearch() {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleScreen = useCallback(async () => {
-    const symbol = query.trim().toUpperCase().replace(/\.NS$/, "");
+  const handleScreen = useCallback(async (forcedSymbol?: string) => {
+    const symbol = (forcedSymbol ?? query).trim().toUpperCase().replace(/\.NS$/, "");
     if (!symbol) return;
 
     setLoading(true);
@@ -89,45 +96,69 @@ export function ManualScreenSearch() {
   }, [query]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleScreen();
+    if (e.key === "Enter") void handleScreen();
+  };
+
+  const applyExampleChip = (value: string) => {
+    setQuery(value);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+    void handleScreen(value);
   };
 
   return (
     <div className={styles.container}>
-      <div className={styles.searchBox}>
-        <div className={styles.inputWrap}>
-          <svg className={styles.searchIcon} width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input
-            ref={inputRef}
-            type="text"
-            className={styles.input}
-            placeholder="Enter any NSE stock symbol (e.g., RELIANCE, TCS)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={loading}
-          />
+      <div className={styles.searchColumn}>
+        <div className={styles.searchBox}>
+          <div className={styles.inputWrap}>
+            <svg className={styles.searchIcon} width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              className={styles.input}
+              placeholder="Enter any NSE stock symbol (e.g., RELIANCE, TCS)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+            />
+          </div>
+          <button
+            type="button"
+            className={styles.screenBtn}
+            onClick={() => void handleScreen()}
+            disabled={loading || !query.trim()}
+          >
+            {loading ? (
+              <span className={styles.spinner} />
+            ) : (
+              <>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Screen
+              </>
+            )}
+          </button>
         </div>
-        <button
-          type="button"
-          className={styles.screenBtn}
-          onClick={handleScreen}
-          disabled={loading || !query.trim()}
-        >
-          {loading ? (
-            <span className={styles.spinner} />
-          ) : (
-            <>
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Screen
-            </>
-          )}
-        </button>
+        <div className={styles.exampleChips} role="group" aria-label="Try an example stock">
+          {EXAMPLE_STOCK_CHIPS.map((chip) => (
+            <button
+              key={chip.value}
+              type="button"
+              className={styles.exampleChip}
+              disabled={loading}
+              onClick={() => applyExampleChip(chip.value)}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && (

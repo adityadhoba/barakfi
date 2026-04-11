@@ -1,5 +1,7 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StockBase(BaseModel):
@@ -60,6 +62,11 @@ class ScreeningBreakdown(BaseModel):
     sector_allowed: bool
 
 
+class ConfidenceBullet(BaseModel):
+    tone: Literal["success", "warning", "error"]
+    text: str
+
+
 class ScreeningResult(BaseModel):
     symbol: str
     name: str
@@ -71,6 +78,7 @@ class ScreeningResult(BaseModel):
     active_review_case: "PublicReviewCaseRead | None" = None
     recent_review_cases: list["PublicReviewCaseRead"] = []
     breakdown: ScreeningBreakdown
+    confidence_bullets: list[ConfidenceBullet] = Field(default_factory=list)
 
 
 class RuleSource(BaseModel):

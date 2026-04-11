@@ -59,6 +59,9 @@ def test_compliance_history_inserts_once_then_skips(db_session):
     db_session.commit()
 
     r = evaluate_stock(helpers.stock_to_dict(st), profile=PRIMARY_PROFILE)
+    assert "confidence_bullets" in r
+    assert 2 <= len(r["confidence_bullets"]) <= 3
+    assert all("tone" in b and "text" in b for b in r["confidence_bullets"])
     assert record_compliance_change_if_needed(db_session, st, r["status"], r.get("compliance_rating")) is True
     db_session.commit()
     assert db_session.query(ComplianceHistory).count() == 1

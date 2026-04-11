@@ -38,6 +38,14 @@ const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   NON_COMPLIANT: { cls: "statusFail", label: "Avoid" },
 };
 
+/** Shown under search — `value` is what we put in the query (symbol or substring). */
+const EXAMPLE_STOCK_CHIPS = [
+  { label: "Reliance", value: "RELIANCE" },
+  { label: "TCS", value: "TCS" },
+  { label: "Tesla", value: "TSLA" },
+  { label: "Infosys", value: "INFY" },
+] as const;
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
 }
@@ -105,10 +113,19 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(query);
 
   const PAGE_SIZE = 40;
   const [currentPage, setCurrentPage] = useState(1);
+
+  const applyExampleChip = useCallback((value: string) => {
+    setQuery(value);
+    requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+  }, []);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState("");
@@ -154,7 +171,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (indexFilter !== "all") params.set("index", indexFilter);
     if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
-    router.replace(qs ? `/screener?${qs}` : "/screener", { scroll: false });
+    const base = qs ? `/screener?${qs}` : "/screener";
+    const hash =
+      typeof window !== "undefined" && window.location.hash === "#stock-search"
+        ? "#stock-search"
+        : "";
+    router.replace(`${base}${hash}`, { scroll: false });
   }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, exchangeFilter, router]);
 
   const sectorCounts = useMemo(() => {
@@ -197,6 +219,28 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const pageItems = sorted.slice(pageStart, pageEnd);
 
   useEffect(() => { setCurrentPage(1); setFocusedIdx(-1); }, [sorted.length]);
+
+  useEffect(() => {
+    if (!initialized) return;
+    const run = () => {
+      if (typeof window === "undefined") return;
+      if (window.location.hash !== "#stock-search") return;
+      setQuery("");
+      const el = searchInputRef.current;
+      if (!el) return;
+      const reduceMotion =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      window.setTimeout(() => {
+        el.focus();
+        el.select();
+      }, 280);
+    };
+    run();
+    window.addEventListener("hashchange", run);
+    return () => window.removeEventListener("hashchange", run);
+  }, [initialized, setQuery]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -407,15 +451,32 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             </p>
           </div>
           <div className={styles.contentHeaderRight}>
-            <div className={styles.searchBox}>
-              <span className={styles.searchIcon} aria-hidden>&#x2315;</span>
-              <input
-                type="search"
-                placeholder="Search stocks..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                aria-label="Search stocks"
-              />
+            <div className={styles.headerSearchStack}>
+              <div className={styles.searchBox}>
+                <span className={styles.searchIcon} aria-hidden>&#x2315;</span>
+                <input
+                  id="stock-search"
+                  ref={searchInputRef}
+                  type="search"
+                  className={styles.stockSearchField}
+                  placeholder="Search stocks..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search stocks"
+                />
+              </div>
+              <div className={styles.exampleChips} role="group" aria-label="Try an example stock">
+                {EXAMPLE_STOCK_CHIPS.map((chip) => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    className={styles.exampleChip}
+                    onClick={() => applyExampleChip(chip.value)}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <button type="button" className={styles.headerBtn} onClick={() => { exportToCsv(sorted); toast(`Exported ${sorted.length} stocks`, "success"); }}>&#x2913; Export</button>
             <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>Save</button>

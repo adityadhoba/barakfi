@@ -192,6 +192,13 @@ export type Rulebook = {
   }>;
 };
 
+export type ConfidenceBulletTone = "success" | "warning" | "error";
+
+export type ConfidenceBullet = {
+  tone: ConfidenceBulletTone;
+  text: string;
+};
+
 export type ScreeningResult = {
   symbol: string;
   name: string;
@@ -212,6 +219,7 @@ export type ScreeningResult = {
     fixed_assets_to_total_assets_ratio: number | null;
     sector_allowed: boolean;
   };
+  confidence_bullets?: ConfidenceBullet[];
 };
 
 export type ScreeningLog = {
@@ -630,6 +638,7 @@ export type MultiMethodologyResult = {
     non_compliant_count: number;
     total: number;
   };
+  confidence_bullets?: ConfidenceBullet[];
 };
 
 export type TrendingStock = {
