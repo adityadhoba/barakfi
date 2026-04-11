@@ -1,0 +1,103 @@
+.heroCard {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 40px 28px 36px;
+  text-align: center;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0 0 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7rem;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.badgeHalal {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+
+.badgeDoubt {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+.badgeHaram {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+}
+
+.scoreBlock {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.score {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 10vw, 3.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--text);
+}
+
+.scoreOutOf {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.summary {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 auto 28px;
+  max-width: 36ch;
+  text-align: center;
+}
+
+.detailsNote {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+  margin: -12px auto 24px;
+  max-width: 32ch;
+}
+
+.detailsBelow {
+  margin-top: 28px;
+  text-align: left;
+}
+
+@media (max-width: 480px) {
+  .heroCard {
+    padding: 32px 20px 28px;
+  }
+}
