@@ -2554,6 +2554,18 @@ def daily_refresh(
         le=20000,
         description="Cap screening warm-up to first N symbols after sort; omit for full universe (slow).",
     ),
+    price_sync_offset: int = Query(
+        default=0,
+        ge=0,
+        le=500000,
+        description="Skip first N active stocks (by symbol) before price sync slice — chain 30s cron jobs.",
+    ),
+    screen_sync_offset: int = Query(
+        default=0,
+        ge=0,
+        le=500000,
+        description="Skip first N symbols before screening slice — pair with max_screen_symbols for paging.",
+    ),
     skip_prices: bool = Query(default=False, description="Skip price sync (combine with other skips for split crons)."),
     skip_news: bool = Query(default=False),
     skip_screen: bool = Query(default=False),
@@ -2563,8 +2575,8 @@ def daily_refresh(
 
     Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
-    External pingers (e.g. cron-job.org) often cap HTTP time (~30s): use ``skip_*`` and/or ``max_*`` to split work,
-    or raise the job timeout to the provider maximum.
+    **cron-job.org (30s max):** use ``skip_*`` plus ``max_price_stocks`` + ``price_sync_offset`` /
+    ``max_screen_symbols`` + ``screen_sync_offset`` to page through the universe across multiple jobs.
     """
     helpers.require_internal_token(x_internal_service_token)
     eff = MARKET_DATA_PROVIDER.strip().lower()
@@ -2573,7 +2585,9 @@ def daily_refresh(
     if skip_prices:
         prices_payload = {"skipped": True}
     else:
-        price_result = sync_all_stock_prices(db, provider=eff, max_stocks=max_price_stocks)
+        price_result = sync_all_stock_prices(
+            db, provider=eff, max_stocks=max_price_stocks, start_offset=price_sync_offset
+        )
         if not price_result["ok"]:
             raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
         prices_payload = {
@@ -2581,6 +2595,8 @@ def daily_refresh(
             "updated": price_result["updated"],
             "failed_symbols": price_result["failed_symbols"],
             "total": price_result["total"],
+            "start_offset": price_result.get("start_offset", price_sync_offset),
+            "next_offset": price_result.get("next_offset"),
         }
 
     news_payload: dict
@@ -2601,6 +2617,8 @@ def daily_refresh(
             row[0]
             for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
         ]
+        if screen_sync_offset > 0:
+            symbols = symbols[screen_sync_offset:]
         if max_screen_symbols is not None:
             symbols = symbols[:max_screen_symbols]
         screen_chunks = 0
@@ -2610,7 +2628,14 @@ def daily_refresh(
             rows = _screen_stocks_bulk_impl(chunk, db)
             screen_chunks += 1
             screen_rows += len(rows)
-        screening_payload = {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows}
+        next_screen = screen_sync_offset + len(symbols)
+        screening_payload = {
+            "symbols_total": len(symbols),
+            "chunks": screen_chunks,
+            "rows_cached": screen_rows,
+            "start_offset": screen_sync_offset,
+            "next_offset": next_screen,
+        }
 
     return {
         "ok": True,

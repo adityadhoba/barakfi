@@ -27,26 +27,27 @@ This document describes how Barakfi refreshes **prices**, **fundamentals**, **ne
 
 - `screen_chunk_size` (optional, 50–500): symbols per bulk-screen chunk.
 - `max_price_stocks` (optional, 1–5000): cap how many stocks get a price quote update (omit = entire active universe).
-- `max_screen_symbols` (optional): cap screening warm-up to the first *N* symbols (sorted by symbol); omit = all active stocks.
-- `skip_prices=true` | `skip_news=true` | `skip_screen=true`: run only the remaining steps (useful when an HTTP client enforces a short timeout).
+- `price_sync_offset` (optional, default 0): skip the first *N* active stocks (by symbol) before applying `max_price_stocks` — use to **page** price sync across many short requests.
+- `max_screen_symbols` (optional): cap screening warm-up to at most *N* symbols after `screen_sync_offset`.
+- `screen_sync_offset` (optional, default 0): skip the first *N* symbols — page screening across jobs.
+- `skip_prices=true` | `skip_news=true` | `skip_screen=true`: run only the remaining steps.
 
-**Short timeouts (e.g. cron-job.org test at 30s)**
+**cron-job.org (hard 30s timeout)**
 
-A **full** refresh usually needs **many minutes**. Either:
+A **single** call with no skips and no caps will usually **exceed 30 seconds**. You cannot raise that limit on cron-job.org; instead create **several cron jobs** (stagger times so they do not overlap), each finishing one slice:
 
-1. Set the cron job **timeout to the maximum** your plan allows, **or**
-2. **Split into multiple jobs** (same header on each), for example:
-   - **Prices only:**  
-     `POST .../daily-refresh?skip_news=true&skip_screen=true`
-   - **News only:**  
-     `POST .../daily-refresh?skip_prices=true&skip_screen=true`
-   - **Screening only (full universe):**  
-     `POST .../daily-refresh?skip_prices=true&skip_news=true`  
-     (still long if you have hundreds of symbols — add `max_screen_symbols` and use several jobs with offsets later if needed), **or**
-3. Combine **caps** for a single quick smoke test, e.g.  
-   `?max_price_stocks=50&max_screen_symbols=50` (still depends on provider speed).
+1. **News (once per day)** — usually fits in 30s:  
+   `POST .../daily-refresh?skip_prices=true&skip_screen=true`
 
-For **production** full runs, **Render Cron** (or another worker) calling this endpoint with a **long** HTTP or process timeout is more reliable than a 30s-limited URL pinger.
+2. **Prices — one slice per job** (~0.35s throttle per stock → budget **~50–70 stocks** per request to stay under 30s, depending on provider):  
+   `POST .../daily-refresh?skip_news=true&skip_screen=true&max_price_stocks=60&price_sync_offset=0`  
+   Then duplicate jobs with `price_sync_offset=60`, `120`, `180`, … until `next_offset` in the JSON response reaches your active stock count (see `/api/market-data/status` or DB).
+
+3. **Screening — one slice per job** (cheap per symbol, but cap to be safe):  
+   `POST .../daily-refresh?skip_prices=true&skip_news=true&max_screen_symbols=200&screen_sync_offset=0`  
+   Then `screen_sync_offset=200`, `400`, … until you have covered the universe. The response includes `screening.next_offset` for the next slice.
+
+**Easier alternative:** use **Render Cron** (or another worker) with a **long** timeout or a one-shot shell script on a machine you control, and keep cron-job.org only for **wake** or **news-only** if you prefer.
 
 ### Invoking from Vercel Cron
 

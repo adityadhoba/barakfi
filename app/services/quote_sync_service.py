@@ -23,11 +23,15 @@ def sync_all_stock_prices(
     *,
     provider: str | None = None,
     max_stocks: int | None = None,
+    start_offset: int = 0,
     throttle_sec: float = 0.35,
 ) -> dict:
     """
     Refresh `price` and `data_source` for active stocks. Uses small delays to
     avoid hammering public endpoints.
+
+    ``start_offset`` skips the first N rows (ordered by symbol) so callers can
+    split work across short HTTP timeouts (e.g. 30s cron jobs).
     """
     code = (provider or MARKET_DATA_PROVIDER).strip().lower()
     if code not in PUBLIC_MARKET_PROVIDERS:
@@ -42,6 +46,8 @@ def sync_all_stock_prices(
         }
 
     stocks = db.query(Stock).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
+    if start_offset > 0:
+        stocks = stocks[start_offset:]
     if max_stocks is not None:
         stocks = stocks[: max(0, max_stocks)]
 
@@ -65,4 +71,6 @@ def sync_all_stock_prices(
         "updated": updated,
         "failed_symbols": failed,
         "total": len(stocks),
+        "start_offset": start_offset,
+        "next_offset": start_offset + len(stocks),
     }

@@ -687,3 +687,17 @@ def test_daily_refresh_screen_only_small_cap():
     sc = body["screening"]
     assert sc["symbols_total"] <= 8
     assert sc["rows_cached"] >= 1
+    assert sc["start_offset"] == 0
+    assert sc["next_offset"] == sc["symbols_total"]
+
+
+def test_daily_refresh_screen_slice_offset():
+    r = client.post(
+        "/api/internal/daily-refresh?skip_prices=true&skip_news=true&screen_sync_offset=2&max_screen_symbols=3&screen_chunk_size=50",
+        headers={"X-Internal-Service-Token": INTERNAL_SERVICE_TOKEN},
+    )
+    assert r.status_code == 200
+    sc = api_json(r)["screening"]
+    assert sc["symbols_total"] <= 3
+    assert sc["start_offset"] == 2
+    assert sc["next_offset"] == 2 + sc["symbols_total"]
