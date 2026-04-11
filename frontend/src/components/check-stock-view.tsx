@@ -190,6 +190,35 @@ export function CheckStockView({ symbol }: Props) {
         />
       </div>
 
+      <section className={styles.trustCard} aria-labelledby="check-trust-heading">
+        <h2 id="check-trust-heading" className={styles.trustTitle}>
+          How we determine Halal status
+        </h2>
+        <ul className={styles.trustList}>
+          <li className={styles.trustItem}>
+            <span className={styles.trustCheck} aria-hidden>
+              ✔
+            </span>
+            <span>Based on AAOIFI, S&amp;P Shariah standards</span>
+          </li>
+          <li className={styles.trustItem}>
+            <span className={styles.trustCheck} aria-hidden>
+              ✔
+            </span>
+            <span>Uses financial ratios like debt and income</span>
+          </li>
+          <li className={styles.trustItem}>
+            <span className={styles.trustCheck} aria-hidden>
+              ✔
+            </span>
+            <span>Regularly updated data</span>
+          </li>
+        </ul>
+        <p className={styles.trustDisclaimer}>
+          This is an automated screening tool and not financial or religious advice
+        </p>
+      </section>
+
       {fullDetails ? (
         <div ref={detailsAnchorRef} className={styles.expandWrap}>
           <StockCheckFullDetails screening={screening} multi={multi} />
