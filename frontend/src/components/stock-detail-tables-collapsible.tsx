@@ -24,6 +24,10 @@ type Props = {
   ratioRows: StockDetailRatioRow[];
   methodologyCaption: string | null;
   methodologyRows: StockDetailMethodologyRow[] | null;
+  /** Optional anchor id for scroll targets. */
+  id?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 function statusBadgeClass(status: string): string {
@@ -36,10 +40,25 @@ export function StockDetailTablesCollapsible({
   ratioRows,
   methodologyCaption,
   methodologyRows,
+  id,
+  open: openControlled,
+  onOpenChange,
 }: Props) {
+  const controlled = openControlled !== undefined;
   return (
     <div className={styles.wrap}>
-      <details className={styles.details}>
+      <details
+        className={styles.details}
+        {...(id ? { id } : {})}
+        open={controlled ? openControlled : undefined}
+        onToggle={
+          controlled
+            ? (e) => {
+                onOpenChange?.(e.currentTarget.open);
+              }
+            : undefined
+        }
+      >
         <summary className={styles.summary}>
           <span className={styles.summaryLeft}>
             <span className={styles.summaryTitle}>Financial ratios &amp; methodology</span>

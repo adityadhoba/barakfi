@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
 import { addLocalWatchlist } from "@/lib/local-watchlist";
@@ -8,31 +7,42 @@ import styles from "./stock-check-result-actions.module.css";
 
 type Props = {
   symbol: string;
+  name: string;
+  score: number;
+  status: string;
+  onViewDetails: () => void;
 };
 
-export function StockCheckResultActions({ symbol }: Props) {
+export function StockCheckResultActions({ symbol, name, score, status, onViewDetails }: Props) {
   const { toast } = useToast();
   const router = useRouter();
 
   return (
     <div className={styles.row}>
+      <button type="button" className={styles.secondary} onClick={onViewDetails}>
+        View Details
+      </button>
       <button
         type="button"
         className={styles.primary}
         onClick={() => {
-          if (addLocalWatchlist(symbol)) {
-            toast(`Saved ${symbol} to your list`, "success");
+          if (
+            addLocalWatchlist({
+              symbol,
+              name,
+              score,
+              status,
+            })
+          ) {
+            toast("Added to Watchlist", "success");
             router.push("/saved-stocks");
           } else {
             toast("Could not save — try again", "error");
           }
         }}
       >
-        Save to list
+        Save to Watchlist
       </button>
-      <Link href={`/stocks/${encodeURIComponent(symbol)}`} className={styles.secondary}>
-        Full analysis &amp; chart
-      </Link>
     </div>
   );
 }
