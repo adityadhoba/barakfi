@@ -122,6 +122,8 @@ export type Stock = {
   exchange_code?: string | null;
   is_etf?: boolean;
   index_memberships?: string[];
+  /** API-computed fundamentals completeness hint */
+  data_quality?: "high" | "medium" | "low" | null;
 };
 
 export type Holding = {

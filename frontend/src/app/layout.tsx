@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Halal Stock Checker",
   },
   description:
-    "Halal Stock Checker: check if a stock is Halal in seconds — instant Halal status using trusted financial ratios (S&P Shariah, AAOIFI, FTSE). Free for Indian and global stocks.",
+    "BarakFi (Halal Stock Checker) helps you screen NSE and BSE-listed Indian equities for Shariah-style compliance in seconds — debt, non-permissible income, interest income, receivables, and cash tests with transparent methodology. Free educational tools; not a fatwa or personalised investment advice.",
   keywords: [
     "halal stocks India",
     "shariah compliant stocks India",
@@ -60,7 +60,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Halal Stock Checker — Check if a stock is Halal",
-    description: "Instant Halal status for NSE and more. Simple answer first; open full details when you need them.",
+    description:
+      "Instant Shariah-style screening for Indian equities (NSE & BSE): halal, doubtful, or haram labels with clear financial ratios and methodology context — educational only.",
     type: "website",
     locale: "en_IN",
     siteName: "Halal Stock Checker",

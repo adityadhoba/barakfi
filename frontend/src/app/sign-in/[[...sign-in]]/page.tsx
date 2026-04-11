@@ -5,7 +5,9 @@ import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
   title: "Sign In — Barakfi",
-  description: "Sign in to access your Shariah-compliant portfolio, watchlist, and research notes.",
+  description:
+    "Sign in to BarakFi to sync your Shariah-compliant watchlist, research notes, and portfolio tools for Indian equities (NSE & BSE). Clerk-secured authentication — private page, not intended for search indexing.",
+  robots: { index: false, follow: true },
 };
 
 export default function SignInPage() {
@@ -21,12 +23,12 @@ export default function SignInPage() {
           </div>
           <h2 className="authSidebarTitle">Assalamu Alaikum — welcome to Barakfi</h2>
           <p className="authSidebarDesc">
-            Sign in to access your halal portfolio tracker, watchlist, and screening results across Indian, US, and UK markets.
+            Sign in to access your halal portfolio tracker, watchlist, and screening results for NSE and BSE-listed Indian equities.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2713;</span>
-              <span>Screen 370+ stocks across NSE, NYSE, and LSE</span>
+              <span>Screen Indian stocks with transparent Shariah-style ratios</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>

@@ -124,7 +124,8 @@ from app.services.market_data_service import get_data_stack_status, get_fundamen
 from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
-from app.services.stock_lookup import resolve_stock
+from app.services.stock_data_quality import compute_fundamentals_data_quality
+from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
 
@@ -140,14 +141,24 @@ def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, lis
 
 def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
-    return StockRead.model_validate(stock).model_copy(update={"index_memberships": codes})
+    return StockRead.model_validate(stock).model_copy(
+        update={
+            "index_memberships": codes,
+            "data_quality": compute_fundamentals_data_quality(stock),
+        }
+    )
 
 
 def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     ids = [s.id for s in stocks]
     code_map = _index_codes_by_stock_id(db, ids)
     return [
-        StockRead.model_validate(s).model_copy(update={"index_memberships": code_map.get(s.id, [])})
+        StockRead.model_validate(s).model_copy(
+            update={
+                "index_memberships": code_map.get(s.id, []),
+                "data_quality": compute_fundamentals_data_quality(s),
+            }
+        )
         for s in stocks
     ]
 
@@ -280,7 +291,7 @@ def equity_quote_snapshot(
             status_code=400,
             detail=f"provider must be one of: {', '.join(sorted(PUBLIC_MARKET_PROVIDERS))}",
         )
-    row = resolve_stock(db, sym, None, active_only=True)
+    row = resolve_stock(db, sym, None, active_only=True, require_indian_listing=True)
     ex = (exchange or (row.exchange if row else "NSE")).upper()
     quote = fetch_quote_by_provider(sym, ex, effective)
     if not quote or quote.last_price is None:
@@ -385,7 +396,10 @@ def list_stocks(
         ~50-500 stocks typically. halal_only=true filters in Python (slow for 500+).
         Consider using bulk screening endpoint for large universes.
     """
-    query = db.query(Stock).filter(Stock.is_active.is_(True))
+    query = db.query(Stock).filter(
+        Stock.is_active.is_(True),
+        Stock.exchange.in_(("NSE", "BSE")),
+    )
 
     if search:
         search_term = f"%{search.upper()}%"
@@ -424,7 +438,7 @@ def get_stock(
     Raises:
         HTTPException 404: If stock not found or inactive
     """
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return _stock_read_enriched(db, stock)
@@ -448,11 +462,7 @@ def check_stock(
     if not clean:
         raise HTTPException(status_code=400, detail="symbol is required")
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == clean, Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, clean, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -504,7 +514,7 @@ def screen_stock(
     Raises:
         HTTPException 404: If stock not found or inactive
     """
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -547,7 +557,7 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
         by_sym[s.symbol].append(s)
 
     def _pick(sym: str) -> Stock | None:
-        cands = by_sym.get(sym, [])
+        cands = [c for c in by_sym.get(sym, []) if is_indian_exchange(c.exchange)]
         if not cands:
             return None
         return next((c for c in cands if c.exchange == "NSE"), cands[0])
@@ -627,7 +637,7 @@ def screen_stock_multi(
 
     Auth: None (public endpoint)
     """
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -657,12 +667,17 @@ def related_stocks(
     _: None = Depends(enforce_screening_budget),
 ):
     """Peers in the same sector (and fallback large-cap); rows only when screening cache is warm."""
-    stock = resolve_stock(db, symbol, None, active_only=True)
+    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     peers = (
         db.query(Stock)
-        .filter(Stock.sector == stock.sector, Stock.id != stock.id, Stock.is_active.is_(True))
+        .filter(
+            Stock.sector == stock.sector,
+            Stock.id != stock.id,
+            Stock.is_active.is_(True),
+            Stock.exchange.in_(("NSE", "BSE")),
+        )
         .order_by(Stock.market_cap.desc())
         .limit(12)
         .all()
@@ -677,7 +692,11 @@ def related_stocks(
     if len(rows) < 4:
         popular = (
             db.query(Stock)
-            .filter(Stock.is_active.is_(True), Stock.id != stock.id)
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.id != stock.id,
+                Stock.exchange.in_(("NSE", "BSE")),
+            )
             .order_by(Stock.market_cap.desc())
             .limit(24)
             .all()
@@ -703,7 +722,7 @@ def top_halal_stocks(
     """Largest active names that have a cached Halal consensus row (pre-warm via screening or bulk)."""
     candidates = (
         db.query(Stock)
-        .filter(Stock.is_active.is_(True))
+        .filter(Stock.is_active.is_(True), Stock.exchange.in_(("NSE", "BSE")))
         .order_by(Stock.market_cap.desc())
         .limit(150)
         .all()
@@ -725,7 +744,7 @@ def stock_details_seo(
     _: None = Depends(enforce_screening_budget),
 ):
     """Rich screening row plus SEO copy; warms check-stock cache when needed."""
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     ck = _check_cache_key(stock.symbol, stock.exchange)
@@ -774,7 +793,7 @@ def track_symbol_add(
     user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
-    stock = resolve_stock(db, body.symbol, None, active_only=True)
+    stock = resolve_stock(db, body.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     entry = (
@@ -821,7 +840,7 @@ def track_symbol_delete(
     user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
-    stock = resolve_stock(db, symbol, None, active_only=True)
+    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     entry = (
@@ -853,7 +872,7 @@ def screen_stock_manual(
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
     # Check if stock already exists in database (manual flow is India-first)
-    existing = resolve_stock(db, clean_symbol, "NSE", active_only=True)
+    existing = resolve_stock(db, clean_symbol, "NSE", active_only=True, require_indian_listing=True)
 
     if existing:
         stock_data = helpers.stock_to_dict(existing)
@@ -952,7 +971,7 @@ def create_compliance_override(
     db: Session = Depends(get_db),
 ):
     admin_subject = helpers.require_admin(db, claims)
-    stock = resolve_stock(db, payload.symbol, None, active_only=True)
+    stock = resolve_stock(db, payload.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -979,7 +998,7 @@ def create_review_case(
     db: Session = Depends(get_db),
 ):
     admin_subject = helpers.require_admin(db, claims)
-    stock = resolve_stock(db, payload.symbol, None, active_only=True)
+    stock = resolve_stock(db, payload.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1591,7 +1610,7 @@ def create_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = resolve_stock(db, payload.symbol, None, active_only=True)
+    stock = resolve_stock(db, payload.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1631,7 +1650,7 @@ def delete_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = resolve_stock(db, symbol, None, active_only=True)
+    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1656,7 +1675,7 @@ def create_holding(
 ):
     user = helpers.get_current_user_from_claims(db, claims)
 
-    stock = resolve_stock(db, payload.symbol, None, active_only=True)
+    stock = resolve_stock(db, payload.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1715,7 +1734,7 @@ def delete_holding(
 ):
     user = helpers.get_current_user_from_claims(db, claims)
 
-    stock = resolve_stock(db, symbol, None, active_only=True)
+    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -1785,7 +1804,7 @@ def create_current_research_note(
     db: Session = Depends(get_db),
 ):
     user = helpers.get_current_user_from_claims(db, claims)
-    stock = resolve_stock(db, payload.symbol, None, active_only=True)
+    stock = resolve_stock(db, payload.symbol, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
@@ -2260,7 +2279,7 @@ def get_metrics(
     db: Session = Depends(get_db),
 ):
     from app.services.metrics_service import get_investment_metrics
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     stock_data = helpers.stock_to_dict(stock)
@@ -2277,7 +2296,7 @@ def get_compliance_history(
     exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     entries = (

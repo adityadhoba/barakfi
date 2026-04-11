@@ -27,6 +27,8 @@ def get_trending(
     query = db.query(Stock).filter(Stock.is_active.is_(True))
     if exchange:
         query = query.filter(Stock.exchange == exchange.upper())
+    else:
+        query = query.filter(Stock.exchange.in_(("NSE", "BSE")))
 
     if category in ("gainers", "most-active", "popular"):
         query = query.order_by(Stock.market_cap.desc())

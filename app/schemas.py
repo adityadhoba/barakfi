@@ -35,6 +35,10 @@ class StockCreate(StockBase):
 
 class StockRead(StockBase):
     id: int
+    data_quality: Literal["high", "medium", "low"] | None = Field(
+        default=None,
+        description="Heuristic completeness of fundamentals for screening (high/medium/low).",
+    )
     exchange_code: str | None = None
     isin: str | None = None
     beta: float | None = None

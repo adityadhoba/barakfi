@@ -11,8 +11,8 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
-  resolvedTheme: "light",
+  theme: "dark",
+  resolvedTheme: "dark",
   setTheme: () => {},
 });
 
@@ -26,7 +26,7 @@ function getSystemTheme(): "dark" | "light" {
 }
 
 
-export function ThemeProvider({ children, initialTheme = "light" }: {
+export function ThemeProvider({ children, initialTheme = "dark" }: {
   children: React.ReactNode;
   initialTheme?: string;
 }) {
@@ -39,7 +39,7 @@ export function ThemeProvider({ children, initialTheme = "light" }: {
       } catch {}
     }
     if (valid.includes(initialTheme as Theme)) return initialTheme as Theme;
-    return "light";
+    return "dark";
   });
 
   const [systemTheme, setSystemTheme] = useState<"dark" | "light">(getSystemTheme);
