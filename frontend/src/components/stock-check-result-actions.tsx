@@ -26,7 +26,7 @@ export function StockCheckResultActions({
   return (
     <div className={styles.row}>
       <button type="button" className={styles.secondary} onClick={onToggleDetails}>
-        {detailsOpen ? "Hide full details" : "View full details"}
+        {detailsOpen ? "Hide full details" : "View Full Details"}
       </button>
       <button
         type="button"

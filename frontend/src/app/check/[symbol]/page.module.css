@@ -153,24 +153,6 @@
   text-align: left;
 }
 
-.fullDetailsFootnote {
-  font-size: 0.78rem;
-  line-height: 1.5;
-  color: var(--text-tertiary);
-  margin: 16px 0 0;
-  text-align: center;
-}
-
-.fullDetailsFootnote a {
-  color: var(--emerald);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.fullDetailsFootnote a:hover {
-  text-decoration: underline;
-}
-
 .loading {
   font-size: 0.95rem;
   color: var(--text-secondary);

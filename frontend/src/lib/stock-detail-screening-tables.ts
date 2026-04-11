@@ -86,6 +86,40 @@ export function methodologyTableCaption(multi: MultiMethodologyResult): string {
   return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass.`;
 }
 
+/** Three ratio lines for /check full details (values from API breakdown only). */
+export function buildCheckSimpleRatioRows(screening: ScreeningResult): { label: string; value: string }[] {
+  const b = screening.breakdown;
+  return [
+    {
+      label: "Debt ratio",
+      value: `${formatRatio(b.debt_to_36m_avg_market_cap_ratio)} (36-month avg mcap) · ${formatRatio(b.debt_to_market_cap_ratio)} (current mcap)`,
+    },
+    { label: "Non-halal income", value: formatRatio(b.non_permissible_income_ratio) },
+    { label: "Receivables", value: formatRatio(b.receivables_to_market_cap_ratio) },
+  ];
+}
+
+export type CheckMethodologyPassRow = { code: string; label: string; outcome: "pass" | "fail" | "review" };
+
+const CHECK_FULL_DETAILS_METHODS: { code: string; label: string }[] = [
+  { code: "aaoifi", label: "AAOIFI" },
+  { code: "sp_shariah", label: "S&P" },
+  { code: "ftse_maxis", label: "FTSE" },
+];
+
+/** Pass / Fail / Review from multi-methodology payload (no re-screening). */
+export function buildCheckMethodologyPassRows(multi: MultiMethodologyResult | null): CheckMethodologyPassRow[] {
+  return CHECK_FULL_DETAILS_METHODS.map(({ code, label }) => {
+    const result = multi?.methodologies?.[code];
+    if (!result) {
+      return { code, label, outcome: "review" as const };
+    }
+    if (result.status === "HALAL") return { code, label, outcome: "pass" };
+    if (result.status === "NON_COMPLIANT") return { code, label, outcome: "fail" };
+    return { code, label, outcome: "review" };
+  });
+}
+
 /** Short product bullets for /check result (2–3 lines, no raw ratios). */
 export function buildCheckSummaryBullets(screening: ScreeningResult): {
   bullets: string[];

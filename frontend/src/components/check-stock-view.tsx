@@ -3,15 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import { StockCheckFullDetails } from "@/components/stock-check-full-details";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
-import {
-  buildCheckSummaryBullets,
-  buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
-} from "@/lib/stock-detail-screening-tables";
+import { buildCheckSummaryBullets } from "@/lib/stock-detail-screening-tables";
 import { useCheckStockSession } from "@/stores/check-stock-session";
 import styles from "@/app/check/[symbol]/page.module.css";
 
@@ -112,16 +107,6 @@ export function CheckStockView({ symbol }: Props) {
     };
   }, [symU, setSessionPayload]);
 
-  const tables = useMemo(() => {
-    if (!data || data.kind !== "ok") return null;
-    const { screening, multi } = data;
-    return {
-      ratioRows: buildPrimaryRatioTableRows(screening),
-      methodologyRows: multi ? buildMethodologyTableRowsFromMulti(multi) : null,
-      methodologyCaption: multi ? methodologyTableCaption(multi) : null,
-    };
-  }, [data]);
-
   const summaryBullets = useMemo(() => {
     if (!data || data.kind !== "ok") return null;
     return buildCheckSummaryBullets(data.screening);
@@ -162,7 +147,7 @@ export function CheckStockView({ symbol }: Props) {
     );
   }
 
-  const { check, stock } = data;
+  const { check, stock, screening, multi } = data;
 
   return (
     <div className={styles.page}>
@@ -205,19 +190,9 @@ export function CheckStockView({ symbol }: Props) {
         />
       </div>
 
-      {fullDetails && tables ? (
+      {fullDetails ? (
         <div ref={detailsAnchorRef} className={styles.expandWrap}>
-          <StockDetailTablesCollapsible
-            ratioRows={tables.ratioRows}
-            methodologyCaption={tables.methodologyCaption}
-            methodologyRows={tables.methodologyRows}
-            pinnedOpen
-            onRequestClose={() => setFullDetails(false)}
-          />
-          <p className={styles.fullDetailsFootnote}>
-            Methodology labels and ratios are for information only — not religious advice. See{" "}
-            <Link href="/methodology">methodology</Link> and <Link href="/disclaimer">disclaimer</Link>.
-          </p>
+          <StockCheckFullDetails screening={screening} multi={multi} />
         </div>
       ) : null}
 
