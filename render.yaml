@@ -22,18 +22,19 @@ services:
       - key: APP_ENV
         value: production
 
-  # Daily price update cron job
-  # Runs at 4:30 AM IST (23:00 UTC previous day) — after Indian market close
+  # Single daily job: prices + news + screening (POST /api/internal/daily-refresh)
+  # Schedule is UTC. Adjust to taste (e.g. after India close).
   - type: cron
     name: barakfi-daily-update
     runtime: python
     buildCommand: pip install httpx
-    startCommand: python scripts/daily_update.py --provider auto_global
-    schedule: "0 23 * * 1-5"
+    startCommand: python scripts/daily_update.py --full-pipeline
+    schedule: "30 4 * * *"
     region: singapore
     branch: main
     plan: free
     envVars:
+      # fromService hostport is like ``svc:10000``; daily_update.py normalizes to http://.../api
       - key: API_BASE_URL
         fromService:
           name: barakfi-api
