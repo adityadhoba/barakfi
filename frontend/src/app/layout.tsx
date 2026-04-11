@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import Link from "next/link";
@@ -245,11 +246,13 @@ const breadcrumbSchema = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const homeMinimal = (await headers()).get("x-home-minimal") === "1";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -271,20 +274,24 @@ export default function RootLayout({
               <NavProgress />
             </Suspense>
             <a className="skipToContent" href="#main-content">Skip to content</a>
-            <MarketTicker />
-            <header className="topbar" role="banner">
+            {!homeMinimal && <MarketTicker />}
+            <header className={`topbar ${homeMinimal ? "topbarHomeMinimal" : ""}`} role="banner">
               <Link className="wordmark" href="/" style={{ textDecoration: "none" }}>
-                <Logo size={28} showText />
+                <Logo size={homeMinimal ? 32 : 28} showText={!homeMinimal} />
               </Link>
 
-              <div className="topbarSearchSlot">
-                <TopbarSearchLauncher />
-                <TopbarSearch />
-              </div>
+              {!homeMinimal && (
+                <>
+                  <div className="topbarSearchSlot">
+                    <TopbarSearchLauncher />
+                    <TopbarSearch />
+                  </div>
 
-              <MobileDrawer />
+                  <MobileDrawer />
 
-              <TopbarAuth />
+                  <TopbarAuth />
+                </>
+              )}
             </header>
             <ToastProvider>
               <Suspense fallback={null}>
@@ -294,7 +301,7 @@ export default function RootLayout({
                   </div>
                 </AnalyticsProvider>
               </Suspense>
-              <BottomNav />
+              {!homeMinimal && <BottomNav />}
               <TopbarScroll />
             </ToastProvider>
             </MobileNavProvider>

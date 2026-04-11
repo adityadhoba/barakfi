@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
-    <main className="shellPage">
+    <main className="shellPage shellPageHomeMinimal">
       <HomeDashboard />
     </main>
   );

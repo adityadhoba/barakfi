@@ -12,6 +12,14 @@
   min-height: calc(100vh - 56px);
 }
 
+/* Minimal product homepage: full-bleed hero, no bottom nav padding bump */
+.shellPageHomeMinimal {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: calc(100dvh - 56px);
+}
+
 @media (min-width: 640px) {
   .shellPage {
     padding: 18px 20px max(48px, calc(36px + env(safe-area-inset-bottom, 0px)));
