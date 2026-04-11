@@ -24,6 +24,9 @@ type Props = {
   ratioRows: StockDetailRatioRow[];
   methodologyCaption: string | null;
   methodologyRows: StockDetailMethodologyRow[] | null;
+  /** Controlled open state (optional). When set, `onOpenChange` should update parent state. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 function statusBadgeClass(status: string): string {
@@ -36,10 +39,24 @@ export function StockDetailTablesCollapsible({
   ratioRows,
   methodologyCaption,
   methodologyRows,
+  open: openControlled,
+  onOpenChange,
 }: Props) {
+  const controlled = openControlled !== undefined;
   return (
     <div className={styles.wrap}>
-      <details className={styles.details}>
+      <details
+        className={styles.details}
+        id="check-stock-details"
+        open={controlled ? openControlled : undefined}
+        onToggle={
+          controlled
+            ? (e) => {
+                onOpenChange?.(e.currentTarget.open);
+              }
+            : undefined
+        }
+      >
         <summary className={styles.summary}>
           <span className={styles.summaryLeft}>
             <span className={styles.summaryTitle}>Financial ratios &amp; methodology</span>

@@ -1,0 +1,150 @@
+/* /check/[symbol] — simple result first, details hidden until expanded */
+
+.shell {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.card {
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 36px 28px 32px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0 0 20px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7.5rem;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.badgeHalal {
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+
+.badgeDoubt {
+  background: var(--gold-bg);
+  color: var(--gold);
+  border: 1px solid var(--gold-border);
+}
+
+.badgeHaram {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+}
+
+.scoreRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.score {
+  font-size: clamp(3rem, 12vw, 3.75rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  line-height: 1;
+  color: var(--text);
+}
+
+.scoreOutOf {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.summary {
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+  max-width: 32ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin: -20px 0 24px;
+  line-height: 1.4;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.actionCell {
+  width: 100%;
+  min-width: 0;
+}
+
+.btnSecondary {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.btnSecondary:hover {
+  border-color: var(--emerald);
+  color: var(--emerald);
+  background: var(--panel);
+}
+
+.detailsSlot {
+  margin-top: 20px;
+  text-align: left;
+}
+
+@media (min-width: 480px) {
+  .actions {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: stretch;
+  }
+
+  .actionCell {
+    flex: 1 1 0;
+  }
+
+  .btnSecondary {
+    width: 100%;
+  }
+}

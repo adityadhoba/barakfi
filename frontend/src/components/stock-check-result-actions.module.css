@@ -6,6 +6,16 @@
   margin-top: 8px;
 }
 
+.rowStack {
+  margin-top: 0;
+  width: 100%;
+}
+
+.primaryFull {
+  width: 100%;
+  justify-content: center;
+}
+
 .primary {
   padding: 12px 22px;
   font-size: 0.88rem;
