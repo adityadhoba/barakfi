@@ -85,3 +85,101 @@ export function methodologyTableCaption(multi: MultiMethodologyResult): string {
   const label = ENGINE_TO_PRODUCT[consensus] ?? consensus;
   return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass.`;
 }
+
+/** Three ratio lines for /check full details (values from API breakdown only). */
+export function buildCheckSimpleRatioRows(screening: ScreeningResult): { label: string; value: string }[] {
+  const b = screening.breakdown;
+  return [
+    {
+      label: "Debt ratio",
+      value: `${formatRatio(b.debt_to_36m_avg_market_cap_ratio)} (36-month avg mcap) · ${formatRatio(b.debt_to_market_cap_ratio)} (current mcap)`,
+    },
+    { label: "Non-halal income", value: formatRatio(b.non_permissible_income_ratio) },
+    { label: "Receivables", value: formatRatio(b.receivables_to_market_cap_ratio) },
+  ];
+}
+
+export type CheckMethodologyPassRow = { code: string; label: string; outcome: "pass" | "fail" | "review" };
+
+const CHECK_FULL_DETAILS_METHODS: { code: string; label: string }[] = [
+  { code: "aaoifi", label: "AAOIFI" },
+  { code: "sp_shariah", label: "S&P" },
+  { code: "ftse_maxis", label: "FTSE" },
+];
+
+/** Pass / Fail / Review from multi-methodology payload (no re-screening). */
+export function buildCheckMethodologyPassRows(multi: MultiMethodologyResult | null): CheckMethodologyPassRow[] {
+  return CHECK_FULL_DETAILS_METHODS.map(({ code, label }) => {
+    const result = multi?.methodologies?.[code];
+    if (!result) {
+      return { code, label, outcome: "review" as const };
+    }
+    if (result.status === "HALAL") return { code, label, outcome: "pass" };
+    if (result.status === "NON_COMPLIANT") return { code, label, outcome: "fail" };
+    return { code, label, outcome: "review" };
+  });
+}
+
+/** Short product bullets for /check result (2–3 lines, no raw ratios). */
+export function buildCheckSummaryBullets(screening: ScreeningResult): {
+  bullets: string[];
+  variant: "pass" | "fail" | "review";
+} {
+  const b = screening.breakdown;
+  const engine = screening.status;
+
+  if (engine === "NON_COMPLIANT") {
+    const bullets = screening.reasons.slice(0, 3).map(shortenHardReason);
+    return { bullets: bullets.length ? bullets : ["Does not meet screening criteria"], variant: "fail" };
+  }
+
+  if (engine === "CAUTIOUS") {
+    const fromFlags = screening.manual_review_flags.slice(0, 2).map(shortenManualFlag);
+    const positive = pickPositiveBullets(b, 3 - fromFlags.length);
+    const merged = [...fromFlags, ...positive].slice(0, 3);
+    return { bullets: merged.length ? merged : ["Manual review suggested"], variant: "review" };
+  }
+
+  const positive = pickPositiveBullets(b, 3);
+  return {
+    bullets: positive.length ? positive : ["Meets primary screening criteria"],
+    variant: "pass",
+  };
+}
+
+function pickPositiveBullets(b: ScreeningResult["breakdown"], max: number): string[] {
+  const out: string[] = [];
+  const debtOk =
+    b.debt_to_36m_avg_market_cap_ratio < 0.33 && b.debt_to_market_cap_ratio < 0.33;
+  if (debtOk) out.push("Low debt");
+  if (b.non_permissible_income_ratio < 0.05) out.push("Minimal non-halal income");
+  if (out.length >= max) return out.slice(0, max);
+  if (b.sector_allowed) out.push("Permitted business sector");
+  if (out.length >= max) return out.slice(0, max);
+  if (b.interest_income_ratio < 0.05) out.push("Interest income within limits");
+  if (out.length >= max) return out.slice(0, max);
+  if (b.receivables_to_market_cap_ratio < 0.33) out.push("Receivables within limits");
+  if (out.length >= max) return out.slice(0, max);
+  if (b.cash_and_interest_bearing_to_assets_ratio < 0.33) out.push("Cash & investments within limits");
+  return out.slice(0, max);
+}
+
+function shortenHardReason(r: string): string {
+  const lower = r.toLowerCase();
+  if (lower.includes("debt")) return "Debt above recommended limit";
+  if (lower.includes("non-permissible")) return "Non-halal income too high";
+  if (lower.includes("interest income")) return "Interest income too high";
+  if (lower.includes("receivables")) return "Receivables above recommended limit";
+  if (lower.includes("cash & interest") || lower.includes("cash and interest"))
+    return "Cash & interest-bearing assets too high";
+  if (lower.includes("sector") || lower.includes("prohibited activities")) return "Sector not permissible";
+  const one = r.split(".")[0]?.trim() ?? r;
+  return one.length > 88 ? `${one.slice(0, 85)}…` : one;
+}
+
+function shortenManualFlag(f: string): string {
+  if (f.includes("Missing or zero")) return "Some financial data incomplete";
+  if (f.includes("Fixed-asset")) return "Fixed-asset data needs review";
+  const one = f.split(".")[0]?.trim() ?? f;
+  return one.length > 88 ? `${one.slice(0, 85)}…` : one;
+}

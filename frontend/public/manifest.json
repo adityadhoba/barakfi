@@ -1,7 +1,7 @@
 {
-  "name": "Barakfi",
-  "short_name": "Barakfi",
-  "description": "Shariah-compliant Indian equity screening, portfolio management, and compliance tracking.",
+  "name": "Halal Stock Checker",
+  "short_name": "Halal Checker",
+  "description": "Check if a stock is Halal. Instant Halal status using trusted financial ratios.",
   "start_url": "/workspace",
   "display": "standalone",
   "background_color": "#060b14",

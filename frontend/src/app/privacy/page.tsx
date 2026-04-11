@@ -118,7 +118,7 @@ export default function PrivacyPolicyPage() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>3. Third-Party Services</h2>
           <p className={styles.prose}>
-            We rely on the following third-party service providers to operate the platform.
+            We rely on the following third-party service providers to run Halal Stock Checker.
             Each provider receives only the minimum data necessary to perform its function:
           </p>
           <table className={styles.dataTable}>
@@ -323,7 +323,7 @@ export default function PrivacyPolicyPage() {
             Barakfi is not intended for individuals under the age of 18. We do not
             knowingly collect personal data from children. If we become aware that a user is
             under 18, we will promptly delete their account and associated data. If you believe
-            a minor has registered on our platform, please contact us immediately at
+            a minor has registered on Halal Stock Checker, please contact us immediately at
             privacy@barakfi.in.
           </p>
         </section>
@@ -347,7 +347,7 @@ export default function PrivacyPolicyPage() {
           <p className={styles.prose}>
             We may update this Privacy Policy from time to time to reflect changes in our
             practices, technology, legal requirements, or other factors. Material changes will
-            be communicated via email and/or a prominent notice on the platform at least 15 days
+            be communicated via email and/or a prominent notice on this site at least 15 days
             before taking effect. The &quot;Effective Date&quot; at the top of this page indicates
             when the policy was last revised.
           </p>

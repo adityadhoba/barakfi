@@ -5,7 +5,7 @@ import styles from "./terms.module.css";
 export const metadata: Metadata = {
   title: "Terms of Service — Barakfi",
   description:
-    "Terms and conditions governing the use of Barakfi, a Shariah-compliant Indian equity screening platform.",
+    "Terms for Halal Stock Checker — check if a stock is Halal; instant Halal status.",
 };
 
 export default function TermsOfServicePage() {
@@ -19,8 +19,8 @@ export default function TermsOfServicePage() {
           </Link>
           <h1 className={styles.title}>Terms of Service</h1>
           <p className={styles.subtitle}>
-            Please read these terms carefully before using Barakfi. By accessing or
-            using our platform, you agree to be bound by these terms.
+            Please read these terms carefully before using Halal Stock Checker. By accessing or
+            using this site, you agree to be bound by these terms.
           </p>
           <span className={styles.effectiveDate}>Effective Date: 1 April 2026</span>
         </header>
@@ -40,7 +40,7 @@ export default function TermsOfServicePage() {
               <strong>Barakfi is NOT a registered Investment Advisor, Research Analyst,
               or Portfolio Manager under the Securities and Exchange Board of India (SEBI)
               regulations.</strong> The Service does not provide personalised investment advice,
-              specific buy/sell recommendations, or portfolio management services. All screening
+              specific buy/sell recommendations, or managed portfolio services. All screening
               results are for informational and educational purposes only.
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function TermsOfServicePage() {
             The Service is free and supported by advertising. You may see ads from Google
             AdSense (web) and Google AdMob (mobile). Ad content is provided by third parties
             and we do not control or endorse advertised products or services. By using Barakfi,
-            you acknowledge and agree that advertisements may be displayed within the platform.
+            you acknowledge and agree that advertisements may be displayed on Halal Stock Checker.
           </p>
         </section>
 
@@ -155,7 +155,7 @@ export default function TermsOfServicePage() {
             </li>
             <li>
               Use our screening results or data outputs for commercial redistribution, including
-              publishing on competing platforms, newsletters, or paid advisory services.
+              publishing on competing websites, newsletters, or paid advisory services.
             </li>
             <li>
               Remove, alter, or obscure any copyright, trademark, or proprietary notices.
@@ -235,7 +235,7 @@ export default function TermsOfServicePage() {
           <p className={styles.prose}>
             We reserve the right to modify these Terms of Service at any time. Material changes
             will be communicated via email to registered users and/or through a prominent notice
-            on the platform at least 15 days before the changes take effect. Continued use of
+            on this site at least 15 days before the changes take effect. Continued use of
             the Service after such changes constitutes acceptance of the updated terms.
           </p>
         </section>

@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import { CheckStockDiscovery } from "@/components/check-stock-discovery";
+import { StockCheckFullDetails } from "@/components/stock-check-full-details";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
-import {
-  buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
-} from "@/lib/stock-detail-screening-tables";
+import { buildCheckSummaryBullets } from "@/lib/stock-detail-screening-tables";
 import { useCheckStockSession } from "@/stores/check-stock-session";
 import styles from "@/app/check/[symbol]/page.module.css";
 
@@ -20,6 +17,24 @@ function badgeClass(status: string): string {
   return styles.badgeDoubt;
 }
 
+function statusIcon(status: string): string {
+  if (status === "Halal") return "✅";
+  if (status === "Haram") return "❌";
+  return "⚠️";
+}
+
+function bulletClass(variant: "pass" | "fail" | "review"): string {
+  if (variant === "fail") return styles.bulletFail;
+  if (variant === "review") return styles.bulletReview;
+  return styles.bulletPass;
+}
+
+function bulletMark(variant: "pass" | "fail" | "review"): string {
+  if (variant === "fail") return "✗";
+  if (variant === "review") return "⚠";
+  return "✔";
+}
+
 type Props = {
   symbol: string;
 };
@@ -27,6 +42,8 @@ type Props = {
 export function CheckStockView({ symbol }: Props) {
   const setSessionPayload = useCheckStockSession((s) => s.setPayload);
   const symU = symbol.trim().toUpperCase();
+  const [fullDetails, setFullDetails] = useState(false);
+  const detailsAnchorRef = useRef<HTMLDivElement>(null);
 
   const [{ data, loading }, setView] = useState(() => {
     const cached = useCheckStockSession.getState().payload;
@@ -91,33 +108,28 @@ export function CheckStockView({ symbol }: Props) {
     };
   }, [symU, setSessionPayload]);
 
-  const tables = useMemo(() => {
+  const summaryBullets = useMemo(() => {
     if (!data || data.kind !== "ok") return null;
-    const { screening, multi } = data;
-    return {
-      ratioRows: buildPrimaryRatioTableRows(screening),
-      methodologyRows: multi ? buildMethodologyTableRowsFromMulti(multi) : null,
-      methodologyCaption: multi ? methodologyTableCaption(multi) : null,
-    };
+    return buildCheckSummaryBullets(data.screening);
   }, [data]);
 
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <p className={styles.loading}>Loading…</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!fullDetails) return;
+    const id = requestAnimationFrame(() => {
+      detailsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [fullDetails]);
 
-  if (!data) {
+  if (!loading && !data) {
     return null;
   }
 
-  if (data.kind === "not_found") {
+  if (!loading && data?.kind === "not_found") {
     notFound();
   }
 
-  if (data.kind === "error") {
+  if (!loading && data?.kind === "error") {
     return (
       <div className={styles.page}>
         <p style={{ color: "var(--red)" }}>{data.message}</p>
@@ -128,7 +140,7 @@ export function CheckStockView({ symbol }: Props) {
     );
   }
 
-  const { check, stock } = data;
+  const okData = !loading && data?.kind === "ok" ? data : null;
 
   return (
     <div className={styles.page}>
@@ -136,30 +148,103 @@ export function CheckStockView({ symbol }: Props) {
         ← Back to check
       </Link>
 
-      <div className={styles.card}>
-        <div className={styles.symbol}>{stock.symbol}</div>
-        <h1 className={styles.name}>{check.name}</h1>
-        <div className={`${styles.badge} ${badgeClass(check.status)}`}>{check.status}</div>
-        <div className={styles.score}>{check.score}</div>
-        <div className={styles.scoreSuffix}>/ 100 compliance score</div>
-        <p className={styles.summary}>{check.summary}</p>
-        {!check.details_available && (
-          <p className={styles.detailsNote}>
-            Some fundamentals are missing — treat this score as indicative and open full analysis for context.
-          </p>
-        )}
-        <StockCheckResultActions symbol={stock.symbol} />
-      </div>
-
-      {tables ? (
-        <div className={styles.expandWrap}>
-          <StockDetailTablesCollapsible
-            ratioRows={tables.ratioRows}
-            methodologyCaption={tables.methodologyCaption}
-            methodologyRows={tables.methodologyRows}
-          />
+      {loading ? (
+        <div className={styles.skeletonCard} aria-busy="true" aria-live="polite">
+          <div className={styles.spinnerRow}>
+            <span className={styles.spinner} aria-hidden />
+            <span className={styles.spinnerLabel}>Getting instant Halal status…</span>
+          </div>
+          <div className={`${styles.skelPulse} ${styles.skelTitle}`} />
+          <div className={`${styles.skelPulse} ${styles.skelLineShort}`} />
+          <div className={`${styles.skelPulse} ${styles.skelPill}`} />
+          <div className={`${styles.skelPulse} ${styles.skelScore}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={`${styles.skelPulse} ${styles.skelBullet}`} />
+          <div className={styles.skelActions}>
+            <div className={`${styles.skelPulse} ${styles.skelBtn}`} />
+            <div className={`${styles.skelPulse} ${styles.skelBtn}`} />
+          </div>
+          <p className={styles.delayHint}>Large universes or cold servers can take a few seconds — hang tight.</p>
         </div>
       ) : null}
+
+      {okData ? (
+        <div className={styles.resultStack}>
+          <div className={styles.card}>
+            <h1 className={styles.name}>{okData.check.name}</h1>
+            <div className={styles.symbolMuted}>{okData.stock.symbol}</div>
+            <div className={`${styles.statusLine} ${badgeClass(okData.check.status)}`}>
+              <span className={styles.statusEmoji} aria-hidden>
+                {statusIcon(okData.check.status)}
+              </span>
+              <span className={styles.statusLabel}>{okData.check.status}</span>
+            </div>
+            <div className={styles.scoreBlock}>
+              <span className={styles.score}>{okData.check.score}</span>
+              <span className={styles.scoreSuffix}>/ 100</span>
+            </div>
+            {summaryBullets && summaryBullets.bullets.length > 0 ? (
+              <ul className={styles.bulletList}>
+                {summaryBullets.bullets.map((line) => (
+                  <li key={line} className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}>
+                    <span className={styles.bulletMark} aria-hidden>
+                      {bulletMark(summaryBullets.variant)}
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <StockCheckResultActions
+              symbol={okData.stock.symbol}
+              name={okData.check.name}
+              score={okData.check.score}
+              status={okData.check.status}
+              detailsOpen={fullDetails}
+              onToggleDetails={() => setFullDetails((o) => !o)}
+            />
+          </div>
+
+          <section className={styles.trustCard} aria-labelledby="check-trust-heading">
+            <h2 id="check-trust-heading" className={styles.trustTitle}>
+              How we determine Halal status
+            </h2>
+            <ul className={styles.trustList}>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
+                </span>
+                <span>Based on AAOIFI, S&amp;P Shariah standards</span>
+              </li>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
+                </span>
+                <span>Uses financial ratios like debt and income</span>
+              </li>
+              <li className={styles.trustItem}>
+                <span className={styles.trustCheck} aria-hidden>
+                  ✔
+                </span>
+                <span>Regularly updated data</span>
+              </li>
+            </ul>
+            <p className={styles.trustDisclaimer}>
+              This is an automated screening tool and not financial or religious advice
+            </p>
+          </section>
+
+          <CheckStockDiscovery excludeSymbol={okData.stock.symbol} />
+
+          {fullDetails ? (
+            <div ref={detailsAnchorRef} className={styles.expandWrap}>
+              <StockCheckFullDetails screening={okData.screening} multi={okData.multi} />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
     </div>
   );
 }

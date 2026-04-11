@@ -1,0 +1,115 @@
+.section {
+  margin-top: 0;
+  text-align: left;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+
+.sub {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  display: block;
+  padding: 16px 18px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.card:hover {
+  border-color: color-mix(in srgb, var(--emerald) 35%, var(--line));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.name {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 10px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.score {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.scoreSuffix {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.badge {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 5px 10px;
+  border-radius: 9999px;
+}
+
+.badgeHalal {
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
+}
+
+.badgeDoubt {
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border: 1px solid var(--status-doubtful-border);
+}
+
+.badgeHaram {
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border: 1px solid var(--status-haram-border);
+}
+
+@media (min-width: 480px) {
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

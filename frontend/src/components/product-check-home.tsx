@@ -41,12 +41,12 @@ export async function ProductCheckHome() {
   return (
     <section className={styles.strip} aria-labelledby="product-check-heading">
       <div className={styles.inner}>
-        <p className={styles.kicker}>Instant answer</p>
+        <p className={styles.kicker}>Instant Halal status</p>
         <h1 id="product-check-heading" className={styles.title}>
-          Check if any stock is Halal in seconds
+          Check if a stock is Halal
         </h1>
         <p className={styles.sub}>
-          Shariah-compliant screening across four global methodologies — one clear result, with full ratios when you need them.
+          Halal Stock Checker — quick result from trusted ratios (AAOIFI, S&amp;P Shariah, and more). Open full details when you want the numbers.
         </p>
         <StockCheckHero />
       </div>
@@ -72,7 +72,7 @@ export async function ProductCheckHome() {
           </div>
           <div style={{ textAlign: "center" }}>
             <Link href="/screener" className={styles.moreLink}>
-              Browse full screener →
+              Browse all stocks →
             </Link>
           </div>
         </div>

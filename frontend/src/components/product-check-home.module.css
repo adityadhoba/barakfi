@@ -2,7 +2,7 @@
 
 .strip {
   position: relative;
-  padding: 48px 20px 40px;
+  padding: 3rem 1.25rem 3.5rem;
   text-align: center;
   background: linear-gradient(
     180deg,
@@ -18,12 +18,12 @@
 }
 
 .kicker {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--emerald);
-  margin: 0 0 12px;
+  margin: 0 0 14px;
 }
 
 .title {
@@ -37,15 +37,15 @@
 }
 
 .sub {
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.55;
   color: var(--text-secondary);
-  margin: 0 auto 28px;
+  margin: 0 auto 2rem;
   max-width: 34rem;
 }
 
 .topSection {
-  margin-top: 40px;
+  margin-top: var(--section-gap-lg);
   text-align: left;
 }
 
@@ -79,8 +79,8 @@
 
 .topCard {
   display: block;
-  padding: 14px 14px;
-  border-radius: var(--radius-lg);
+  padding: 16px 16px;
+  border-radius: var(--radius-2xl);
   border: 1px solid var(--line);
   background: var(--panel);
   text-decoration: none;
@@ -126,27 +126,30 @@
 }
 
 .badge {
-  font-size: 0.62rem;
+  font-size: 0.6875rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 9999px;
 }
 
 .badgeHalal {
-  background: color-mix(in srgb, var(--emerald) 18%, transparent);
-  color: var(--emerald);
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
 }
 
 .badgeDoubt {
-  background: color-mix(in srgb, var(--gold) 22%, transparent);
-  color: var(--gold);
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border: 1px solid var(--status-doubtful-border);
 }
 
 .badgeHaram {
-  background: color-mix(in srgb, var(--red) 18%, transparent);
-  color: var(--red);
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border: 1px solid var(--status-haram-border);
 }
 
 .moreLink {

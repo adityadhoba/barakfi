@@ -7,7 +7,7 @@ import { useMobileNav } from "@/components/mobile-nav-context";
 
 const TABS = [
   { href: "/", label: "Home", icon: "\u2302", match: (p: string) => p === "/" },
-  { href: "/screener", label: "Screener", icon: "\u2315", match: (p: string) => p.startsWith("/screener") || p.startsWith("/stocks") },
+  { href: "/screener", label: "Stocks", icon: "\u2315", match: (p: string) => p.startsWith("/screener") || p.startsWith("/stocks") },
   {
     href: "/watchlist",
     label: "Watchlist",
