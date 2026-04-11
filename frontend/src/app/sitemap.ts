@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${CANONICAL_DOMAIN}/tools`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${CANONICAL_DOMAIN}/tools/purification`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.75 },
     { url: `${CANONICAL_DOMAIN}/tools/zakat`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.75 },
+    { url: `${CANONICAL_DOMAIN}/how-it-works`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.75 },
     { url: `${CANONICAL_DOMAIN}/methodology`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${CANONICAL_DOMAIN}/shariah-compliance`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${CANONICAL_DOMAIN}/academy`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
