@@ -1,5 +1,13 @@
+import {
+  unwrapCheckStockEnvelope,
+  unwrapMultiScreenEnvelope,
+  unwrapPrimaryScreenEnvelope,
+  type CheckStockResponse,
+  type MultiMethodologyResult,
+  type ScreeningResult,
+  type Stock,
+} from "@/lib/api";
 import { getPublicApiBaseUrl } from "@/lib/api-base";
-import type { CheckStockResponse, MultiMethodologyResult, ScreeningResult, Stock } from "@/lib/api";
 
 const REVALIDATE_SEC = 60;
 const FETCH_MS = 28_000;
@@ -50,10 +58,16 @@ export async function fetchCheckStockPageData(symbol: string): Promise<CheckStoc
       return { kind: "error", message: parts.join(" — ") || "Could not load screening." };
     }
 
-    const check = (await resCheck.json()) as CheckStockResponse;
+    const checkRaw = await resCheck.json();
+    const check = unwrapCheckStockEnvelope(checkRaw);
     const stock = (await resStock.json()) as Stock;
-    const screening = (await resScreen.json()) as ScreeningResult;
-    const multi = resMulti.ok ? ((await resMulti.json()) as MultiMethodologyResult) : null;
+    const screening = unwrapPrimaryScreenEnvelope(await resScreen.json());
+    const multiRaw = resMulti.ok ? await resMulti.json() : null;
+    const multi = multiRaw != null ? unwrapMultiScreenEnvelope(multiRaw) : null;
+
+    if (!check || !screening) {
+      return { kind: "error", message: "Screening response format error." };
+    }
 
     return { kind: "ok", check, stock, screening, multi };
   } catch (err) {

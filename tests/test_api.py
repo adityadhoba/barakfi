@@ -99,22 +99,34 @@ def test_screen_stock():
 
     response = client.get("/api/screen/TCS")
     assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["error"] is None
+    data = payload["data"]
     # TCS passes all hard rules (low debt, no forbidden sector) but may trigger
     # soft review flags (e.g., low fixed-assets ratio for IT companies).
-    assert response.json()["status"] in ("HALAL", "CAUTIOUS")
-    assert response.json()["active_review_case"] is None
+    assert data["status"] in ("Halal", "Doubtful", "Haram")
+    assert data["details"]["engine_status"] in ("HALAL", "CAUTIOUS")
+    assert data["details"]["active_review_case"] is None
 
 
 def test_check_stock_returns_compact_payload():
     response = client.get("/api/check-stock", params={"symbol": "TCS"})
     assert response.status_code == 200
-    body = response.json()
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["error"] is None
+    body = payload["data"]
     assert body["name"]
+    assert body["symbol"] == "TCS"
     assert body["status"] in ("Halal", "Doubtful", "Haram")
     assert isinstance(body["score"], int)
     assert 0 <= body["score"] <= 100
     assert isinstance(body["summary"], str) and len(body["summary"]) > 0
     assert isinstance(body["details_available"], bool)
+    assert "ratios" in body["details"]
+    assert "methodologies" in body["details"]
+    assert isinstance(body["details"]["reasons"], list)
 
 
 def test_check_stock_404_unknown_symbol():
@@ -130,11 +142,12 @@ def test_check_stock_400_empty_symbol():
 def test_screen_stock_includes_active_review_case():
     response = client.get("/api/screen/WIPRO")
     assert response.status_code == 200
-    body = response.json()
-    assert body["active_review_case"] is not None
-    assert body["active_review_case"]["stock"]["symbol"] == "WIPRO"
-    assert body["active_review_case"]["status"] in {"open", "in_progress"}
-    assert len(body["recent_review_cases"]) >= 1
+    body = response.json()["data"]
+    arc = body["details"]["active_review_case"]
+    assert arc is not None
+    assert arc["stock"]["symbol"] == "WIPRO"
+    assert arc["status"] in {"open", "in_progress"}
+    assert len(body["details"]["recent_review_cases"]) >= 1
 
 
 def test_rulebook():
@@ -260,8 +273,9 @@ def test_admin_override_changes_screening_result(mock_admin_auth):
 
         screen_response = client.get("/api/screen/TCS")
         assert screen_response.status_code == 200
-        assert screen_response.json()["status"] == "CAUTIOUS"
-        assert "Manual compliance override applied" in screen_response.json()["reasons"][0]
+        sbody = screen_response.json()["data"]
+        assert sbody["details"]["engine_status"] == "CAUTIOUS"
+        assert "Manual compliance override applied" in sbody["details"]["reasons"][0]
     finally:
         db = SessionLocal()
         try:
@@ -342,10 +356,11 @@ def test_admin_can_update_review_case_and_create_override(mock_admin_auth):
 
         screen_response = client.get("/api/screen/DMART")
         assert screen_response.status_code == 200
-        assert screen_response.json()["status"] == "HALAL"
-        assert "Manual compliance override applied" in screen_response.json()["reasons"][0]
+        sbody = screen_response.json()["data"]
+        assert sbody["details"]["engine_status"] == "HALAL"
+        assert "Manual compliance override applied" in sbody["details"]["reasons"][0]
         assert any(
-            item["status"] == "resolved" for item in screen_response.json()["recent_review_cases"]
+            item["status"] == "resolved" for item in sbody["details"]["recent_review_cases"]
         )
     finally:
         db = SessionLocal()

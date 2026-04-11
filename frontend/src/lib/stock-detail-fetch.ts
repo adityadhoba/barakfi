@@ -3,8 +3,14 @@
  * uses ISR revalidation for public GETs (faster repeat visits).
  */
 
+import {
+  unwrapMultiScreenEnvelope,
+  unwrapPrimaryScreenEnvelope,
+  type MultiMethodologyResult,
+  type ScreeningResult,
+  type Stock,
+} from "@/lib/api";
 import { getPublicApiBaseUrl } from "@/lib/api-base";
-import type { MultiMethodologyResult, ScreeningResult, Stock } from "@/lib/api";
 
 const REVALIDATE_SEC = 90;
 const FETCH_MS = 28_000;
@@ -71,7 +77,10 @@ export async function fetchStockAndScreenForPage(symbol: string): Promise<StockD
     }
 
     const stock = (await resStock.json()) as Stock;
-    const screening = (await resScreen.json()) as ScreeningResult;
+    const screening = unwrapPrimaryScreenEnvelope(await resScreen.json());
+    if (!screening) {
+      return { kind: "error", message: "Screening response format error." };
+    }
     return { kind: "ok", stock, screening };
   } catch (err) {
     const aborted = err instanceof Error && err.name === "AbortError";
@@ -100,7 +109,7 @@ export async function fetchMultiScreeningForPage(symbol: string): Promise<MultiM
       signal: controller.signal,
     });
     if (!res.ok) return null;
-    return (await res.json()) as MultiMethodologyResult;
+    return unwrapMultiScreenEnvelope(await res.json());
   } catch {
     return null;
   } finally {

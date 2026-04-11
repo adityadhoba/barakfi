@@ -4,34 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { StockLogo } from "@/components/stock-logo";
 import styles from "./manual-screen-search.module.css";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
-
-type ScreeningResult = {
-  symbol: string;
-  name: string;
-  status: string;
-  reasons: string[];
-  breakdown: Record<string, unknown>;
-};
-
-type MultiResult = {
-  consensus_status: string;
-  methodologies: Record<string, ScreeningResult>;
-  summary: {
-    halal_count: number;
-    cautious_count: number;
-    non_compliant_count: number;
-    total: number;
-  };
-};
-
-type ManualScreenResult = {
-  symbol: string;
-  name: string;
-  is_prescreened: boolean;
-  screening: ScreeningResult;
-  multi: MultiResult;
-};
+import { manualScreenStock, type ManualScreenResult } from "@/lib/api";
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
@@ -44,8 +17,6 @@ const STATUS_CLASSES: Record<string, string> = {
   CAUTIOUS: "statusCautious",
   NON_COMPLIANT: "statusFail",
 };
-
-const apiBaseUrl = getPublicApiBaseUrl();
 
 export function ManualScreenSearch() {
   const [query, setQuery] = useState("");
@@ -63,24 +34,11 @@ export function ManualScreenSearch() {
     setResult(null);
 
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60_000);
-
-      const response = await fetch(`${apiBaseUrl}/screen/manual`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        setError(data?.detail || `Could not find stock: ${symbol}`);
+      const data = await manualScreenStock(symbol);
+      if (!data) {
+        setError(`Could not find stock: ${symbol}`);
         return;
       }
-
-      const data: ManualScreenResult = await response.json();
       setResult(data);
     } catch {
       setError("Request timed out or failed. Please try again.");
