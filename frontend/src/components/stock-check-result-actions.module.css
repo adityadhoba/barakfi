@@ -1,14 +1,28 @@
 .row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 8px;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+  width: 100%;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 420px) {
+  .row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: none;
+  }
 }
 
 .primary {
-  padding: 12px 22px;
-  font-size: 0.88rem;
+  flex: 1;
+  min-width: 0;
+  padding: 14px 20px;
+  font-size: 0.92rem;
   font-weight: 700;
   border: none;
   border-radius: var(--radius-xl);
@@ -23,16 +37,20 @@
 }
 
 .secondary {
+  flex: 1;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
-  padding: 12px 20px;
-  font-size: 0.88rem;
-  font-weight: 600;
+  justify-content: center;
+  padding: 14px 20px;
+  font-size: 0.92rem;
+  font-weight: 700;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   background: var(--panel);
   color: var(--text);
-  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .secondary:hover {

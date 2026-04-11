@@ -24,6 +24,11 @@ type Props = {
   ratioRows: StockDetailRatioRow[];
   methodologyCaption: string | null;
   methodologyRows: StockDetailMethodologyRow[] | null;
+  /**
+   * When true, panel stays expanded; summary acts as "Hide" (for /check flow with external open button).
+   */
+  pinnedOpen?: boolean;
+  onRequestClose?: () => void;
 };
 
 function statusBadgeClass(status: string): string {
@@ -36,15 +41,31 @@ export function StockDetailTablesCollapsible({
   ratioRows,
   methodologyCaption,
   methodologyRows,
+  pinnedOpen,
+  onRequestClose,
 }: Props) {
   return (
     <div className={styles.wrap}>
-      <details className={styles.details}>
-        <summary className={styles.summary}>
+      <details className={styles.details} open={pinnedOpen ? true : undefined}>
+        <summary
+          className={styles.summary}
+          onClick={
+            pinnedOpen && onRequestClose
+              ? (e) => {
+                  e.preventDefault();
+                  onRequestClose();
+                }
+              : undefined
+          }
+        >
           <span className={styles.summaryLeft}>
-            <span className={styles.summaryTitle}>Financial ratios &amp; methodology</span>
+            <span className={styles.summaryTitle}>
+              {pinnedOpen ? "Hide full details" : "Financial ratios & methodology"}
+            </span>
             <span className={styles.summaryHint}>
-              S&amp;P-style metrics and all four methodology outcomes — expand for full tables
+              {pinnedOpen
+                ? "Ratios, methodology breakdown, and technical data"
+                : "S&P-style metrics and all four methodology outcomes — expand for full tables"}
             </span>
           </span>
           <span className={styles.chevron} aria-hidden>

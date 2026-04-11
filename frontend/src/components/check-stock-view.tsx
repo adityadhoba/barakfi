@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
 import {
+  buildCheckSummaryBullets,
   buildMethodologyTableRowsFromMulti,
   buildPrimaryRatioTableRows,
   methodologyTableCaption,
@@ -20,6 +21,24 @@ function badgeClass(status: string): string {
   return styles.badgeDoubt;
 }
 
+function statusIcon(status: string): string {
+  if (status === "Halal") return "✅";
+  if (status === "Haram") return "❌";
+  return "⚠️";
+}
+
+function bulletClass(variant: "pass" | "fail" | "review"): string {
+  if (variant === "fail") return styles.bulletFail;
+  if (variant === "review") return styles.bulletReview;
+  return styles.bulletPass;
+}
+
+function bulletMark(variant: "pass" | "fail" | "review"): string {
+  if (variant === "fail") return "✗";
+  if (variant === "review") return "⚠";
+  return "✔";
+}
+
 type Props = {
   symbol: string;
 };
@@ -27,6 +46,8 @@ type Props = {
 export function CheckStockView({ symbol }: Props) {
   const setSessionPayload = useCheckStockSession((s) => s.setPayload);
   const symU = symbol.trim().toUpperCase();
+  const [fullDetails, setFullDetails] = useState(false);
+  const detailsAnchorRef = useRef<HTMLDivElement>(null);
 
   const [{ data, loading }, setView] = useState(() => {
     const cached = useCheckStockSession.getState().payload;
@@ -101,6 +122,19 @@ export function CheckStockView({ symbol }: Props) {
     };
   }, [data]);
 
+  const summaryBullets = useMemo(() => {
+    if (!data || data.kind !== "ok") return null;
+    return buildCheckSummaryBullets(data.screening);
+  }, [data]);
+
+  useEffect(() => {
+    if (!fullDetails) return;
+    const id = requestAnimationFrame(() => {
+      detailsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [fullDetails]);
+
   if (loading) {
     return (
       <div className={styles.page}>
@@ -137,29 +171,56 @@ export function CheckStockView({ symbol }: Props) {
       </Link>
 
       <div className={styles.card}>
-        <div className={styles.symbol}>{stock.symbol}</div>
         <h1 className={styles.name}>{check.name}</h1>
-        <div className={`${styles.badge} ${badgeClass(check.status)}`}>{check.status}</div>
-        <div className={styles.score}>{check.score}</div>
-        <div className={styles.scoreSuffix}>/ 100 compliance score</div>
-        <p className={styles.summary}>{check.summary}</p>
-        {!check.details_available && (
-          <p className={styles.detailsNote}>
-            Some fundamentals are missing — treat this score as indicative and open full analysis for context.
-          </p>
-        )}
-        <StockCheckResultActions symbol={stock.symbol} />
+        <div className={styles.symbolMuted}>{stock.symbol}</div>
+        <div className={`${styles.statusLine} ${badgeClass(check.status)}`}>
+          <span className={styles.statusEmoji} aria-hidden>
+            {statusIcon(check.status)}
+          </span>
+          <span className={styles.statusLabel}>{check.status}</span>
+        </div>
+        <div className={styles.scoreBlock}>
+          <span className={styles.score}>{check.score}</span>
+          <span className={styles.scoreSuffix}>/ 100</span>
+        </div>
+        {summaryBullets && summaryBullets.bullets.length > 0 ? (
+          <ul className={styles.bulletList}>
+            {summaryBullets.bullets.map((line) => (
+              <li key={line} className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}>
+                <span className={styles.bulletMark} aria-hidden>
+                  {bulletMark(summaryBullets.variant)}
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <StockCheckResultActions
+          symbol={stock.symbol}
+          name={check.name}
+          score={check.score}
+          status={check.status}
+          detailsOpen={fullDetails}
+          onToggleDetails={() => setFullDetails((o) => !o)}
+        />
       </div>
 
-      {tables ? (
-        <div className={styles.expandWrap}>
+      {fullDetails && tables ? (
+        <div ref={detailsAnchorRef} className={styles.expandWrap}>
           <StockDetailTablesCollapsible
             ratioRows={tables.ratioRows}
             methodologyCaption={tables.methodologyCaption}
             methodologyRows={tables.methodologyRows}
+            pinnedOpen
+            onRequestClose={() => setFullDetails(false)}
           />
+          <p className={styles.fullDetailsFootnote}>
+            Methodology labels and ratios are for information only — not religious advice. See{" "}
+            <Link href="/methodology">methodology</Link> and <Link href="/disclaimer">disclaimer</Link>.
+          </p>
         </div>
       ) : null}
+
     </div>
   );
 }

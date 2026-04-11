@@ -25,9 +25,18 @@ export default function SavedStocksPage() {
           <ul className={styles.list}>
             {items.map((e) => (
               <li key={e.symbol} className={styles.row}>
-                <Link href={`/check/${encodeURIComponent(e.symbol)}`} className={styles.sym}>
-                  {e.symbol}
-                </Link>
+                <div>
+                  <Link href={`/check/${encodeURIComponent(e.symbol)}`} className={styles.sym}>
+                    {e.symbol}
+                  </Link>
+                  {e.name ? <div className={styles.name}>{e.name}</div> : null}
+                  {e.score != null || e.status ? (
+                    <div className={styles.meta}>
+                      {e.score != null ? <span className={styles.score}>{e.score}/100</span> : null}
+                      {e.status ? <span className={styles.status}>{e.status}</span> : null}
+                    </div>
+                  ) : null}
+                </div>
                 <div className={styles.actions}>
                   <Link href={`/stocks/${encodeURIComponent(e.symbol)}`} className={styles.secondary}>
                     Details
