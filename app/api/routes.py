@@ -100,6 +100,7 @@ from app.services.halal_service import (
     get_profile_version,
     get_rulebook,
 )
+from app.services import screening_cache
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
@@ -380,8 +381,13 @@ def check_stock(
         raise HTTPException(status_code=404, detail="Stock not found")
 
     stock_data = helpers.stock_to_dict(stock)
+    cached_check = screening_cache.get_check_stock(clean)
+    if cached_check is not None:
+        return cached_check
     multi = evaluate_stock_multi(stock_data)
-    return build_stock_check_payload(stock.name, stock_data, multi)
+    payload = build_stock_check_payload(stock.name, stock_data, multi)
+    screening_cache.set_check_stock(clean, payload)
+    return payload
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)
@@ -416,7 +422,11 @@ def screen_stock(
         raise HTTPException(status_code=404, detail="Stock not found")
 
     stock_data = helpers.stock_to_dict(stock)
-    result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+    sym_u = stock.symbol.upper()
+    result = screening_cache.get_primary_eval(sym_u)
+    if result is None:
+        result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        screening_cache.set_primary_eval(sym_u, result)
     result = helpers.apply_compliance_override(db, stock, result)
     helpers.record_screening_log(db, stock, result)
     active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
@@ -468,7 +478,11 @@ def screen_stocks_bulk(
         if not stock:
             continue
         stock_data = helpers.stock_to_dict(stock)
-        result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        sym_u = stock.symbol.upper()
+        result = screening_cache.get_primary_eval(sym_u)
+        if result is None:
+            result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+            screening_cache.set_primary_eval(sym_u, result)
         result = helpers.apply_compliance_override(db, stock, result)
         helpers.record_screening_log(db, stock, result)
         active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
@@ -503,7 +517,11 @@ def screen_stock_multi(
         raise HTTPException(status_code=404, detail="Stock not found")
 
     stock_data = helpers.stock_to_dict(stock)
-    multi_result = evaluate_stock_multi(stock_data)
+    sym_u = stock.symbol.upper()
+    multi_result = screening_cache.get_multi(sym_u)
+    if multi_result is None:
+        multi_result = evaluate_stock_multi(stock_data)
+        screening_cache.set_multi(sym_u, multi_result)
 
     return {
         "symbol": stock.symbol,
