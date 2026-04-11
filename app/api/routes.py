@@ -2569,9 +2569,26 @@ def daily_refresh(
     skip_prices: bool = Query(default=False, description="Skip price sync (combine with other skips for split crons)."),
     skip_news: bool = Query(default=False),
     skip_screen: bool = Query(default=False),
+    skip_fundamentals: bool = Query(
+        default=False,
+        description="Skip Yahoo Finance fundamentals pull (tests: set true; production: false so screening uses fresh ratios).",
+    ),
+    max_fundamentals_stocks: int | None = Query(
+        default=None,
+        ge=1,
+        le=5000,
+        description="Cap fundamentals fetch batch size (non-ETF active stocks); omit for full slice after offset.",
+    ),
+    fundamentals_offset: int = Query(
+        default=0,
+        ge=0,
+        le=500000,
+        description="Skip first N active non-ETF stocks before fundamentals slice — chain long jobs.",
+    ),
 ):
     """
-    One-shot pipeline for cron: sync all equity prices, upsert news, warm screening cache in chunks.
+    One-shot pipeline for cron: optional **fundamentals** (Yahoo via ``fetch_real_data``), equity prices,
+    news, then screening warm-up so compliance uses **DB** data after fundamentals land.
 
     Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
@@ -2580,6 +2597,23 @@ def daily_refresh(
     """
     helpers.require_internal_token(x_internal_service_token)
     eff = MARKET_DATA_PROVIDER.strip().lower()
+
+    from app.services.fundamentals_sync_service import sync_fundamentals_yfinance_batch
+
+    fundamentals_payload: dict
+    if skip_fundamentals:
+        fundamentals_payload = {"skipped": True}
+    else:
+        fr = sync_fundamentals_yfinance_batch(
+            max_stocks=max_fundamentals_stocks,
+            start_offset=fundamentals_offset,
+        )
+        if not fr.get("ok"):
+            raise HTTPException(
+                status_code=503,
+                detail=fr.get("detail") or fr.get("error") or "fundamentals sync unavailable",
+            )
+        fundamentals_payload = {k: v for k, v in fr.items() if k != "ok"}
 
     prices_payload: dict
     if skip_prices:
@@ -2639,6 +2673,7 @@ def daily_refresh(
 
     return {
         "ok": True,
+        "fundamentals": fundamentals_payload,
         "prices": prices_payload,
         "news": news_payload,
         "screening": screening_payload,

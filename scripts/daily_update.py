@@ -15,7 +15,7 @@ Environment:
     INTERNAL_SERVICE_TOKEN  Service token for authenticated endpoints
 
 Examples:
-    python scripts/daily_update.py --full-pipeline   # prices + news + screening (Render Cron)
+    python scripts/daily_update.py --full-pipeline   # fundamentals + prices + news + screening (Render Cron)
     python scripts/daily_update.py                    # prices only (legacy)
 """
 
@@ -125,7 +125,7 @@ def health_check():
 
 def run_full_daily_pipeline(dry_run: bool = False) -> None:
     """
-    POST /api/internal/daily-refresh — full price sync, news, screening warm-up.
+    POST /api/internal/daily-refresh — Yahoo fundamentals, price sync, news, screening warm-up.
     Use a long read timeout (below) so Render Cron can finish in one HTTP call.
     """
     url = f"{API_BASE.rstrip('/')}/internal/daily-refresh"
