@@ -513,18 +513,21 @@ input, select, textarea, button {
 /* ── Search Autocomplete Dropdown ── */
 .searchDropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 10px);
   left: 0;
   width: 100%;
   background: var(--panel-solid);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.08);
   list-style: none;
   margin: 0;
-  padding: 4px;
+  padding: 8px;
   z-index: 9999;
-  max-height: 400px;
+  max-height: min(360px, 55vh);
   overflow-y: auto;
   animation: dropdownIn 120ms ease-out;
 }
@@ -542,9 +545,13 @@ input, select, textarea, button {
   cursor: pointer;
   transition: background var(--transition-fast);
 }
-.searchDropdownItem:hover,
-.searchDropdownItemFocused {
+.searchDropdownItem:hover {
   background: var(--bg-soft);
+}
+.searchDropdownItemFocused {
+  background: color-mix(in srgb, var(--emerald) 10%, var(--bg-soft));
+  outline: 1px solid color-mix(in srgb, var(--emerald) 35%, transparent);
+  outline-offset: -1px;
 }
 .searchMatchHighlight {
   background: color-mix(in srgb, var(--emerald) 28%, transparent);
@@ -559,19 +566,22 @@ input, select, textarea, button {
   gap: 1px;
   min-width: 0;
 }
-.searchDropdownSymbol {
-  font-weight: 700;
-  font-size: 0.82rem;
-  color: var(--text);
-  font-family: var(--font-display);
-  letter-spacing: -0.01em;
-}
+/* Company name first, ticker second (autocomplete) */
 .searchDropdownName {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  width: 100%;
+}
+.searchDropdownSymbol {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 .searchDropdownRight {
   display: flex;
@@ -608,6 +618,14 @@ input, select, textarea, button {
   text-align: center;
   color: var(--text-tertiary);
   font-size: 0.8rem;
+}
+.searchDropdownStatus {
+  padding: 14px 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+  font-style: italic;
+  list-style: none;
 }
 .searchDropdownHint {
   display: flex;
@@ -1005,7 +1023,14 @@ input, select, textarea, button {
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.06);
 }
 [data-theme="dark"] .searchDropdownItemFocused {
-  background: rgba(16, 185, 129, 0.08);
+  background: rgba(16, 185, 129, 0.12);
+  outline-color: rgba(16, 185, 129, 0.4);
+}
+[data-theme="dark"] .searchDropdown {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 16px 48px rgba(0, 0, 0, 0.45),
+    0 32px 80px rgba(0, 0, 0, 0.3);
 }
 [data-theme="dark"] .searchMatchHighlight {
   background: rgba(16, 185, 129, 0.25);

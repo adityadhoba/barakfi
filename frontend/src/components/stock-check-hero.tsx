@@ -1,15 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo, useId } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useId } from "react";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import styles from "./stock-check-hero.module.css";
+
+const AUTOCOMPLETE_LIMIT = 5;
+const DEBOUNCE_MS = 300;
 
 type StockHit = { symbol: string; name: string; sector: string };
 
 type Props = {
-  /** Larger input + slate styling for the minimal homepage */
   variant?: "default" | "hero";
   placeholder?: string;
   submitLabel?: string;
@@ -28,8 +31,10 @@ export function StockCheckHero({
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
-  const deferred = useDeferredValue(value);
   const fetched = useRef(false);
+
+  const debouncedValue = useDebouncedValue(value, DEBOUNCE_MS);
+  const filterQuery = debouncedValue.trim();
 
   const loadStocks = useCallback(async () => {
     if (fetched.current) return;
@@ -45,11 +50,10 @@ export function StockCheckHero({
     } catch { /* silent */ }
   }, []);
 
-  const q = deferred.trim();
   const filtered = useMemo(() => {
-    if (!q) return [];
-    return rankStocksForQuery(stocks, q, 8);
-  }, [q, stocks]);
+    if (!filterQuery) return [];
+    return rankStocksForQuery(stocks, filterQuery, AUTOCOMPLETE_LIMIT);
+  }, [filterQuery, stocks]);
 
   const goCheck = useCallback(
     (symbol: string) => {
@@ -73,6 +77,14 @@ export function StockCheckHero({
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setFocusIdx(-1));
+    return () => cancelAnimationFrame(id);
+  }, [filterQuery]);
+
+  const showSuggestions = open && value.trim().length > 0 && stocks.length > 0;
+  const typingPending = value.trim().length > 0 && filterQuery !== value.trim();
 
   const wrapClass = variant === "hero" ? `${styles.wrap} ${styles.wrapHero}` : styles.wrap;
   const formClass = variant === "hero" ? `${styles.form} ${styles.formHero}` : styles.form;
@@ -111,6 +123,7 @@ export function StockCheckHero({
             void loadStocks();
           }}
           onKeyDown={(e) => {
+            if (!filtered.length) return;
             if (e.key === "ArrowDown") {
               e.preventDefault();
               setFocusIdx((i) => Math.min(i + 1, filtered.length - 1));
@@ -126,7 +139,7 @@ export function StockCheckHero({
           role="combobox"
           aria-autocomplete="list"
           aria-controls={listboxId}
-          aria-expanded={open && q.length > 0 && stocks.length > 0}
+          aria-expanded={showSuggestions}
           autoComplete="off"
         />
         <button type="submit" className={btnClass}>
@@ -134,25 +147,27 @@ export function StockCheckHero({
         </button>
       </form>
 
-      {open && q.length > 0 && stocks.length > 0 && (
+      {showSuggestions && (
         <ul className={dropdownClass} id={listboxId} role="listbox">
-          {filtered.length > 0 ? (
+          {typingPending && filtered.length === 0 ? (
+            <li className={styles.hint}>Searching…</li>
+          ) : filtered.length > 0 ? (
             filtered.map((s, i) => (
               <li key={s.symbol}>
                 <button
                   type="button"
                   role="option"
                   aria-selected={i === focusIdx}
-                  className={`${styles.item} ${i === focusIdx ? styles.itemFocus : ""} ${i === 0 ? styles.itemBest : ""}`}
+                  className={`${styles.item} ${i === focusIdx ? styles.itemFocus : ""}`}
                   onMouseEnter={() => setFocusIdx(i)}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => goCheck(s.symbol)}
                 >
-                  <span className={styles.sym}>
-                    <SearchMatchHighlight text={s.symbol} query={q} />
+                  <span className={styles.nameLine}>
+                    <SearchMatchHighlight text={s.name} query={filterQuery} />
                   </span>
-                  <span className={styles.name}>
-                    <SearchMatchHighlight text={s.name} query={q} />
+                  <span className={styles.symLine}>
+                    <SearchMatchHighlight text={s.symbol} query={filterQuery} />
                   </span>
                 </button>
               </li>

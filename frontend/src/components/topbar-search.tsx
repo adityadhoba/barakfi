@@ -1,12 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { StockLogo } from "@/components/stock-logo";
 import { useMobileNav } from "@/components/mobile-nav-context";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
+import { SearchMatchHighlight } from "@/components/search-match-highlight";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 type StockHit = {
   symbol: string;
@@ -20,6 +23,8 @@ type StockHit = {
 
 const RECENT_KEY = "barakfi_recent_searches";
 const MAX_RECENT = 5;
+const AUTOCOMPLETE_LIMIT = 5;
+const DEBOUNCE_MS = 300;
 
 function getRecentSearches(): string[] {
   if (typeof window === "undefined") return [];
@@ -49,7 +54,8 @@ export function TopbarSearch() {
   const [focusIdx, setFocusIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const deferredValue = useDeferredValue(value);
+  const debouncedValue = useDebouncedValue(value, DEBOUNCE_MS);
+  const debouncedQuery = debouncedValue.trim();
 
   const fetched = useRef(false);
   const fetchStocks = useCallback(async () => {
@@ -74,20 +80,13 @@ export function TopbarSearch() {
     } catch { /* silent */ }
   }, []);
 
-  const q = deferredValue.trim().toLowerCase();
+  const q = value.trim().toLowerCase();
   const filtered = useMemo(() => {
-    if (q.length === 0) return [];
-    return stocks
-      .filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q) ||
-          s.sector.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [q, stocks]);
+    if (debouncedQuery.length === 0) return [];
+    return rankStocksForQuery(stocks, debouncedQuery, AUTOCOMPLETE_LIMIT);
+  }, [debouncedQuery, stocks]);
 
-  const recentSymbols = useMemo(() => getRecentSearches(), [open, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentSymbols = useMemo(() => getRecentSearches(), []);
   const recentStocks = useMemo(() => {
     if (!stocks.length) return [];
     return recentSymbols
@@ -103,7 +102,10 @@ export function TopbarSearch() {
   }, [stocks]);
 
   const showEmpty = (open || searchOpen) && q.length === 0 && stocks.length > 0;
-  const showResults = (open || searchOpen) && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
+  const typingPending = q.length > 0 && debouncedQuery !== value.trim();
+  const showResults =
+    (open || searchOpen) &&
+    (filtered.length > 0 || typingPending || (q.length > 0 && stocks.length > 0));
   const showDropdown = showEmpty || showResults;
 
   const dropdownQuoteSymbols = useMemo(() => {
@@ -208,7 +210,7 @@ export function TopbarSearch() {
 
   useEffect(() => {
     setFocusIdx(-1);
-  }, [deferredValue]);
+  }, [debouncedQuery]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -291,7 +293,9 @@ export function TopbarSearch() {
         <ul className="searchDropdown" id="search-listbox" role="listbox">
           {q.length > 0 ? (
             <>
-              {filtered.length > 0 ? (
+              {typingPending && filtered.length === 0 ? (
+                <li className="searchDropdownStatus">Searching…</li>
+              ) : filtered.length > 0 ? (
                 filtered.map((stock, i) => (
                   <li
                     key={stock.symbol}
@@ -304,8 +308,12 @@ export function TopbarSearch() {
                   >
                     <StockLogo symbol={stock.symbol} size={28} />
                     <div className="searchDropdownLeft">
-                      <span className="searchDropdownSymbol">{stock.symbol}</span>
-                      <span className="searchDropdownName">{stock.name}</span>
+                      <span className="searchDropdownName">
+                        <SearchMatchHighlight text={stock.name} query={debouncedQuery} />
+                      </span>
+                      <span className="searchDropdownSymbol">
+                        <SearchMatchHighlight text={stock.symbol} query={debouncedQuery} />
+                      </span>
                     </div>
                     <div className="searchDropdownRight">
                       <span className="searchDropdownPrice">

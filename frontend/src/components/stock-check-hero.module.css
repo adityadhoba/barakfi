@@ -110,25 +110,31 @@
 
 .dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 0;
   right: 0;
   z-index: 50;
   margin: 0;
-  padding: 6px;
+  padding: 8px;
   list-style: none;
   background: var(--panel-solid);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
-  max-height: 280px;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 24px 64px rgba(0, 0, 0, 0.08);
+  max-height: min(320px, 50vh);
   overflow-y: auto;
 }
 
 .dropdownHero {
   background: #1e293b;
-  border-color: rgba(148, 163, 184, 0.35);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  border-color: rgba(148, 163, 184, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.35),
+    0 32px 80px rgba(0, 0, 0, 0.25);
 }
 
 .item {
@@ -136,62 +142,72 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  padding: 10px 12px;
+  gap: 4px;
+  padding: 12px 14px;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background var(--transition-fast);
+  transition: background 0.12s ease;
 }
 
-.item:hover,
-.itemFocus {
+.item:hover {
   background: var(--bg-soft);
 }
 
-.dropdownHero .item:hover,
+.itemFocus {
+  background: color-mix(in srgb, var(--emerald) 12%, var(--bg-soft));
+  outline: 1px solid color-mix(in srgb, var(--emerald) 35%, transparent);
+}
+
+.dropdownHero .item:hover {
+  background: rgba(51, 65, 85, 0.6);
+}
+
 .dropdownHero .itemFocus {
-  background: rgba(51, 65, 85, 0.85);
+  background: rgba(34, 197, 94, 0.12);
+  outline: 1px solid rgba(34, 197, 94, 0.35);
 }
 
-.dropdownHero .sym {
-  color: #f8fafc;
-}
-
-.dropdownHero .name {
-  color: #94a3b8;
-}
-
-.dropdownHero .empty {
-  color: #64748b;
-}
-
-.itemBest {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emerald) 35%, var(--line));
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--emerald) 10%, transparent),
-    transparent
-  );
-}
-
-.sym {
-  font-weight: 800;
-  font-size: 0.85rem;
-  font-family: var(--font-display);
+.nameLine {
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--text);
+  line-height: 1.25;
+  width: 100%;
 }
 
-.name {
-  font-size: 0.78rem;
+.symLine {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
   color: var(--text-secondary);
 }
 
-.empty {
-  padding: 14px;
+.dropdownHero .nameLine {
+  color: #f1f5f9;
+}
+
+.dropdownHero .symLine {
+  color: #94a3b8;
+}
+
+.dropdownHero .empty,
+.dropdownHero .hint {
+  color: #64748b;
+}
+
+.empty,
+.hint {
+  padding: 14px 12px;
   text-align: center;
   font-size: 0.82rem;
   color: var(--text-tertiary);
+  list-style: none;
+}
+
+.hint {
+  font-style: italic;
 }
