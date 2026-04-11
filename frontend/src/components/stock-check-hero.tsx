@@ -10,6 +10,14 @@ import styles from "./stock-check-hero.module.css";
 
 type StockHit = { symbol: string; name: string; sector: string };
 
+/** Label shown on chip → ticker/query sent to screening */
+const EXAMPLE_CHIPS: { label: string; symbol: string }[] = [
+  { label: "Reliance", symbol: "RELIANCE" },
+  { label: "TCS", symbol: "TCS" },
+  { label: "Tesla", symbol: "TSLA" },
+  { label: "Infosys", symbol: "INFY" },
+];
+
 export function StockCheckHero() {
   const router = useRouter();
   const setSessionPayload = useCheckStockSession((s) => s.setPayload);
@@ -44,10 +52,12 @@ export function StockCheckHero() {
   }, [q, stocks]);
 
   const goCheck = useCallback(
-    async (symbol: string) => {
+    async (symbol: string, opts?: { keepInput?: boolean }) => {
       const sym = symbol.trim().toUpperCase();
       if (!sym) return;
-      setValue("");
+      if (!opts?.keepInput) {
+        setValue("");
+      }
       setOpen(false);
       setFocusIdx(-1);
       const result = await fetchCheckStockPageDataBrowser(sym);
@@ -62,6 +72,18 @@ export function StockCheckHero() {
       router.push(`/check/${encodeURIComponent(sym)}`);
     },
     [router, setSessionPayload],
+  );
+
+  const onExampleChip = useCallback(
+    (symbol: string) => {
+      const sym = symbol.trim().toUpperCase();
+      setValue(sym);
+      setOpen(false);
+      setFocusIdx(-1);
+      void loadStocks();
+      void goCheck(sym, { keepInput: true });
+    },
+    [goCheck, loadStocks],
   );
 
   useEffect(() => {
@@ -128,6 +150,20 @@ export function StockCheckHero() {
           Check halal status
         </button>
       </form>
+
+      <div className={styles.chips} role="group" aria-label="Try an example stock">
+        <span className={styles.chipsLabel}>Try</span>
+        {EXAMPLE_CHIPS.map((c) => (
+          <button
+            key={c.symbol}
+            type="button"
+            className={styles.chip}
+            onClick={() => onExampleChip(c.symbol)}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
 
       {open && q.length > 0 && stocks.length > 0 && (
         <ul className={styles.dropdown} id={listboxId} role="listbox">
