@@ -266,6 +266,13 @@ input, select, textarea, button {
   -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
+/* Homepage: logo-only topbar, centered */
+.topbar.topbarHomeMinimal {
+  justify-content: center;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 @media (min-width: 768px) {
   .topbar {
     gap: 16px;

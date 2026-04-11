@@ -1,14 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo, useId } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useId } from "react";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import styles from "./stock-check-hero.module.css";
 
 type StockHit = { symbol: string; name: string; sector: string };
 
-export function StockCheckHero() {
+const SUGGEST_LIMIT = 5;
+
+type Props = {
+  variant?: "default" | "hero";
+  placeholder?: string;
+  submitLabel?: string;
+};
+
+export function StockCheckHero({
+  variant = "default",
+  placeholder = "Search Reliance, TCS, INFY, Tesla…",
+  submitLabel = "Check halal status",
+}: Props) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -17,7 +30,7 @@ export function StockCheckHero() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
-  const deferred = useDeferredValue(value);
+  const deferred = useDebouncedValue(value, 300);
   const fetched = useRef(false);
 
   const loadStocks = useCallback(async () => {
@@ -31,13 +44,16 @@ export function StockCheckHero() {
           data.map((s) => ({ symbol: s.symbol, name: s.name, sector: s.sector || "" })),
         );
       }
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   }, []);
 
   const q = deferred.trim();
+  const typingPending = value.trim() !== q;
   const filtered = useMemo(() => {
     if (!q) return [];
-    return rankStocksForQuery(stocks, q, 8);
+    return rankStocksForQuery(stocks, q, SUGGEST_LIMIT);
   }, [q, stocks]);
 
   const goCheck = useCallback(
@@ -63,10 +79,17 @@ export function StockCheckHero() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  const wrapClass = variant === "hero" ? `${styles.wrap} ${styles.wrapHero}` : styles.wrap;
+  const formClass = variant === "hero" ? `${styles.form} ${styles.formHero}` : styles.form;
+  const inputClass = variant === "hero" ? `${styles.input} ${styles.inputHero}` : styles.input;
+  const btnClass = variant === "hero" ? `${styles.btn} ${styles.btnHero}` : styles.btn;
+  const dropdownClass = variant === "hero" ? `${styles.dropdown} ${styles.dropdownHero}` : styles.dropdown;
+  const showSuggestions = open && value.trim().length > 0 && stocks.length > 0;
+
   return (
-    <div ref={wrapRef} className={styles.wrap}>
+    <div ref={wrapRef} className={wrapClass}>
       <form
-        className={styles.form}
+        className={formClass}
         onSubmit={(e) => {
           e.preventDefault();
           if (focusIdx >= 0 && focusIdx < filtered.length) {
@@ -80,8 +103,8 @@ export function StockCheckHero() {
         <input
           ref={inputRef}
           type="search"
-          className={styles.input}
-          placeholder="Search Reliance, TCS, INFY, Tesla…"
+          className={inputClass}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -109,17 +132,19 @@ export function StockCheckHero() {
           role="combobox"
           aria-autocomplete="list"
           aria-controls={listboxId}
-          aria-expanded={open && q.length > 0 && stocks.length > 0}
+          aria-expanded={showSuggestions}
           autoComplete="off"
         />
-        <button type="submit" className={styles.btn}>
-          Check halal status
+        <button type="submit" className={btnClass}>
+          {submitLabel}
         </button>
       </form>
 
-      {open && q.length > 0 && stocks.length > 0 && (
-        <ul className={styles.dropdown} id={listboxId} role="listbox">
-          {filtered.length > 0 ? (
+      {showSuggestions && (
+        <ul className={dropdownClass} id={listboxId} role="listbox">
+          {typingPending && filtered.length === 0 ? (
+            <li className={styles.hint}>Searching…</li>
+          ) : filtered.length > 0 ? (
             filtered.map((s, i) => (
               <li key={s.symbol}>
                 <button
@@ -131,11 +156,11 @@ export function StockCheckHero() {
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => goCheck(s.symbol)}
                 >
-                  <span className={styles.sym}>
-                    <SearchMatchHighlight text={s.symbol} query={q} />
-                  </span>
-                  <span className={styles.name}>
+                  <span className={styles.nameLine}>
                     <SearchMatchHighlight text={s.name} query={q} />
+                  </span>
+                  <span className={styles.symLine}>
+                    <SearchMatchHighlight text={s.symbol} query={q} />
                   </span>
                 </button>
               </li>
