@@ -1,11 +1,7 @@
-import { HomeDashboard } from "@/components/home-dashboard";
+import { ProductCheckHome } from "@/components/product-check-home";
 
 export const dynamic = "force-dynamic";
 
 export default function Home() {
-  return (
-    <main className="shellPage">
-      <HomeDashboard />
-    </main>
-  );
+  return <ProductCheckHome />;
 }

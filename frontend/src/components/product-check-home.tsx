@@ -2,7 +2,7 @@ import Link from "next/link";
 import { StockCheckHero } from "@/components/stock-check-hero";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
-import styles from "./product-check-home.module.css";
+import styles from "./home-minimal.module.css";
 
 type Screened = Stock & { screening: ScreeningResult };
 
@@ -39,21 +39,22 @@ export async function ProductCheckHome() {
     .slice(0, 5);
 
   return (
-    <section className={styles.strip} aria-labelledby="product-check-heading">
+    <div className={styles.shell}>
       <div className={styles.inner}>
-        <p className={styles.kicker}>Instant answer</p>
-        <h1 id="product-check-heading" className={styles.title}>
-          Check if any stock is Halal in seconds
-        </h1>
-        <p className={styles.sub}>
-          Shariah-compliant screening across four global methodologies — one clear result, with full ratios when you need them.
-        </p>
-        <StockCheckHero />
+        <h1 className={styles.title}>Check if any stock is Halal instantly</h1>
+        <p className={styles.sub}>Shariah-compliant stock screening in seconds</p>
+        <div className={styles.searchWrap}>
+          <StockCheckHero
+            variant="hero"
+            placeholder="Search Reliance, TCS, Tesla"
+            submitLabel="Check Halal Status"
+          />
+        </div>
       </div>
 
       {top.length > 0 && (
-        <div className={`${styles.inner} ${styles.topSection}`}>
-          <h2 className={styles.topTitle}>Top halal scores today</h2>
+        <section className={`${styles.inner} ${styles.topSection}`} aria-label="Top screening scores">
+          <h2 className={styles.topTitle}>Top scores today</h2>
           <div className={styles.topGrid}>
             {top.map((s) => {
               const label = productStatus(s.screening.status);
@@ -70,13 +71,8 @@ export async function ProductCheckHome() {
               );
             })}
           </div>
-          <div style={{ textAlign: "center" }}>
-            <Link href="/screener" className={styles.moreLink}>
-              Browse full screener →
-            </Link>
-          </div>
-        </div>
+        </section>
       )}
-    </section>
+    </div>
   );
 }

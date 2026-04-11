@@ -1,0 +1,152 @@
+/* Minimal homepage — single action, dark slate (#0f172a) */
+
+.shell {
+  min-height: calc(100dvh - 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px 48px;
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.inner {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: #f8fafc;
+  margin: 0 0 14px;
+}
+
+.sub {
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+  line-height: 1.55;
+  color: #94a3b8;
+  margin: 0 auto 36px;
+  max-width: 28rem;
+}
+
+.searchWrap {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.topSection {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 56px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.topTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 480px) {
+  .topGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .topGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.topCard {
+  display: block;
+  padding: 14px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.6);
+  text-decoration: none;
+  color: inherit;
+  text-align: left;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.topCard:hover {
+  border-color: rgba(34, 197, 94, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+
+.topSym {
+  font-weight: 800;
+  font-size: 0.88rem;
+  font-family: var(--font-display);
+  color: #f8fafc;
+}
+
+.topName {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.topScore {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e2e8f0;
+}
+
+.badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.badgeHalal {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.badgeDoubt {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.badgeHaram {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}

@@ -5,6 +5,10 @@
   margin: 0 auto;
 }
 
+.wrapHero {
+  max-width: 100%;
+}
+
 .form {
   display: flex;
   flex-direction: column;
@@ -13,6 +17,18 @@
 
 @media (min-width: 520px) {
   .form {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.formHero {
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .formHero {
     flex-direction: row;
     align-items: stretch;
   }
@@ -40,6 +56,24 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--emerald) 15%, transparent);
 }
 
+.inputHero {
+  padding: 18px 22px;
+  font-size: 1.05rem;
+  border-radius: 14px;
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #f8fafc;
+}
+
+.inputHero::placeholder {
+  color: #64748b;
+}
+
+.inputHero:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+}
+
 .btn {
   flex-shrink: 0;
   padding: 14px 22px;
@@ -60,6 +94,20 @@
   transform: translateY(-1px);
 }
 
+.btnHero {
+  padding: 18px 28px;
+  font-size: 1rem;
+  border-radius: 14px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .btnHero {
+    width: auto;
+    min-width: 200px;
+  }
+}
+
 .dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -75,6 +123,12 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.14);
   max-height: 280px;
   overflow-y: auto;
+}
+
+.dropdownHero {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
 .item {
@@ -95,6 +149,23 @@
 .item:hover,
 .itemFocus {
   background: var(--bg-soft);
+}
+
+.dropdownHero .item:hover,
+.dropdownHero .itemFocus {
+  background: rgba(51, 65, 85, 0.85);
+}
+
+.dropdownHero .sym {
+  color: #f8fafc;
+}
+
+.dropdownHero .name {
+  color: #94a3b8;
+}
+
+.dropdownHero .empty {
+  color: #64748b;
 }
 
 .itemBest {

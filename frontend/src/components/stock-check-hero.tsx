@@ -8,7 +8,18 @@ import styles from "./stock-check-hero.module.css";
 
 type StockHit = { symbol: string; name: string; sector: string };
 
-export function StockCheckHero() {
+type Props = {
+  /** Larger input + slate styling for the minimal homepage */
+  variant?: "default" | "hero";
+  placeholder?: string;
+  submitLabel?: string;
+};
+
+export function StockCheckHero({
+  variant = "default",
+  placeholder = "Search Reliance, TCS, INFY, Tesla…",
+  submitLabel = "Check halal status",
+}: Props) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -63,10 +74,16 @@ export function StockCheckHero() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  const wrapClass = variant === "hero" ? `${styles.wrap} ${styles.wrapHero}` : styles.wrap;
+  const formClass = variant === "hero" ? `${styles.form} ${styles.formHero}` : styles.form;
+  const inputClass = variant === "hero" ? `${styles.input} ${styles.inputHero}` : styles.input;
+  const btnClass = variant === "hero" ? `${styles.btn} ${styles.btnHero}` : styles.btn;
+  const dropdownClass = variant === "hero" ? `${styles.dropdown} ${styles.dropdownHero}` : styles.dropdown;
+
   return (
-    <div ref={wrapRef} className={styles.wrap}>
+    <div ref={wrapRef} className={wrapClass}>
       <form
-        className={styles.form}
+        className={formClass}
         onSubmit={(e) => {
           e.preventDefault();
           if (focusIdx >= 0 && focusIdx < filtered.length) {
@@ -80,8 +97,8 @@ export function StockCheckHero() {
         <input
           ref={inputRef}
           type="search"
-          className={styles.input}
-          placeholder="Search Reliance, TCS, INFY, Tesla…"
+          className={inputClass}
+          placeholder={placeholder}
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -112,13 +129,13 @@ export function StockCheckHero() {
           aria-expanded={open && q.length > 0 && stocks.length > 0}
           autoComplete="off"
         />
-        <button type="submit" className={styles.btn}>
-          Check halal status
+        <button type="submit" className={btnClass}>
+          {submitLabel}
         </button>
       </form>
 
       {open && q.length > 0 && stocks.length > 0 && (
-        <ul className={styles.dropdown} id={listboxId} role="listbox">
+        <ul className={dropdownClass} id={listboxId} role="listbox">
           {filtered.length > 0 ? (
             filtered.map((s, i) => (
               <li key={s.symbol}>
