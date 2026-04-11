@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
@@ -33,7 +33,7 @@ export async function GET() {
       console.error("[/api/me GET] Backend error:", response.status, responseBody);
     }
 
-    return NextResponse.json(responseBody, { status: response.status });
+    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), { status: response.status });
   } catch (error) {
     console.error("[/api/me GET] Proxy error:", error);
     return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });

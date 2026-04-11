@@ -1,8 +1,12 @@
+import time
 from collections import defaultdict
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Optional
+
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 
 from app.config import (
     FRONTEND_APP_URL,
@@ -27,6 +31,7 @@ from app.services.rbac import (
 )
 from app.database import get_db
 from app.api import helpers
+from app.api.public_screen_guard import enforce_screening_budget
 from app.models import (
     ComplianceHistory,
     ComplianceOverride,
@@ -86,6 +91,7 @@ from app.schemas import (
     ScreeningResult,
     CheckStockResponse,
     StockRead,
+    TrackSymbolRequest,
     UserSettingsRead,
     UserSettingsUpdateRequest,
     UserProvisionRequest,
@@ -95,13 +101,22 @@ from app.schemas import (
     WatchlistEntryRead,
     WorkspaceResponse,
 )
+from app.services.cache_service import (
+    SCREENING_CACHE_TTL_SECONDS,
+    screening_cache,
+    screening_cache_key,
+)
 from app.services.halal_service import (
     PRIMARY_PROFILE,
-    build_stock_check_payload,
     evaluate_stock,
     evaluate_stock_multi,
     get_profile_version,
     get_rulebook,
+)
+from app.services.screening_presenter import (
+    build_rich_screening_payload,
+    build_seo_block,
+    simple_row_from_cache_entry,
 )
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.market_data_service import get_market_data_status
@@ -135,6 +150,38 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
         StockRead.model_validate(s).model_copy(update={"index_memberships": code_map.get(s.id, [])})
         for s in stocks
     ]
+
+
+def _stock_has_compliance_override(db: Session, stock_id: int) -> bool:
+    return (
+        db.query(ComplianceOverride).filter(ComplianceOverride.stock_id == stock_id).first() is not None
+    )
+
+
+def _check_cache_key(symbol: str, exchange: str) -> str:
+    return f"check:{symbol.strip().upper()}:{(exchange or '_').strip().upper()}"
+
+
+def _multi_cache_key(symbol: str, exchange: str | None) -> str:
+    return f"multi:{symbol.strip().upper()}:{(exchange or '_').strip().upper()}"
+
+
+def _tracked_rows_for_user(db: Session, user: User) -> list[dict[str, Any]]:
+    entries = (
+        db.query(WatchlistEntry)
+        .filter(WatchlistEntry.user_id == user.id)
+        .order_by(WatchlistEntry.added_at.desc())
+        .all()
+    )
+    out: list[dict[str, Any]] = []
+    for e in entries:
+        s = e.stock
+        row = simple_row_from_cache_entry(screening_cache.get(_check_cache_key(s.symbol, s.exchange)))
+        if row:
+            out.append(row)
+        else:
+            out.append({"symbol": s.symbol, "status": "Unknown", "score": None})
+    return out
 
 
 @router.get("/auth/strategy", response_model=AuthStrategyResponse)
@@ -383,16 +430,20 @@ def get_stock(
     return _stock_read_enriched(db, stock)
 
 
-@router.get("/check-stock", response_model=CheckStockResponse)
+@router.get("/check-stock")
 def check_stock(
     symbol: str,
+    request: Request,
     db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
 ):
     """
     Fast product endpoint: Halal / Doubtful / Haram, score, one-line summary.
 
     Uses four-methodology consensus (same engine as /screen/{symbol}/multi).
+    Returns a rich payload (highlights, consensus, confidence, details); middleware wraps {success,data}.
     """
+    _ = request  # noqa: ARG001 — reserved for future rate-limit context
     clean = symbol.strip().upper()
     if not clean:
         raise HTTPException(status_code=400, detail="symbol is required")
@@ -405,9 +456,27 @@ def check_stock(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
+    ck = _check_cache_key(stock.symbol, stock.exchange)
+    if not _stock_has_compliance_override(db, stock.id):
+        cached = screening_cache.get(ck)
+        if cached:
+            return cached
+
     stock_data = helpers.stock_to_dict(stock)
     multi = evaluate_stock_multi(stock_data)
-    return build_stock_check_payload(stock.name, stock_data, multi)
+    methodologies = multi.get("methodologies") or {}
+    primary = methodologies.get(PRIMARY_PROFILE) or next(iter(methodologies.values()), None)
+    rich = build_rich_screening_payload(
+        name=stock.name,
+        symbol=stock.symbol,
+        stock=stock_data,
+        multi=multi,
+        primary_screening=primary,
+        evaluated_at=datetime.now(timezone.utc),
+    )
+    if not _stock_has_compliance_override(db, stock.id):
+        screening_cache.set(ck, rich, SCREENING_CACHE_TTL_SECONDS)
+    return rich
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)
@@ -415,6 +484,7 @@ def screen_stock(
     symbol: str,
     exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
 ):
     """
     Evaluate a single stock's Shariah compliance.
@@ -438,6 +508,13 @@ def screen_stock(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
+    ex_for_key = exchange or stock.exchange
+    ckey = screening_cache_key(stock.symbol, ex_for_key)
+    if not _stock_has_compliance_override(db, stock.id):
+        cached = screening_cache.get(ckey)
+        if cached:
+            return cached
+
     stock_data = helpers.stock_to_dict(stock)
     result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
     result = helpers.apply_compliance_override(db, stock, result)
@@ -445,19 +522,66 @@ def screen_stock(
     active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
     recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
 
-    return {
+    out = {
         "symbol": stock.symbol,
         "name": stock.name,
         "active_review_case": active_review_case,
         "recent_review_cases": recent_review_cases,
         **result,
     }
+    if not _stock_has_compliance_override(db, stock.id):
+        screening_cache.set(ckey, out, SCREENING_CACHE_TTL_SECONDS)
+    return out
+
+
+def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
+    """Shared bulk screening; populates per-symbol cache; throttled between rows."""
+    upper_symbols = [s.upper() for s in symbols[:500]]
+    stocks = (
+        db.query(Stock)
+        .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
+        .all()
+    )
+    by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
+    for s in stocks:
+        by_sym[s.symbol].append(s)
+
+    def _pick(sym: str) -> Stock | None:
+        cands = by_sym.get(sym, [])
+        if not cands:
+            return None
+        return next((c for c in cands if c.exchange == "NSE"), cands[0])
+
+    results: list[dict] = []
+    for sym in upper_symbols:
+        stock = _pick(sym)
+        if not stock:
+            continue
+        stock_data = helpers.stock_to_dict(stock)
+        result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        result = helpers.apply_compliance_override(db, stock, result)
+        helpers.record_screening_log(db, stock, result)
+        active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
+        recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
+        out = {
+            "symbol": stock.symbol,
+            "name": stock.name,
+            "active_review_case": active_review_case,
+            "recent_review_cases": recent_review_cases,
+            **result,
+        }
+        if not _stock_has_compliance_override(db, stock.id):
+            screening_cache.set(screening_cache_key(stock.symbol, stock.exchange), out, SCREENING_CACHE_TTL_SECONDS)
+        results.append(out)
+        time.sleep(0.015)
+    return results
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])
 def screen_stocks_bulk(
     symbols: list[str] = Body(..., max_length=500),
     db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
 ):
     """
     Batch evaluate multiple stocks for Shariah compliance.
@@ -477,41 +601,17 @@ def screen_stocks_bulk(
     Performance:
         ~50-500ms for 100 stocks (vs 15+ seconds for 100 individual requests)
     """
-    upper_symbols = [s.upper() for s in symbols[:500]]
-    stocks = (
-        db.query(Stock)
-        .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
-        .all()
-    )
-    by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
-    for s in stocks:
-        by_sym[s.symbol].append(s)
+    return _screen_stocks_bulk_impl(symbols, db)
 
-    def _pick(sym: str) -> Stock | None:
-        cands = by_sym.get(sym, [])
-        if not cands:
-            return None
-        return next((c for c in cands if c.exchange == "NSE"), cands[0])
 
-    results = []
-    for sym in upper_symbols:
-        stock = _pick(sym)
-        if not stock:
-            continue
-        stock_data = helpers.stock_to_dict(stock)
-        result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
-        result = helpers.apply_compliance_override(db, stock, result)
-        helpers.record_screening_log(db, stock, result)
-        active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
-        recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
-        results.append({
-            "symbol": stock.symbol,
-            "name": stock.name,
-            "active_review_case": active_review_case,
-            "recent_review_cases": recent_review_cases,
-            **result,
-        })
-    return results
+@router.post("/bulk-screen", response_model=list[ScreeningResult])
+def bulk_screen(
+    symbols: list[str] = Body(..., max_length=500),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """Alias for POST /screen/bulk — warms per-symbol screening cache."""
+    return _screen_stocks_bulk_impl(symbols, db)
 
 
 @router.get("/screen/{symbol}/multi")
@@ -519,6 +619,7 @@ def screen_stock_multi(
     symbol: str,
     exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
 ):
     """
     Evaluate a single stock against all three Shariah methodologies
@@ -530,14 +631,208 @@ def screen_stock_multi(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
 
+    mk = _multi_cache_key(stock.symbol, exchange or stock.exchange)
+    if not _stock_has_compliance_override(db, stock.id):
+        cached = screening_cache.get(mk)
+        if cached:
+            return cached
+
     stock_data = helpers.stock_to_dict(stock)
     multi_result = evaluate_stock_multi(stock_data)
 
-    return {
+    out = {
         "symbol": stock.symbol,
         "name": stock.name,
         **multi_result,
     }
+    if not _stock_has_compliance_override(db, stock.id):
+        screening_cache.set(mk, out, SCREENING_CACHE_TTL_SECONDS)
+    return out
+
+
+@router.get("/related")
+def related_stocks(
+    symbol: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """Peers in the same sector (and fallback large-cap); rows only when screening cache is warm."""
+    stock = resolve_stock(db, symbol, None, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    peers = (
+        db.query(Stock)
+        .filter(Stock.sector == stock.sector, Stock.id != stock.id, Stock.is_active.is_(True))
+        .order_by(Stock.market_cap.desc())
+        .limit(12)
+        .all()
+    )
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for p in peers:
+        row = simple_row_from_cache_entry(screening_cache.get(_check_cache_key(p.symbol, p.exchange)))
+        if row and row["symbol"] not in seen:
+            rows.append(row)
+            seen.add(row["symbol"])
+    if len(rows) < 4:
+        popular = (
+            db.query(Stock)
+            .filter(Stock.is_active.is_(True), Stock.id != stock.id)
+            .order_by(Stock.market_cap.desc())
+            .limit(24)
+            .all()
+        )
+        for p in popular:
+            if p.symbol in seen:
+                continue
+            row = simple_row_from_cache_entry(screening_cache.get(_check_cache_key(p.symbol, p.exchange)))
+            if row:
+                rows.append(row)
+                seen.add(row["symbol"])
+            if len(rows) >= 8:
+                break
+    return rows[:8]
+
+
+@router.get("/top-halal")
+def top_halal_stocks(
+    limit: int = Query(8, ge=5, le=10),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """Largest active names that have a cached Halal consensus row (pre-warm via screening or bulk)."""
+    candidates = (
+        db.query(Stock)
+        .filter(Stock.is_active.is_(True))
+        .order_by(Stock.market_cap.desc())
+        .limit(150)
+        .all()
+    )
+    scored: list[dict[str, Any]] = []
+    for p in candidates:
+        row = simple_row_from_cache_entry(screening_cache.get(_check_cache_key(p.symbol, p.exchange)))
+        if row and row.get("status") == "Halal":
+            scored.append(row)
+    scored.sort(key=lambda r: int(r.get("score") or 0), reverse=True)
+    return scored[:limit]
+
+
+@router.get("/stock-details")
+def stock_details_seo(
+    symbol: str = Query(..., min_length=1),
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """Rich screening row plus SEO copy; warms check-stock cache when needed."""
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    ck = _check_cache_key(stock.symbol, stock.exchange)
+    stock_data = helpers.stock_to_dict(stock)
+    if not _stock_has_compliance_override(db, stock.id):
+        cached = screening_cache.get(ck)
+        if cached:
+            base = dict(cached)
+            base["seo"] = build_seo_block(
+                stock.name,
+                stock.symbol,
+                base.get("status", "Doubtful"),
+                multi=None,
+                consensus_override=base.get("consensus"),
+            )
+            return base
+    multi = evaluate_stock_multi(stock_data)
+    methodologies = multi.get("methodologies") or {}
+    primary = methodologies.get(PRIMARY_PROFILE) or next(iter(methodologies.values()), None)
+    rich = build_rich_screening_payload(
+        name=stock.name,
+        symbol=stock.symbol,
+        stock=stock_data,
+        multi=multi,
+        primary_screening=primary,
+        evaluated_at=datetime.now(timezone.utc),
+    )
+    product_status = rich["status"]
+    rich["seo"] = build_seo_block(stock.name, stock.symbol, product_status, multi=multi)
+    if not _stock_has_compliance_override(db, stock.id):
+        cache_body = {k: v for k, v in rich.items() if k != "seo"}
+        screening_cache.set(ck, cache_body, SCREENING_CACHE_TTL_SECONDS)
+    return rich
+
+
+@router.post("/track")
+def track_symbol_add(
+    body: TrackSymbolRequest,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    """Authenticated: add symbol to watchlist (same storage as /me/watchlist)."""
+    auth_subject = claims.get("sub")
+    if not auth_subject:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not provisioned")
+    stock = resolve_stock(db, body.symbol, None, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    entry = (
+        db.query(WatchlistEntry)
+        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .first()
+    )
+    if not entry:
+        db.add(
+            WatchlistEntry(
+                user_id=user.id,
+                owner_name=(user.display_name or user.email or "user").lower().replace(" ", "-"),
+                stock_id=stock.id,
+                notes="Tracked",
+            )
+        )
+    db.commit()
+    return _tracked_rows_for_user(db, user)
+
+
+@router.get("/tracked")
+def track_symbol_list(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    auth_subject = claims.get("sub")
+    if not auth_subject:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not provisioned")
+    return _tracked_rows_for_user(db, user)
+
+
+@router.delete("/track/{symbol}")
+def track_symbol_delete(
+    symbol: str,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    auth_subject = claims.get("sub")
+    if not auth_subject:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not provisioned")
+    stock = resolve_stock(db, symbol, None, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    entry = (
+        db.query(WatchlistEntry)
+        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .first()
+    )
+    if entry:
+        db.delete(entry)
+        db.commit()
+    return _tracked_rows_for_user(db, user)
 
 
 @router.post("/screen/manual")

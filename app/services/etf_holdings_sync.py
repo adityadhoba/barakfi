@@ -5,7 +5,7 @@ Fetch ETF constituent holdings via yfinance, with optional FMP fallback.
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -125,7 +125,7 @@ def sync_etf_holdings_for_stock(db: Session, etf: Stock) -> int:
     if not holdings:
         fmp = fetch_etf_holdings_fmp(etf.symbol)
         if fmp:
-            as_of = datetime.now(UTC)
+            as_of = datetime.now(timezone.utc)
             holdings = [
                 {
                     "symbol": h["symbol"],
@@ -144,7 +144,7 @@ def sync_etf_holdings_for_stock(db: Session, etf: Stock) -> int:
         return 0
 
     if as_of is None:
-        as_of = datetime.now(UTC)
+        as_of = datetime.now(timezone.utc)
 
     n = 0
     for h in holdings:

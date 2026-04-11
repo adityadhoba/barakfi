@@ -8,6 +8,8 @@ APP_NAME = os.getenv("APP_NAME", "Barakfi API")
 APP_ENV = os.getenv("APP_ENV", "development")
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+# During envelope rollout: include previous JSON body under "legacy" for selected routes
+API_ENVELOPE_LEGACY = os.getenv("API_ENVELOPE_LEGACY", "false").lower() == "true"
 CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")

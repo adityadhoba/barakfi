@@ -11,6 +11,50 @@ function stripTrailingSlashes(s: string): string {
   return s.replace(/\/+$/, "");
 }
 
+/**
+ * FastAPI `ApiEnvelopeMiddleware` wraps `/api/*` JSON as `{ success, data, error }`.
+ * Browser and Next proxies that expect the legacy inner payload should call this
+ * after `response.json()` when talking to the Python API.
+ */
+export function unwrapBackendEnvelope<T = unknown>(body: unknown): T {
+  if (
+    body !== null &&
+    typeof body === "object" &&
+    "success" in body &&
+    (body as { success: unknown }).success === true &&
+    "data" in body
+  ) {
+    return (body as { data: T }).data;
+  }
+  return body as T;
+}
+
+/**
+ * Normalize backend JSON for Next.js route handlers: unwrap 2xx payloads; map
+ * enveloped errors to `{ detail }` so existing UI error parsing keeps working.
+ */
+export function adaptBackendJsonForProxy(body: unknown, ok: boolean): unknown {
+  if (body !== null && typeof body === "object") {
+    const o = body as Record<string, unknown>;
+    if (o.success === true && "data" in o) {
+      return o.data;
+    }
+    if (
+      !ok &&
+      o.success === false &&
+      o.error !== null &&
+      typeof o.error === "object" &&
+      o.error !== undefined
+    ) {
+      const msg = (o.error as { message?: string }).message;
+      if (typeof msg === "string" && msg.length > 0) {
+        return { detail: msg };
+      }
+    }
+  }
+  return body;
+}
+
 export function getPublicApiBaseUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_API_BASE_URL || "").trim();
   if (!raw) {

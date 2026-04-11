@@ -1,5 +1,5 @@
 import { buildBackendHeaders, type BackendActor } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, unwrapBackendEnvelope } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
@@ -21,8 +21,20 @@ export class ApiError extends Error {
 
 async function parseErrorDetail(response: Response): Promise<string> {
   try {
-    const body = await response.json();
-    return body.detail || response.statusText;
+    const body: unknown = await response.json();
+    if (body && typeof body === "object") {
+      const o = body as Record<string, unknown>;
+      if (o.error && typeof o.error === "object" && "message" in o.error) {
+        const m = (o.error as { message?: string }).message;
+        if (typeof m === "string" && m.length > 0) return m;
+      }
+      if ("detail" in o) {
+        const d = o.detail;
+        if (typeof d === "string") return d;
+        if (d != null && typeof d === "object") return JSON.stringify(d);
+      }
+    }
+    return response.statusText;
   } catch {
     return response.statusText;
   }
@@ -504,7 +516,7 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
       return fallback;
     }
 
-    return (await response.json()) as T;
+    return unwrapBackendEnvelope<T>(await response.json());
   } catch (err) {
     console.error(`[api] Network error on GET ${path}:`, err);
     return fallback;
@@ -567,7 +579,7 @@ export async function getMarketIndices(): Promise<IndexQuote[]> {
       next: { revalidate: 120 },
     });
     if (!response.ok) return [];
-    return (await response.json()) as IndexQuote[];
+    return unwrapBackendEnvelope<IndexQuote[]>(await response.json());
   } catch {
     return [];
   }
@@ -606,7 +618,7 @@ export async function getEquityQuote(
       { next: { revalidate: 60 } },
     );
     if (!response.ok) return null;
-    return (await response.json()) as EquityQuote;
+    return unwrapBackendEnvelope<EquityQuote>(await response.json());
   } catch {
     return null;
   }
@@ -708,7 +720,7 @@ export async function manualScreenStock(symbol: string): Promise<ManualScreenRes
     });
     clearTimeout(timeout);
     if (!response.ok) return null;
-    return response.json();
+    return unwrapBackendEnvelope<ManualScreenResult>(await response.json());
   } catch {
     clearTimeout(timeout);
     return null;
@@ -747,7 +759,7 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
           next: { revalidate: 60 },
         });
         if (!response.ok) return [];
-        return (await response.json()) as ScreeningResult[];
+        return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
       })
     );
     return results.flat();
@@ -908,7 +920,7 @@ export async function getAuthenticatedWorkspace(token: string, actor?: BackendAc
     throw new ApiError(response.status, detail, "/me/workspace");
   }
 
-  return (await response.json()) as WorkspaceBundle;
+  return unwrapBackendEnvelope<WorkspaceBundle>(await response.json());
 }
 
 /**
@@ -931,7 +943,7 @@ export async function getAuthenticatedUser(token: string, actor?: BackendActor |
     throw new ApiError(response.status, detail, "/me");
   }
 
-  return (await response.json()) as User;
+  return unwrapBackendEnvelope<User>(await response.json());
 }
 
 /**
@@ -954,7 +966,7 @@ export async function getAuthenticatedAlerts(token: string, actor?: BackendActor
     throw new ApiError(response.status, detail, "/me/alerts");
   }
 
-  return (await response.json()) as Alert[];
+  return unwrapBackendEnvelope<Alert[]>(await response.json());
 }
 
 /**
@@ -977,7 +989,7 @@ export async function getAuthenticatedActivityFeed(token: string, actor?: Backen
     throw new ApiError(response.status, detail, "/me/activity-feed");
   }
 
-  return (await response.json()) as ActivityEvent[];
+  return unwrapBackendEnvelope<ActivityEvent[]>(await response.json());
 }
 
 /**
@@ -1006,7 +1018,7 @@ export async function getAuthenticatedComplianceQueue(token: string, actor?: Bac
     throw new ApiError(response.status, detail, "/me/compliance-queue");
   }
 
-  return (await response.json()) as ComplianceQueueItem[];
+  return unwrapBackendEnvelope<ComplianceQueueItem[]>(await response.json());
 }
 
 /**
@@ -1031,7 +1043,7 @@ export async function getAuthenticatedGovernanceOverview(token: string, actor?: 
     throw new ApiError(response.status, detail, "/admin/governance/overview");
   }
 
-  return (await response.json()) as GovernanceOverview;
+  return unwrapBackendEnvelope<GovernanceOverview>(await response.json());
 }
 
 /**
@@ -1065,7 +1077,7 @@ export async function getAuthenticatedUniversePreview(
     throw new ApiError(response.status, detail, "/admin/data-stack/universe-preview");
   }
 
-  return (await response.json()) as UniversePreview;
+  return unwrapBackendEnvelope<UniversePreview>(await response.json());
 }
 
 /**
@@ -1093,7 +1105,7 @@ export async function getAuthenticatedWatchlist(token: string, actor?: BackendAc
     throw new ApiError(response.status, detail, "/me/watchlist");
   }
 
-  return (await response.json()) as WatchlistEntry[];
+  return unwrapBackendEnvelope<WatchlistEntry[]>(await response.json());
 }
 
 /**
@@ -1147,7 +1159,7 @@ export async function bootstrapAuthenticatedUser(
     throw new ApiError(response.status, detail, "/me/bootstrap");
   }
 
-  return (await response.json()) as User;
+  return unwrapBackendEnvelope<User>(await response.json());
 }
 
 export type TrendingStock = {
@@ -1303,7 +1315,7 @@ export async function getNewsFeed(limit: number = 24): Promise<NewsFeedResult> {
         errorHint: `News API returned ${response.status}. Check NEXT_PUBLIC_API_BASE_URL points to your FastAPI base (e.g. https://api.example.com/api).`,
       };
     }
-    const data = (await response.json()) as NewsItem[];
+    const data = unwrapBackendEnvelope<NewsItem[]>(await response.json());
     if (!Array.isArray(data) || data.length === 0) {
       return { items: [], loadStatus: "empty" };
     }

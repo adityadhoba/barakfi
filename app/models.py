@@ -12,8 +12,11 @@ Key relationships:
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
 from app.database import Base
+
+UTC = timezone.utc
 
 
 def utc_now() -> datetime:

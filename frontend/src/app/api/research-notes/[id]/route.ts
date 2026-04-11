@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
@@ -25,5 +25,5 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
   });
 
   const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
+  return NextResponse.json(adaptBackendJsonForProxy(data, response.ok), { status: response.status });
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const API_BASE = getPublicApiBaseUrl();
 
@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
     );
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return NextResponse.json(body, { status: res.status });
+      return NextResponse.json(adaptBackendJsonForProxy(body, res.ok), { status: res.status });
     }
-    return NextResponse.json(body, {
+    return NextResponse.json(adaptBackendJsonForProxy(body, res.ok), {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },

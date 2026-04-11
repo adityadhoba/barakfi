@@ -869,6 +869,11 @@ def evaluate_stock_multi(stock: dict) -> dict:
     return payload
 
 
+def screening_summary_for_multi(multi: dict) -> str:
+    """Public one-line product summary from evaluate_stock_multi output."""
+    return _simple_summary_from_multi(multi)
+
+
 def _simple_summary_from_multi(multi: dict) -> str:
     """One-line product summary from evaluate_stock_multi output."""
     consensus = multi["consensus_status"]

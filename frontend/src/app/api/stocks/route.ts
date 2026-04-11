@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const API_BASE = getPublicApiBaseUrl();
 
@@ -18,7 +18,7 @@ export async function GET() {
     }
 
     const data = await res.json();
-    return NextResponse.json(data, {
+    return NextResponse.json(adaptBackendJsonForProxy(data, res.ok), {
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 from sqlalchemy.orm import Session
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
 from app.services.halal_service import evaluate_stock
 
@@ -159,9 +159,9 @@ def seed_investors(db: Session) -> int:
                         if getattr(row, "pct_portfolio", None) is None:
                             row.pct_portfolio = _safe_float(row.weight_pct, 0.0)
                         if getattr(row, "as_of_date", None) is None:
-                            row.as_of_date = datetime.now(UTC)
+                            row.as_of_date = datetime.now(timezone.utc)
                 else:
-                    now = datetime.now(UTC)
+                    now = datetime.now(timezone.utc)
                     db.add(SuperInvestorHolding(
                         investor_id=investor.id,
                         stock_id=stock.id,

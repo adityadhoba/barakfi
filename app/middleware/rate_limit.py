@@ -11,6 +11,8 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from app.api.envelope import api_error
+
 
 class _TokenBucket:
     __slots__ = ("capacity", "refill_rate", "tokens", "last_refill")
@@ -81,9 +83,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         bucket = self._buckets[client_ip]
 
         if not bucket.consume():
+            msg = "Too many requests. Please slow down."
+            body = api_error(msg) if request.url.path.startswith("/api") else {"detail": msg}
             return JSONResponse(
                 status_code=429,
-                content={"detail": "Too many requests. Please slow down."},
+                content=body,
                 headers={"Retry-After": str(int(60 / self.requests_per_minute) + 1)},
             )
 

@@ -1,6 +1,6 @@
 """Persist compliance status changes for timeline UI."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -33,7 +33,7 @@ def record_compliance_change_if_needed(
         stock_id=stock.id,
         status=new_status,
         profile_code=profile_code,
-        recorded_at=datetime.now(UTC),
+        recorded_at=datetime.now(timezone.utc),
     )
     db.add(row)
     return True
