@@ -26,6 +26,12 @@ from app.services.rbac import (
 )
 from app.database import get_db
 from app.api import helpers
+from app.api.screening_response import (
+    build_check_stock_data,
+    build_multi_screen_data,
+    build_screen_stock_data,
+    ok_envelope,
+)
 from app.models import (
     ComplianceOverride,
     ComplianceReviewCase,
@@ -81,7 +87,6 @@ from app.schemas import (
     SavedScreenerRead,
     ScreeningLogRead,
     ScreeningResult,
-    CheckStockResponse,
     StockRead,
     UserSettingsRead,
     UserSettingsUpdateRequest,
@@ -94,7 +99,6 @@ from app.schemas import (
 )
 from app.services.halal_service import (
     PRIMARY_PROFILE,
-    build_stock_check_payload,
     evaluate_stock,
     evaluate_stock_multi,
     get_profile_version,
@@ -357,7 +361,7 @@ def get_stock(symbol: str, db: Session = Depends(get_db)):
     return stock
 
 
-@router.get("/check-stock", response_model=CheckStockResponse)
+@router.get("/check-stock")
 def check_stock(
     symbol: str,
     db: Session = Depends(get_db),
@@ -381,10 +385,11 @@ def check_stock(
 
     stock_data = helpers.stock_to_dict(stock)
     multi = evaluate_stock_multi(stock_data)
-    return build_stock_check_payload(stock.name, stock_data, multi)
+    inner = build_check_stock_data(stock.name, stock.symbol, stock_data, multi)
+    return ok_envelope(inner)
 
 
-@router.get("/screen/{symbol}", response_model=ScreeningResult)
+@router.get("/screen/{symbol}")
 def screen_stock(
     symbol: str,
     db: Session = Depends(get_db),
@@ -422,16 +427,17 @@ def screen_stock(
     active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
     recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
 
-    return {
-        "symbol": stock.symbol,
-        "name": stock.name,
-        "active_review_case": active_review_case,
-        "recent_review_cases": recent_review_cases,
-        **result,
-    }
+    inner = build_screen_stock_data(
+        stock.symbol,
+        stock.name,
+        result,
+        active_review_case=active_review_case,
+        recent_review_cases=recent_review_cases,
+    )
+    return ok_envelope(inner)
 
 
-@router.post("/screen/bulk", response_model=list[ScreeningResult])
+@router.post("/screen/bulk")
 def screen_stocks_bulk(
     symbols: list[str] = Body(..., max_length=500),
     db: Session = Depends(get_db),
@@ -473,13 +479,14 @@ def screen_stocks_bulk(
         helpers.record_screening_log(db, stock, result)
         active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
         recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
-        results.append({
-            "symbol": stock.symbol,
-            "name": stock.name,
-            "active_review_case": active_review_case,
-            "recent_review_cases": recent_review_cases,
-            **result,
-        })
+        inner = build_screen_stock_data(
+            stock.symbol,
+            stock.name,
+            result,
+            active_review_case=active_review_case,
+            recent_review_cases=recent_review_cases,
+        )
+        results.append(ok_envelope(inner))
     return results
 
 
@@ -505,11 +512,8 @@ def screen_stock_multi(
     stock_data = helpers.stock_to_dict(stock)
     multi_result = evaluate_stock_multi(stock_data)
 
-    return {
-        "symbol": stock.symbol,
-        "name": stock.name,
-        **multi_result,
-    }
+    inner = build_multi_screen_data(stock.symbol, stock.name, stock_data, multi_result)
+    return ok_envelope(inner)
 
 
 @router.post("/screen/manual")
@@ -540,12 +544,20 @@ def screen_stock_manual(
         stock_data = helpers.stock_to_dict(existing)
         multi_result = evaluate_stock_multi(stock_data)
         primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        screening_inner = build_screen_stock_data(
+            existing.symbol,
+            existing.name,
+            primary_result,
+            active_review_case=None,
+            recent_review_cases=[],
+        )
+        multi_inner = build_multi_screen_data(existing.symbol, existing.name, stock_data, multi_result)
         return {
             "symbol": existing.symbol,
             "name": existing.name,
             "is_prescreened": True,
-            "screening": {**primary_result, "symbol": existing.symbol, "name": existing.name},
-            "multi": {"symbol": existing.symbol, "name": existing.name, **multi_result},
+            "screening": ok_envelope(screening_inner),
+            "multi": ok_envelope(multi_inner),
         }
 
     stock_data = fetch_and_screen(clean_symbol)
@@ -555,12 +567,22 @@ def screen_stock_manual(
     multi_result = evaluate_stock_multi(stock_data)
     primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
 
+    sym = stock_data["symbol"]
+    nm = stock_data["name"]
+    screening_inner = build_screen_stock_data(
+        sym,
+        nm,
+        primary_result,
+        active_review_case=None,
+        recent_review_cases=[],
+    )
+    multi_inner = build_multi_screen_data(sym, nm, stock_data, multi_result)
     return {
-        "symbol": stock_data["symbol"],
-        "name": stock_data["name"],
+        "symbol": sym,
+        "name": nm,
         "is_prescreened": False,
-        "screening": {**primary_result, "symbol": stock_data["symbol"], "name": stock_data["name"]},
-        "multi": {"symbol": stock_data["symbol"], "name": stock_data["name"], **multi_result},
+        "screening": ok_envelope(screening_inner),
+        "multi": ok_envelope(multi_inner),
     }
 
 

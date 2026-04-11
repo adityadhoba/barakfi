@@ -1,7 +1,7 @@
 "use client";
 
 import styles from "@/app/page.module.css";
-import type { ScreeningResult, Stock } from "@/lib/api";
+import { unwrapPrimaryScreenEnvelope, type ScreeningResult, type Stock } from "@/lib/api";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
@@ -45,7 +45,12 @@ async function fetchScreening(symbol: string) {
     throw new Error("Unable to load stock screening");
   }
 
-  return (await response.json()) as ScreeningResult;
+  const raw = await response.json();
+  const screening = unwrapPrimaryScreenEnvelope(raw);
+  if (!screening) {
+    throw new Error("Unable to load stock screening");
+  }
+  return screening;
 }
 
 export function ExploreCommandCenter({ stocks }: Props) {

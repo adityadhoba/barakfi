@@ -222,14 +222,121 @@ export type ScreeningResult = {
   };
 };
 
-/** GET /api/check-stock — product-level halal check */
+export type MultiMethodologyResult = {
+  symbol: string;
+  name: string;
+  consensus_status: string;
+  screening_score: number;
+  methodologies: Record<string, ScreeningResult>;
+  summary: {
+    halal_count: number;
+    cautious_count: number;
+    non_compliant_count: number;
+    total: number;
+  };
+};
+
+/** GET /api/check-stock — `data` field inside { success, data, error } */
 export type CheckStockResponse = {
   name: string;
-  status: "Halal" | "Doubtful" | "Haram" | string;
+  symbol: string;
+  status: string;
   score: number;
   summary: string;
   details_available: boolean;
+  details: {
+    ratios: ScreeningResult["breakdown"];
+    methodologies: Record<string, ScreeningResult>;
+    reasons: string[];
+    manual_review_flags: string[];
+    methodology_summary: MultiMethodologyResult["summary"];
+    consensus_status: string;
+    disclaimer?: string;
+  };
 };
+
+type ScreeningApiEnvelope<T> = {
+  success: boolean;
+  data: T | null;
+  error: string | null;
+};
+
+type PrimaryScreenEnvelopeData = {
+  symbol: string;
+  name: string;
+  status: string;
+  score: number;
+  summary: string;
+  details: {
+    engine_status: string;
+    profile: string;
+    methodology_label?: string;
+    ratios: ScreeningResult["breakdown"];
+    methodologies: Record<string, unknown>;
+    reasons: string[];
+    manual_review_flags: string[];
+    purification_ratio_pct?: number | null;
+    disclaimer?: string;
+    active_review_case: ScreeningResult["active_review_case"];
+    recent_review_cases: ScreeningResult["recent_review_cases"];
+  };
+};
+
+function isScreeningEnvelope(raw: unknown): raw is ScreeningApiEnvelope<unknown> {
+  return (
+    typeof raw === "object" &&
+    raw !== null &&
+    "success" in raw &&
+    "data" in raw &&
+    "error" in raw
+  );
+}
+
+export function unwrapCheckStockEnvelope(raw: unknown): CheckStockResponse | null {
+  if (!isScreeningEnvelope(raw) || !raw.success || raw.data == null || typeof raw.data !== "object") {
+    return null;
+  }
+  return raw.data as CheckStockResponse;
+}
+
+function primaryEnvelopeToScreeningResult(data: PrimaryScreenEnvelopeData): ScreeningResult {
+  const d = data.details;
+  return {
+    symbol: data.symbol,
+    name: data.name,
+    profile: d.profile,
+    status: d.engine_status,
+    reasons: d.reasons,
+    manual_review_flags: d.manual_review_flags,
+    screening_score: data.score,
+    purification_ratio_pct: d.purification_ratio_pct ?? null,
+    active_review_case: d.active_review_case,
+    recent_review_cases: d.recent_review_cases,
+    breakdown: d.ratios,
+  };
+}
+
+export function unwrapPrimaryScreenEnvelope(raw: unknown): ScreeningResult | null {
+  if (!isScreeningEnvelope(raw) || !raw.success || raw.data == null || typeof raw.data !== "object") {
+    return null;
+  }
+  return primaryEnvelopeToScreeningResult(raw.data as PrimaryScreenEnvelopeData);
+}
+
+export function unwrapMultiScreenEnvelope(raw: unknown): MultiMethodologyResult | null {
+  if (!isScreeningEnvelope(raw) || !raw.success || raw.data == null || typeof raw.data !== "object") {
+    return null;
+  }
+  const data = raw.data as CheckStockResponse;
+  return {
+    symbol: data.symbol,
+    name: data.name,
+    consensus_status: data.details.consensus_status,
+    screening_score: data.score,
+    methodologies: data.details.methodologies,
+    summary: data.details.methodology_summary,
+  };
+}
 
 export type ScreeningLog = {
   id: number;
@@ -645,26 +752,42 @@ export function getScreeningLogs() {
  *   result.reasons.forEach(r => console.log(`  - ${r}`));
  * }
  */
-export function getScreeningResult(symbol: string) {
-  return apiFetch<ScreeningResult | null>(`/screen/${encodeURIComponent(symbol)}`, null);
+export async function getScreeningResult(symbol: string): Promise<ScreeningResult | null> {
+  const path = `/screen/${encodeURIComponent(symbol)}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const raw = await response.json();
+    return unwrapPrimaryScreenEnvelope(raw);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-export type MultiMethodologyResult = {
-  symbol: string;
-  name: string;
-  consensus_status: string;
-  screening_score: number;
-  methodologies: Record<string, ScreeningResult>;
-  summary: {
-    halal_count: number;
-    cautious_count: number;
-    non_compliant_count: number;
-    total: number;
-  };
-};
-
-export function getMultiScreeningResult(symbol: string) {
-  return apiFetch<MultiMethodologyResult | null>(`/screen/${encodeURIComponent(symbol)}/multi`, null);
+export async function getMultiScreeningResult(symbol: string): Promise<MultiMethodologyResult | null> {
+  const path = `/screen/${encodeURIComponent(symbol)}/multi`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const raw = await response.json();
+    return unwrapMultiScreenEnvelope(raw);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export type ManualScreenResult = {
@@ -687,7 +810,23 @@ export async function manualScreenStock(symbol: string): Promise<ManualScreenRes
     });
     clearTimeout(timeout);
     if (!response.ok) return null;
-    return response.json();
+    const raw = (await response.json()) as {
+      symbol: string;
+      name: string;
+      is_prescreened: boolean;
+      screening: unknown;
+      multi: unknown;
+    };
+    const screening = unwrapPrimaryScreenEnvelope(raw.screening);
+    const multi = unwrapMultiScreenEnvelope(raw.multi);
+    if (!screening || !multi) return null;
+    return {
+      symbol: raw.symbol,
+      name: raw.name,
+      is_prescreened: raw.is_prescreened,
+      screening,
+      multi,
+    };
   } catch {
     clearTimeout(timeout);
     return null;
@@ -726,7 +865,10 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
           next: { revalidate: 60 },
         });
         if (!response.ok) return [];
-        return (await response.json()) as ScreeningResult[];
+        const list = (await response.json()) as unknown[];
+        return list
+          .map((item) => unwrapPrimaryScreenEnvelope(item))
+          .filter((r): r is ScreeningResult => r != null);
       })
     );
     return results.flat();
