@@ -5,7 +5,9 @@ import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
-  description: "Create your free account to screen, track, and invest in Shariah-compliant Indian stocks.",
+  description:
+    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use calculators built for Indian Muslim investors screening NSE and BSE equities — private sign-up flow, not for search indexing.",
+  robots: { index: false, follow: true },
 };
 
 export default function SignUpPage() {
@@ -21,12 +23,12 @@ export default function SignUpPage() {
           </div>
           <h2 className="authSidebarTitle">Start Your Halal Journey</h2>
           <p className="authSidebarDesc">
-            Create your free account to screen, track, and invest in Shariah-compliant stocks across Indian, US, and UK markets.
+            Create your free account to screen, track, and invest in Shariah-compliant Indian stocks on NSE and BSE.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2315;</span>
-              <span>Screen 370+ stocks across NSE, NYSE, and LSE</span>
+              <span>Screen Indian equities with transparent Shariah-style ratios</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>

@@ -18,7 +18,11 @@ import {
   type ScreeningResult,
   type WorkspaceBundle,
 } from "@/lib/api";
-import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
+import {
+  fetchMultiScreeningForPage,
+  fetchStockAndScreenForPage,
+  fetchStockMetadataBundle,
+} from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,9 +52,36 @@ export async function generateMetadata({
   params: Promise<{ symbol: string }>;
 }): Promise<Metadata> {
   const { symbol } = await params;
+  const sym = decodeURIComponent(symbol).toUpperCase();
+  const bundle = await fetchStockMetadataBundle(sym);
+  if (!bundle) {
+    return {
+      title: `${sym} — Shariah screening`,
+      description:
+        `See whether ${sym} is halal, doubtful, or haram under Shariah financial screening for NSE/BSE-listed Indian equities. BarakFi explains debt, non-permissible income, interest income, and other ratios used in compliance checks — not a fatwa; consult a qualified scholar for personal rulings.`,
+    };
+  }
+  const { stock, statusLabel } = bundle;
+  const title = `Is ${stock.name} Halal? Shariah compliance (${stock.symbol}) | BarakFi`;
+  const description =
+    `Check if ${stock.name} (${stock.symbol}) on ${stock.exchange} is halal or haram using Shariah stock screening: current status ${statusLabel}, with debt, revenue, interest income, and asset ratios compared to widely used Islamic finance benchmarks. Updated when fundamentals sync runs; educational only — not investment advice.`;
   return {
-    title: `${symbol} — Shariah Screening | Barakfi`,
-    description: `Shariah compliance screening, financial ratios, and research tools for ${symbol} on the Indian stock market.`,
+    title,
+    description,
+    alternates: { canonical: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}` },
+    openGraph: {
+      title,
+      description,
+      url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
+      siteName: "BarakFi",
+      locale: "en_IN",
+      type: "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -239,7 +270,7 @@ export default async function StockDetailPage({
 
   const { stock, screening } = detail;
 
-  const liveQuote = sanitizeEquityQuote(await getEquityQuote(symbol, "auto_global", stock.exchange));
+  const liveQuote = sanitizeEquityQuote(await getEquityQuote(symbol, "auto_india", stock.exchange));
 
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;
@@ -412,42 +443,89 @@ export default async function StockDetailPage({
     };
   });
 
-  /* ── JSON-LD Structured Data for SEO ── */
-  const jsonLd = {
+  const lastUpdatedIso =
+    stock.fundamentals_updated_at != null && stock.fundamentals_updated_at !== ""
+      ? new Date(stock.fundamentals_updated_at).toISOString()
+      : undefined;
+
+  /* ── JSON-LD: FinancialProduct + FAQPage for rich results ── */
+  const jsonLdProduct = {
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
-    name: stock.name,
-    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Cautious"}`,
-    url: `https://barakfi.in/stocks/${stock.symbol}`,
+    name: `${stock.name} (${stock.symbol})`,
+    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${STATUS_LABELS[screening.status] || "Doubtful"}. Uses financial ratios; not a religious ruling.`,
+    url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
+    brand: { "@type": "Brand", name: "BarakFi" },
     provider: {
       "@type": "Organization",
-      name: "Barakfi",
+      name: "BarakFi",
       url: "https://barakfi.in",
     },
     additionalProperty: [
       {
         "@type": "PropertyValue",
-        name: "Shariah Status",
-        value: STATUS_LABELS[screening.status] || "Cautious",
+        name: "halalStatus",
+        value: STATUS_LABELS[screening.status] || screening.status,
       },
       {
         "@type": "PropertyValue",
-        name: "Sector",
-        value: stock.sector,
+        name: "complianceScore",
+        value: String(complianceScore),
+      },
+      ...(lastUpdatedIso
+        ? [{ "@type": "PropertyValue", name: "lastUpdated", value: lastUpdatedIso }]
+        : []),
+      { "@type": "PropertyValue", name: "exchange", value: stock.exchange },
+      { "@type": "PropertyValue", name: "sector", value: stock.sector },
+      ...(stock.data_quality
+        ? [{ "@type": "PropertyValue", name: "dataQuality", value: stock.data_quality }]
+        : []),
+    ],
+  };
+
+  const statusWord = STATUS_LABELS[screening.status] || screening.status;
+  const jsonLdFaq = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `Is ${stock.name} halal to invest in?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `BarakFi labels this listing as ${statusWord} under automated Shariah-style financial screening (${stock.exchange}). This is an educational tool, not a fatwa — consult a qualified scholar before investing.`,
+        },
       },
       {
-        "@type": "PropertyValue",
-        name: "Exchange",
-        value: stock.exchange,
+        "@type": "Question",
+        name: `Why is ${stock.symbol} considered ${statusWord}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: `${reasons.join(" ")} See key ratios and methodology on this page.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: "When was this screening last updated?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: lastUpdatedIso
+            ? `Fundamentals timestamp in our system: ${lastUpdatedIso}. Prices may refresh more often.`
+            : "We do not have a fundamentals sync timestamp for this row yet; ratios may lag.",
+        },
       },
     ],
   };
 
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProduct) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }}
       />
       <div className={styles.screenerContainer}>
         {/* Breadcrumb */}
@@ -470,7 +548,10 @@ export default async function StockDetailPage({
             <div className={styles.stockTitleRow}>
               <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
               <div>
-                <h1 className={styles.stockTitle}>{stock.name}</h1>
+                <h1 className={styles.stockTitle}>Is {stock.name} Halal?</h1>
+                <p className={styles.stockMetaLine} style={{ margin: "6px 0 0", fontSize: "0.95rem", color: "var(--text-secondary)" }}>
+                  {stock.symbol} · {stock.exchange} · {stock.sector}
+                </p>
                 <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
                   {STATUS_LABELS[screening.status] || screening.status}
                 </span>
@@ -643,6 +724,105 @@ export default async function StockDetailPage({
             Explore top halal stocks
           </Link>
         </div>
+
+        <section className={styles.seoArticle} aria-labelledby="why-status-heading">
+          <h2 id="why-status-heading" className={styles.sectionTitle}>
+            Why is this stock {STATUS_LABELS[screening.status] || screening.status}?
+          </h2>
+          <p className={styles.seoProse}>
+            {takeaway} BarakFi applies transparent financial tests inspired by widely cited Shariah equity standards
+            (for example S&amp;P Shariah-style debt and income screens, AAOIFI-style balance-sheet tests, and related
+            ratio work). Sector activity is also checked for obvious non-permissible business lines. This page shows
+            the outcome for <strong>{stock.name}</strong> ({stock.symbol}) on <strong>{stock.exchange}</strong> using
+            numbers stored in our database — not a substitute for your own due diligence or a scholar&apos;s guidance.
+          </p>
+          {stock.data_quality && (
+            <p className={styles.seoProse}>
+              <strong>Data quality:</strong> {stock.data_quality === "high" ? "High" : stock.data_quality === "medium" ? "Medium" : "Low"}
+              — indicates how complete the fundamentals are for ratio screening. Source: {stock.data_source}.
+            </p>
+          )}
+        </section>
+
+        <section className={styles.seoArticle} aria-labelledby="key-ratios-heading">
+          <h2 id="key-ratios-heading" className={styles.sectionTitle}>
+            Key financial ratios
+          </h2>
+          <p className={styles.seoProse}>
+            The strip below summarizes debt versus market cap, non-permissible income, interest-related income, cash and
+            interest-bearing balances, and receivables — the same families of ratios many Islamic index providers use in
+            different forms. Expand the detailed tables for exact numerators and denominators used on this listing.
+          </p>
+        </section>
+
+        <section className={styles.seoArticle} aria-labelledby="breakdown-heading">
+          <h2 id="breakdown-heading" className={styles.sectionTitle}>
+            Shariah screening breakdown
+          </h2>
+          <p className={styles.seoProse}>
+            Use the <strong>Compliance</strong> tab for per-ratio gauges, the <strong>Financials</strong> tab for raw
+            inputs, and the methodology comparison (where available) to see how {stock.name} performs across multiple
+            reference styles. If you are new to these concepts, start with our{" "}
+            <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link> or{" "}
+            <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
+          </p>
+        </section>
+
+        <section className={styles.seoArticle} aria-labelledby="conclusion-heading">
+          <h2 id="conclusion-heading" className={styles.sectionTitle}>
+            Conclusion
+          </h2>
+          <p className={styles.seoProse}>
+            For <strong>{stock.name}</strong>, the automated label is <strong>{STATUS_LABELS[screening.status] || screening.status}</strong>{" "}
+            with a compliance-style score of <strong>{complianceScore}</strong> out of 100 on the primary profile shown
+            on this page. Re-run your checks after major results or restructuring events, and always align investments with
+            your values, risk tolerance, and qualified advice.
+          </p>
+        </section>
+
+        <section className={styles.seoArticle} aria-labelledby="learn-more-stock">
+          <h2 id="learn-more-stock" className={styles.sectionTitle}>
+            Learn more
+          </h2>
+          <ul className={styles.seoLinkList}>
+            <li>
+              <Link href="/learn/halal-stocks-india">Halal stocks in India — how screening works on NSE &amp; BSE</Link>
+            </li>
+            <li>
+              <Link href="/learn/top-halal-stocks-india">Examples of large Indian names investors often ask about</Link>
+            </li>
+            {stock.symbol.toUpperCase() === "RELIANCE" && (
+              <li>
+                <Link href="/learn/is-reliance-halal">Is Reliance halal? — context article</Link>
+              </li>
+            )}
+            <li>
+              <Link href="/methodology">Full methodology reference</Link>
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.seoArticle} aria-labelledby="faq-heading">
+          <h2 id="faq-heading" className={styles.sectionTitle}>
+            Frequently asked questions
+          </h2>
+          <dl className={styles.seoFaq}>
+            <dt>Is {stock.name} halal to invest in?</dt>
+            <dd>
+              Our engine shows <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> based on financial
+              ratios and sector rules — educational only. Personal investability can depend on your madhhab, portfolio
+              mix, and scholar guidance.
+            </dd>
+            <dt>Why is it considered {STATUS_LABELS[screening.status] || screening.status}?</dt>
+            <dd>{reasons.join(" ")}</dd>
+            <dt>When was this last updated?</dt>
+            <dd>
+              {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ??
+                "We do not yet show a fundamentals sync timestamp for this company in our database."}{" "}
+              Market prices may update more frequently than filing-based ratios.
+            </dd>
+          </dl>
+        </section>
 
         {peopleAlsoChecked.length > 0 && (
           <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">

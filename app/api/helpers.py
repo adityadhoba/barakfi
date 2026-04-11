@@ -2,6 +2,8 @@
 Shared helper functions used across API route modules.
 """
 
+import math
+
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -104,25 +106,33 @@ def get_current_user_from_claims(db: Session, claims: dict) -> User:
     return user
 
 
+def _finite_num(v: object, *, default: float = 0.0) -> float:
+    try:
+        x = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return default
+    return default if not math.isfinite(x) else x
+
+
 def stock_to_dict(stock: Stock) -> dict:
     return {
         "symbol": stock.symbol,
         "name": stock.name,
         "sector": stock.sector,
-        "market_cap": stock.market_cap,
-        "average_market_cap_36m": stock.average_market_cap_36m,
-        "debt": stock.debt,
-        "revenue": stock.revenue,
-        "total_business_income": stock.total_business_income,
+        "market_cap": _finite_num(stock.market_cap),
+        "average_market_cap_36m": _finite_num(stock.average_market_cap_36m),
+        "debt": _finite_num(stock.debt),
+        "revenue": _finite_num(stock.revenue),
+        "total_business_income": _finite_num(stock.total_business_income),
         # Some providers represent these as negative line items; we treat them as magnitudes.
-        "interest_income": abs(stock.interest_income or 0.0),
-        "non_permissible_income": abs(stock.non_permissible_income or 0.0),
-        "accounts_receivable": stock.accounts_receivable,
-        "cash_and_equivalents": stock.cash_and_equivalents,
-        "short_term_investments": stock.short_term_investments,
-        "fixed_assets": stock.fixed_assets,
-        "total_assets": stock.total_assets,
-        "price": stock.price,
+        "interest_income": abs(_finite_num(stock.interest_income)),
+        "non_permissible_income": abs(_finite_num(stock.non_permissible_income)),
+        "accounts_receivable": _finite_num(stock.accounts_receivable),
+        "cash_and_equivalents": _finite_num(stock.cash_and_equivalents),
+        "short_term_investments": _finite_num(stock.short_term_investments),
+        "fixed_assets": _finite_num(stock.fixed_assets),
+        "total_assets": _finite_num(stock.total_assets),
+        "price": _finite_num(stock.price),
     }
 
 

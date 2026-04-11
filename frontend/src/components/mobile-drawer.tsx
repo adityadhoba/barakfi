@@ -22,6 +22,7 @@ const DRAWER_LINKS: DrawerLink[] = [
   { href: "/compare", label: "Compare", icon: "\u229E" },
   { href: "/watchlist", label: "Watchlist", icon: "\u2606", auth: true },
   { href: "/news", label: "News", icon: "\u25A6" },
+  { href: "/learn", label: "Learn", icon: "\u2728" },
   { href: "/admin", label: "Admin", icon: "\u26A0", auth: true, adminOnly: true },
 ];
 

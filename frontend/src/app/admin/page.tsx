@@ -48,7 +48,9 @@ async function checkAdminAccess() {
 
 export const metadata = {
   title: "Admin Panel — Barakfi",
-  description: "User and role management console",
+  description:
+    "Restricted BarakFi admin console for operators who manage roles, support queues, and internal governance — authenticated access only; not a public marketing or help page for investors.",
+  robots: { index: false, follow: true },
 };
 
 export default async function AdminPage() {

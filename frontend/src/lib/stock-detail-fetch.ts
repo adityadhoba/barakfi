@@ -102,3 +102,32 @@ export async function fetchMultiScreeningForPage(symbol: string): Promise<MultiM
     clearTimeout(t);
   }
 }
+
+/** Lightweight fetch for `generateMetadata` (title + description). */
+export async function fetchStockMetadataBundle(
+  symbol: string,
+): Promise<{ stock: Stock; statusLabel: string } | null> {
+  const base = getPublicApiBaseUrl();
+  const enc = encodeURIComponent(symbol);
+  const pathStock = `${base}/stocks/${enc}`;
+  const pathScreen = `${base}/screen/${enc}`;
+  try {
+    const [resStock, resScreen] = await Promise.all([
+      fetch(pathStock, { next: { revalidate: 300 } }),
+      fetch(pathScreen, { next: { revalidate: 300 } }),
+    ]);
+    if (!resStock.ok) return null;
+    const stock = unwrapBackendEnvelope<Stock>(await resStock.json());
+    let statusLabel = "Shariah screening";
+    if (resScreen.ok) {
+      const scr = unwrapBackendEnvelope<{ status?: string }>(await resScreen.json());
+      const s = (scr.status || "").toUpperCase();
+      if (s === "HALAL") statusLabel = "Halal";
+      else if (s === "NON_COMPLIANT") statusLabel = "Haram";
+      else if (s === "CAUTIOUS" || s === "REVIEW") statusLabel = "Doubtful";
+    }
+    return { stock, statusLabel };
+  } catch {
+    return null;
+  }
+}
