@@ -37,18 +37,24 @@ export default async function ETFsPage() {
           <h1 className={ep.title}>Halal ETFs</h1>
           <p className={ep.subtitle}>
             We analyse disclosed ETF holdings and map them to our Shariah screening engine. Weights drive the halal
-            percentage — sync holdings with{" "}
-            <code style={{ fontSize: "0.85em" }}>python -m app.scripts.sync_etf_holdings</code> after fetching ETF
-            symbols. Optional: set <code style={{ fontSize: "0.85em" }}>MARKET_DATA_API_KEY</code> for FMP fallback.
+            percentage. Holdings are synced from our data pipeline; optional <code style={{ fontSize: "0.85em" }}>MARKET_DATA_API_KEY</code>{" "}
+            enables FMP fallback for some symbols.
           </p>
         </header>
 
         {etfs.length === 0 ? (
           <div className={ep.empty}>
-            <h2 className={ep.emptyTitle}>No ETFs in the database yet</h2>
+            <h2 className={ep.emptyTitle}>No ETFs to show yet</h2>
             <p className={ep.emptyText}>
-              Run <code>fetch_real_data.py</code> (US list includes SPY, QQQ, VTI) or mark funds with{" "}
-              <code>is_etf</code>, then sync holdings.
+              ETF coverage is rolling out. Browse screened equities on{" "}
+              <Link href="/halal-stocks" className={ep.emptyLink}>
+                Halal stocks
+              </Link>{" "}
+              or use the{" "}
+              <Link href="/screener" className={ep.emptyLink}>
+                screener
+              </Link>{" "}
+              in the meantime.
             </p>
           </div>
         ) : (

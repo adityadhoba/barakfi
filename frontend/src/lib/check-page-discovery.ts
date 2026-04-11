@@ -1,4 +1,4 @@
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, unwrapBackendEnvelope } from "@/lib/api-base";
 import type { ScreeningResult, Stock } from "@/lib/api";
 
 export type CheckDiscoveryPick = {
@@ -69,7 +69,7 @@ async function bulkScreenBrowser(symbols: string[]): Promise<ScreeningResult[]> 
     cache: "no-store",
   });
   if (!res.ok) return [];
-  const data = (await res.json()) as ScreeningResult[];
+  const data = unwrapBackendEnvelope<ScreeningResult[]>(await res.json());
   return Array.isArray(data) ? data : [];
 }
 

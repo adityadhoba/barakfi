@@ -658,3 +658,16 @@ def test_dashboard(mock_admin_auth):
     response = client.get("/api/dashboard/aditya", headers=AUTH_HEADER)
     assert response.status_code == 200
     assert api_json(response)["portfolio_count"] >= 1
+
+
+def test_daily_refresh_forbidden_without_token():
+    r = client.post("/api/internal/daily-refresh")
+    assert r.status_code == 403
+
+
+def test_daily_refresh_forbidden_wrong_token():
+    r = client.post(
+        "/api/internal/daily-refresh",
+        headers={"X-Internal-Service-Token": "not-the-token"},
+    )
+    assert r.status_code == 403

@@ -3,7 +3,7 @@
  * uses ISR revalidation for public GETs (faster repeat visits).
  */
 
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
 import type { MultiMethodologyResult, ScreeningResult, Stock } from "@/lib/api";
 
 const REVALIDATE_SEC = 90;
@@ -15,12 +15,7 @@ export type StockDetailFetchResult =
   | { kind: "error"; message: string };
 
 async function parseDetail(response: Response): Promise<string> {
-  try {
-    const body = await response.json();
-    return typeof body?.detail === "string" ? body.detail : response.statusText;
-  } catch {
-    return response.statusText;
-  }
+  return parseFastapiFetchError(response);
 }
 
 /**
@@ -70,8 +65,8 @@ export async function fetchStockAndScreenForPage(symbol: string): Promise<StockD
       };
     }
 
-    const stock = (await resStock.json()) as Stock;
-    const screening = (await resScreen.json()) as ScreeningResult;
+    const stock = unwrapBackendEnvelope<Stock>(await resStock.json());
+    const screening = unwrapBackendEnvelope<ScreeningResult>(await resScreen.json());
     return { kind: "ok", stock, screening };
   } catch (err) {
     const aborted = err instanceof Error && err.name === "AbortError";
@@ -100,7 +95,7 @@ export async function fetchMultiScreeningForPage(symbol: string): Promise<MultiM
       signal: controller.signal,
     });
     if (!res.ok) return null;
-    return (await res.json()) as MultiMethodologyResult;
+    return unwrapBackendEnvelope<MultiMethodologyResult>(await res.json());
   } catch {
     return null;
   } finally {

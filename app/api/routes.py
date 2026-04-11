@@ -2536,6 +2536,54 @@ def sync_news_feed(
     n_nd = fetch_and_upsert_newsdata(db)
     return {"ok": True, "upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd}
 
+
+@router.post("/internal/daily-refresh")
+def daily_refresh(
+    db: Session = Depends(get_db),
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+    screen_chunk_size: int = Query(default=150, ge=50, le=500, description="Symbols per bulk-screen chunk (max 500)."),
+):
+    """
+    One-shot pipeline for cron: sync all equity prices, upsert news, warm screening cache in chunks.
+
+    Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
+    Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
+    """
+    helpers.require_internal_token(x_internal_service_token)
+    eff = MARKET_DATA_PROVIDER.strip().lower()
+    price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
+    if not price_result["ok"]:
+        raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
+
+    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
+
+    n_rss = fetch_and_upsert_news(db)
+    n_nd = fetch_and_upsert_newsdata(db)
+
+    symbols = [
+        row[0]
+        for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
+    ]
+    screen_chunks = 0
+    screen_rows = 0
+    for i in range(0, len(symbols), screen_chunk_size):
+        chunk = symbols[i : i + screen_chunk_size]
+        rows = _screen_stocks_bulk_impl(chunk, db)
+        screen_chunks += 1
+        screen_rows += len(rows)
+
+    return {
+        "ok": True,
+        "prices": {
+            "provider": price_result["provider"],
+            "updated": price_result["updated"],
+            "failed_symbols": price_result["failed_symbols"],
+            "total": price_result["total"],
+        },
+        "news": {"upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd},
+        "screening": {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows},
+    }
+
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth
 # ═══════════════════════════════════════════════════════════════

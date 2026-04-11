@@ -16,6 +16,7 @@ function PrimaryNav() {
         basePath="/collections"
         items={[
           { href: "/collections", label: "Collections" },
+          { href: "/halal-stocks", label: "Halal stocks" },
           { href: "/super-investors", label: "Super Investors" },
           { href: "/etfs", label: "Halal ETFs" },
           { href: "/academy", label: "Academy" },

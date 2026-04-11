@@ -26,6 +26,10 @@
     {
       "path": "/api/keep-alive",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/daily-pipeline",
+      "schedule": "30 4 * * *"
     }
   ],
   "headers": [
