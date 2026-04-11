@@ -1,16 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getLocalWatchlist, removeLocalWatchlist, type LocalWatchlistEntry } from "@/lib/local-watchlist";
 import styles from "./saved-stocks.module.css";
 
 export default function SavedStocksPage() {
-  const [items, setItems] = useState<LocalWatchlistEntry[]>([]);
-
-  useEffect(() => {
-    setItems(getLocalWatchlist());
-  }, []);
+  const [items, setItems] = useState<LocalWatchlistEntry[]>(() => getLocalWatchlist());
 
   return (
     <main className="shellPage">

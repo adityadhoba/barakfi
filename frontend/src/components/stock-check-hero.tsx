@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo, useId } from "react";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import styles from "./stock-check-hero.module.css";
@@ -16,6 +16,7 @@ export function StockCheckHero() {
   const [focusIdx, setFocusIdx] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
   const deferred = useDeferredValue(value);
   const fetched = useRef(false);
 
@@ -62,10 +63,6 @@ export function StockCheckHero() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  useEffect(() => {
-    setFocusIdx(-1);
-  }, [deferred]);
-
   return (
     <div ref={wrapRef} className={styles.wrap}>
       <form
@@ -88,6 +85,7 @@ export function StockCheckHero() {
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
+            setFocusIdx(-1);
             setOpen(true);
             void loadStocks();
           }}
@@ -108,7 +106,10 @@ export function StockCheckHero() {
             }
           }}
           aria-label="Search stock symbol or company name"
-          aria-expanded={open && filtered.length > 0}
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-expanded={open && q.length > 0 && stocks.length > 0}
           autoComplete="off"
         />
         <button type="submit" className={styles.btn}>
@@ -117,13 +118,14 @@ export function StockCheckHero() {
       </form>
 
       {open && q.length > 0 && stocks.length > 0 && (
-        <ul className={styles.dropdown} role="listbox">
+        <ul className={styles.dropdown} id={listboxId} role="listbox">
           {filtered.length > 0 ? (
             filtered.map((s, i) => (
               <li key={s.symbol}>
                 <button
                   type="button"
                   role="option"
+                  aria-selected={i === focusIdx}
                   className={`${styles.item} ${i === focusIdx ? styles.itemFocus : ""} ${i === 0 ? styles.itemBest : ""}`}
                   onMouseEnter={() => setFocusIdx(i)}
                   onMouseDown={(e) => e.preventDefault()}
