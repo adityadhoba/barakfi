@@ -127,6 +127,45 @@ def test_check_stock_returns_compact_payload():
     assert isinstance(body["details_available"], bool)
 
 
+def test_screen_query_returns_rich_payload():
+    """GET /api/screen?symbol= — product screening (same shape as check-stock)."""
+    response = client.get("/api/screen", params={"symbol": "TCS"})
+    assert response.status_code == 200
+    body = api_json(response)
+    for key in (
+        "name",
+        "symbol",
+        "status",
+        "score",
+        "highlights",
+        "consensus",
+        "confidence",
+        "note",
+        "last_updated",
+    ):
+        assert key in body, f"missing {key}"
+    assert body["symbol"] == "TCS"
+
+
+def test_screen_query_400_whitespace_symbol():
+    response = client.get("/api/screen", params={"symbol": "   "})
+    assert response.status_code == 400
+
+
+def test_stock_details_includes_seo_and_batch_title_for_infy():
+    response = client.get("/api/stock-details", params={"symbol": "INFY"})
+    assert response.status_code == 200
+    data = api_json(response)
+    assert "seo" in data
+    assert "Infosys" in data["seo"]["title"]
+    assert "2026" in data["seo"]["title"]
+
+
+def test_stock_details_400_empty_symbol():
+    response = client.get("/api/stock-details", params={"symbol": "   "})
+    assert response.status_code == 400
+
+
 def test_check_stock_404_unknown_symbol():
     response = client.get("/api/check-stock", params={"symbol": "NOTREALSYM99"})
     assert response.status_code == 404

@@ -1,3 +1,4 @@
+import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -125,8 +126,10 @@ from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_st
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 from app.services.stock_lookup import resolve_stock
+from app.data.seo_stock_batch import get_seo_batch_override
 
 router = APIRouter(prefix="/api")
+_log_screen = logging.getLogger("barakfi.screen")
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -160,6 +163,34 @@ def _stock_has_compliance_override(db: Session, stock_id: int) -> bool:
 
 def _check_cache_key(symbol: str, exchange: str) -> str:
     return f"check:{symbol.strip().upper()}:{(exchange or '_').strip().upper()}"
+
+
+def _rich_screening_payload_for_stock(db: Session, stock: Stock) -> dict[str, Any]:
+    """
+    Rich product screening (multi-methodology): same payload as /check-stock.
+    Uses screening_cache with _check_cache_key; skips cache when compliance override applies.
+    """
+    ck = _check_cache_key(stock.symbol, stock.exchange)
+    if not _stock_has_compliance_override(db, stock.id):
+        cached = screening_cache.get(ck)
+        if cached:
+            return cached
+
+    stock_data = helpers.stock_to_dict(stock)
+    multi = evaluate_stock_multi(stock_data)
+    methodologies = multi.get("methodologies") or {}
+    primary = methodologies.get(PRIMARY_PROFILE) or next(iter(methodologies.values()), None)
+    rich = build_rich_screening_payload(
+        name=stock.name,
+        symbol=stock.symbol,
+        stock=stock_data,
+        multi=multi,
+        primary_screening=primary,
+        evaluated_at=datetime.now(timezone.utc),
+    )
+    if not _stock_has_compliance_override(db, stock.id):
+        screening_cache.set(ck, rich, SCREENING_CACHE_TTL_SECONDS)
+    return rich
 
 
 def _multi_cache_key(symbol: str, exchange: str | None) -> str:
@@ -448,35 +479,53 @@ def check_stock(
     if not clean:
         raise HTTPException(status_code=400, detail="symbol is required")
 
-    stock = (
-        db.query(Stock)
-        .filter(Stock.symbol == clean, Stock.is_active.is_(True))
-        .first()
-    )
+    stock = resolve_stock(db, clean, None, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    return _rich_screening_payload_for_stock(db, stock)
 
-    ck = _check_cache_key(stock.symbol, stock.exchange)
-    if not _stock_has_compliance_override(db, stock.id):
-        cached = screening_cache.get(ck)
-        if cached:
-            return cached
 
-    stock_data = helpers.stock_to_dict(stock)
-    multi = evaluate_stock_multi(stock_data)
-    methodologies = multi.get("methodologies") or {}
-    primary = methodologies.get(PRIMARY_PROFILE) or next(iter(methodologies.values()), None)
-    rich = build_rich_screening_payload(
-        name=stock.name,
-        symbol=stock.symbol,
-        stock=stock_data,
-        multi=multi,
-        primary_screening=primary,
-        evaluated_at=datetime.now(timezone.utc),
-    )
-    if not _stock_has_compliance_override(db, stock.id):
-        screening_cache.set(ck, rich, SCREENING_CACHE_TTL_SECONDS)
-    return rich
+@router.get("/screen")
+def screen_stock_query(
+    request: Request,
+    symbol: str = Query(..., min_length=1, description="Ticker, e.g. INFY"),
+    exchange: str | None = Query(default=None, description="Optional exchange when symbol is ambiguous"),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """
+    Production-friendly screening: rich payload (name, symbol, status, score, highlights,
+    consensus, confidence, note, last_updated). Prefer this over GET /screen/{symbol} for product UIs.
+
+    Same cache as /check-stock (5m TTL). Middleware wraps JSON in { success, data, error }.
+    """
+    t0 = time.perf_counter()
+    clean = (symbol or "").strip().upper()
+    client = request.client.host if request.client else None
+    if not clean:
+        _log_screen.warning("screen.query invalid empty symbol client=%s", client)
+        raise HTTPException(status_code=400, detail="symbol is required")
+
+    _log_screen.info("screen.query start symbol=%s exchange=%s client=%s", clean, exchange, client)
+    try:
+        stock = resolve_stock(db, clean, exchange, active_only=True)
+        if not stock:
+            _log_screen.info("screen.query not_found symbol=%s ms=%.2f", clean, (time.perf_counter() - t0) * 1000)
+            raise HTTPException(status_code=404, detail="Stock not found")
+        payload = _rich_screening_payload_for_stock(db, stock)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        _log_screen.info(
+            "screen.query ok symbol=%s status=%s ms=%.2f",
+            clean,
+            payload.get("status"),
+            elapsed_ms,
+        )
+        return payload
+    except HTTPException:
+        raise
+    except Exception as exc:
+        _log_screen.exception("screen.query error symbol=%s: %s", clean, exc)
+        raise HTTPException(status_code=500, detail="Screening failed") from exc
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)
@@ -719,15 +768,19 @@ def top_halal_stocks(
 
 @router.get("/stock-details")
 def stock_details_seo(
-    symbol: str = Query(..., min_length=1),
+    symbol: str = Query(..., description="Ticker, e.g. INFY"),
     exchange: str | None = Query(default=None),
     db: Session = Depends(get_db),
     _: None = Depends(enforce_screening_budget),
 ):
-    """Rich screening row plus SEO copy; warms check-stock cache when needed."""
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    """Rich screening row plus SEO copy (title, description, content, faq); warms check-stock cache when needed."""
+    clean_sym = (symbol or "").strip().upper()
+    if not clean_sym:
+        raise HTTPException(status_code=400, detail="symbol is required")
+    stock = resolve_stock(db, clean_sym, exchange, active_only=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    seo_ov = get_seo_batch_override(stock.symbol)
     ck = _check_cache_key(stock.symbol, stock.exchange)
     stock_data = helpers.stock_to_dict(stock)
     if not _stock_has_compliance_override(db, stock.id):
@@ -740,6 +793,7 @@ def stock_details_seo(
                 base.get("status", "Doubtful"),
                 multi=None,
                 consensus_override=base.get("consensus"),
+                batch_override=seo_ov,
             )
             return base
     multi = evaluate_stock_multi(stock_data)
@@ -754,7 +808,9 @@ def stock_details_seo(
         evaluated_at=datetime.now(timezone.utc),
     )
     product_status = rich["status"]
-    rich["seo"] = build_seo_block(stock.name, stock.symbol, product_status, multi=multi)
+    rich["seo"] = build_seo_block(
+        stock.name, stock.symbol, product_status, multi=multi, batch_override=seo_ov
+    )
     if not _stock_has_compliance_override(db, stock.id):
         cache_body = {k: v for k, v in rich.items() if k != "seo"}
         screening_cache.set(ck, cache_body, SCREENING_CACHE_TTL_SECONDS)

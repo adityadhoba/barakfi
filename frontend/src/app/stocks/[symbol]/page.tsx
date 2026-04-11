@@ -18,6 +18,7 @@ import {
   type ScreeningResult,
   type WorkspaceBundle,
 } from "@/lib/api";
+import { fetchStockDetailsForSeo, stockPageCanonicalUrl } from "@/lib/stock-seo-fetch";
 import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
@@ -28,6 +29,7 @@ import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
+import { StockSeoSection } from "@/components/stock-seo-section";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import {
   buildMethodologyTableRowsFromMulti,
@@ -48,9 +50,19 @@ export async function generateMetadata({
   params: Promise<{ symbol: string }>;
 }): Promise<Metadata> {
   const { symbol } = await params;
+  const canonical = stockPageCanonicalUrl(symbol);
+  const seoRow = await fetchStockDetailsForSeo(symbol);
+  if (seoRow?.seo?.title && seoRow.seo.description) {
+    return {
+      title: seoRow.seo.title,
+      description: seoRow.seo.description,
+      alternates: { canonical },
+    };
+  }
   return {
     title: `${symbol} — Shariah Screening | Barakfi`,
     description: `Shariah compliance screening, financial ratios, and research tools for ${symbol} on the Indian stock market.`,
+    alternates: { canonical },
   };
 }
 
@@ -214,11 +226,12 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [detail, watchlist, allStocks, multiScreening] = await Promise.all([
+  const [detail, watchlist, allStocks, multiScreening, seoDetail] = await Promise.all([
     fetchStockAndScreenForPage(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     getStocks(),
     fetchMultiScreeningForPage(symbol),
+    fetchStockDetailsForSeo(symbol),
   ]);
 
   let workspace: WorkspaceBundle | null = null;
@@ -417,8 +430,10 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: stock.name,
-    description: `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Cautious"}`,
-    url: `https://barakfi.in/stocks/${stock.symbol}`,
+    description:
+      seoDetail?.seo?.description ??
+      `Shariah compliance screening for ${stock.name} (${stock.symbol}) — ${STATUS_LABELS[screening.status] || "Cautious"}`,
+    url: stockPageCanonicalUrl(stock.symbol),
     provider: {
       "@type": "Organization",
       name: "Barakfi",
@@ -444,7 +459,7 @@ export default async function StockDetailPage({
   };
 
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -459,6 +474,8 @@ export default async function StockDetailPage({
           <span className={styles.breadcrumbCurrent} aria-current="page">{stock.symbol}</span>
         </nav>
 
+        {seoDetail ? <StockSeoSection data={seoDetail} /> : null}
+
         {/* Hero */}
         <div className={styles.complianceHero}>
           <div className={styles.complianceHeroLeft}>
@@ -470,7 +487,11 @@ export default async function StockDetailPage({
             <div className={styles.stockTitleRow}>
               <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
               <div>
-                <h1 className={styles.stockTitle}>{stock.name}</h1>
+                {seoDetail ? (
+                  <h2 className={styles.stockTitle}>{stock.name}</h2>
+                ) : (
+                  <h1 className={styles.stockTitle}>{stock.name}</h1>
+                )}
                 <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
                   {STATUS_LABELS[screening.status] || screening.status}
                 </span>

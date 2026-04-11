@@ -138,6 +138,7 @@ def build_seo_block(
     product_status: str,
     multi: dict | None = None,
     consensus_override: dict[str, Any] | None = None,
+    batch_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if multi is not None:
         cs = build_consensus_summary(multi)
@@ -149,37 +150,48 @@ def build_seo_block(
             "total": 4,
             "summary": "Multi-methodology Shariah screening.",
         }
-    title = f"Is {name} ({symbol}) Halal? Shariah status explained"
+    title = f"Is {name} ({symbol}) Halal? Shariah status explained (2026)"
     description = (
         f"{name} automated Shariah screening: {product_status}. "
         f"{cs['summary']}. Based on S&P Shariah, AAOIFI, FTSE Yasaar, and related methodology views."
     )
     faq = [
         {
-            "question": f"Is {symbol} halal?",
+            "question": f"Is {name} ({symbol}) halal?",
             "answer": f"Our automated screen labels this name as {product_status} using multiple published methodologies; always confirm with a scholar.",
         },
         {
-            "question": "Which standards are used?",
-            "answer": "We compare several widely used Islamic equity screening approaches so you can see where they agree or disagree.",
+            "question": f"Why is {symbol} considered halal or not under these screens?",
+            "answer": "Typical drivers are interest-bearing debt versus market cap, non-permissible income as a share of revenue, receivables versus assets, and sector rules. Each methodology sets its own thresholds.",
         },
         {
-            "question": "Does this count as a fatwa?",
-            "answer": "No. This is an informational tool using public financial data, not a religious ruling.",
+            "question": "Can Muslims invest in this stock?",
+            "answer": "Barakfi provides informational screening only—not a fatwa or investment recommendation. Many Muslims confirm with a qualified advisor before investing.",
         },
     ]
     content = (
-        f"{name} ({symbol}) is summarized as **{product_status}** in our multi-methodology view. "
+        f"{name} ({symbol}) is summarized as {product_status} in our multi-methodology view. "
         f"{cs['summary']}. "
         "We show methodology-level ratios and reasons so you can understand what drove the outcome. "
-        "Markets and filings change — revisit screening after major results or restructuring."
+        "Markets and filings change—revisit screening after major results or restructuring."
     )
-    return {
+    out: dict[str, Any] = {
         "title": title,
         "description": description,
         "faq": faq,
         "content": content,
     }
+    if batch_override:
+        if isinstance(batch_override.get("title"), str) and batch_override["title"].strip():
+            out["title"] = batch_override["title"].strip()
+        if isinstance(batch_override.get("description"), str) and batch_override["description"].strip():
+            out["description"] = batch_override["description"].strip()
+        if isinstance(batch_override.get("content"), str) and batch_override["content"].strip():
+            out["content"] = batch_override["content"].strip()
+        faq_o = batch_override.get("faq")
+        if isinstance(faq_o, list) and len(faq_o) > 0:
+            out["faq"] = faq_o
+    return out
 
 
 def build_screening_details(
