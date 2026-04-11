@@ -27,7 +27,12 @@ import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { MethodologyComparison } from "@/components/methodology-comparison";
+import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import {
+  buildMethodologyTableRowsFromMulti,
+  buildPrimaryRatioTableRows,
+  methodologyTableCaption,
+} from "@/lib/stock-detail-screening-tables";
 import { displayCountryForStock } from "@/lib/stock-display";
 import {
   capTierLabel,
@@ -55,8 +60,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 /** Coerce API numerics; avoids render crashes if JSON has string numbers. */
@@ -222,6 +227,14 @@ export default async function StockDetailPage({
     { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
   ];
 
+  const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
+  const methodologyRowsForCollapsible = multiScreening
+    ? buildMethodologyTableRowsFromMulti(multiScreening)
+    : null;
+  const methodologyCaptionForCollapsible = multiScreening
+    ? methodologyTableCaption(multiScreening)
+    : null;
+
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
   const displayCountry = displayCountryForStock(stock.exchange, stock.country);
@@ -257,15 +270,17 @@ export default async function StockDetailPage({
     ? await getBulkScreeningResults(similarStocks.map((s) => s.symbol)).catch(() => [])
     : [];
 
-  // Calculate compliance score
-  const complianceScore = calculateComplianceScore(
-    b.debt_to_36m_avg_market_cap_ratio,
-    b.debt_to_market_cap_ratio,
-    b.non_permissible_income_ratio,
-    b.interest_income_ratio,
-    b.receivables_to_market_cap_ratio,
-    b.cash_and_interest_bearing_to_assets_ratio
-  );
+  const complianceScore =
+    typeof screening.screening_score === "number"
+      ? screening.screening_score
+      : calculateComplianceScore(
+          b.debt_to_36m_avg_market_cap_ratio,
+          b.debt_to_market_cap_ratio,
+          b.non_permissible_income_ratio,
+          b.interest_income_ratio,
+          b.receivables_to_market_cap_ratio,
+          b.cash_and_interest_bearing_to_assets_ratio,
+        );
 
   // Count status breakdown for donut chart
   let passCount = 0,
@@ -631,10 +646,11 @@ export default async function StockDetailPage({
           </div>
         )}
 
-        {/* Multi-Methodology Comparison */}
-        {multiScreening && (
-          <MethodologyComparison data={multiScreening} />
-        )}
+        <StockDetailTablesCollapsible
+          ratioRows={ratioRowsForCollapsible}
+          methodologyCaption={methodologyCaptionForCollapsible}
+          methodologyRows={methodologyRowsForCollapsible}
+        />
 
         {/* Tabbed Content: Compliance | Financials | Actions */}
         <StockTabs>

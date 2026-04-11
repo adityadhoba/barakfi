@@ -16,6 +16,7 @@ import { NewsCarousel } from "@/app/news/news-carousel";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import { HomeHeroVisual } from "@/components/home-hero-visual";
+import { ProductCheckHome } from "@/components/product-check-home";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -76,6 +77,8 @@ export async function HomeDashboard() {
 
   return (
     <div className={styles.home}>
+      <ProductCheckHome />
+
       {/* ── Hero ── */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>

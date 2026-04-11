@@ -17,15 +17,18 @@ analysis of BSE-500 data and argues for using total assets (not market
 capitalisation) as the denominator for all financial ratios.
 
 Core Functions:
-- evaluate_stock(stock_dict, profile) -> screening result with status
-- evaluate_stock_multi(stock_dict) -> results for all four methodologies
+- evaluate_stock(stock_dict, profile) -> screening result with status + screening_score
+- evaluate_stock_multi(stock_dict) -> consensus + per-methodology scores
+- get_simple_result(stock_dict) -> {status, score, summary} product language (wraps multi)
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
-Status Values:
+Status Values (API / engine):
 - HALAL: Meets all screening criteria under the given methodology
 - CAUTIOUS: Passes core criteria but has flags that need attention
 - NON_COMPLIANT: Fails one or more screening criteria
+
+Product UI labels: HALAL → Halal, CAUTIOUS → Doubtful, NON_COMPLIANT → Haram.
 """
 
 PRIMARY_PROFILE = "sp_shariah"
@@ -169,6 +172,11 @@ ALL_PROFILE_CODES = list(PROFILES.keys())
 
 FIXED_ASSETS_REVIEW_THRESHOLD = 0.25
 
+SCORE_START = 100
+SCORE_DEBT_BREACH = 30
+SCORE_INCOME_BREACH = 30
+SCORE_OTHER_ISSUE = 10
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -235,6 +243,52 @@ def calculate_purification_ratio(stock: dict) -> float | None:
         return None
     ratio = non_permissible / total_income
     return round(ratio * 100, 2)
+
+
+def _reason_is_success_line(reason: str) -> bool:
+    return "Meets all screening criteria" in reason
+
+
+def screening_score_from_evaluation(result: dict) -> int:
+    """
+    0–100 from one evaluate_stock() result: start 100; −30 debt (once); −30 income
+    breaches (once); −10 per other hard reason and each manual_review_flag.
+    """
+    reasons = list(result.get("reasons") or [])
+    flags = list(result.get("manual_review_flags") or [])
+
+    debt_hit = False
+    income_hit = False
+    other_hits = 0
+
+    for r in reasons:
+        if _reason_is_success_line(r):
+            continue
+        s = r.strip()
+        if s.startswith("Debt is"):
+            debt_hit = True
+        elif s.startswith("Non-permissible income") or s.startswith("Interest income"):
+            income_hit = True
+        else:
+            other_hits += 1
+
+    other_hits += len(flags)
+
+    score = SCORE_START
+    if debt_hit:
+        score -= SCORE_DEBT_BREACH
+    if income_hit:
+        score -= SCORE_INCOME_BREACH
+    score -= SCORE_OTHER_ISSUE * other_hits
+    return max(0, min(100, score))
+
+
+def screening_score_for_manual_override(status: str) -> int:
+    if status == "HALAL":
+        return 100
+    if status == "NON_COMPLIANT":
+        return 0
+    return 50
 
 
 # ============================================================================
@@ -370,12 +424,17 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
             f"Meets all screening criteria under {p['label']} methodology."
         )
 
+    screening_score = screening_score_from_evaluation(
+        {"reasons": reasons, "manual_review_flags": manual_review_flags}
+    )
+
     return {
         "profile": profile,
         "status": status,
         "methodology_label": p["label"],
         "reasons": reasons,
         "manual_review_flags": manual_review_flags,
+        "screening_score": screening_score,
         "purification_ratio_pct": purification_pct,
         "disclaimer": SCREENING_DISCLAIMER,
         "breakdown": {
@@ -426,8 +485,15 @@ def evaluate_stock_multi(stock: dict) -> dict:
     else:
         consensus = "CAUTIOUS"
 
+    per_method_scores = [r["screening_score"] for r in results.values()]
+    if consensus == "CAUTIOUS":
+        consensus_score = int(round(sum(per_method_scores) / len(per_method_scores)))
+    else:
+        consensus_score = min(per_method_scores)
+
     return {
         "consensus_status": consensus,
+        "screening_score": max(0, min(100, consensus_score)),
         "methodologies": results,
         "disclaimer": SCREENING_DISCLAIMER,
         "summary": {
@@ -436,4 +502,83 @@ def evaluate_stock_multi(stock: dict) -> dict:
             "non_compliant_count": fail_count,
             "total": len(ALL_PROFILE_CODES),
         },
+    }
+
+
+def _simple_summary_from_multi(multi: dict) -> str:
+    """One-line product summary from evaluate_stock_multi output."""
+    consensus = multi["consensus_status"]
+    tallies = multi["summary"]
+    halal_count = tallies["halal_count"]
+    cautious_count = tallies["cautious_count"]
+    fail_count = tallies["non_compliant_count"]
+    total = tallies["total"] or len(ALL_PROFILE_CODES)
+
+    if consensus == "HALAL":
+        return (
+            "Consensus pass across four Shariah methodologies — low structural risk "
+            "on debt, income purity, and sector rules in our automated screen."
+        )
+    if consensus == "NON_COMPLIANT":
+        return (
+            "Consensus fail: sector exclusion or financial ratios exceed Shariah "
+            "thresholds on a majority of methodologies."
+        )
+    return (
+        f"{halal_count} of {total} methodologies pass; {cautious_count} need review and "
+        f"{fail_count} fail — verify with a scholar before investing."
+    )
+
+
+def get_simple_result(stock: dict) -> dict:
+    """
+    Product wrapper over evaluate_stock_multi — no engine changes.
+
+    Returns:
+        status: "Halal" | "Doubtful" | "Haram"
+        score: 0–100 (consensus methodology score)
+        summary: one line
+    """
+    multi = evaluate_stock_multi(stock)
+    consensus = multi["consensus_status"]
+    score = int(multi["screening_score"])
+
+    if consensus == "HALAL":
+        status = "Halal"
+    elif consensus == "NON_COMPLIANT":
+        status = "Haram"
+    else:
+        status = "Doubtful"
+
+    return {
+        "status": status,
+        "score": max(0, min(100, score)),
+        "summary": _simple_summary_from_multi(multi),
+    }
+
+
+def stock_check_details_available(stock: dict) -> bool:
+    return (
+        (stock.get("market_cap") or 0) > 0
+        and (stock.get("total_business_income") or 0) > 0
+        and (stock.get("total_assets") or 0) > 0
+    )
+
+
+def build_stock_check_payload(name: str, stock: dict, multi: dict) -> dict:
+    """GET /api/check-stock response body (uses precomputed multi — single engine run)."""
+    consensus = multi["consensus_status"]
+    if consensus == "HALAL":
+        status = "Halal"
+    elif consensus == "NON_COMPLIANT":
+        status = "Haram"
+    else:
+        status = "Doubtful"
+    score = int(multi["screening_score"])
+    return {
+        "name": name,
+        "status": status,
+        "score": max(0, min(100, score)),
+        "summary": _simple_summary_from_multi(multi),
+        "details_available": stock_check_details_available(stock),
     }
