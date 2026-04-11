@@ -19,6 +19,21 @@ This document describes how Barakfi refreshes **prices**, **fundamentals**, **ne
 2. **News** upsert (same as `POST /api/internal/news/sync`).
 3. **Screening warm-up** in chunks (default 150 symbols per chunk, max 500) via the same logic as bulk screen — no HTTP rate-limit path.
 
+### What one Render cron (`--full-pipeline`) refreshes on the product
+
+| User-visible area | Covered by daily-refresh? | Why |
+| --- | --- | --- |
+| **Stock prices** in DB (screener, lists, detail fallbacks) | **Yes** | Step 1 updates `Stock.price` / `data_source`. |
+| **Home / header “live” prices** | **Partly** | Tiles use client quote polling where configured; **DB price** (after sync) is the fallback and drives rankings that sort by price. |
+| **Shariah screening** results & cache (stock pages, screener, home halal stats) | **Yes** | Step 3 recomputes and fills the screening cache used by SSR/API. |
+| **News feed** | **Yes** | Step 2 upserts articles. |
+| **Trending** (`/trending`, home preview) | **Indirectly yes** | Trending is computed from **DB** `Stock` rows (e.g. market cap, price); after price sync, lists reflect newer values. |
+| **Financial ratios / fundamentals** (debt, revenue, statements in DB) | **No** | Not part of `daily-refresh`. Still updated via **separate ingestion** (seed scripts, SignalX/Xaro, `fetch_real_data.py`, etc.). Check `/api/fundamentals/status`. |
+| **ETF holdings** (halal % on `/etfs`) | **No** | Holdings come from `python -m app.scripts.sync_etf_holdings` (or your own schedule). Not wired into `daily-refresh` today. |
+| **Collections / super-investors** curated lists | **No** | Static or separately maintained data, not this pipeline. |
+
+To extend the single job later, add explicit steps (e.g. optional internal **ETF holdings** batch) in the API and call them from the same cron **after** measuring runtime impact.
+
 **Headers**
 
 - `X-Internal-Service-Token`: must match `INTERNAL_SERVICE_TOKEN` on the API host.
