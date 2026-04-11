@@ -7,7 +7,10 @@ import { CheckStockDiscovery } from "@/components/check-stock-discovery";
 import { StockCheckFullDetails } from "@/components/stock-check-full-details";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
-import { buildCheckSummaryBullets } from "@/lib/stock-detail-screening-tables";
+import {
+  resolveCheckPageSummaryBullets,
+  type CheckPageBullets,
+} from "@/lib/stock-detail-screening-tables";
 import { useCheckStockSession } from "@/stores/check-stock-session";
 import styles from "@/app/check/[symbol]/page.module.css";
 
@@ -33,6 +36,18 @@ function bulletMark(variant: "pass" | "fail" | "review"): string {
   if (variant === "fail") return "✗";
   if (variant === "review") return "⚠";
   return "✔";
+}
+
+function variantFromBulletTone(tone: string): "pass" | "fail" | "review" {
+  if (tone === "error") return "fail";
+  if (tone === "warning") return "review";
+  return "pass";
+}
+
+function hasBullets(b: CheckPageBullets | null): b is CheckPageBullets {
+  if (!b) return false;
+  if (b.mode === "toned") return b.items.length > 0;
+  return b.bullets.length > 0;
 }
 
 type Props = {
@@ -110,7 +125,7 @@ export function CheckStockView({ symbol }: Props) {
 
   const summaryBullets = useMemo(() => {
     if (!data || data.kind !== "ok") return null;
-    return buildCheckSummaryBullets(data.screening);
+    return resolveCheckPageSummaryBullets(data.check, data.screening, data.multi);
   }, [data]);
 
   useEffect(() => {
@@ -184,16 +199,34 @@ export function CheckStockView({ symbol }: Props) {
               <span className={styles.score}>{okData.check.score}</span>
               <span className={styles.scoreSuffix}>/ 100</span>
             </div>
-            {summaryBullets && summaryBullets.bullets.length > 0 ? (
+            {hasBullets(summaryBullets) ? (
               <ul className={styles.bulletList}>
-                {summaryBullets.bullets.map((line) => (
-                  <li key={line} className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}>
-                    <span className={styles.bulletMark} aria-hidden>
-                      {bulletMark(summaryBullets.variant)}
-                    </span>
-                    <span>{line}</span>
-                  </li>
-                ))}
+                {summaryBullets.mode === "toned"
+                  ? summaryBullets.items.map((item, idx) => {
+                      const v = variantFromBulletTone(item.tone);
+                      return (
+                        <li
+                          key={`${idx}-${item.text.slice(0, 48)}`}
+                          className={`${styles.bulletItem} ${bulletClass(v)}`}
+                        >
+                          <span className={styles.bulletMark} aria-hidden>
+                            {bulletMark(v)}
+                          </span>
+                          <span>{item.text}</span>
+                        </li>
+                      );
+                    })
+                  : summaryBullets.bullets.map((line, idx) => (
+                      <li
+                        key={`${idx}-${line.slice(0, 48)}`}
+                        className={`${styles.bulletItem} ${bulletClass(summaryBullets.variant)}`}
+                      >
+                        <span className={styles.bulletMark} aria-hidden>
+                          {bulletMark(summaryBullets.variant)}
+                        </span>
+                        <span>{line}</span>
+                      </li>
+                    ))}
               </ul>
             ) : null}
             <StockCheckResultActions

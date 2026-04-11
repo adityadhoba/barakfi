@@ -3,7 +3,12 @@
  * Used by the full stock detail page and the fast /check/[symbol] result view.
  */
 
-import type { MultiMethodologyResult, ScreeningResult } from "@/lib/api";
+import type {
+  CheckStockResponse,
+  ConfidenceBullet,
+  MultiMethodologyResult,
+  ScreeningResult,
+} from "@/lib/api";
 import type { StockDetailMethodologyRow, StockDetailRatioRow } from "@/components/stock-detail-tables-collapsible";
 
 const METHODOLOGY_ORDER = ["sp_shariah", "aaoifi", "ftse_maxis", "khatkhatay"] as const;
@@ -145,6 +150,59 @@ export function buildCheckSummaryBullets(screening: ScreeningResult): {
     bullets: positive.length ? positive : ["Meets primary screening criteria"],
     variant: "pass",
   };
+}
+
+export type CheckPageBullets =
+  | { mode: "toned"; items: ConfidenceBullet[] }
+  | { mode: "flat"; bullets: string[]; variant: "pass" | "fail" | "review" };
+
+function truncateSummary(text: string, max = 168): string {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
+/**
+ * Bullets beside the `/check-stock` verdict must match the **four-methodology consensus**
+ * (same engine as the headline). `buildCheckSummaryBullets(screening)` uses only the
+ * primary `/screen` profile and can show green “ratio” lines while the verdict is Haram.
+ */
+export function resolveCheckPageSummaryBullets(
+  check: CheckStockResponse,
+  screening: ScreeningResult,
+  multi: MultiMethodologyResult | null,
+): CheckPageBullets {
+  const consensusBullets = multi?.confidence_bullets?.filter((b) => b.text?.trim());
+  if (consensusBullets && consensusBullets.length > 0) {
+    return { mode: "toned", items: consensusBullets };
+  }
+
+  const legacy = buildCheckSummaryBullets(screening);
+  const consensus = check.status;
+  const primary = screening.status;
+
+  if (consensus === "Haram" && primary === "HALAL") {
+    return {
+      mode: "flat",
+      variant: "fail",
+      bullets: [
+        "This verdict uses all four methodologies together; enough of them fail that we label the name non-compliant, even when the default profile’s ratios look acceptable.",
+        truncateSummary(check.summary),
+      ],
+    };
+  }
+  if (consensus === "Halal" && primary === "NON_COMPLIANT") {
+    return {
+      mode: "flat",
+      variant: "review",
+      bullets: [
+        "Consensus is halal here while at least one methodology still fails on this data — open each methodology tab before treating the name as cleared.",
+        truncateSummary(check.summary),
+      ],
+    };
+  }
+
+  return { mode: "flat", bullets: legacy.bullets, variant: legacy.variant };
 }
 
 function pickPositiveBullets(b: ScreeningResult["breakdown"], max: number): string[] {
