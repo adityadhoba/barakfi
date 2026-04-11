@@ -1,128 +1,193 @@
-"""
-Super investor service.
+"""Super investors service — returns investor profiles and their holdings."""
 
-Provides seeded data for major investors based on publicly available
-13F filings. Cross-references their holdings with Shariah screening.
-"""
-
+from __future__ import annotations
 from sqlalchemy.orm import Session
+from datetime import UTC, datetime
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
 from app.services.halal_service import evaluate_stock
 
+def _safe_str(value: object) -> str:
+    try:
+        return str(value) if value is not None else ""
+    except Exception:
+        return ""
 
-SEED_INVESTORS = [
-    {
-        "name": "Warren Buffett",
-        "firm": "Berkshire Hathaway",
-        "slug": "warren-buffett",
-        "bio": "Chairman and CEO of Berkshire Hathaway. Known as the Oracle of Omaha, one of the most successful investors of all time.",
-        "image_url": None,
-        "source_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001067983&type=13F",
-        "holdings": [
-            {"symbol": "AAPL", "company_name": "Apple Inc.", "shares": 905560000, "value": 174300000000, "pct_portfolio": 48.5},
-            {"symbol": "BAC", "company_name": "Bank of America", "shares": 680000000, "value": 25800000000, "pct_portfolio": 7.2},
-            {"symbol": "AMZN", "company_name": "Amazon.com Inc.", "shares": 10000000, "value": 1750000000, "pct_portfolio": 0.5},
-            {"symbol": "KO", "company_name": "The Coca-Cola Company", "shares": 400000000, "value": 25000000000, "pct_portfolio": 7.0},
-            {"symbol": "CVX", "company_name": "Chevron Corporation", "shares": 110000000, "value": 18000000000, "pct_portfolio": 5.0},
-            {"symbol": "OXY", "company_name": "Occidental Petroleum", "shares": 250000000, "value": 16000000000, "pct_portfolio": 4.5},
-            {"symbol": "KHC", "company_name": "Kraft Heinz", "shares": 325600000, "value": 11000000000, "pct_portfolio": 3.1},
-            {"symbol": "MCO", "company_name": "Moody's Corporation", "shares": 24600000, "value": 10000000000, "pct_portfolio": 2.8},
-        ],
-    },
-    {
-        "name": "Cathie Wood",
-        "firm": "ARK Invest",
-        "slug": "cathie-wood",
-        "bio": "Founder, CEO, and CIO of ARK Invest. Known for investing in disruptive innovation and high-growth technology companies.",
-        "image_url": None,
-        "source_url": "https://ark-invest.com/",
-        "holdings": [
-            {"symbol": "TSLA", "company_name": "Tesla Inc.", "shares": 9500000, "value": 3800000000, "pct_portfolio": 12.5},
-            {"symbol": "ROKU", "company_name": "Roku Inc.", "shares": 14000000, "value": 1200000000, "pct_portfolio": 4.0},
-            {"symbol": "COIN", "company_name": "Coinbase Global", "shares": 6000000, "value": 1400000000, "pct_portfolio": 4.6},
-            {"symbol": "SQ", "company_name": "Block Inc.", "shares": 10000000, "value": 800000000, "pct_portfolio": 2.6},
-            {"symbol": "SHOP", "company_name": "Shopify Inc.", "shares": 8000000, "value": 600000000, "pct_portfolio": 2.0},
-        ],
-    },
-    {
-        "name": "Ray Dalio",
-        "firm": "Bridgewater Associates",
-        "slug": "ray-dalio",
-        "bio": "Founder of Bridgewater Associates, the world's largest hedge fund. Pioneer of risk parity and all-weather investing strategies.",
-        "image_url": None,
-        "source_url": "https://www.bridgewater.com/",
-        "holdings": [
-            {"symbol": "GOOGL", "company_name": "Alphabet Inc.", "shares": 3000000, "value": 500000000, "pct_portfolio": 3.5},
-            {"symbol": "PG", "company_name": "Procter & Gamble", "shares": 5000000, "value": 800000000, "pct_portfolio": 5.6},
-            {"symbol": "JNJ", "company_name": "Johnson & Johnson", "shares": 4000000, "value": 600000000, "pct_portfolio": 4.2},
-            {"symbol": "COST", "company_name": "Costco Wholesale", "shares": 1500000, "value": 1100000000, "pct_portfolio": 7.7},
-            {"symbol": "WMT", "company_name": "Walmart", "shares": 3000000, "value": 500000000, "pct_portfolio": 3.5},
-            {"symbol": "PEP", "company_name": "PepsiCo", "shares": 2500000, "value": 400000000, "pct_portfolio": 2.8},
-        ],
-    },
-    {
-        "name": "Bill Ackman",
-        "firm": "Pershing Square Capital",
-        "slug": "bill-ackman",
-        "bio": "Founder and CEO of Pershing Square Capital Management. Known as an activist investor with concentrated portfolio positions.",
-        "image_url": None,
-        "source_url": "https://pershingsquareholdings.com/",
-        "holdings": [
-            {"symbol": "GOOGL", "company_name": "Alphabet Inc.", "shares": 7000000, "value": 1200000000, "pct_portfolio": 16.0},
-            {"symbol": "HLT", "company_name": "Hilton Worldwide", "shares": 8000000, "value": 1800000000, "pct_portfolio": 24.0},
-            {"symbol": "QSR", "company_name": "Restaurant Brands Intl", "shares": 15000000, "value": 1000000000, "pct_portfolio": 13.3},
-        ],
-    },
-    {
-        "name": "Rakesh Jhunjhunwala (Legacy)",
-        "firm": "RARE Enterprises",
-        "slug": "rakesh-jhunjhunwala",
-        "bio": "The late 'Big Bull' of Indian stock markets. His legacy portfolio continues to be tracked by Indian investors.",
-        "image_url": None,
-        "source_url": None,
-        "holdings": [
-            {"symbol": "TITAN", "company_name": "Titan Company", "shares": 50000000, "value": 175000000000, "pct_portfolio": 30.0},
-            {"symbol": "TATACOMM", "company_name": "Tata Communications", "shares": 15000000, "value": 30000000000, "pct_portfolio": 5.1},
-            {"symbol": "CRISIL", "company_name": "CRISIL Limited", "shares": 5500000, "value": 27000000000, "pct_portfolio": 4.6},
-            {"symbol": "FORTIS", "company_name": "Fortis Healthcare", "shares": 36500000, "value": 18000000000, "pct_portfolio": 3.1},
-        ],
-    },
-]
+
+def get_investors(db: Session) -> list[dict]:
+    investors = (
+        db.query(SuperInvestor)
+        .filter(SuperInvestor.is_active.is_(True))
+        .order_by(SuperInvestor.name.asc())
+        .all()
+    )
+    result = []
+    for inv in investors:
+        holding_count = db.query(SuperInvestorHolding).filter(SuperInvestorHolding.investor_id == inv.id).count()
+        result.append({
+            "id": inv.id,
+            "name": inv.name,
+            "slug": inv.slug,
+            "title": inv.title,
+            "bio": inv.bio,
+            "country": inv.country,
+            "investment_style": inv.investment_style,
+            "image_url": inv.image_url,
+            "holding_count": holding_count,
+        })
+    return result
+
+
+def get_investor_detail(db: Session, slug: str) -> dict | None:
+    investor = db.query(SuperInvestor).filter(SuperInvestor.slug == slug, SuperInvestor.is_active.is_(True)).first()
+    if not investor:
+        return None
+
+    holdings = (
+        db.query(SuperInvestorHolding)
+        .filter(SuperInvestorHolding.investor_id == investor.id)
+        .order_by(SuperInvestorHolding.weight_pct.desc())
+        .all()
+    )
+
+    holding_list = []
+    for h in holdings:
+        stock = db.query(Stock).filter(Stock.id == h.stock_id).first()
+        if stock:
+            holding_list.append({
+                "symbol": stock.symbol,
+                "name": stock.name,
+                "sector": stock.sector,
+                "exchange": stock.exchange,
+                "price": stock.price,
+                "market_cap": stock.market_cap,
+                "weight_pct": h.weight_pct,
+            })
+
+    return {
+        "id": investor.id,
+        "name": investor.name,
+        "slug": investor.slug,
+        "title": investor.title,
+        "bio": investor.bio,
+        "country": investor.country,
+        "investment_style": investor.investment_style,
+        "image_url": investor.image_url,
+        "holdings": holding_list,
+    }
 
 
 def seed_investors(db: Session) -> int:
-    """Seed the super investor data if not already present. Returns count of investors seeded."""
-    existing = db.query(SuperInvestor).count()
-    if existing > 0:
-        return 0
+    """Seed super investors from app/data/super_investors.py."""
+    from app.data.super_investors import SUPER_INVESTORS, DEACTIVATED_SUPER_INVESTOR_SLUGS
 
-    count = 0
-    for inv_data in SEED_INVESTORS:
-        inv = SuperInvestor(
-            name=inv_data["name"],
-            firm=inv_data["firm"],
-            slug=inv_data["slug"],
-            bio=inv_data["bio"],
-            image_url=inv_data.get("image_url"),
-            source_url=inv_data.get("source_url"),
-        )
-        db.add(inv)
-        db.flush()
+    def _safe_float(value: object, default: float = 0.0) -> float:
+        try:
+            return float(value) if value is not None else default
+        except Exception:
+            return default
 
-        for h in inv_data["holdings"]:
-            holding = SuperInvestorHolding(
-                investor_id=inv.id,
-                symbol=h["symbol"],
-                company_name=h["company_name"],
-                shares=h["shares"],
-                value=h["value"],
-                pct_portfolio=h["pct_portfolio"],
+    seeded = 0
+    for inv_data in SUPER_INVESTORS:
+        existing = db.query(SuperInvestor).filter(SuperInvestor.slug == inv_data["slug"]).first()
+        if existing:
+            existing.name = inv_data["name"]
+            existing.firm = inv_data.get("firm", "") or ""
+            existing.title = inv_data["title"]
+            existing.bio = inv_data["bio"]
+            existing.source_url = inv_data.get("source_url", "") or ""
+            existing.country = inv_data["country"]
+            existing.investment_style = inv_data["investment_style"]
+            existing.image_url = inv_data.get("image_url", "") or ""
+            investor = existing
+        else:
+            investor = SuperInvestor(
+                name=inv_data["name"],
+                slug=inv_data["slug"],
+                firm=inv_data.get("firm", "") or "",
+                title=inv_data["title"],
+                bio=inv_data["bio"],
+                source_url=inv_data.get("source_url", "") or "",
+                country=inv_data["country"],
+                investment_style=inv_data["investment_style"],
+                image_url=inv_data.get("image_url", "") or "",
             )
-            db.add(holding)
-        count += 1
+            db.add(investor)
+            db.flush()
+
+        existing_holdings = {
+            row.stock_id
+            for row in db.query(SuperInvestorHolding)
+            .filter(SuperInvestorHolding.investor_id == investor.id)
+            .all()
+        }
+
+        for h in inv_data.get("holdings", []):
+            sym = (h.get("symbol") or "").upper()
+            stock = db.query(Stock).filter(Stock.symbol == sym).first()
+            if stock:
+                if stock.id in existing_holdings:
+                    # Update weight if already exists
+                    row = (
+                        db.query(SuperInvestorHolding)
+                        .filter(
+                            SuperInvestorHolding.investor_id == investor.id,
+                            SuperInvestorHolding.stock_id == stock.id,
+                        )
+                        .first()
+                    )
+                    if row:
+                        row.weight_pct = h.get("weight_pct", 0.0)
+                        row.symbol = stock.symbol
+                        row.company_name = _safe_str(stock.name)
+                        row.name = _safe_str(getattr(stock, "name", ""))  # backward-compat field
+                        row.exchange = stock.exchange
+                        row.currency = stock.currency
+                        row.country = stock.country
+                        row.sector = stock.sector
+                        try:
+                            row.company_sector = _safe_str(getattr(stock, "sector", ""))
+                        except Exception:
+                            pass
+                        # Production schema may require these fields; default to 0.
+                        try:
+                            row.shares = int(getattr(row, "shares", 0) or 0)
+                        except Exception:
+                            row.shares = 0
+                        # Some production schemas require value/pct_portfolio/as_of_date.
+                        if getattr(row, "value", None) is None:
+                            row.value = 0.0
+                        if getattr(row, "pct_portfolio", None) is None:
+                            row.pct_portfolio = _safe_float(row.weight_pct, 0.0)
+                        if getattr(row, "as_of_date", None) is None:
+                            row.as_of_date = datetime.now(UTC)
+                else:
+                    now = datetime.now(UTC)
+                    db.add(SuperInvestorHolding(
+                        investor_id=investor.id,
+                        stock_id=stock.id,
+                        weight_pct=h.get("weight_pct", 0.0),
+                        symbol=stock.symbol,
+                        company_name=_safe_str(stock.name),
+                        name=_safe_str(getattr(stock, "name", "")),
+                        exchange=stock.exchange,
+                        currency=stock.currency,
+                        country=stock.country,
+                        sector=stock.sector,
+                        company_sector=_safe_str(getattr(stock, "sector", "")),
+                        shares=0,
+                        value=0.0,
+                        pct_portfolio=_safe_float(h.get("weight_pct", 0.0), 0.0),
+                        as_of_date=now,
+                    ))
+        seeded += 1
+
+    for slug in DEACTIVATED_SUPER_INVESTOR_SLUGS:
+        inactive = db.query(SuperInvestor).filter(SuperInvestor.slug == slug).first()
+        if inactive:
+            inactive.is_active = False
 
     db.commit()
-    return count
+    return seeded
 
 
 def get_investor_with_compliance(db: Session, slug: str) -> dict | None:

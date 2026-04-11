@@ -69,7 +69,84 @@
   border-radius: var(--radius-lg);
   background: var(--panel);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-sm);
+}
+
+/* Desktop table — hidden on small screens (cards used instead) */
+.tableDesktop {
+  display: block;
+}
+
+.cardList {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 767px) {
+  .tableDesktop {
+    display: none;
+  }
+  .cardList {
+    display: flex;
+  }
+  .tableContainer {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+}
+
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-xs);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cardSymbolBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+}
+
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .table {
@@ -296,3 +373,18 @@
     font-size: 0.7rem;
   }
 }
+
+
+.marketBadge {
+  display: inline-flex;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+}
+

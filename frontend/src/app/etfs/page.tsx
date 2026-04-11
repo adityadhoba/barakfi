@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getETFs } from "@/lib/api";
-import { CountryBadge } from "@/components/country-badge";
 import { StockLogo } from "@/components/stock-logo";
 import ep from "../explore-pages.module.css";
 
@@ -19,6 +18,7 @@ export const metadata: Metadata = {
     "shariah etf screening",
     "muslim etf investing",
   ],
+  alternates: { canonical: "https://barakfi.in/etfs" },
 };
 
 function statusColor(st?: string | null) {
@@ -54,14 +54,18 @@ export default async function ETFsPage() {
         ) : (
           <div className={ep.grid}>
             {etfs.map((etf) => (
-              <Link key={`${etf.exchange}-${etf.symbol}`} href={`/etfs/${encodeURIComponent(etf.symbol)}`} className={ep.card}>
+              <Link
+                key={`${etf.exchange}-${etf.symbol}`}
+                href={`/etfs/${encodeURIComponent(etf.symbol)}`}
+                className={ep.card}
+              >
                 <StockLogo symbol={etf.symbol} size={40} />
                 <div className={ep.cardMeta}>
                   <div className={ep.cardTitle}>{etf.symbol}</div>
                   <div className={ep.cardSub}>{etf.name}</div>
                 </div>
                 <div className={ep.badgeRow}>
-                  <CountryBadge exchange={etf.exchange} />
+                  <span className={ep.cardSub}>{etf.exchange}</span>
                   {etf.holdings_count != null && etf.holdings_count > 0 && etf.halal_pct != null && (
                     <span className={ep.pct} style={{ color: statusColor(etf.status) }}>
                       {etf.halal_pct}% halal

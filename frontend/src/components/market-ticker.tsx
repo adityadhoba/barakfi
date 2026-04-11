@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./market-ticker.module.css";
 
 interface MarketIndex {
@@ -57,9 +58,12 @@ export function MarketTicker() {
 
   useEffect(() => {
     let cancelled = false;
+    const isMobile = typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches;
+    const refreshMs = isMobile ? 300_000 : 120_000;
+
     async function fetchLive() {
       try {
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+        const apiBase = getPublicApiBaseUrl();
         const res = await fetch(`${apiBase}/market-data/indices`);
         if (!res.ok || cancelled) return;
         const data = await res.json();
@@ -79,8 +83,7 @@ export function MarketTicker() {
       }
     }
     fetchLive();
-    // Refresh every 2 minutes during market hours
-    const interval = setInterval(fetchLive, 120_000);
+    const interval = setInterval(fetchLive, refreshMs);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 

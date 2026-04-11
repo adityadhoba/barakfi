@@ -67,24 +67,7 @@ class Stock(Base):
     country = Column(String, nullable=False, default="India")
     data_source = Column(String, nullable=False, default="internal_seed")
     is_active = Column(Boolean, nullable=False, default=True)
-    # Investment metrics
-    beta = Column(Float, nullable=True)
-    dividend_yield = Column(Float, nullable=True)
-    pe_ratio = Column(Float, nullable=True)
-    eps = Column(Float, nullable=True)
-    week_52_high = Column(Float, nullable=True)
-    week_52_low = Column(Float, nullable=True)
-    avg_volume = Column(Float, nullable=True)
-    shares_outstanding = Column(Float, nullable=True)
-    # Global identifiers
-    isin = Column(String, nullable=True)
-    exchange_code = Column(String, nullable=True, index=True)
-    # Compliance
-    compliance_rating = Column(Integer, nullable=True)
-    last_compliance_change = Column(DateTime, nullable=True)
-    is_etf = Column(Boolean, nullable=False, default=False)
-    # Price change
-    price_change_pct = Column(Float, nullable=True)
+    fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     stock_index_links = relationship(
         "StockIndexMembership", back_populates="stock", cascade="all, delete-orphan"
@@ -383,75 +366,143 @@ class ScreeningLog(Base):
     stock = relationship("Stock")
 
 
+# ============================================================================
+# COMPLIANCE HISTORY, COLLECTIONS, SUPER INVESTORS, COVERAGE REQUESTS
+# ============================================================================
+
 class ComplianceHistory(Base):
     __tablename__ = "compliance_history"
+
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
-    old_status = Column(String, nullable=False)
-    new_status = Column(String, nullable=False)
+    status = Column(String, nullable=False)
     profile_code = Column(String, nullable=False, default="sp_shariah")
-    old_rating = Column(Integer, nullable=True)
-    new_rating = Column(Integer, nullable=True)
-    changed_at = Column(DateTime, nullable=False, default=utc_now)
+    recorded_at = Column(DateTime, nullable=False, default=utc_now)
+
     stock = relationship("Stock")
 
 
 class StockCollection(Base):
     __tablename__ = "stock_collections"
+
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    slug = Column(String, unique=True, index=True, nullable=False)
+    name = Column(String, nullable=False, unique=True)
+    slug = Column(String, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=False, default="")
     icon = Column(String, nullable=False, default="")
+    # Featured collections are highlighted on the homepage / discovery surfaces.
+    # This column exists in production Postgres; keep it non-null with a default.
     is_featured = Column(Boolean, nullable=False, default=False)
+    display_order = Column(Integer, nullable=False, default=0)
+    is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
+
     entries = relationship("CollectionEntry", back_populates="collection", cascade="all, delete-orphan")
 
 
 class CollectionEntry(Base):
     __tablename__ = "collection_entries"
+
     id = Column(Integer, primary_key=True)
     collection_id = Column(Integer, ForeignKey("stock_collections.id"), nullable=False, index=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    display_order = Column(Integer, nullable=False, default=0)
+    # Production Postgres includes this timestamp as NOT NULL; keep it populated.
     added_at = Column(DateTime, nullable=False, default=utc_now)
+
     collection = relationship("StockCollection", back_populates="entries")
     stock = relationship("Stock")
 
 
 class SuperInvestor(Base):
     __tablename__ = "super_investors"
+
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    slug = Column(String, nullable=False, unique=True, index=True)
+    # Production Postgres includes this as NOT NULL (source/organization).
     firm = Column(String, nullable=False, default="")
-    slug = Column(String, unique=True, index=True, nullable=False)
+    title = Column(String, nullable=False, default="")
     bio = Column(Text, nullable=False, default="")
-    image_url = Column(String, nullable=True)
-    source_url = Column(String, nullable=True)
+    country = Column(String, nullable=False, default="India")
+    investment_style = Column(String, nullable=False, default="")
+    image_url = Column(String, nullable=False, default="")
+    # Production Postgres includes a NOT NULL canonical source URL.
+    source_url = Column(String, nullable=False, default="")
+    is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
+
     holdings = relationship("SuperInvestorHolding", back_populates="investor", cascade="all, delete-orphan")
 
 
 class SuperInvestorHolding(Base):
     __tablename__ = "super_investor_holdings"
+
     id = Column(Integer, primary_key=True)
     investor_id = Column(Integer, ForeignKey("super_investors.id"), nullable=False, index=True)
-    symbol = Column(String, nullable=False)
+    # Production Postgres stores a denormalized snapshot of the holding for fast reads.
+    symbol = Column(String, nullable=False, default="")
+    name = Column(String, nullable=False, default="")
+    # Some production schemas use company_name/company_sector; keep both populated.
     company_name = Column(String, nullable=False, default="")
-    shares = Column(Float, nullable=False, default=0)
-    value = Column(Float, nullable=False, default=0)
-    pct_portfolio = Column(Float, nullable=False, default=0)
+    sector = Column(String, nullable=False, default="")
+    company_sector = Column(String, nullable=False, default="")
+    # Some production schemas persist position size details; keep a safe default.
+    shares = Column(Float, nullable=False, default=0.0)
+    value = Column(Float, nullable=False, default=0.0)
+    pct_portfolio = Column(Float, nullable=False, default=0.0)
     as_of_date = Column(DateTime, nullable=False, default=utc_now)
+    exchange = Column(String, nullable=False, default="")
+    currency = Column(String, nullable=False, default="")
+    country = Column(String, nullable=False, default="")
+    stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    weight_pct = Column(Float, nullable=False, default=0.0)
+
     investor = relationship("SuperInvestor", back_populates="holdings")
+    stock = relationship("Stock")
+
+
+class NewsArticle(Base):
+    """Cached RSS news items for the public news section."""
+    __tablename__ = "news_articles"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String, nullable=False)
+    summary = Column(Text, nullable=False, default="")
+    url = Column(String, nullable=False, unique=True, index=True)
+    image_url = Column(String, nullable=False, default="")
+    source = Column(String, nullable=False, default="RSS")
+    published_at = Column(DateTime, nullable=False, default=utc_now)
+    fetched_at = Column(DateTime, nullable=False, default=utc_now)
 
 
 class CoverageRequest(Base):
     __tablename__ = "coverage_requests"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    symbol = Column(String, nullable=False)
+    exchange = Column(String, nullable=False, default="NSE")
+    notes = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default="pending")
+    # Postgres schema uses requested_at NOT NULL; keep created_at for ordering/API
+    requested_at = Column(DateTime, nullable=False, default=utc_now)
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    user = relationship("User")
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    symbol = Column(String, nullable=False)
-    exchange = Column(String, nullable=False, default="")
-    status = Column(String, nullable=False, default="pending")
-    result_status = Column(String, nullable=True)
-    requested_at = Column(DateTime, nullable=False, default=utc_now)
-    resolved_at = Column(DateTime, nullable=True)
-    user = relationship("User")
+    email = Column(String, nullable=False, default="")
+    name = Column(String, nullable=False, default="")
+    category = Column(String, nullable=False, default="general")
+    message = Column(Text, nullable=False, default="")
+    status = Column(String, nullable=False, default="new")
+    admin_notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+    user = relationship("User", foreign_keys=[user_id])

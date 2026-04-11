@@ -16,22 +16,25 @@ export default function SignUpPage() {
           <Link href="/" style={{ textDecoration: "none" }}>
             <Logo size={28} showText variant="light" />
           </Link>
-          <h2 className="authSidebarTitle">Start investing with confidence</h2>
+          <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
+            Shariah-Compliant Investing
+          </div>
+          <h2 className="authSidebarTitle">Start Your Halal Journey</h2>
           <p className="authSidebarDesc">
-            Create your free account in seconds. No credit card required.
+            Create your free account to screen, track, and invest in Shariah-compliant stocks across Indian, US, and UK markets.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2315;</span>
-              <span>Screen 100+ Indian stocks for Shariah compliance</span>
+              <span>Screen 370+ stocks across NSE, NYSE, and LSE</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>
-              <span>Build and track your personal watchlist</span>
+              <span>Track Shariah compliance across your portfolio</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x25A6;</span>
-              <span>Log decisions and manage your halal portfolio</span>
+              <span>Free purification and zakat calculators</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x1F4CA;</span>
@@ -48,7 +51,7 @@ export default function SignUpPage() {
           </div>
 
           <p className="authSidebarFooter">
-            S&amp;P + AAOIFI methodology &middot; Free forever
+            370+ stocks screened across 3 global exchanges
           </p>
         </div>
       </div>

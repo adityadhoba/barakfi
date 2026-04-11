@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type QuoteMap = Record<string, {
   last_price: number | null;
@@ -8,12 +8,20 @@ type QuoteMap = Record<string, {
   change_percent: number | null;
 }>;
 
+const DEFAULT_REFRESH_MS = 60_000;
+
 /**
- * Fetches batch quotes for a list of symbols.
- * Batches into groups of 20 to avoid overloading.
+ * Batch quotes for symbols. Pass optional exchange per symbol (NSE, US, LSE, …) for correct FX.
+ * Refreshes on an interval so list prices stay aligned with Yahoo chart snapshots (same source as /api/chart).
  */
-export function useBatchQuotes(symbols: string[]): QuoteMap {
+export function useBatchQuotes(
+  symbols: string[],
+  exchangeBySymbol?: Record<string, string>,
+  refreshMs: number = DEFAULT_REFRESH_MS,
+): QuoteMap {
   const [quotes, setQuotes] = useState<QuoteMap>({});
+  const exchangeRef = useRef(exchangeBySymbol);
+  exchangeRef.current = exchangeBySymbol;
 
   useEffect(() => {
     if (symbols.length === 0) return;
@@ -21,7 +29,6 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
     let cancelled = false;
 
     async function fetchBatch() {
-      // Split into batches of 20
       const batches: string[][] = [];
       for (let i = 0; i < symbols.length; i += 20) {
         batches.push(symbols.slice(i, i + 20));
@@ -32,7 +39,13 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
       for (const batch of batches) {
         if (cancelled) break;
         try {
-          const res = await fetch(`/api/quotes?symbols=${batch.join(",")}`);
+          const pairs = batch
+            .map((sym) => {
+              const ex = exchangeRef.current?.[sym] || "NSE";
+              return `${sym}:${ex}`;
+            })
+            .join(",");
+          const res = await fetch(`/api/quotes?pairs=${encodeURIComponent(pairs)}`, { cache: "no-store" });
           if (!res.ok) continue;
           const data = await res.json();
           for (const q of data.quotes || []) {
@@ -47,16 +60,24 @@ export function useBatchQuotes(symbols: string[]): QuoteMap {
         }
       }
 
-      if (!cancelled) {
-        setQuotes(allQuotes);
+      if (!cancelled && Object.keys(allQuotes).length > 0) {
+        setQuotes((prev) => ({ ...prev, ...allQuotes }));
       }
     }
 
-    fetchBatch();
-    return () => { cancelled = true; };
-    // Only re-fetch when the symbol list changes (by join comparison)
+    void fetchBatch();
+    const id =
+      refreshMs > 0
+        ? window.setInterval(() => {
+            void fetchBatch();
+          }, refreshMs)
+        : null;
+    return () => {
+      cancelled = true;
+      if (id != null) window.clearInterval(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbols.join(",")]);
+  }, [symbols.join(","), exchangeBySymbol ? JSON.stringify(exchangeBySymbol) : "", refreshMs]);
 
   return quotes;
 }

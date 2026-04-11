@@ -10,7 +10,6 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: [
-          /* ── Security ── */
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-XSS-Protection", value: "1; mode=block" },
@@ -30,13 +29,29 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.barakfi.in https://*.clerk.accounts.dev https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.googleadservices.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://*.clerk.com https://img.clerk.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.in https://cdn.brandfetch.io https://t1.gstatic.com",
-              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://api.barakfi.in https://barakfi.com https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com",
+              "img-src 'self' data: blob: https: https://img.logo.dev https://*.clerk.com https://img.clerk.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.in https://cdn.brandfetch.io https://t1.gstatic.com https://upload.wikimedia.org",
+              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://api.barakfi.in https://barakfi.com https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://*.posthog.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
               "worker-src 'self' blob:",
             ].join("; "),
           },
         ],
+      },
+      {
+        source: "/llms.txt",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400" },
+          { key: "Content-Type", value: "text/plain; charset=utf-8" },
+        ],
+      },
+    ];
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/ai-plugin.json",
+        destination: "/api/.well-known/ai-plugin",
       },
     ];
   },

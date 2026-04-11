@@ -3,9 +3,11 @@ Shared helper functions used across API route modules.
 """
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN
+from app.services.auth_service import get_current_auth_claims as verify_clerk_token  # noqa: F401
 from app.models import (
     ComplianceOverride,
     ComplianceReviewCase,
@@ -19,12 +21,38 @@ from app.models import (
     UserSettings,
     WatchlistEntry,
 )
+from app.schemas import HoldingStockSnapshot, WatchlistEntryRead
 from app.services.halal_service import (
     PRIMARY_PROFILE,
     build_confidence_bullets,
     evaluate_stock,
     get_profile_version,
+    screening_score_for_manual_override,
 )
+from app.services.portfolio_live_prices import build_live_last_price_by_symbol
+
+
+def _effective_price_for_holding(
+    holding: PortfolioHolding,
+    live_last_price_by_symbol: dict[str, float],
+) -> float:
+    sym = holding.stock.symbol.upper()
+    live = live_last_price_by_symbol.get(sym)
+    if live is not None and live > 0:
+        return live
+    return float(holding.stock.price or 0.0)
+
+
+def _total_market_value(
+    holdings: list[PortfolioHolding],
+    live_last_price_by_symbol: dict[str, float],
+) -> float:
+    return sum(holding.quantity * _effective_price_for_holding(holding, live_last_price_by_symbol) for holding in holdings)
+
+
+def live_last_prices_for_portfolios(portfolios: list[Portfolio]) -> dict[str, float]:
+    holdings = [h for p in portfolios for h in p.holdings]
+    return build_live_last_price_by_symbol(holdings)
 
 
 def require_admin(db: Session, claims: dict) -> str:
@@ -86,8 +114,9 @@ def stock_to_dict(stock: Stock) -> dict:
         "debt": stock.debt,
         "revenue": stock.revenue,
         "total_business_income": stock.total_business_income,
-        "interest_income": stock.interest_income,
-        "non_permissible_income": stock.non_permissible_income,
+        # Some providers represent these as negative line items; we treat them as magnitudes.
+        "interest_income": abs(stock.interest_income or 0.0),
+        "non_permissible_income": abs(stock.non_permissible_income or 0.0),
         "accounts_receivable": stock.accounts_receivable,
         "cash_and_equivalents": stock.cash_and_equivalents,
         "short_term_investments": stock.short_term_investments,
@@ -113,6 +142,7 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
         f"Manual compliance override applied by {override.decided_by}: {override.rationale}"
     ]
     updated["manual_review_flags"] = []
+    updated["screening_score"] = screening_score_for_manual_override(override.decided_status)
     updated["confidence_bullets"] = build_confidence_bullets(
         updated["status"],
         updated["breakdown"],
@@ -120,6 +150,54 @@ def apply_compliance_override(db: Session, stock: Stock, result: dict) -> dict:
         updated["manual_review_flags"],
     )
     return updated
+
+
+def research_note_display_line(n: ResearchNote) -> str:
+    head = f"[{n.note_type}] {n.summary}".strip() if n.summary else f"[{n.note_type}]"
+    body = (n.notes or "").strip()
+    if body:
+        snippet = body[:240] + ("…" if len(body) > 240 else "")
+        return f"{head} — {snippet}" if head else snippet
+    return head
+
+
+def build_watchlist_entry_reads(db: Session, user_id: int, entries: list[WatchlistEntry]) -> list[WatchlistEntryRead]:
+    """Batch-load latest research note per stock and return WatchlistEntryRead list."""
+    if not entries:
+        return []
+
+    inner = (
+        db.query(ResearchNote.stock_id, func.max(ResearchNote.id).label("max_id"))
+        .filter(ResearchNote.user_id == user_id)
+        .group_by(ResearchNote.stock_id)
+        .subquery()
+    )
+    latest_notes = (
+        db.query(ResearchNote)
+        .join(
+            inner,
+            (ResearchNote.stock_id == inner.c.stock_id) & (ResearchNote.id == inner.c.max_id),
+        )
+        .filter(ResearchNote.user_id == user_id)
+        .all()
+    )
+    research_by_stock: dict[int, ResearchNote] = {n.stock_id: n for n in latest_notes}
+
+    out: list[WatchlistEntryRead] = []
+    for w in entries:
+        rn = research_by_stock.get(w.stock_id)
+        latest = research_note_display_line(rn) if rn else ""
+        out.append(
+            WatchlistEntryRead(
+                id=w.id,
+                owner_name=w.owner_name,
+                notes=w.notes,
+                added_at=w.added_at,
+                stock=HoldingStockSnapshot.model_validate(w.stock),
+                latest_research_summary=latest,
+            )
+        )
+    return out
 
 
 def record_screening_log(db: Session, stock: Stock, result: dict) -> None:
@@ -270,10 +348,18 @@ def upsert_override_for_review_case(
     )
 
 
-def build_dashboard_payload(owner_name: str, portfolios: list[Portfolio], watchlist_entries: list[WatchlistEntry]):
+def build_dashboard_payload(
+    owner_name: str,
+    portfolios: list[Portfolio],
+    watchlist_entries: list[WatchlistEntry],
+    live_last_price_by_symbol: dict[str, float] | None = None,
+):
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
 
-    total_market_value = round(sum(holding.quantity * holding.stock.price for holding in holdings), 2)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+
+    total_market_value = round(_total_market_value(holdings, live_last_price_by_symbol), 2)
     halal_holdings = 0
     non_compliant_holdings = 0
     review_holdings = 0
@@ -305,11 +391,14 @@ def build_alerts_payload(
     portfolios: list[Portfolio],
     watchlist_entries: list[WatchlistEntry],
     review_cases: list[dict] | None = None,
+    live_last_price_by_symbol: dict[str, float] | None = None,
 ) -> list[dict]:
     alerts: list[dict] = []
     review_cases = review_cases or []
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
-    total_market_value = sum(holding.quantity * holding.stock.price for holding in holdings)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+    total_market_value = _total_market_value(holdings, live_last_price_by_symbol)
 
     if user.settings and not user.settings.notifications_enabled:
         alerts.append({"level": "info", "title": "Notifications are paused", "message": "Compliance and portfolio alerts are turned off in account settings."})
@@ -322,7 +411,8 @@ def build_alerts_payload(
             alerts.append({"level": "warning", "title": f"{holding.stock.symbol} needs manual review", "message": "The automated rules flagged this holding for deeper compliance validation."})
 
         if total_market_value > 0:
-            weight = (holding.quantity * holding.stock.price / total_market_value) * 100
+            px = _effective_price_for_holding(holding, live_last_price_by_symbol)
+            weight = (holding.quantity * px / total_market_value) * 100
             if weight >= 45:
                 alerts.append({"level": "warning", "title": f"{holding.stock.symbol} concentration is high", "message": f"This position is {weight:.1f}% of the portfolio and may need rebalancing."})
 
@@ -339,14 +429,20 @@ def build_alerts_payload(
     return alerts[:6]
 
 
-def build_compliance_check(portfolios: list[Portfolio]) -> list[dict]:
+def build_compliance_check(
+    portfolios: list[Portfolio],
+    live_last_price_by_symbol: dict[str, float] | None = None,
+) -> list[dict]:
     holdings = [holding for portfolio in portfolios for holding in portfolio.holdings]
-    total_market_value = sum(holding.quantity * holding.stock.price for holding in holdings)
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings)
+    total_market_value = _total_market_value(holdings, live_last_price_by_symbol)
     suggestions: list[dict] = []
 
     for holding in holdings:
+        px = _effective_price_for_holding(holding, live_last_price_by_symbol)
         current_weight_pct = (
-            (holding.quantity * holding.stock.price / total_market_value) * 100 if total_market_value > 0 else 0
+            (holding.quantity * px / total_market_value) * 100 if total_market_value > 0 else 0
         )
         drift_pct = round(current_weight_pct - holding.target_allocation_pct, 2)
 
@@ -380,11 +476,21 @@ def build_activity_feed(
     watchlist_entries: list[WatchlistEntry],
     research_notes: list[ResearchNote],
     review_cases: list[dict] | None = None,
+    live_last_price_by_symbol: dict[str, float] | None = None,
 ) -> list[dict]:
     events: list[dict] = []
     review_cases = review_cases or []
+    holdings_flat = [holding for portfolio in portfolios for holding in portfolio.holdings]
+    if live_last_price_by_symbol is None:
+        live_last_price_by_symbol = build_live_last_price_by_symbol(holdings_flat)
 
-    for alert in build_alerts_payload(user, portfolios, watchlist_entries, review_cases):
+    for alert in build_alerts_payload(
+        user,
+        portfolios,
+        watchlist_entries,
+        review_cases,
+        live_last_price_by_symbol=live_last_price_by_symbol,
+    ):
         events.append({"id": f"alert-{alert['title']}", "kind": "alert", "title": alert["title"], "detail": alert["message"], "created_at": user.created_at, "level": alert["level"], "symbol": None})
 
     for review_case in review_cases[:4]:
@@ -450,6 +556,7 @@ def build_compliance_queue(portfolios: list[Portfolio], watchlist_entries: list[
 
 
 def create_default_workspace(db: Session, user: User) -> None:
+    # Preserve historical default name expected by tests and earlier UI copy.
     portfolio = Portfolio(
         user_id=user.id,
         owner_name=(user.display_name or user.email or "user").lower().replace(" ", "-"),
@@ -467,6 +574,18 @@ def create_default_workspace(db: Session, user: User) -> None:
         .all()
     )
     for stock in starter_stocks:
+        # Give the starter portfolio at least one holding so portfolio endpoints
+        # have meaningful data out-of-the-box (used in tests and demos).
+        db.add(
+            PortfolioHolding(
+                portfolio_id=portfolio.id,
+                stock_id=stock.id,
+                quantity=1,
+                average_buy_price=stock.price or 0.0,
+                target_allocation_pct=0.0,
+                thesis="Seeded starter holding for demo/testing.",
+            )
+        )
         db.add(
             WatchlistEntry(
                 user_id=user.id,

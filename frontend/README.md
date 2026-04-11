@@ -1,4 +1,4 @@
-This is the premium Next.js frontend for the Barakfi platform.
+This is the Next.js frontend for **Halal Stock Checker** (Barakfi) — check if a stock is Halal; instant Halal status.
 
 ## Local setup
 
@@ -55,6 +55,13 @@ Backend bridge:
 - move the current founder dashboard into a full signed-in app over time
 - connect this frontend to real Clerk sessions once your keys are ready
 
+## Mobile UX
+
+- **Bottom nav**: Home, Screener, Watchlist, and **More** (opens the slide-out menu for News, Compare, Admin, etc.). This avoids duplicating **Watchlist** next to **News** on small screens.
+- **Top bar**: On viewports under 768px the **Watchlist** link is hidden in the header (still in bottom nav + drawer).
+- **Screener**: Filter sidebar starts **collapsed** on narrow screens; tap **Filters** to open; tap the dimmed overlay to close.
+- **Rate limits**: If you see “Too many requests” from the API on mobile, the backend rate limit was raised; ensure the latest API is deployed.
+
 ## Verify
 
 ```bash
@@ -63,3 +70,35 @@ npm run build
 ```
 
 Both commands are currently passing.
+
+## Production (Vercel + Clerk)
+
+- **Root directory**: In Vercel → Project → Settings → General, set **Root Directory** to `frontend` (the folder that contains `src/middleware.ts`). If this is wrong, `clerkMiddleware()` may not run and routes that use `auth()` can fail.
+- **Clerk env (Production and Preview)**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. For preview deployments (`*.vercel.app`), add the host under **Clerk Dashboard → Domains** if sign-in fails on previews.
+- **API URL**: `NEXT_PUBLIC_API_BASE_URL` must be the FastAPI base URL **including `/api`**, e.g. `https://api.barakfi.in/api`. **Do not** set this to `https://barakfi.in` (that is the Vercel frontend). If you do, the app now falls back to `https://api.barakfi.in/api` in production when it detects the marketing hostname.
+
+## News feed (why the home/news pages can be empty)
+
+- The site reads **`GET {NEXT_PUBLIC_API_BASE_URL}/news`** (public). An empty array means no rows in `news_articles` yet, or the request failed (see on-page hints after deploy).
+- **Ingestion**: On the API (Render), call **`POST /api/internal/news/sync`** with header **`X-Internal-Service-Token`** set to the same value as **`INTERNAL_SERVICE_TOKEN`** in the API environment. That runs RSS (`NEWS_RSS_URL`) and NewsData.io when configured.
+- **NewsData.io**: Set **`NEWSDATA_API_KEY`** and optionally **`NEWSDATA_Q`** on the **API service** (not on Vercel — ingestion runs server-side). Legacy names **`NEWS_NEWSAPI_KEY`** / **`NEWS_NEWSAPI_QUERY`** are still read as fallbacks.
+- **`NEWS_RSS_URL`**: Optional. If unset, the API uses a built-in default Islamic-finance RSS URL in config. Override only when you want a different feed.
+- **Automation**: Add a Render **Cron Job** (or external scheduler) that runs periodically, e.g. `curl -X POST "https://YOUR_API_HOST/api/internal/news/sync" -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"` (use the same secret as in the API env; do not commit it). Without a scheduled sync, headlines stay empty until you trigger ingestion manually.
+
+## Watchlist market / currency (US vs India)
+
+- **`GET /api/me/watchlist`** returns each entry’s `stock` with **`exchange`**, **`currency`**, and **`country`** from the database. The watchlist page uses these for USD/GBP vs INR and the market pill.
+- If a US ticker still shows as India + rupees, fix the **`stocks`** row in PostgreSQL (`exchange`, `currency`) or run **`scripts/audit_stock_exchange.py`** on the API host.
+- **`latest_research_summary`** on each watchlist row is the latest research note line for that symbol (see API response).
+
+## Stock detail 404 (e.g. M&M, AVGO)
+
+- The stock page calls **`GET /api/stocks/{symbol}`** and **`GET /api/screen/{symbol}`**. If the symbol is **missing** from the `stocks` table or **`is_active = false`**, the API returns **404** and the site shows “Page not found.”
+- On production Postgres, verify:
+
+```sql
+SELECT symbol, is_active, exchange FROM stocks WHERE symbol IN ('M&M', 'AVGO');
+```
+
+- If no rows are returned, **seed or import** those symbols (see repo seed data / `fetch_data.py` / your ETL). Symbols with **`&`** (e.g. `M&M`) must match exactly in the DB; the URL uses **`/stocks/M%26M`**, which decodes to `M&M`.
+- Slow loads followed by errors are often **API cold starts**; the stock page shows a **try again** state when the API times out or returns 5xx instead of a generic 404.

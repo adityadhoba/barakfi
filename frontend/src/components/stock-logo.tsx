@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 
+const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
+
+const EXCHANGE_SUFFIX: Record<string, string> = {
+  NSE: ".IN",
+  BSE: ".IN",
+  US: "",
+  NYSE: "",
+  NASDAQ: "",
+  LSE: ".L",
+  LON: ".L",
+};
+
 const SYMBOL_TO_DOMAIN: Record<string, string> = {
-  // NIFTY 50
   RELIANCE: "ril.com",
   TCS: "tcs.com",
   HDFCBANK: "hdfcbank.com",
@@ -14,6 +25,7 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   SBIN: "sbi.co.in",
   BHARTIARTL: "airtel.in",
   KOTAKBANK: "kotak.com",
+  CHOLAFIN: "cholamandalam.com",
   LT: "larsentoubro.com",
   HCLTECH: "hcltech.com",
   AXISBANK: "axisbank.com",
@@ -21,233 +33,88 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   MARUTI: "marutisuzuki.com",
   SUNPHARMA: "sunpharma.com",
   TITAN: "titan.co.in",
-  BAJFINANCE: "bajajfinserv.in",
-  DMART: "dmartindia.com",
-  NESTLEIND: "nestle.in",
-  ULTRACEMCO: "ultratechcement.com",
-  NTPC: "ntpclimited.com",
   WIPRO: "wipro.com",
   ADANIENT: "adani.com",
   ADANIPORTS: "adaniports.com",
-  POWERGRID: "powergridindia.com",
   TATAMOTORS: "tatamotors.com",
-  BAJAJFINSV: "bajajfinserv.in",
   ONGC: "ongcindia.com",
   JSWSTEEL: "jsw.in",
-  TECHM: "techmahindra.com",
-  COALINDIA: "coalindia.in",
-  "M&M": "mahindra.com",
-  MM: "mahindra.com",
-  TATASTEEL: "tatasteel.com",
-  INDUSINDBK: "indusind.com",
-  HINDALCO: "hindalco.com",
-  GRASIM: "grasim.com",
   CIPLA: "cipla.com",
-  BRITANNIA: "britannia.co.in",
   DRREDDY: "drreddys.com",
   APOLLOHOSP: "apollohospitals.com",
-  EICHERMOT: "eicher.in",
-  HEROMOTOCO: "heromotocorp.com",
-  DIVISLAB: "divislab.com",
-  LTIM: "ltimindtree.com",
-  BAJAJAUTO: "bajajauto.com",
-  TRENT: "trentlimited.com",
-  SHREECEM: "shreecement.com",
-  PIDILITIND: "pidilite.com",
-  SOLARINDS: "sfrp.com",
-  // NIFTY NEXT 50
-  HAL: "hal-india.co.in",
-  BEL: "bel-india.in",
-  IRCTC: "irctc.co.in",
-  ZOMATO: "zomato.com",
-  TATAPOWER: "tatapower.com",
-  INDIGO: "goindigo.in",
-  DLF: "dlf.in",
-  GODREJPROP: "godrejproperties.com",
-  DABUR: "dabur.com",
-  MARICO: "marico.com",
-  PERSISTENT: "persistent.com",
-  COFORGE: "coforge.com",
-  TATACONSUM: "tataconsumer.com",
-  COLPAL: "colgatepalmolive.co.in",
-  MCDOWELL: "diageo.com",
-  MCDOWELL_N: "diageo.com",
-  MCDOWNN: "diageo.com",
-  MCDOWELLN: "diageo.com",
-  PEL: "piramal.com",
-  SIEMENS: "siemens.co.in",
-  ABB: "abb.com",
-  TORNTPHARM: "torrentpharma.com",
-  AUROPHARMA: "aurobindo.com",
-  LUPIN: "lupin.com",
-  BIOCON: "biocon.com",
-  HAVELLS: "havells.com",
-  VOLTAS: "voltas.com",
-  INDUSTOWER: "industower.com",
-  MOTHERSON: "motherson.com",
-  PIIND: "piindustries.com",
-  NAUKRI: "naukri.com",
-  PAGEIND: "pageindustries.com",
-  MPHASIS: "mphasis.com",
-  // Additional popular stocks
-  HDFCLIFE: "hdfclife.com",
-  POLYCAB: "polycab.com",
-  DEEPAKNTR: "deepaknitrite.com",
-  SBILIFE: "sbilife.co.in",
-  IDFCFIRSTB: "idfcfirstbank.com",
-  BANKBARODA: "bankofbaroda.in",
-  PNB: "pnbindia.in",
-  CANBK: "canarabank.com",
-  FEDERALBNK: "federalbank.co.in",
-  ICICIPRULI: "iciciprulife.com",
-  // NIFTY Midcap 100 additions
-  TATAELXSI: "tataelxsi.com",
-  LTTS: "ltts.com",
-  KPITTECH: "kpit.com",
-  DIXON: "dixoninfo.com",
-  KAYNES: "kaynestechnology.com",
-  ALKEM: "alkemlabs.com",
-  LAURUSLABS: "lauruslabs.com",
-  IPCALAB: "ipcalabs.com",
-  GLENMARK: "glenmarkpharma.com",
-  NATCOPHARM: "natcopharma.co.in",
-  BOSCHLTD: "bosch.in",
-  BHARATFORG: "bharatforge.com",
-  EXIDEIND: "exideindustries.com",
-  BALKRISIND: "bfrubber.com",
-  UPL: "upl-ltd.com",
-  SRF: "srf.com",
-  ATUL: "atul.co.in",
-  NAVINFLUOR: "nfrind.com",
-  CLEAN: "cleanscienceindia.com",
-  VBL: "varunbeverages.com",
+  DMART: "dmartindia.com",
+  ULTRACEMCO: "ultratechcement.com",
+  NESTLEIND: "nestle.in",
+  BAJFINANCE: "bajajfinserv.in",
+  AAPL: "apple.com",
+  MSFT: "microsoft.com",
+  GOOGL: "google.com",
+  AMZN: "amazon.com",
+  NVDA: "nvidia.com",
+  META: "meta.com",
+  TSLA: "tesla.com",
+  JPM: "jpmorganchase.com",
+  V: "visa.com",
+  MA: "mastercard.com",
+  SHEL: "shell.com",
+  AZN: "astrazeneca.com",
+  ULVR: "unilever.com",
+  BP: "bp.com",
+  HSBA: "hsbc.com",
+  GSK: "gsk.com",
+  LODHA: "lodhagroup.com",
+  SOBHA: "sobha.com",
+  MINDACORP: "mindagroup.com",
+  SUNTV: "sunnetwork.in",
+  NETWORK18: "network18group.com",
+  TV18BRDCST: "network18group.com",
+  TATACHEM: "tatachemicals.com",
+  BRITANNIA: "britannia.co.in",
   GODREJCP: "godrejcp.com",
-  BATAINDIA: "bata.in",
-  EMAMILTD: "emamiltd.in",
-  CUMMINSIND: "cumminsindia.com",
-  THERMAX: "thermaxglobal.com",
-  ASTRAL: "astralltd.com",
-  APLAPOLLO: "aplapollo.com",
-  SUPREMEIND: "supreme.co.in",
-  OBEROIRLTY: "oberoirealty.com",
-  PRESTIGE: "prestigeconstructions.com",
-  BRIGADE: "brigadegroup.com",
-  PHOENIXLTD: "thephoenixmills.com",
-  IRFC: "irfc.nic.in",
-  JIOFIN: "jiofinancialservices.com",
-  TATACOMM: "tatacommunications.com",
-  MAXHEALTH: "maxhealthcare.in",
-  FORTIS: "fortishealthcare.com",
-  LALPATHLAB: "lalpathlabs.com",
-  INDIANHOTELS: "ihcltata.com",
-  JUBLFOOD: "jubilantfoodworks.com",
-  DEVYANI: "devyani.com",
-  LICHSGFIN: "lichfl.com",
-  MANAPPURAM: "manappuram.com",
-  MUTHOOTFIN: "muthootfinance.com",
-  CONCOR: "concorindia.co.in",
-  NHPC: "nhpcindia.com",
-  SJVN: "sjvn.nic.in",
-  RECLTD: "recindia.nic.in",
-  PFC: "pfcindia.com",
-  IREDA: "ireda.in",
-  SYNGENE: "syngeneintl.com",
-  AJANTPHARM: "ajantpharma.com",
-  GRANULES: "granulesindia.com",
-  CROMPTON: "crompton.co.in",
-  WHIRLPOOL: "whirlpoolindia.com",
-  BLUESTARCO: "bluestarindia.com",
-  ABCAPITAL: "adityabirlacapital.com",
-  CHOLAFIN: "cholamandalam.com",
-  SHRIRAMFIN: "shriramfinance.in",
-  MFSL: "maxlifeinsurance.com",
-  NIACL: "newindia.co.in",
-  STARHEALTH: "starhealth.in",
-  AMBUJACEM: "ambujacement.com",
-  RAMCOCEM: "ramcocements.in",
-  JKCEMENT: "jkcement.com",
-  TVSMOTOR: "tvsmotor.com",
-  ASHOKLEY: "ashokleyland.com",
-  ESCORTS: "escortsgroup.com",
-  HINDPETRO: "hindustanpetroleum.com",
-  BPCL: "bharatpetroleum.in",
-  IOC: "iocl.com",
-  GAIL: "gailonline.com",
-  VEDL: "vedantalimited.com",
-  NMDC: "nmdc.co.in",
-  NATIONALUM: "nalcoindia.com",
-  BANDHANBNK: "bandhanbank.com",
-  AUBANK: "aubank.in",
-  RBLBANK: "rblbank.com",
-  // Other common stocks
-  SBICARD: "sbicard.com",
-  ACC: "acclimited.com",
-  LICI: "licindia.in",
-  BERGEPAINT: "bergerpaints.com",
+  HAVELLS: "havells.com",
+  INDIGO: "goindigo.in",
+  ZOMATO: "zomato.com",
   PAYTM: "paytm.com",
   NYKAA: "nykaa.com",
-  // Week 1 expansion
-  DALBHARAT: "dfrlab.com",
-  JSWENERGY: "jsw.in",
-  ADANIGREEN: "adanigreenenergy.com",
-  ADANIPOWER: "adanipower.com",
-  ADANITRANS: "adanitransmission.com",
-  POWERMECH: "powermechprojects.com",
-  SUZLON: "suzlon.com",
-  INOXWIND: "inoxwind.com",
-  TTML: "tatateleservices.com",
-  IDEA: "myvi.in",
-  // Week 2 expansion
-  ZYDUSLIFE: "zyduslife.com",
-  MANKIND: "mankindpharma.com",
-  PGHH: "pg.com",
-  GODREJIND: "godrejindustries.com",
-  // Week 3 expansion
-  CENTURYTEX: "centurytextiles.com",
-  GRINFRA: "grinfra.com",
-  KFINTECH: "kfintech.com",
-  CAMS: "camsonline.com",
-  BSOFT: "birlasoft.com",
-  HAPPSTMNDS: "happiest-minds.com",
-  TANLA: "tanla.com",
-  LATENTVIEW: "latentview.com",
-  MASTEK: "mastek.com",
-  ZENSAR: "zensar.com",
-  // Week 4 expansion
-  CUB: "cityunionbank.com",
-  KARURVYSYA: "kvb.co.in",
-  SOUTHBANK: "southindianbank.com",
-  TMB: "tmb.in",
-  EQUITASBNK: "equitasbank.com",
-  APLLTD: "aplltd.com",
-  JBCHEPHARM: "jbcpl.com",
-  GLAXO: "gsk.com",
-  PFIZER: "pfizer.com",
-  PATANJALI: "patanjaliayurved.net",
-  FINPIPE: "finpipe.com",
-  NTPCGREEN: "ntpc.co.in",
+  POLICYBZR: "pbpartners.com",
+  CARTRADE: "cartrade.com",
+  RVNL: "rvnl.org",
+  IRCON: "ircon.org",
+  COALINDIA: "coalindia.in",
+  NTPC: "ntpc.co.in",
+  POWERGRID: "powergrid.in",
+  IOC: "iocl.com",
+  BPCL: "bharatpetroleum.in",
+  GAIL: "gailonline.com",
 };
 
 function normalizeSymbol(symbol: string): string {
   return symbol
-    .replace(/\.NS$/, "")
+    .replace(/\.(NS|BO|L|IN)$/i, "")
     .replace(/-/g, "")
     .toUpperCase();
 }
 
-function getLogoDomain(symbol: string): string | null {
+function getTickerLogoUrl(symbol: string, exchange?: string): string {
   const clean = normalizeSymbol(symbol);
-  return SYMBOL_TO_DOMAIN[clean] || SYMBOL_TO_DOMAIN[symbol.replace(/\.NS$/, "").toUpperCase()] || null;
+  const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".IN";
+  const ticker = `${clean}${suffix}`;
+  if (LOGO_DEV_TOKEN) {
+    return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=128&format=png`;
+  }
+  return `https://img.logo.dev/ticker/${ticker}?size=128&format=png`;
 }
 
-function getLogoUrl(symbol: string): string | null {
-  const domain = getLogoDomain(symbol);
+function getBrandfetchUrl(symbol: string): string | null {
+  const clean = normalizeSymbol(symbol);
+  const domain = SYMBOL_TO_DOMAIN[clean];
   if (!domain) return null;
   return `https://cdn.brandfetch.io/${domain}/w/256/h/256`;
 }
 
-function getFallbackLogoUrl(symbol: string): string | null {
-  const domain = getLogoDomain(symbol);
+function getFaviconUrl(symbol: string): string | null {
+  const clean = normalizeSymbol(symbol);
+  const domain = SYMBOL_TO_DOMAIN[clean];
   if (!domain) return null;
   return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
 }
@@ -263,16 +130,20 @@ type Props = {
   symbol: string;
   size?: number;
   status?: string;
+  exchange?: string;
   className?: string;
 };
 
-export function StockLogo({ symbol, size = 32, status, className }: Props) {
+export function StockLogo({ symbol, size = 32, status, exchange, className }: Props) {
   const [srcLevel, setSrcLevel] = useState(0);
-  const logoUrl = getLogoUrl(symbol);
-  const fallbackUrl = getFallbackLogoUrl(symbol);
-  const initials = symbol.replace(/\.NS$/, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  const currentSrc = srcLevel === 0 ? logoUrl : srcLevel === 1 ? fallbackUrl : null;
+  const tickerUrl = getTickerLogoUrl(symbol, exchange);
+  const brandfetchUrl = getBrandfetchUrl(symbol);
+  const faviconUrl = getFaviconUrl(symbol);
+  const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
+
+  const sources = [tickerUrl, brandfetchUrl, faviconUrl].filter(Boolean) as string[];
+  const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
     return (
@@ -285,12 +156,13 @@ export function StockLogo({ symbol, size = 32, status, className }: Props) {
           width: size,
           height: size,
           borderRadius: size > 28 ? 10 : 6,
-          background: getAvatarColor(status),
+          background: `linear-gradient(135deg, ${getAvatarColor(status)}, ${getAvatarColor(status)}dd)`,
           color: "#fff",
           fontWeight: 700,
           fontSize: size * 0.38,
           flexShrink: 0,
           lineHeight: 1,
+          letterSpacing: "-0.02em",
         }}
       >
         {initials}
@@ -299,12 +171,14 @@ export function StockLogo({ symbol, size = 32, status, className }: Props) {
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- dynamic multi-source logo fallbacks
     <img
       src={currentSrc}
       alt={`${symbol} logo`}
       width={size}
       height={size}
       className={className}
+      loading="lazy"
       onError={() => setSrcLevel((prev) => prev + 1)}
       style={{
         borderRadius: size > 28 ? 10 : 6,

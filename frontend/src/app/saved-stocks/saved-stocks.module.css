@@ -1,0 +1,133 @@
+.page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.sub {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+}
+
+.link {
+  display: inline-block;
+  margin-top: 12px;
+  font-weight: 600;
+  color: var(--emerald);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.sym {
+  font-weight: 800;
+  font-size: 1rem;
+  font-family: var(--font-display);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sym:hover {
+  color: var(--emerald);
+}
+
+.name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.score {
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.status {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--emerald) 16%, transparent);
+  color: var(--emerald);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.secondary {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.secondary:hover {
+  color: var(--emerald);
+}
+
+.remove {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.remove:hover {
+  border-color: var(--red);
+  color: var(--red);
+}

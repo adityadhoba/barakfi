@@ -776,6 +776,7 @@
 .watchlistCard { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
 .watchlistHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .watchlistHeader div { display: grid; gap: 3px; }
+.watchlistPrice { font-size: 0.85rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); font-weight: 600; }
 .orderIntentCard { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); }
 .orderIntentHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
 .orderIntentHeader div { display: grid; gap: 3px; }

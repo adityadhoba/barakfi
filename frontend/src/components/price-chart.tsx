@@ -12,6 +12,26 @@ type Candle = {
 
 type ChartRange = "1mo" | "3mo" | "6mo" | "1y" | "5y";
 
+/**
+ * Yahoo daily OHLC often ends at the prior session close while /market-data/quote
+ * returns regularMarketPrice — the line would otherwise disagree with the hero price.
+ */
+function mergeLiveCloseIntoCandles(candles: Candle[], liveClose: number | null | undefined): Candle[] {
+  if (liveClose == null || !Number.isFinite(liveClose) || liveClose <= 0 || candles.length === 0) {
+    return candles;
+  }
+  const last = candles[candles.length - 1];
+  const next = [...candles];
+  const i = next.length - 1;
+  next[i] = {
+    ...last,
+    close: liveClose,
+    high: Math.max(last.high, liveClose),
+    low: Math.min(last.low, liveClose),
+  };
+  return next;
+}
+
 const RANGES: { label: string; value: ChartRange; interval: string; ariaLabel: string }[] = [
   { label: "1M", value: "1mo", interval: "1d", ariaLabel: "1 month price range" },
   { label: "3M", value: "3mo", interval: "1d", ariaLabel: "3 month price range" },
@@ -20,7 +40,16 @@ const RANGES: { label: string; value: ChartRange; interval: string; ariaLabel: s
   { label: "5Y", value: "5y", interval: "1mo", ariaLabel: "5 year price range" },
 ];
 
-export function PriceChart({ symbol }: { symbol: string }) {
+export function PriceChart({
+  symbol,
+  exchange,
+  /** Same last_price as stock hero / 52w bar when available */
+  liveClose,
+}: {
+  symbol: string;
+  exchange?: string;
+  liveClose?: number | null;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
   const [range, setRange] = useState<ChartRange>("6mo");
@@ -32,7 +61,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
     try {
       setLoading(true);
       setError(false);
-      const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?range=${cfg.value}&interval=${cfg.interval}`);
+      const qs = new URLSearchParams({ range: cfg.value, interval: cfg.interval });
+      if (exchange) qs.set("exchange", exchange);
+      const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?${qs.toString()}`);
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
       return (data.candles || []) as Candle[];
@@ -42,7 +73,7 @@ export function PriceChart({ symbol }: { symbol: string }) {
     } finally {
       setLoading(false);
     }
-  }, [symbol]);
+  }, [symbol, exchange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -60,7 +91,6 @@ export function PriceChart({ symbol }: { symbol: string }) {
       const text = cs.getPropertyValue("--text-secondary").trim() || "#4b5563";
       const line = cs.getPropertyValue("--line").trim() || "#e5e7eb";
       const emerald = cs.getPropertyValue("--emerald").trim() || "#059669";
-      const red = cs.getPropertyValue("--red").trim() || "#dc2626";
 
       // Remove old chart
       if (chartRef.current) {
@@ -113,7 +143,8 @@ export function PriceChart({ symbol }: { symbol: string }) {
 
       const candles = await fetchData(range);
       if (!disposed && candles.length > 0) {
-        const lineData = candles.map((c) => ({ time: c.time, value: c.close }));
+        const merged = mergeLiveCloseIntoCandles(candles, liveClose);
+        const lineData = merged.map((c) => ({ time: c.time, value: c.close }));
         areaSeries.setData(lineData as never[]);
         chart.timeScale().fitContent();
       }
@@ -142,9 +173,9 @@ export function PriceChart({ symbol }: { symbol: string }) {
         chartRef.current = null;
       }
     };
-    // Only re-create chart on symbol change, not range
+    // Re-create when symbol or live snapshot changes (RSC: usually once per navigation)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol]);
+  }, [symbol, liveClose]);
 
   // Handle range changes without recreating chart
   useEffect(() => {
@@ -155,12 +186,13 @@ export function PriceChart({ symbol }: { symbol: string }) {
     (async () => {
       const candles = await fetchData(range);
       if (candles.length > 0) {
-        const lineData = candles.map((c: Candle) => ({ time: c.time, value: c.close }));
+        const merged = mergeLiveCloseIntoCandles(candles, liveClose);
+        const lineData = merged.map((c: Candle) => ({ time: c.time, value: c.close }));
         series.setData(lineData as never[]);
         chartRef.current?.timeScale().fitContent();
       }
     })();
-  }, [range, fetchData]);
+  }, [range, fetchData, liveClose]);
 
   return (
     <div
@@ -183,17 +215,24 @@ export function PriceChart({ symbol }: { symbol: string }) {
           gap: 8,
         }}
       >
-        <span
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "0.95rem",
-            fontWeight: 700,
-            color: "var(--text)",
-            letterSpacing: "-0.01em",
-          }}
-        >
-          Price Chart
-        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              color: "var(--text)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Price Chart
+          </span>
+          {liveClose != null && liveClose > 0 && (
+            <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 500 }}>
+              Last point matches quote snapshot (daily history may lag by a session)
+            </span>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 4 }}>
           {RANGES.map((r) => (
             <button

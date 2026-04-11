@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { WorkspaceShell } from "@/components/workspace-shell";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Portfolio — Barakfi",
-  description: "Track your halal investments, manage your watchlist, and monitor your portfolio — all in one place.",
+  description: "Portfolio workspace is temporarily unavailable while we improve the experience.",
 };
 
 export default function WorkspacePage() {
-  return <WorkspaceShell />;
+  redirect("/");
 }

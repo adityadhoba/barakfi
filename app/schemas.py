@@ -26,6 +26,7 @@ class StockBase(BaseModel):
     country: str = "India"
     data_source: str = "internal_seed"
     is_active: bool = True
+    fundamentals_updated_at: datetime | None = None
 
 
 class StockCreate(StockBase):
@@ -60,6 +61,11 @@ class ScreeningBreakdown(BaseModel):
     cash_and_interest_bearing_to_assets_ratio: float
     fixed_assets_to_total_assets_ratio: float | None = None
     sector_allowed: bool
+    debt_ratio_value: float | None = None
+    debt_ratio_threshold: float | None = None
+    receivables_ratio_value: float | None = None
+    receivables_ratio_threshold: float | None = None
+    cash_ib_ratio_threshold: float | None = None
 
 
 class ConfidenceBullet(BaseModel):
@@ -74,6 +80,7 @@ class ScreeningResult(BaseModel):
     status: str
     reasons: list[str]
     manual_review_flags: list[str]
+    screening_score: int = Field(ge=0, le=100)
     purification_ratio_pct: float | None = None
     active_review_case: "PublicReviewCaseRead | None" = None
     recent_review_cases: list["PublicReviewCaseRead"] = []
@@ -100,6 +107,16 @@ class RuleProfile(BaseModel):
 class RulebookResponse(BaseModel):
     default_profile: str
     profiles: list[RuleProfile]
+
+
+class CheckStockResponse(BaseModel):
+    """Simplified screening for GET /api/check-stock (product language)."""
+
+    name: str
+    status: str = Field(description="Halal | Doubtful | Haram")
+    score: int = Field(ge=0, le=100)
+    summary: str
+    details_available: bool
 
 
 class AuthStrategyResponse(BaseModel):
@@ -139,6 +156,7 @@ class EquityQuoteResponse(BaseModel):
     week_52_low: float | None = None
     source: str
     as_of: str
+    currency: str = "INR"
     disclaimer: str = (
         "Indicative delayed-style data from public sources, not financial advice. "
         "Not an official NSE/BSE redistribution feed."
@@ -488,10 +506,15 @@ class ComplianceRuleVersionRead(BaseModel):
 
 
 class HoldingStockSnapshot(BaseModel):
+    """Nested stock summary for watchlist, holdings, research notes — includes market fields for UI."""
+
     symbol: str
     name: str
     price: float
     sector: str
+    exchange: str = "NSE"
+    currency: str = "INR"
+    country: str = "India"
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -522,6 +545,7 @@ class WatchlistEntryRead(BaseModel):
     notes: str
     added_at: datetime
     stock: HoldingStockSnapshot
+    latest_research_summary: str = ""
     model_config = ConfigDict(from_attributes=True)
 
 

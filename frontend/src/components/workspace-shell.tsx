@@ -11,7 +11,6 @@ import {
   getAuthenticatedAlerts,
   getAuthenticatedWorkspace,
   getBulkScreeningResults,
-  getStocks,
   getWorkspace,
 } from "@/lib/api";
 import { auth, currentUser } from "@clerk/nextjs/server";
@@ -132,9 +131,6 @@ export async function WorkspaceShell() {
     : [];
   const screeningStatuses = screeningResults.map((r) => ({ symbol: r.symbol, status: r.status }));
 
-  const allStocks = await getStocks().catch(() => []);
-
-
   const urgentAlerts = alerts.filter((a) => a.level === "critical" || a.level === "warning");
   const firstName = user.display_name.split(" ")[0];
   const totalHoldings = dashboard.holding_count;
@@ -165,7 +161,12 @@ export async function WorkspaceShell() {
           <div className={ws.metricsRow}>
             <div className={ws.metricChip}>
               <span className={ws.metricChipLabel}>Value</span>
-              <span className={ws.metricChipValue}>{formatCurrency(dashboard.portfolio_market_value)}</span>
+              <span
+                className={ws.metricChipValue}
+                title="Portfolio value uses live last prices where available (same source as charts); mixed-currency totals are approximate in INR."
+              >
+                {formatCurrency(dashboard.portfolio_market_value)}
+              </span>
             </div>
             <div className={ws.metricChip}>
               <span className={ws.metricChipLabel}>Halal</span>

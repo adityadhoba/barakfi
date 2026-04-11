@@ -1,111 +1,113 @@
-"""
-Collections service.
+"""Stock collections service — curated thematic stock baskets."""
 
-Manages curated lists of halal stocks (e.g. "Halal Tech Giants",
-"Shariah Blue Chips India").
-"""
-
+from __future__ import annotations
 from sqlalchemy.orm import Session
-from app.models import Stock, StockCollection, CollectionEntry
+from app.models import Stock, StockCollection, CollectionEntry, utc_now
 
 
-SEED_COLLECTIONS = [
-    {
-        "name": "Halal Tech Giants",
-        "slug": "halal-tech-giants",
-        "description": "Top technology companies that pass Shariah screening across all methodologies.",
-        "icon": "laptop",
-        "is_featured": True,
-        "symbols": ["TCS", "INFY", "WIPRO", "HCLTECH", "AAPL", "MSFT", "GOOGL", "NVDA"],
-    },
-    {
-        "name": "Shariah Blue Chips India",
-        "slug": "shariah-blue-chips-india",
-        "description": "Large-cap Indian stocks compliant with S&P, AAOIFI, and FTSE Shariah methodologies.",
-        "icon": "shield",
-        "is_featured": True,
-        "symbols": ["RELIANCE", "TCS", "INFY", "LT", "SUNPHARMA", "MARUTI", "TITAN", "CIPLA"],
-    },
-    {
-        "name": "Clean Energy Halal",
-        "slug": "clean-energy-halal",
-        "description": "Renewable energy and sustainable companies that meet Shariah compliance standards.",
-        "icon": "leaf",
-        "is_featured": True,
-        "symbols": ["ADANIGREEN", "TATAPOWER", "SJVN", "NHPC", "SUZLON", "INOXWIND", "NEE"],
-    },
-    {
-        "name": "Healthcare & Pharma Halal",
-        "slug": "healthcare-pharma-halal",
-        "description": "Shariah-compliant pharmaceutical and healthcare companies serving global markets.",
-        "icon": "heart",
-        "is_featured": True,
-        "symbols": ["SUNPHARMA", "CIPLA", "DRREDDY", "DIVISLAB", "LUPIN", "JNJ", "ABT", "TMO"],
-    },
-    {
-        "name": "Global Consumer Staples",
-        "slug": "global-consumer-staples",
-        "description": "Consumer goods companies with steady revenue and Shariah compliance worldwide.",
-        "icon": "shopping-bag",
-        "is_featured": False,
-        "symbols": ["HINDUNILVR", "DABUR", "MARICO", "PG", "KO", "PEP", "CL", "MDLZ", "NESTLEIND"],
-    },
-    {
-        "name": "US Halal Large Caps",
-        "slug": "us-halal-large-caps",
-        "description": "S&P 500 constituents screened for Shariah compliance using multiple methodologies.",
-        "icon": "flag",
-        "is_featured": True,
-        "symbols": ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "JNJ", "PG", "KO", "PEP", "TMO"],
-    },
-    {
-        "name": "Infrastructure & Industrials",
-        "slug": "infrastructure-industrials",
-        "description": "Companies building infrastructure and industrial capacity while remaining Shariah compliant.",
-        "icon": "building",
-        "is_featured": False,
-        "symbols": ["LT", "SIEMENS", "ABB", "CUMMINSIND", "HON", "CAT", "GE", "DE"],
-    },
-    {
-        "name": "Dividend Champions Halal",
-        "slug": "dividend-champions-halal",
-        "description": "High dividend yield stocks that pass Shariah screening — ideal for income-focused halal investors.",
-        "icon": "coins",
-        "is_featured": False,
-        "symbols": ["ITC", "COALINDIA", "POWERGRID", "NTPC", "XOM", "CVX", "SO", "DUK"],
-    },
-]
+def get_collections(db: Session) -> list[dict]:
+    collections = (
+        db.query(StockCollection)
+        .filter(StockCollection.is_active.is_(True))
+        .order_by(StockCollection.display_order.asc())
+        .all()
+    )
+    result = []
+    for c in collections:
+        entry_count = db.query(CollectionEntry).filter(CollectionEntry.collection_id == c.id).count()
+        result.append({
+            "id": c.id,
+            "name": c.name,
+            "slug": c.slug,
+            "description": c.description,
+            "icon": c.icon,
+            "stock_count": entry_count,
+        })
+    return result
+
+
+def get_collection_detail(db: Session, slug: str) -> dict | None:
+    collection = db.query(StockCollection).filter(StockCollection.slug == slug, StockCollection.is_active.is_(True)).first()
+    if not collection:
+        return None
+
+    entries = (
+        db.query(CollectionEntry)
+        .filter(CollectionEntry.collection_id == collection.id)
+        .order_by(CollectionEntry.display_order.asc())
+        .all()
+    )
+
+    stocks = []
+    for entry in entries:
+        stock = db.query(Stock).filter(Stock.id == entry.stock_id).first()
+        if stock:
+            stocks.append({
+                "symbol": stock.symbol,
+                "name": stock.name,
+                "sector": stock.sector,
+                "exchange": stock.exchange,
+                "price": stock.price,
+                "market_cap": stock.market_cap,
+                "country": stock.country,
+                "currency": stock.currency,
+            })
+
+    return {
+        "id": collection.id,
+        "name": collection.name,
+        "slug": collection.slug,
+        "description": collection.description,
+        "icon": collection.icon,
+        "stocks": stocks,
+    }
 
 
 def seed_collections(db: Session) -> int:
-    """Seed curated collections if not already present. Returns count seeded."""
-    existing = db.query(StockCollection).count()
-    if existing > 0:
-        return 0
+    """Seed collections from app/data/collections.py. Returns count of collections seeded."""
+    from app.data.collections import COLLECTIONS
 
-    count = 0
-    for coll_data in SEED_COLLECTIONS:
-        coll = StockCollection(
-            name=coll_data["name"],
-            slug=coll_data["slug"],
-            description=coll_data["description"],
-            icon=coll_data["icon"],
-            is_featured=coll_data["is_featured"],
-        )
-        db.add(coll)
-        db.flush()
+    seeded = 0
+    for i, coll_data in enumerate(COLLECTIONS):
+        existing = db.query(StockCollection).filter(StockCollection.slug == coll_data["slug"]).first()
+        if existing:
+            existing.name = coll_data["name"]
+            existing.description = coll_data["description"]
+            existing.icon = coll_data["icon"]
+            existing.display_order = i
+            existing.is_featured = bool(coll_data.get("is_featured", False))
+            existing.is_active = True
+            collection = existing
+        else:
+            collection = StockCollection(
+                name=coll_data["name"],
+                slug=coll_data["slug"],
+                description=coll_data["description"],
+                icon=coll_data["icon"],
+                display_order=i,
+                is_featured=bool(coll_data.get("is_featured", False)),
+                is_active=True,
+            )
+            db.add(collection)
+            db.flush()
+
+        # Idempotent: reset entries and rebuild
+        db.query(CollectionEntry).filter(CollectionEntry.collection_id == collection.id).delete()
 
         from app.services.stock_lookup import resolve_stock
 
-        for sym in coll_data["symbols"]:
+        for j, sym in enumerate(coll_data["symbols"]):
             stock = resolve_stock(db, sym, "NSE", active_only=True) or resolve_stock(db, sym, None, active_only=True)
+            if not stock and coll_data["slug"].startswith("ftse100"):
+                stock = db.query(Stock).filter(Stock.symbol == f"{sym}.L").first()
             if stock:
-                entry = CollectionEntry(
-                    collection_id=coll.id,
+                db.add(CollectionEntry(
+                    collection_id=collection.id,
                     stock_id=stock.id,
-                )
-                db.add(entry)
-        count += 1
+                    display_order=j,
+                    added_at=utc_now(),
+                ))
+        seeded += 1
 
     db.commit()
-    return count
+    return seeded

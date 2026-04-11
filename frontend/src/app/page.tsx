@@ -1,13 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
 import { HomeDashboard } from "@/components/home-dashboard";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const { userId } = await auth();
+export default function Home() {
   return (
     <main className="shellPage">
-      <HomeDashboard isSignedIn={Boolean(userId)} />
+      <HomeDashboard />
     </main>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
-import { StockLogo } from "@/components/stock-logo";
+import { HalalStocksPriceTable } from "@/components/halal-stocks-price-table";
 import styles from "./halal-stocks.module.css";
 
 export const dynamic = "force-dynamic";
@@ -34,27 +34,22 @@ export const metadata: Metadata = {
   },
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
-}
-
 export default async function HalalStocksPage() {
   const stocks = await getStocks();
   const symbols = stocks.map((s) => s.symbol);
   const screeningResults = await getBulkScreeningResults(symbols);
   const screeningMap = new Map(screeningResults.map((r) => [r.symbol, r]));
 
-  const halalStocks = stocks
+  const indian = stocks.filter((s) => {
+    const ex = (s.exchange || "").toUpperCase();
+    return ex === "NSE" || ex === "BSE";
+  });
+
+  const halalStocks = indian
     .filter((s) => screeningMap.get(s.symbol)?.status === "HALAL")
     .sort((a, b) => b.market_cap - a.market_cap);
 
-  const reviewStocks = stocks
+  const reviewStocks = indian
     .filter((s) => screeningMap.get(s.symbol)?.status === "CAUTIOUS")
     .sort((a, b) => b.market_cap - a.market_cap);
 
@@ -98,9 +93,9 @@ export default async function HalalStocksPage() {
           Halal Stocks in India <span className={styles.year}>2026</span>
         </h1>
         <p className={styles.subtitle}>
-          Complete list of {halalStocks.length} Shariah-compliant stocks on India&apos;s NSE.
-          Screened using S&amp;P Shariah methodology with real-time financial data.
-          {reviewStocks.length > 0 && ` Plus ${reviewStocks.length} cautious stocks.`}
+          Curated list of {halalStocks.length} Shariah-compliant NSE/BSE listings (India).
+          Screened using S&amp;P Shariah methodology with live data. US and UK listings are in the screener.
+          {reviewStocks.length > 0 ? ` ${reviewStocks.length} cautious NSE/BSE names need extra verification.` : ""}
         </p>
         <div className={styles.ctas}>
           <Link href="/screener" className={styles.ctaPrimary}>Open Full Screener</Link>
@@ -144,42 +139,7 @@ export default async function HalalStocksPage() {
       {/* Halal Stocks Table */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>All Halal-Compliant Stocks</h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Company</th>
-                <th>Sector</th>
-                <th className={styles.thRight}>Price</th>
-                <th className={styles.thRight}>Market Cap</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {halalStocks.map((s, i) => (
-                <tr key={s.symbol}>
-                  <td className={styles.tdNum}>{i + 1}</td>
-                  <td>
-                    <Link href={`/stocks/${encodeURIComponent(s.symbol)}`} className={styles.stockLink}>
-                      <StockLogo symbol={s.symbol} size={28} status="HALAL" />
-                      <div className={styles.stockInfo}>
-                        <strong>{s.name}</strong>
-                        <span>{s.symbol}</span>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className={styles.tdSector}>{s.sector}</td>
-                  <td className={styles.tdRight}>{formatPrice(s.price)}</td>
-                  <td className={styles.tdRight}>{formatMcap(s.market_cap)}</td>
-                  <td>
-                    <span className={styles.halalBadge}>Halal</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <HalalStocksPriceTable stocks={halalStocks} />
       </section>
 
       {/* SEO Content Section */}

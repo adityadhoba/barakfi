@@ -41,9 +41,11 @@
 }
 
 .tabIcon {
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
 }
-
 /* ── Tab Content ── */
 .tabContent {
   min-height: 200px;
@@ -63,9 +65,12 @@
 }
 
 .comingSoonIcon {
-  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 14px;
-  opacity: 0.6;
+  color: var(--text-tertiary);
+  opacity: 0.85;
 }
 
 .comingSoonTitle {
@@ -107,3 +112,55 @@
     padding: 32px 16px;
   }
 }
+
+
+.mfPanel {
+  padding: 8px 0 24px;
+  max-width: 560px;
+}
+
+.mfTitle {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--text);
+}
+
+.mfDesc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 16px;
+}
+
+.mfLinks {
+  margin: 0 0 16px;
+  padding-left: 1.15rem;
+  font-size: 0.88rem;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.mfLinks a {
+  font-weight: 700;
+  color: var(--emerald);
+  text-decoration: none;
+}
+
+.mfLinks a:hover {
+  text-decoration: underline;
+}
+
+.mfHint {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.mfFootnote {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  line-height: 1.5;
+}
+

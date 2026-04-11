@@ -12,27 +12,35 @@ import {
   getAuthenticatedWatchlist,
   getAuthenticatedWorkspace,
   getBulkScreeningResults,
-  getComplianceHistory,
   getEquityQuote,
-  getInvestmentMetrics,
-  getMultiScreeningResult,
-  getScreeningResult,
-  getStock,
   getStocks,
+  type EquityQuote,
   type ScreeningResult,
+  type WorkspaceBundle,
 } from "@/lib/api";
+import { fetchMultiScreeningForPage, fetchStockAndScreenForPage } from "@/lib/stock-detail-fetch";
+import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
+import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { MethodologyComparison } from "@/components/methodology-comparison";
-import { ComplianceRating } from "@/components/compliance-rating";
-import { ComplianceTimeline } from "@/components/compliance-timeline";
-import { InvestmentGauge } from "@/components/investment-gauge";
-import { CountryBadge } from "@/components/country-badge";
+import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import {
+  buildMethodologyTableRowsFromMulti,
+  buildPrimaryRatioTableRows,
+  methodologyTableCaption,
+} from "@/lib/stock-detail-screening-tables";
+import { displayCountryForStock } from "@/lib/stock-display";
+import {
+  capTierLabel,
+  formatFundamentalAmount,
+  formatFundamentalsAsOfLine,
+  fundamentalsUnitNote,
+} from "@/lib/fundamentals-format";
 
 export async function generateMetadata({
   params,
@@ -53,13 +61,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
-};
-const STATUS_HERO: Record<string, string> = {
-  HALAL: "halal",
-  CAUTIOUS: "review",
-  NON_COMPLIANT: "fail",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 const CONFIDENCE_ICONS: Record<string, string> = {
@@ -69,12 +72,13 @@ const CONFIDENCE_ICONS: Record<string, string> = {
 };
 
 /** Order matches backend `ALL_PROFILE_CODES` (halal_service.PROFILES). */
-const METHODOLOGY_CODES = ["sp_shariah", "aaoifi", "ftse_maxis"] as const;
+const METHODOLOGY_CODES = ["sp_shariah", "aaoifi", "ftse_maxis", "khatkhatay"] as const;
 
 const METHODOLOGY_LABEL: Record<(typeof METHODOLOGY_CODES)[number], string> = {
   sp_shariah: "S&P Shariah",
   aaoifi: "AAOIFI",
   ftse_maxis: "FTSE Yasaar",
+  khatkhatay: "Khatkhatay norms",
 };
 
 /** Curated “popular” tickers for “People also checked” (merged with live screening when available). */
@@ -89,14 +93,50 @@ const PEOPLE_ALSO_SYMBOLS = [
   "BHARTIARTL",
 ] as const;
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
+/** Coerce API numerics; avoids render crashes if JSON has string numbers. */
+function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
+  if (!raw) return null;
+  const n = (v: unknown): number | null => {
+    if (v == null) return null;
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim() !== "") {
+      const x = Number(v);
+      if (Number.isFinite(x)) return x;
+    }
+    return null;
+  };
+  const last = n(raw.last_price);
+  if (last == null || last <= 0) return null;
+  return {
+    ...raw,
+    last_price: last,
+    previous_close: n(raw.previous_close),
+    change: n(raw.change),
+    change_percent: n(raw.change_percent),
+    day_high: n(raw.day_high),
+    day_low: n(raw.day_low),
+    volume: n(raw.volume),
+    week_52_high: n(raw.week_52_high),
+    week_52_low: n(raw.week_52_low),
+  };
 }
 
-function formatMcap(value: number) {
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatCurrency(value);
+function formatCurrency(value: number, currency: string = "INR") {
+  const cur = currency || "INR";
+  const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
+  return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(value);
+}
+
+function formatVolumeShorthand(volume: number, currency: string) {
+  const cur = currency || "INR";
+  if (cur === "INR") {
+    if (volume >= 1e7) return `${(volume / 1e7).toFixed(2)} Cr`;
+    return `${(volume / 1e5).toFixed(1)} L`;
+  }
+  if (volume >= 1e9) return `${(volume / 1e9).toFixed(2)}B`;
+  if (volume >= 1e6) return `${(volume / 1e6).toFixed(2)}M`;
+  if (volume >= 1e3) return `${(volume / 1e3).toFixed(1)}K`;
+  return String(Math.round(volume));
 }
 
 function formatRatio(value: number) {
@@ -174,19 +214,32 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [stock, screening, watchlist, workspace, liveQuote, allStocks, multiScreening, complianceHistory, investmentMetrics] = await Promise.all([
-    getStock(symbol),
-    getScreeningResult(symbol),
+  const [detail, watchlist, allStocks, multiScreening] = await Promise.all([
+    fetchStockAndScreenForPage(symbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
-    token ? getAuthenticatedWorkspace(token, actor).catch(() => null) : Promise.resolve(null),
-    getEquityQuote(symbol, "auto_india"),
     getStocks(),
-    getMultiScreeningResult(symbol).catch(() => null),
-    getComplianceHistory(symbol),
-    getInvestmentMetrics(symbol),
+    fetchMultiScreeningForPage(symbol),
   ]);
 
-  if (!stock || !screening) notFound();
+  let workspace: WorkspaceBundle | null = null;
+  if (token) {
+    try {
+      workspace = await getAuthenticatedWorkspace(token, actor);
+    } catch {
+      workspace = null;
+    }
+  }
+
+  if (detail.kind === "not_found") {
+    notFound();
+  }
+  if (detail.kind === "error") {
+    return <StockDetailError message={detail.message} />;
+  }
+
+  const { stock, screening } = detail;
+
+  const liveQuote = sanitizeEquityQuote(await getEquityQuote(symbol, "auto_global", stock.exchange));
 
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;
@@ -203,17 +256,28 @@ export default async function StockDetailPage({
     { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
   ];
 
+  const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
+  const methodologyRowsForCollapsible = multiScreening
+    ? buildMethodologyTableRowsFromMulti(multiScreening)
+    : null;
+  const methodologyCaptionForCollapsible = multiScreening
+    ? methodologyTableCaption(multiScreening)
+    : null;
+
+  const cur = stock.currency || "INR";
+  const quoteCur = liveQuote?.currency?.trim() || cur;
+  const displayCountry = displayCountryForStock(stock.exchange, stock.country);
   const financials = [
-    { label: "Market Cap", value: formatMcap(stock.market_cap) },
-    { label: "36M Avg Market Cap", value: formatMcap(stock.average_market_cap_36m) },
-    { label: "Revenue", value: formatCurrency(stock.revenue) },
-    { label: "Total Business Income", value: formatCurrency(stock.total_business_income) },
-    { label: "Interest Income", value: formatCurrency(stock.interest_income) },
-    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income) },
-    { label: "Total Debt", value: formatCurrency(stock.debt) },
-    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable) },
-    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets) },
-    { label: "Total Assets", value: formatCurrency(stock.total_assets) },
+    { label: "Market Cap", value: formatFundamentalAmount(stock.market_cap, cur) },
+    { label: "36M Avg Market Cap", value: formatFundamentalAmount(stock.average_market_cap_36m, cur) },
+    { label: "Revenue", value: formatCurrency(stock.revenue, cur) },
+    { label: "Total Business Income", value: formatCurrency(stock.total_business_income, cur) },
+    { label: "Interest Income", value: formatCurrency(stock.interest_income, cur) },
+    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income, cur) },
+    { label: "Total Debt", value: formatCurrency(stock.debt, cur) },
+    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable, cur) },
+    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets, cur) },
+    { label: "Total Assets", value: formatCurrency(stock.total_assets, cur) },
   ];
 
   // Similar stocks from the same sector (excluding current)
@@ -256,6 +320,7 @@ export default async function StockDetailPage({
   const peopleBulk = mergedScreenings;
 
   const scoreFromScreening = (sc: ScreeningResult) => {
+    if (typeof sc.screening_score === "number") return sc.screening_score;
     const bb = sc.breakdown;
     return calculateComplianceScore(
       bb.debt_to_36m_avg_market_cap_ratio,
@@ -285,15 +350,17 @@ export default async function StockDetailPage({
   for (const s of popularOrdered) pushPeopleAlso(s);
   for (const s of topByMcapSymbols) pushPeopleAlso(s);
 
-  // Calculate compliance score
-  const complianceScore = calculateComplianceScore(
-    b.debt_to_36m_avg_market_cap_ratio,
-    b.debt_to_market_cap_ratio,
-    b.non_permissible_income_ratio,
-    b.interest_income_ratio,
-    b.receivables_to_market_cap_ratio,
-    b.cash_and_interest_bearing_to_assets_ratio
-  );
+  const complianceScore =
+    typeof screening.screening_score === "number"
+      ? screening.screening_score
+      : calculateComplianceScore(
+          b.debt_to_36m_avg_market_cap_ratio,
+          b.debt_to_market_cap_ratio,
+          b.non_permissible_income_ratio,
+          b.interest_income_ratio,
+          b.receivables_to_market_cap_ratio,
+          b.cash_and_interest_bearing_to_assets_ratio,
+        );
 
   const confidenceBullets = screening.confidence_bullets ?? [];
 
@@ -398,24 +465,20 @@ export default async function StockDetailPage({
             <div className={styles.stockMeta}>
               <span className={styles.stockMetaChip}>{stock.exchange}</span>
               <span className={styles.stockMetaChip}>{stock.sector}</span>
-              <span className={styles.stockMetaChip}>{stock.country}</span>
+              <span className={styles.stockMetaChip}>{displayCountry}</span>
             </div>
             <div className={styles.stockTitleRow}>
-              <StockLogo symbol={stock.symbol} size={44} status={screening.status} />
+              <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
               <div>
                 <h1 className={styles.stockTitle}>{stock.name}</h1>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                    {STATUS_LABELS[screening.status] || screening.status}
-                  </span>
-                  <ComplianceRating rating={(screening as unknown as Record<string, unknown>).compliance_rating as number | null} size={16} />
-                  <CountryBadge exchange={stock.exchange} size="md" />
-                </div>
+                <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                  {STATUS_LABELS[screening.status] || screening.status}
+                </span>
               </div>
             </div>
             <div className={styles.stockMeta}>
               <span className={styles.stockPrice}>
-                {formatCurrency(liveQuote?.last_price ?? stock.price)}
+                {formatCurrency(liveQuote?.last_price ?? stock.price, quoteCur)}
               </span>
             </div>
             {liveQuote && (
@@ -431,16 +494,16 @@ export default async function StockDetailPage({
                   </span>
                 )}
                 {liveQuote.change_percent == null && liveQuote.change != null && (
-                  <span className={styles.quoteChangeUp}>&Delta; {formatCurrency(liveQuote.change)}</span>
+                  <span className={styles.quoteChangeUp}>&Delta; {formatCurrency(liveQuote.change, quoteCur)}</span>
                 )}
                 {" · "}
                 Day {liveQuote.day_low != null && liveQuote.day_high != null
-                  ? `${formatCurrency(liveQuote.day_low)} – ${formatCurrency(liveQuote.day_high)}`
+                  ? `${formatCurrency(liveQuote.day_low, quoteCur)} – ${formatCurrency(liveQuote.day_high, quoteCur)}`
                   : "range n/a"}
                 {liveQuote.volume != null && (
                   <>
                     {" · "}
-                    Vol {(liveQuote.volume / 1e5).toFixed(1)}L
+                    Vol {formatVolumeShorthand(liveQuote.volume, quoteCur)}
                   </>
                 )}
                 {" · "}
@@ -621,15 +684,15 @@ export default async function StockDetailPage({
         <div className={styles.keyMetricsStrip}>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Market Cap</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.market_cap)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Revenue</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.revenue)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Total Debt</span>
-            <span className={styles.keyMetricValue}>{formatMcap(stock.debt)}</span>
+            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
           </div>
           <div className={styles.keyMetricCard}>
             <span className={styles.keyMetricLabel}>Debt / Mcap</span>
@@ -668,10 +731,10 @@ export default async function StockDetailPage({
             <span className={styles.categoryIcon} style={{ color: "#3b82f6" }}>&#x25B2;</span>
             <div className={styles.categoryContent}>
               <span className={styles.categoryTitle}>
-                {stock.market_cap >= 100000 ? "Large Cap" : stock.market_cap >= 20000 ? "Mid Cap" : "Small Cap"} &rsaquo;
+                {capTierLabel(stock.market_cap, cur)} &rsaquo;
               </span>
               <span className={styles.categorySub}>
-                Market cap of {formatMcap(stock.market_cap)}
+                Market cap {formatFundamentalAmount(stock.market_cap, cur)} (size band is approximate)
               </span>
             </div>
           </div>
@@ -693,7 +756,11 @@ export default async function StockDetailPage({
 
         {/* Price Chart */}
         <div style={{ marginBottom: 28 }}>
-          <PriceChart symbol={stock.symbol} />
+          <PriceChart
+            symbol={stock.symbol}
+            exchange={stock.exchange}
+            liveClose={liveQuote?.last_price ?? stock.price}
+          />
         </div>
 
         {/* 52-Week Range Visual + Volume Summary */}
@@ -727,9 +794,9 @@ export default async function StockDetailPage({
                   />
                 </div>
                 <div className={styles.rangeBarFooter}>
-                  <span>{formatCurrency(liveQuote.week_52_low!)}</span>
-                  <span className={styles.rangeBarCurrent}>{formatCurrency(liveQuote.last_price ?? stock.price)}</span>
-                  <span>{formatCurrency(liveQuote.week_52_high!)}</span>
+                  <span>{formatCurrency(liveQuote.week_52_low!, quoteCur)}</span>
+                  <span className={styles.rangeBarCurrent}>{formatCurrency(liveQuote.last_price ?? stock.price, quoteCur)}</span>
+                  <span>{formatCurrency(liveQuote.week_52_high!, quoteCur)}</span>
                 </div>
               </div>
             )}
@@ -738,28 +805,26 @@ export default async function StockDetailPage({
               {liveQuote.week_52_low != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>52-Week Low</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.week_52_high != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>52-Week High</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.previous_close != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>Prev Close</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close)}</span>
+                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close, quoteCur)}</span>
                 </div>
               )}
               {liveQuote.volume != null && (
                 <div className={styles.financialCard}>
                   <span className={styles.financialCardLabel}>Volume</span>
                   <span className={styles.financialCardValue}>
-                    {liveQuote.volume >= 1e7
-                      ? `${(liveQuote.volume / 1e7).toFixed(2)} Cr`
-                      : `${(liveQuote.volume / 1e5).toFixed(1)} L`}
+                    {formatVolumeShorthand(liveQuote.volume, quoteCur)}
                   </span>
                 </div>
               )}
@@ -767,10 +832,11 @@ export default async function StockDetailPage({
           </div>
         )}
 
-        {/* Multi-Methodology Comparison */}
-        {multiScreening && (
-          <MethodologyComparison data={multiScreening} />
-        )}
+        <StockDetailTablesCollapsible
+          ratioRows={ratioRowsForCollapsible}
+          methodologyCaption={methodologyCaptionForCollapsible}
+          methodologyRows={methodologyRowsForCollapsible}
+        />
 
         {/* Tabbed Content: Compliance | Financials | Actions */}
         <StockTabs>
@@ -850,6 +916,24 @@ export default async function StockDetailPage({
 
 
             </div>
+
+            <div style={{
+              marginTop: 16,
+              padding: "12px 16px",
+              borderRadius: "var(--radius-lg)",
+              background: "var(--bg-soft)",
+              border: "1px solid var(--line)",
+              fontSize: "0.75rem",
+              color: "var(--text-tertiary)",
+              lineHeight: 1.6,
+            }}>
+              Screening results indicate whether this stock meets specific methodology criteria.
+              They do not constitute a fatwa or religious ruling.
+              Consult a qualified Shariah scholar for definitive guidance.{" "}
+              <Link href="/methodology" style={{ color: "var(--emerald)", fontWeight: 600 }}>
+                View methodology
+              </Link>
+            </div>
           </div>
 
           {/* Tab 2: Financials */}
@@ -885,39 +969,27 @@ export default async function StockDetailPage({
                     <td>Data source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
                   </tr>
+                  <tr>
+                    <td>Fundamentals updated</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.88rem" }}>
+                      {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ?? (
+                        <span style={{ fontStyle: "italic" }}>Not recorded — run your fundamentals sync (e.g. fetch_real_data)</span>
+                      )}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
+                      {fundamentalsUnitNote(cur)}{" "}
+                      Fundamentals are derived from public market data (Yahoo Finance via our pipeline) and refreshed on a periodic schedule.
+                      They are indicative and may lag; do not use as the sole basis for investment decisions.
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
-            {/* Investment Metrics */}
-            <div className={styles.sectionHeading} style={{ marginTop: 24 }}>
-              <h2 className={styles.sectionTitle}>Investment Checklist</h2>
-              <p className={styles.sectionSub}>Key investment metrics for this stock</p>
-            </div>
-            <div style={{
-              display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
-              gap: 16, padding: 20, background: "var(--bg-elevated)",
-              borderRadius: "var(--radius-xl)", border: "1px solid var(--line)", marginBottom: 28,
-            }}>
-              <InvestmentGauge label="Expected Return" value={investmentMetrics.expected_return} suffix="%" min={-20} max={40} thresholds={{ good: 10, warn: 0 }} />
-              <InvestmentGauge label="Volatility" value={investmentMetrics.volatility} suffix="%" min={0} max={60} thresholds={{ good: 20, warn: 35 }} />
-              <InvestmentGauge label="Sharpe Ratio" value={investmentMetrics.sharpe_ratio} min={-1} max={3} thresholds={{ good: 1, warn: 0.5 }} />
-              <InvestmentGauge label="Beta" value={investmentMetrics.beta} min={0} max={2} thresholds={{ good: 0.8, warn: 1.2 }} />
-              <InvestmentGauge label="Div Yield" value={investmentMetrics.dividend_yield} suffix="%" min={0} max={8} thresholds={{ good: 2, warn: 1 }} />
-              <InvestmentGauge label="P/E Ratio" value={investmentMetrics.pe_ratio} min={0} max={60} thresholds={{ good: 20, warn: 30 }} />
-            </div>
 
-            {/* Compliance History */}
-            <div className={styles.sectionHeading} style={{ marginTop: 24 }}>
-              <h2 className={styles.sectionTitle}>Compliance History</h2>
-              <p className={styles.sectionSub}>Status changes over time</p>
-            </div>
-            <div style={{
-              padding: 20, background: "var(--bg-elevated)",
-              borderRadius: "var(--radius-xl)", border: "1px solid var(--line)",
-            }}>
-              <ComplianceTimeline history={complianceHistory} />
-            </div>
+
           </div>
 
           {/* Tab 3: Research */}
@@ -956,40 +1028,7 @@ export default async function StockDetailPage({
                 {sameSecStocks.length > 0 ? `Other stocks in ${stock.sector}` : "Other stocks to explore"}
               </p>
             </div>
-            <div className={styles.similarGrid}>
-              {similarStocks.map((s, idx) => {
-                const peerData = peerComparison[idx];
-                const peerQuote = liveQuote; // Note: in production, you'd fetch quotes for all peers
-                return (
-                  <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
-                    <div className={styles.similarCardTop}>
-                      <StockLogo symbol={s.symbol} size={34} status={peerData?.status} />
-                      <div className={styles.similarIdentity}>
-                        <span className={styles.similarSymbol}>{s.symbol}</span>
-                        <span className={styles.similarName}>{s.name}</span>
-                      </div>
-                      {peerData && (
-                        <span className={`${styles.badge} ${styles[STATUS_BADGE[peerData.status] || "badgeReview"]} ${styles.similarBadge}`}>
-                          {STATUS_LABELS[peerData.status] || peerData.status}
-                        </span>
-                      )}
-                    </div>
-                    <div className={styles.similarCardBottom}>
-                      <div>
-                        <span className={styles.similarPrice}>{formatCurrency(s.price)}</span>
-                        {peerQuote?.change_percent != null && (
-                          <span className={peerQuote.change_percent >= 0 ? styles.quoteChangeUp : styles.quoteChangeDown} style={{ fontSize: "0.75rem", marginLeft: 4 }}>
-                            {peerQuote.change_percent >= 0 ? "+" : ""}
-                            {peerQuote.change_percent.toFixed(2)}%
-                          </span>
-                        )}
-                      </div>
-                      <span className={styles.similarMcap}>{formatMcap(s.market_cap)}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <SimilarStocksQuotes peers={similarStocks} peerComparison={peerComparison} />
           </>
         )}
       </div>

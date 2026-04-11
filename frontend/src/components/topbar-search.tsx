@@ -3,6 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo } from "react";
 import { StockLogo } from "@/components/stock-logo";
+import { useMobileNav } from "@/components/mobile-nav-context";
+import { useBatchQuotes } from "@/hooks/use-batch-quotes";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 
 type StockHit = {
   symbol: string;
@@ -10,6 +14,8 @@ type StockHit = {
   sector: string;
   price: number;
   market_cap?: number;
+  exchange?: string;
+  currency?: string;
 };
 
 const RECENT_KEY = "barakfi_recent_searches";
@@ -34,16 +40,9 @@ function addRecentSearch(symbol: string) {
   } catch { /* silent */ }
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export function TopbarSearch() {
   const router = useRouter();
+  const { searchOpen, closeSearch } = useMobileNav();
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);
@@ -66,7 +65,9 @@ export function TopbarSearch() {
             name: s.name,
             sector: s.sector,
             price: s.price,
-            market_cap: (s as Record<string, unknown>).market_cap as number | undefined,
+            market_cap: s.market_cap,
+            exchange: s.exchange,
+            currency: s.currency,
           }))
         );
       }
@@ -74,19 +75,19 @@ export function TopbarSearch() {
   }, []);
 
   const q = deferredValue.trim().toLowerCase();
-  const filtered =
-    q.length > 0
-      ? stocks
-          .filter(
-            (s) =>
-              s.symbol.toLowerCase().includes(q) ||
-              s.name.toLowerCase().includes(q) ||
-              s.sector.toLowerCase().includes(q)
-          )
-          .slice(0, 8)
-      : [];
+  const filtered = useMemo(() => {
+    if (q.length === 0) return [];
+    return stocks
+      .filter(
+        (s) =>
+          s.symbol.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          s.sector.toLowerCase().includes(q)
+      )
+      .slice(0, 8);
+  }, [q, stocks]);
 
-  const recentSymbols = useMemo(() => getRecentSearches(), [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const recentSymbols = useMemo(() => getRecentSearches(), [open, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   const recentStocks = useMemo(() => {
     if (!stocks.length) return [];
     return recentSymbols
@@ -101,12 +102,48 @@ export function TopbarSearch() {
       .slice(0, 5);
   }, [stocks]);
 
-  const showEmpty = open && q.length === 0 && stocks.length > 0;
-  const showResults = open && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
+  const showEmpty = (open || searchOpen) && q.length === 0 && stocks.length > 0;
+  const showResults = (open || searchOpen) && (filtered.length > 0 || (q.length > 0 && stocks.length > 0));
   const showDropdown = showEmpty || showResults;
 
-  const displayItems = q.length > 0 ? filtered : [];
-  const allDropdownItems = q.length > 0 ? displayItems : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))];
+  const dropdownQuoteSymbols = useMemo(() => {
+    if (!showDropdown || stocks.length === 0) return [];
+    if (q.length > 0) return filtered.map((s) => s.symbol);
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const s of recentStocks) {
+      if (!seen.has(s.symbol)) {
+        seen.add(s.symbol);
+        out.push(s.symbol);
+      }
+    }
+    for (const s of trendingStocks) {
+      if (!seen.has(s.symbol)) {
+        seen.add(s.symbol);
+        out.push(s.symbol);
+      }
+    }
+    return out;
+  }, [showDropdown, stocks.length, q.length, filtered, recentStocks, trendingStocks]);
+
+  const searchExchangeBySymbol = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const sym of dropdownQuoteSymbols) {
+      const row = stocks.find((s) => s.symbol === sym);
+      if (row) m[sym] = exchangeForBatchQuote(row.exchange, row.currency);
+    }
+    return m;
+  }, [dropdownQuoteSymbols, stocks]);
+
+  const searchQuotes = useBatchQuotes(dropdownQuoteSymbols, searchExchangeBySymbol);
+
+  const allDropdownItems = useMemo(
+    () =>
+      q.length > 0
+        ? filtered
+        : [...recentStocks, ...trendingStocks.filter((t) => !recentSymbols.includes(t.symbol))],
+    [q.length, filtered, recentStocks, trendingStocks, recentSymbols]
+  );
 
   const navigate = useCallback(
     (symbol: string) => {
@@ -114,10 +151,11 @@ export function TopbarSearch() {
       setValue("");
       setOpen(false);
       setFocusIdx(-1);
+      closeSearch();
       inputRef.current?.blur();
       router.push(`/stocks/${encodeURIComponent(symbol)}`);
     },
-    [router]
+    [router, closeSearch]
   );
 
   const handleSubmit = useCallback(
@@ -131,11 +169,12 @@ export function TopbarSearch() {
       if (trimmed) {
         setValue("");
         setOpen(false);
+        closeSearch();
         inputRef.current?.blur();
         router.push(`/screener?q=${encodeURIComponent(trimmed)}`);
       }
     },
-    [value, router, focusIdx, allDropdownItems, navigate]
+    [value, router, focusIdx, allDropdownItems, navigate, closeSearch]
   );
 
   const handleKeyDown = useCallback(
@@ -149,10 +188,11 @@ export function TopbarSearch() {
       } else if (e.key === "Escape") {
         setOpen(false);
         setFocusIdx(-1);
+        closeSearch();
         inputRef.current?.blur();
       }
     },
-    [allDropdownItems.length]
+    [allDropdownItems.length, closeSearch]
   );
 
   useEffect(() => {
@@ -171,6 +211,19 @@ export function TopbarSearch() {
   }, [deferredValue]);
 
   useEffect(() => {
+    if (!searchOpen) return;
+    setOpen(true);
+    void fetchStocks();
+    const t = requestAnimationFrame(() => inputRef.current?.focus());
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      cancelAnimationFrame(t);
+      document.body.style.overflow = prev;
+    };
+  }, [searchOpen, fetchStocks]);
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
@@ -179,7 +232,9 @@ export function TopbarSearch() {
       }
       if (e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key === "k")) {
         e.preventDefault();
-        inputRef.current?.focus();
+        if (typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches) {
+          inputRef.current?.focus();
+        }
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -189,7 +244,21 @@ export function TopbarSearch() {
   let dropdownIdx = 0;
 
   return (
-    <div ref={wrapRef} className="topbarSearch">
+    <div ref={wrapRef} className={`topbarSearch ${searchOpen ? "topbarSearchOverlay" : ""}`}>
+      {searchOpen && (
+        <button
+          type="button"
+          className="topbarSearchOverlayClose"
+          onClick={() => {
+            closeSearch();
+            setOpen(false);
+            setFocusIdx(-1);
+          }}
+          aria-label="Close search"
+        >
+          ✕
+        </button>
+      )}
       <form onSubmit={handleSubmit} role="search">
         <span className="topbarSearchIcon" aria-hidden>&#x2315;</span>
         <input
@@ -239,7 +308,12 @@ export function TopbarSearch() {
                       <span className="searchDropdownName">{stock.name}</span>
                     </div>
                     <div className="searchDropdownRight">
-                      <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                      <span className="searchDropdownPrice">
+                        {formatMoney(
+                          searchQuotes[stock.symbol]?.last_price ?? stock.price,
+                          resolveDisplayCurrency(stock.exchange, stock.currency),
+                        )}
+                      </span>
                       <span className="searchDropdownSector">{stock.sector}</span>
                     </div>
                   </li>
@@ -273,7 +347,12 @@ export function TopbarSearch() {
                           <span className="searchDropdownName">{stock.name}</span>
                         </div>
                         <div className="searchDropdownRight">
-                          <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                          <span className="searchDropdownPrice">
+                        {formatMoney(
+                          searchQuotes[stock.symbol]?.last_price ?? stock.price,
+                          resolveDisplayCurrency(stock.exchange, stock.currency),
+                        )}
+                      </span>
                           <span className="searchDropdownSector">{stock.sector}</span>
                         </div>
                       </li>
@@ -302,7 +381,12 @@ export function TopbarSearch() {
                         <span className="searchDropdownName">{stock.name}</span>
                       </div>
                       <div className="searchDropdownRight">
-                        <span className="searchDropdownPrice">{formatCurrency(stock.price)}</span>
+                        <span className="searchDropdownPrice">
+                        {formatMoney(
+                          searchQuotes[stock.symbol]?.last_price ?? stock.price,
+                          resolveDisplayCurrency(stock.exchange, stock.currency),
+                        )}
+                      </span>
                         <span className="searchDropdownSector">{stock.sector}</span>
                       </div>
                     </li>

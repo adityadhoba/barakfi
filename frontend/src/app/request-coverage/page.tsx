@@ -1,134 +1,66 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
+import styles from "./request.module.css";
+import { RequestCoverageForm } from "./request-coverage-form";
 
-import { useState } from "react";
+export const metadata: Metadata = {
+  title: "Request Stock Coverage — Get Any Stock Screened",
+  description:
+    "Can't find a stock on Barakfi? Request us to add and screen it for Shariah compliance. We'll notify you when it's available.",
+  alternates: { canonical: "https://barakfi.in/request-coverage" },
+};
 
 export default function RequestCoveragePage() {
-  const [symbol, setSymbol] = useState("");
-  const [exchange, setExchange] = useState("NSE");
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!symbol.trim()) return;
-    setLoading(true);
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
-      await fetch(`${apiBase}/me/coverage-requests`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol: symbol.trim().toUpperCase(), exchange }),
-      });
-      setSubmitted(true);
-    } catch {
-      setSubmitted(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <main className="shellPage">
-      <div style={{ maxWidth: 600, margin: "0 auto", padding: "40px 24px 64px" }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 800, marginBottom: 8 }}>
-          Request Stock Coverage
-        </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: 32, lineHeight: 1.5 }}>
-          Can&apos;t find a stock? Submit a request and we&apos;ll add it to our screening universe. Most requests are processed within a week.
-        </p>
+      <div className={styles.container}>
+        <nav className={styles.breadcrumb}>
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <span>Request Coverage</span>
+        </nav>
+        <header className={styles.header}>
+          <span className={styles.kicker}>Expand Our Universe</span>
+          <h1 className={styles.title}>Request Stock Coverage</h1>
+          <p className={styles.subtitle}>
+            Can&apos;t find a stock? Let us know and we&apos;ll add it to our screening universe.
+          </p>
+        </header>
 
-        {submitted ? (
-          <div style={{
-            padding: "32px 24px", textAlign: "center",
-            background: "var(--emerald-dim)", borderRadius: "var(--radius-xl)",
-            border: "1px solid var(--emerald-border)",
-          }}>
-            <div style={{ fontSize: "2rem", marginBottom: 12 }}>✅</div>
-            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--emerald)", marginBottom: 8 }}>
-              Request Submitted
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
-              We&apos;ve received your request for <strong>{symbol.toUpperCase()}</strong> on {exchange}.
-              You&apos;ll be notified when screening is complete.
-            </p>
-            <button
-              onClick={() => { setSubmitted(false); setSymbol(""); }}
-              style={{
-                marginTop: 16, padding: "8px 20px",
-                background: "var(--emerald)", color: "#fff",
-                border: "none", borderRadius: "var(--radius-md)",
-                fontWeight: 600, cursor: "pointer", fontSize: "0.85rem",
-              }}
-            >
-              Submit Another
-            </button>
+        <div className={styles.info}>
+          <h2 className={styles.infoTitle}>How it works</h2>
+          <div className={styles.steps}>
+            <div className={styles.step}>
+              <span className={styles.stepNum}>1</span>
+              <div>
+                <h3 className={styles.stepTitle}>Sign in</h3>
+                <p className={styles.stepDesc}>Log in to your Barakfi account to submit a request.</p>
+              </div>
+            </div>
+            <div className={styles.step}>
+              <span className={styles.stepNum}>2</span>
+              <div>
+                <h3 className={styles.stepTitle}>Submit</h3>
+                <p className={styles.stepDesc}>Enter the stock symbol and exchange (NSE, BSE, US, or LSE).</p>
+              </div>
+            </div>
+            <div className={styles.step}>
+              <span className={styles.stepNum}>3</span>
+              <div>
+                <h3 className={styles.stepTitle}>We screen</h3>
+                <p className={styles.stepDesc}>
+                  We fetch public financial data and run Shariah screening on a best-effort basis.
+                </p>
+              </div>
+            </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} style={{
-            padding: 24, background: "var(--bg-elevated)",
-            borderRadius: "var(--radius-xl)", border: "1px solid var(--line)",
-          }}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 6, color: "var(--text-secondary)" }}>
-                Stock Symbol
-              </label>
-              <input
-                type="text"
-                value={symbol}
-                onChange={(e) => setSymbol(e.target.value)}
-                placeholder="e.g. AAPL, RELIANCE, AZN"
-                required
-                style={{
-                  width: "100%", padding: "10px 14px",
-                  borderRadius: "var(--radius-md)", border: "1px solid var(--line)",
-                  background: "var(--bg)", fontSize: "0.9rem",
-                  color: "var(--text)", outline: "none",
-                }}
-              />
-            </div>
 
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 6, color: "var(--text-secondary)" }}>
-                Exchange
-              </label>
-              <select
-                value={exchange}
-                onChange={(e) => setExchange(e.target.value)}
-                style={{
-                  width: "100%", padding: "10px 14px",
-                  borderRadius: "var(--radius-md)", border: "1px solid var(--line)",
-                  background: "var(--bg)", fontSize: "0.9rem",
-                  color: "var(--text)", outline: "none",
-                }}
-              >
-                <option value="NSE">NSE (India)</option>
-                <option value="BSE">BSE (India)</option>
-                <option value="US">NYSE / NASDAQ (US)</option>
-                <option value="LSE">LSE (UK)</option>
-                <option value="TSE">TSE (Japan)</option>
-                <option value="XETRA">XETRA (Germany)</option>
-                <option value="ASX">ASX (Australia)</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+          <RequestCoverageForm />
 
-            <button
-              type="submit"
-              disabled={loading || !symbol.trim()}
-              style={{
-                width: "100%", padding: "12px 24px",
-                background: loading ? "var(--text-muted)" : "var(--emerald)",
-                color: "#fff", border: "none",
-                borderRadius: "var(--radius-md)",
-                fontWeight: 700, fontSize: "0.9rem",
-                cursor: loading ? "not-allowed" : "pointer",
-                transition: "background var(--transition-fast)",
-              }}
-            >
-              {loading ? "Submitting..." : "Request Screening"}
-            </button>
-          </form>
-        )}
+          <p className={styles.note}>
+            We maintain a growing universe of NSE, US, and LSE names and add new stocks regularly.
+          </p>
+        </div>
       </div>
     </main>
   );

@@ -57,3 +57,28 @@ FMP_API_BASE = os.getenv("FMP_API_BASE", "https://financialmodelingprep.com/api/
 
 def is_production() -> bool:
     return APP_ENV.lower() == "production"
+
+# RSS feed for Islamic finance news (Google News topic query — configurable)
+NEWS_RSS_URL = os.getenv(
+    "NEWS_RSS_URL",
+    "https://news.google.com/rss/search?q=Islamic+finance+OR+Shariah+investing&hl=en-US&gl=US&ceid=US:en",
+)
+# Upstox OAuth (optional — for broker connect)
+UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY", "")
+UPSTOX_API_SECRET = os.getenv("UPSTOX_API_SECRET", "")
+# Must match the redirect URL registered in Upstox developer console (e.g. https://api.barakfi.in/api/me/integrations/upstox/callback)
+UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
+
+# OAuth redirects (broker callbacks) — set in production to your Vercel URL
+FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", "").strip() or (CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000")
+
+# NewsData.io (optional — set NEWSDATA_API_KEY for /internal/news/sync)
+# Falls back to NEWS_NEWSAPI_* env names for migration from NewsAPI.org.
+NEWSDATA_API_KEY = (
+    os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_NEWSAPI_KEY") or ""
+).strip()
+NEWSDATA_Q = (
+    os.getenv("NEWSDATA_Q")
+    or os.getenv("NEWS_NEWSAPI_QUERY")
+    or "islamic finance OR sukuk OR shariah finance"
+).strip()

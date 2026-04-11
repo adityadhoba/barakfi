@@ -6,6 +6,12 @@ import Link from "next/link";
 import styles from "./stock-preview-popup.module.css";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { StockLogo } from "@/components/stock-logo";
+import {
+  formatMoney,
+  formatMcapShort,
+  resolveDisplayCurrency,
+  resolveMarketLabel,
+} from "@/lib/currency-format";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -16,14 +22,8 @@ type Props = {
   children: React.ReactNode;
 };
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
+function resolveCurrencyCode(stock: Stock): "INR" | "USD" | "GBP" {
+  return resolveDisplayCurrency(stock.exchange, stock.currency);
 }
 
 function formatPct(value: number) {
@@ -96,7 +96,8 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
   }, []);
 
   useEffect(() => {
-    if (visible) computePosition();
+    // Avoid calling setState inside effect body (eslint rule). Use rAF instead.
+    if (visible) requestAnimationFrame(computePosition);
   }, [visible, computePosition]);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
@@ -105,6 +106,9 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
   const statusCls = stock.screening.status === "HALAL" ? styles.statusHalal
     : stock.screening.status === "CAUTIOUS" ? styles.statusReview
     : styles.statusFail;
+
+  const cur = resolveCurrencyCode(stock);
+  const market = resolveMarketLabel(stock.exchange, stock.currency);
 
   const popupContent = visible ? createPortal(
     <div
@@ -125,14 +129,14 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
       </div>
 
       <div className={styles.popupMeta}>
-        <span className={styles.popupSector}>{stock.sector}</span>
+        <span className={styles.popupSector}>{stock.sector} · {market}</span>
         <span className={`${styles.popupStatus} ${statusCls}`}>
           {STATUS_LABELS[stock.screening.status]}
         </span>
       </div>
 
       <div className={styles.popupPriceRow}>
-        <span className={styles.popupPrice}>{formatPrice(price)}</span>
+        <span className={styles.popupPrice}>{formatMoney(price, cur)}</span>
         {changePct != null && (
           <span className={changePct >= 0 ? styles.popupUp : styles.popupDown}>
             {changePct >= 0 ? "+" : ""}{changePct.toFixed(2)}%
@@ -143,7 +147,7 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
       <div className={styles.popupStats}>
         <div className={styles.popupStat}>
           <span className={styles.popupStatLabel}>Market Cap</span>
-          <span className={styles.popupStatValue}>{formatMcap(stock.market_cap)}</span>
+          <span className={styles.popupStatValue}>{formatMcapShort(stock.market_cap, cur)}</span>
         </div>
         <div className={styles.popupStat}>
           <span className={styles.popupStatLabel}>Cap Type</span>

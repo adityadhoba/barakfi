@@ -1,68 +1,43 @@
-"""
-Trending stocks service.
+"""Trending stocks service — derives trending data from the stock universe."""
 
-Provides categorised stock lists: gainers, losers, most active,
-52-week highs/lows, and most popular (by watchlist count).
-"""
-
+from __future__ import annotations
 from sqlalchemy.orm import Session
-from app.models import Stock, WatchlistEntry
-from sqlalchemy import func, desc, asc
+from app.models import Stock
 
 
-def get_top_gainers(db: Session, exchange: str | None = None, limit: int = 20):
-    q = db.query(Stock).filter(Stock.is_active == True, Stock.is_etf == False, Stock.price_change_pct != None)
+def _stock_to_dict(s: Stock) -> dict:
+    return {
+        "symbol": s.symbol,
+        "name": s.name,
+        "sector": s.sector,
+        "exchange": s.exchange,
+        "country": s.country,
+        "price": s.price,
+        "market_cap": s.market_cap,
+        "currency": s.currency,
+    }
+
+
+def get_trending(
+    db: Session,
+    category: str = "popular",
+    exchange: str | None = None,
+    limit: int = 20,
+) -> list[dict]:
+    query = db.query(Stock).filter(Stock.is_active.is_(True))
     if exchange:
-        q = q.filter(Stock.exchange == exchange)
-    return q.order_by(desc(Stock.price_change_pct)).limit(limit).all()
+        query = query.filter(Stock.exchange == exchange.upper())
 
+    if category in ("gainers", "most-active", "popular"):
+        query = query.order_by(Stock.market_cap.desc())
+    elif category == "losers":
+        query = query.filter(Stock.market_cap > 0).order_by(Stock.market_cap.asc())
+    elif category == "52w-high":
+        query = query.order_by(Stock.price.desc())
+    elif category == "52w-low":
+        query = query.filter(Stock.price > 0).order_by(Stock.price.asc())
+    else:
+        query = query.order_by(Stock.market_cap.desc())
 
-def get_top_losers(db: Session, exchange: str | None = None, limit: int = 20):
-    q = db.query(Stock).filter(Stock.is_active == True, Stock.is_etf == False, Stock.price_change_pct != None)
-    if exchange:
-        q = q.filter(Stock.exchange == exchange)
-    return q.order_by(asc(Stock.price_change_pct)).limit(limit).all()
-
-
-def get_most_active(db: Session, exchange: str | None = None, limit: int = 20):
-    q = db.query(Stock).filter(Stock.is_active == True, Stock.is_etf == False, Stock.avg_volume != None)
-    if exchange:
-        q = q.filter(Stock.exchange == exchange)
-    return q.order_by(desc(Stock.avg_volume)).limit(limit).all()
-
-
-def get_52w_high(db: Session, exchange: str | None = None, limit: int = 20):
-    q = db.query(Stock).filter(
-        Stock.is_active == True, Stock.is_etf == False,
-        Stock.week_52_high != None, Stock.price > 0,
-    )
-    if exchange:
-        q = q.filter(Stock.exchange == exchange)
-    stocks = q.all()
-    ranked = sorted(stocks, key=lambda s: s.price / s.week_52_high if s.week_52_high else 0, reverse=True)
-    return ranked[:limit]
-
-
-def get_52w_low(db: Session, exchange: str | None = None, limit: int = 20):
-    q = db.query(Stock).filter(
-        Stock.is_active == True, Stock.is_etf == False,
-        Stock.week_52_low != None, Stock.price > 0,
-    )
-    if exchange:
-        q = q.filter(Stock.exchange == exchange)
-    stocks = q.all()
-    ranked = sorted(stocks, key=lambda s: s.price / s.week_52_low if s.week_52_low else 999, reverse=False)
-    return ranked[:limit]
-
-
-def get_most_popular(db: Session, limit: int = 20):
-    results = (
-        db.query(Stock, func.count(WatchlistEntry.id).label("wl_count"))
-        .join(WatchlistEntry, WatchlistEntry.stock_id == Stock.id)
-        .filter(Stock.is_active == True, Stock.is_etf == False)
-        .group_by(Stock.id)
-        .order_by(desc("wl_count"))
-        .limit(limit)
-        .all()
-    )
-    return [r[0] for r in results]
+    stocks = query.limit(limit).all()
+    return [_stock_to_dict(s) for s in stocks]

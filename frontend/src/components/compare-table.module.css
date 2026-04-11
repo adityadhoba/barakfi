@@ -156,6 +156,7 @@
 /* ── Comparison Table ── */
 .tableWrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--bg-card);
@@ -363,3 +364,17 @@
   .removeBtn { width: 20px; height: 20px; font-size: 0.8rem; }
   .ratioBarTrack { display: none; }
 }
+
+.marketPill {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  color: var(--text-secondary);
+}
+

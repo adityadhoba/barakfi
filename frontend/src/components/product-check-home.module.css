@@ -1,0 +1,166 @@
+/* Primary product entry: instant halal check */
+
+.strip {
+  position: relative;
+  padding: 3rem 1.25rem 3.5rem;
+  text-align: center;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--emerald) 6%, var(--bg)) 0%,
+    var(--bg) 100%
+  );
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--emerald);
+  margin: 0 0 14px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 4.5vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+
+.sub {
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0 auto 2rem;
+  max-width: 34rem;
+}
+
+.topSection {
+  margin-top: var(--section-gap-lg);
+  text-align: left;
+}
+
+.topTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 520px) {
+  .topGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .topGrid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.topCard {
+  display: block;
+  padding: 16px 16px;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.topCard:hover {
+  border-color: color-mix(in srgb, var(--emerald) 40%, var(--line));
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.topSym {
+  font-weight: 800;
+  font-size: 0.88rem;
+  font-family: var(--font-display);
+  color: var(--text);
+}
+
+.topName {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.topScore {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 9px;
+  border-radius: 9999px;
+}
+
+.badgeHalal {
+  background: var(--status-halal-bg);
+  color: var(--status-halal-fg);
+  border: 1px solid var(--status-halal-border);
+}
+
+.badgeDoubt {
+  background: var(--status-doubtful-bg);
+  color: var(--status-doubtful-fg);
+  border: 1px solid var(--status-doubtful-border);
+}
+
+.badgeHaram {
+  background: var(--status-haram-bg);
+  color: var(--status-haram-fg);
+  border: 1px solid var(--status-haram-border);
+}
+
+.moreLink {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--emerald);
+  text-decoration: none;
+}
+
+.moreLink:hover {
+  text-decoration: underline;
+}

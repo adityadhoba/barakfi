@@ -1,6 +1,7 @@
 import { buildBackendHeaders, type BackendActor } from "@/lib/backend-auth";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+const apiBaseUrl = getPublicApiBaseUrl();
 
 /**
  * Structured API error with status code and server detail.
@@ -69,6 +70,7 @@ export type EquityQuote = {
   source: string;
   as_of: string;
   disclaimer: string;
+  currency?: string;
 };
 
 export type Stock = {
@@ -94,6 +96,8 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  /** When balance-sheet / income fundamentals were last written (ISO 8601), if known */
+  fundamentals_updated_at?: string | null;
   beta?: number | null;
   dividend_yield?: number | null;
   pe_ratio?: number | null;
@@ -119,6 +123,8 @@ export type Holding = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -135,11 +141,16 @@ export type WatchlistEntry = {
   id: number;
   owner_name: string;
   notes: string;
+  /** Latest research note line for this symbol (from GET /me/watchlist). */
+  latest_research_summary?: string;
   stock: {
     symbol: string;
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
+    country?: string;
   };
 };
 
@@ -167,6 +178,8 @@ export type ResearchNote = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -206,6 +219,8 @@ export type ScreeningResult = {
   status: string;
   reasons: string[];
   manual_review_flags: string[];
+  /** 0–100 methodology score from engine */
+  screening_score: number;
   purification_ratio_pct: number | null;
   active_review_case: PublicReviewCase | null;
   recent_review_cases: PublicReviewCase[];
@@ -218,8 +233,22 @@ export type ScreeningResult = {
     cash_and_interest_bearing_to_assets_ratio: number;
     fixed_assets_to_total_assets_ratio: number | null;
     sector_allowed: boolean;
+    debt_ratio_value?: number;
+    debt_ratio_threshold?: number;
+    receivables_ratio_value?: number;
+    receivables_ratio_threshold?: number;
+    cash_ib_ratio_threshold?: number;
   };
   confidence_bullets?: ConfidenceBullet[];
+};
+
+/** GET /api/check-stock — product-level halal check */
+export type CheckStockResponse = {
+  name: string;
+  status: "Halal" | "Doubtful" | "Haram" | string;
+  score: number;
+  summary: string;
+  details_available: boolean;
 };
 
 export type ScreeningLog = {
@@ -234,6 +263,8 @@ export type ScreeningLog = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -317,6 +348,8 @@ export type ComplianceOverride = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -344,6 +377,8 @@ export type PublicReviewCase = {
     name: string;
     price: number;
     sector: string;
+    exchange?: string;
+    currency?: string;
   };
 };
 
@@ -555,10 +590,17 @@ export async function getMarketIndices(): Promise<IndexQuote[]> {
  */
 export async function getEquityQuote(
   symbol: string,
-  provider: "nse_public" | "yahoo_india" | "auto_india" = "auto_india",
+  provider:
+    | "nse_public"
+    | "yahoo_india"
+    | "auto_india"
+    | "yahoo_global"
+    | "auto_global" = "auto_india",
+  exchange?: string,
 ): Promise<EquityQuote | null> {
   try {
     const q = new URLSearchParams({ provider });
+    if (exchange) q.set("exchange", exchange);
     const response = await fetch(
       `${apiBaseUrl}/market-data/quote/${encodeURIComponent(symbol)}?${q.toString()}`,
       { next: { revalidate: 60 } },
@@ -631,6 +673,7 @@ export type MultiMethodologyResult = {
   symbol: string;
   name: string;
   consensus_status: string;
+  screening_score: number;
   methodologies: Record<string, ScreeningResult>;
   summary: {
     halal_count: number;
@@ -639,110 +682,6 @@ export type MultiMethodologyResult = {
     total: number;
   };
   confidence_bullets?: ConfidenceBullet[];
-};
-
-export type TrendingStock = {
-  symbol: string;
-  name: string;
-  sector: string;
-  exchange: string;
-  country: string;
-  price: number;
-  price_change_pct: number | null;
-  market_cap: number;
-  compliance_status: string;
-  compliance_rating: number | null;
-  beta: number | null;
-  dividend_yield: number | null;
-  week_52_high: number | null;
-  week_52_low: number | null;
-};
-
-export type Collection = {
-  id: number;
-  name: string;
-  slug: string;
-  description: string;
-  icon: string;
-  is_featured: boolean;
-  stock_count: number;
-};
-
-export type CollectionDetail = {
-  name: string;
-  slug: string;
-  description: string;
-  icon: string;
-  stocks: Array<{
-    symbol: string;
-    name: string;
-    sector: string;
-    exchange: string;
-    price: number;
-    market_cap: number;
-    compliance_status: string;
-    compliance_rating: number | null;
-  }>;
-};
-
-export type SuperInvestorSummary = {
-  name: string;
-  firm: string;
-  slug: string;
-  bio: string;
-  image_url: string | null;
-  holdings_count: number;
-};
-
-export type SuperInvestorDetail = {
-  name: string;
-  firm: string;
-  slug: string;
-  bio: string;
-  image_url: string | null;
-  source_url: string | null;
-  total_holdings: number;
-  halal_pct: number;
-  halal_count: number;
-  total_value: number;
-  holdings: Array<{
-    symbol: string;
-    company_name: string;
-    shares: number;
-    value: number;
-    pct_portfolio: number;
-    compliance_status: string;
-    compliance_rating: number | null;
-  }>;
-};
-
-export type ComplianceHistoryEntry = {
-  old_status: string;
-  new_status: string;
-  old_rating: number | null;
-  new_rating: number | null;
-  profile_code: string;
-  changed_at: string;
-};
-
-export type InvestmentMetrics = {
-  expected_return: number | null;
-  volatility: number | null;
-  sharpe_ratio: number | null;
-  beta: number | null;
-  dividend_yield: number | null;
-  pe_ratio: number | null;
-  eps: number | null;
-};
-
-export type CoverageRequestItem = {
-  id: number;
-  symbol: string;
-  exchange: string;
-  status: string;
-  result_status: string | null;
-  requested_at: string;
-  resolved_at: string | null;
 };
 
 export function getMultiScreeningResult(symbol: string) {
@@ -1211,42 +1150,94 @@ export async function bootstrapAuthenticatedUser(
   return (await response.json()) as User;
 }
 
-// ---------------------------------------------------------------------------
-// New Musaffa-parity API functions
-// ---------------------------------------------------------------------------
+export type TrendingStock = {
+  symbol: string;
+  name: string;
+  sector: string;
+  exchange: string;
+  country: string;
+  price: number;
+  market_cap: number;
+  currency: string;
+};
 
-export function getTrending(category: string, exchange?: string, limit = 20) {
+export type Collection = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  stock_count: number;
+};
+
+export type CollectionDetail = Collection & {
+  stocks: TrendingStock[];
+};
+
+export type SuperInvestorSummary = {
+  id: number;
+  name: string;
+  slug: string;
+  title: string;
+  bio: string;
+  country: string;
+  investment_style: string;
+  image_url: string;
+  holding_count: number;
+};
+
+export type SuperInvestorDetail = SuperInvestorSummary & {
+  holdings: Array<{
+    symbol: string;
+    name: string;
+    sector: string;
+    exchange: string;
+    price: number;
+    market_cap: number;
+    weight_pct: number;
+  }>;
+};
+
+export async function getTrending(category: string = "popular", exchange?: string, limit: number = 20): Promise<TrendingStock[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (exchange) params.set("exchange", exchange);
-  return apiFetch<TrendingStock[]>(`/trending/${encodeURIComponent(category)}?${params}`, []);
+  return apiFetch(`/trending/${category}?${params}`, []);
 }
 
-export function getCollections() {
-  return apiFetch<Collection[]>("/collections", []);
+export async function getCollections(): Promise<Collection[]> {
+  return apiFetch("/collections", []);
 }
 
-export function getCollection(slug: string) {
-  return apiFetch<CollectionDetail | null>(`/collections/${encodeURIComponent(slug)}`, null);
+export async function getCollection(slug: string): Promise<CollectionDetail | null> {
+  return apiFetch(`/collections/${slug}`, null);
 }
 
-export function getSuperInvestors() {
-  return apiFetch<SuperInvestorSummary[]>("/super-investors", []);
+export async function getSuperInvestors(): Promise<SuperInvestorSummary[]> {
+  return apiFetch("/super-investors", []);
 }
 
-export function getSuperInvestor(slug: string) {
-  return apiFetch<SuperInvestorDetail | null>(`/super-investors/${encodeURIComponent(slug)}`, null);
+export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetail | null> {
+  return apiFetch(`/super-investors/${slug}`, null);
 }
 
-export function getComplianceHistory(symbol: string) {
-  return apiFetch<ComplianceHistoryEntry[]>(`/compliance-history/${encodeURIComponent(symbol)}`, []);
-}
+export type NewsItem = {
+  id: number;
+  title: string;
+  summary: string;
+  url: string;
+  image_url: string;
+  source: string;
+  published_at: string | null;
+};
 
-export function getInvestmentMetrics(symbol: string) {
-  return apiFetch<InvestmentMetrics>(`/metrics/${encodeURIComponent(symbol)}`, {
-    expected_return: null, volatility: null, sharpe_ratio: null,
-    beta: null, dividend_yield: null, pe_ratio: null, eps: null,
-  });
-}
+export type NewsLoadStatus = "ok" | "error" | "empty";
+
+export type NewsFeedResult = {
+  items: NewsItem[];
+  loadStatus: NewsLoadStatus;
+  /** Present when loadStatus is "error" (wrong API URL, 5xx, timeout, etc.) */
+  errorHint?: string;
+};
 
 export type ETFListItem = {
   symbol: string;
@@ -1291,8 +1282,53 @@ export type ETFDetail = {
   data_note?: string;
 };
 
-export function getETFs() {
-  return apiFetch<ETFListItem[]>("/etfs", []);
+/**
+ * Fetches public news from the FastAPI `/news` endpoint and reports whether the list is empty vs failed.
+ */
+export async function getNewsFeed(limit: number = 24): Promise<NewsFeedResult> {
+  const path = `/news?limit=${limit}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const detail = await parseErrorDetail(response);
+      console.error(`[api] ${response.status} on GET ${path}: ${detail}`);
+      return {
+        items: [],
+        loadStatus: "error",
+        errorHint: `News API returned ${response.status}. Check NEXT_PUBLIC_API_BASE_URL points to your FastAPI base (e.g. https://api.example.com/api).`,
+      };
+    }
+    const data = (await response.json()) as NewsItem[];
+    if (!Array.isArray(data) || data.length === 0) {
+      return { items: [], loadStatus: "empty" };
+    }
+    return { items: data, loadStatus: "ok" };
+  } catch (err) {
+    console.error(`[api] Network error on GET ${path}:`, err);
+    return {
+      items: [],
+      loadStatus: "error",
+      errorHint:
+        "Could not reach the news API (timeout or network). Confirm the API is up and NEXT_PUBLIC_API_BASE_URL is set on Vercel.",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function getNews(limit: number = 24): Promise<NewsItem[]> {
+  const r = await getNewsFeed(limit);
+  return r.items;
+}
+
+export async function getETFs(exchange?: string): Promise<ETFListItem[]> {
+  const params = exchange ? `?exchange=${encodeURIComponent(exchange)}` : "";
+  return apiFetch(`/etfs${params}`, []);
 }
 
 export function getETFDetail(symbol: string, exchange?: string) {
@@ -1300,30 +1336,10 @@ export function getETFDetail(symbol: string, exchange?: string) {
   return apiFetch<ETFDetail | null>(`/etfs/${encodeURIComponent(symbol)}${q}`, null);
 }
 
-export async function createCoverageRequest(
-  token: string, symbol: string, exchange: string, actor?: BackendActor | null,
-) {
-  const response = await fetch(`${apiBaseUrl}/me/coverage-requests`, {
-    method: "POST",
-    headers: buildBackendHeaders({ token, actor, contentType: true }),
-    body: JSON.stringify({ symbol, exchange }),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const detail = await parseErrorDetail(response);
-    throw new ApiError(response.status, detail, "/me/coverage-requests POST");
-  }
-  return (await response.json()) as { id: number; symbol: string; status: string };
+export async function getComplianceHistory(symbol: string): Promise<Array<{ status: string; profile_code: string; recorded_at: string }>> {
+  return apiFetch(`/compliance-history/${symbol}`, []);
 }
 
-export async function getCoverageRequests(token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/me/coverage-requests`, {
-    headers: buildBackendHeaders({ token, actor }),
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const detail = await parseErrorDetail(response);
-    throw new ApiError(response.status, detail, "/me/coverage-requests GET");
-  }
-  return (await response.json()) as CoverageRequestItem[];
+export async function getInvestmentMetrics(symbol: string): Promise<Record<string, number>> {
+  return apiFetch(`/metrics/${symbol}`, {});
 }

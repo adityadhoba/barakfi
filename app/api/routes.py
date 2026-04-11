@@ -1,9 +1,11 @@
 from collections import defaultdict
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import (
+    FRONTEND_APP_URL,
     ADMIN_AUTH_SUBJECTS,
     ADMIN_EMAILS,
     AUTH_GOOGLE_ENABLED,
@@ -12,6 +14,7 @@ from app.config import (
     CLERK_JWKS_URL,
     CLERK_PUBLISHABLE_KEY,
     CLERK_SECRET_KEY,
+    CORS_ORIGINS,
     INTERNAL_SERVICE_TOKEN,
     MARKET_DATA_PROVIDER,
 )
@@ -41,6 +44,7 @@ from app.models import (
     User,
     UserSettings,
     WatchlistEntry,
+    BrokerConnection,
 )
 from app.schemas import (
     ActionResponse,
@@ -80,6 +84,7 @@ from app.schemas import (
     SavedScreenerRead,
     ScreeningLogRead,
     ScreeningResult,
+    CheckStockResponse,
     StockRead,
     UserSettingsRead,
     UserSettingsUpdateRequest,
@@ -92,6 +97,7 @@ from app.schemas import (
 )
 from app.services.halal_service import (
     PRIMARY_PROFILE,
+    build_stock_check_payload,
     evaluate_stock,
     evaluate_stock_multi,
     get_profile_version,
@@ -100,9 +106,9 @@ from app.services.halal_service import (
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
-from app.services.quote_sync_service import PUBLIC_INDIAN_MARKET_PROVIDERS, sync_all_stock_prices
+from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
-from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal
+from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 from app.services.stock_lookup import resolve_stock
 
 router = APIRouter(prefix="/api")
@@ -222,10 +228,10 @@ def equity_quote_snapshot(
     """
     sym = symbol.upper().strip()
     effective = (provider or "auto_india").strip().lower()
-    if effective not in PUBLIC_INDIAN_MARKET_PROVIDERS:
+    if effective not in PUBLIC_MARKET_PROVIDERS:
         raise HTTPException(
             status_code=400,
-            detail=f"provider must be one of: {', '.join(sorted(PUBLIC_INDIAN_MARKET_PROVIDERS))}",
+            detail=f"provider must be one of: {', '.join(sorted(PUBLIC_MARKET_PROVIDERS))}",
         )
     row = resolve_stock(db, sym, None, active_only=True)
     ex = (exchange or (row.exchange if row else "NSE")).upper()
@@ -250,6 +256,7 @@ def equity_quote_snapshot(
         week_52_low=payload["week_52_low"],
         source=payload["source"],
         as_of=payload["as_of"],
+        currency=str(payload.get("currency") or "INR"),
     )
 
 
@@ -374,6 +381,33 @@ def get_stock(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return _stock_read_enriched(db, stock)
+
+
+@router.get("/check-stock", response_model=CheckStockResponse)
+def check_stock(
+    symbol: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Fast product endpoint: Halal / Doubtful / Haram, score, one-line summary.
+
+    Uses four-methodology consensus (same engine as /screen/{symbol}/multi).
+    """
+    clean = symbol.strip().upper()
+    if not clean:
+        raise HTTPException(status_code=400, detail="symbol is required")
+
+    stock = (
+        db.query(Stock)
+        .filter(Stock.symbol == clean, Stock.is_active.is_(True))
+        .first()
+    )
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    stock_data = helpers.stock_to_dict(stock)
+    multi = evaluate_stock_multi(stock_data)
+    return build_stock_check_payload(stock.name, stock_data, multi)
 
 
 @router.get("/screen/{symbol}", response_model=ScreeningResult)
@@ -927,20 +961,25 @@ def get_workspace(
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
 
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+
     return {
         "user": user,
-        "dashboard": helpers.build_dashboard_payload(user.display_name, portfolios, watchlist_entries),
+        "dashboard": helpers.build_dashboard_payload(
+            user.display_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+        ),
         "portfolios": portfolios,
         "watchlist": watchlist_entries,
         "saved_screeners": saved_screeners,
         "research_notes": research_notes,
-        "compliance_check": helpers.build_compliance_check(portfolios),
+        "compliance_check": helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px),
         "activity_feed": helpers.build_activity_feed(
             user=user,
             portfolios=portfolios,
             watchlist_entries=watchlist_entries,
             research_notes=research_notes,
             review_cases=review_cases,
+            live_last_price_by_symbol=live_px,
         ),
         "review_cases": review_cases,
     }
@@ -1046,7 +1085,36 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
 
     user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not provisioned")
+        # Keep /me endpoints usable in first-session flows without requiring an explicit
+        # bootstrap step. This mirrors the behavior of `GET /me`.
+        email = claims.get("email", "")
+        display = email.split("@")[0] if email else auth_subject
+        try:
+            user = User(
+                email=email or f"{auth_subject}@example.local",
+                display_name=display,
+                auth_provider="clerk",
+                auth_subject=auth_subject,
+                is_active=True,
+            )
+            db.add(user)
+            db.flush()
+            helpers.create_default_workspace(db, user)
+            if not user.settings:
+                db.add(
+                    UserSettings(
+                        user_id=user.id,
+                        preferred_currency="INR",
+                        risk_profile="moderate",
+                        notifications_enabled=True,
+                        theme="dark",
+                    )
+                )
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Failed to auto-provision user")
 
     portfolios = (
         db.query(Portfolio)
@@ -1073,21 +1141,40 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
         .all()
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
+    # If the user has no review cases (common for fresh accounts), include the
+    # seeded public demo case so UX + API shape remain stable.
+    if not review_cases:
+        demo_review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, statuses=["open", "in_progress"])
+        # The above is user-scoped; add global demo if still empty.
+        if not demo_review_cases:
+            try:
+                demo_stock = db.query(Stock).filter(Stock.symbol == "WIPRO").first()
+                if demo_stock:
+                    demo_case = helpers.get_public_review_case_for_stock(db, demo_stock.id)
+                    if demo_case:
+                        review_cases = [demo_case]
+            except Exception:
+                pass
+
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
 
     return {
         "user": user,
-        "dashboard": helpers.build_dashboard_payload(user.display_name, portfolios, watchlist_entries),
+        "dashboard": helpers.build_dashboard_payload(
+            user.display_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+        ),
         "portfolios": portfolios,
         "watchlist": watchlist_entries,
         "saved_screeners": saved_screeners,
         "research_notes": research_notes,
-        "compliance_check": helpers.build_compliance_check(portfolios),
+        "compliance_check": helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px),
         "activity_feed": helpers.build_activity_feed(
             user=user,
             portfolios=portfolios,
             watchlist_entries=watchlist_entries,
             research_notes=research_notes,
             review_cases=review_cases,
+            live_last_price_by_symbol=live_px,
         ),
         "review_cases": review_cases,
     }
@@ -1111,7 +1198,10 @@ def get_current_alerts(claims: dict = Depends(get_current_auth_claims_or_interna
     )
     review_cases = helpers.get_public_review_cases_for_user_scope(db, user.id, limit=4)
 
-    return helpers.build_alerts_payload(user, portfolios, watchlist_entries, review_cases)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_alerts_payload(
+        user, portfolios, watchlist_entries, review_cases, live_last_price_by_symbol=live_px
+    )
 
 
 @router.get("/me/compliance-queue", response_model=list[ComplianceQueueItemRead])
@@ -1183,12 +1273,13 @@ def list_current_watchlist(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    return (
+    entries = (
         db.query(WatchlistEntry)
         .filter(WatchlistEntry.user_id == user.id)
         .order_by(WatchlistEntry.added_at.desc())
         .all()
     )
+    return helpers.build_watchlist_entry_reads(db, user.id, entries)
 
 
 @router.post("/me/watchlist", response_model=WatchlistEntryRead)
@@ -1227,7 +1318,8 @@ def create_current_watchlist_entry(
 
     db.commit()
     db.refresh(entry)
-    return entry
+    reads = helpers.build_watchlist_entry_reads(db, user.id, [entry])
+    return reads[0]
 
 
 @router.delete("/me/watchlist/{symbol}", response_model=ActionResponse)
@@ -1434,6 +1526,37 @@ def create_current_research_note(
         notes=payload.notes.strip(),
     )
     db.add(research_note)
+
+    # Mirror latest research note text on the user's watchlist row (same UX as portfolio notes).
+    summary = payload.summary.strip()
+    body = payload.notes.strip()
+    parts: list[str] = []
+    if summary:
+        parts.append(f"[{note_type}] {summary}")
+    else:
+        parts.append(f"[{note_type}]")
+    if body:
+        snippet = body[:400] + ("…" if len(body) > 400 else "")
+        parts.append(snippet)
+    watchlist_line = " ".join(p for p in parts if p).strip()[:2000] or f"[{note_type}] Research note"
+
+    wl = (
+        db.query(WatchlistEntry)
+        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .first()
+    )
+    if wl:
+        wl.notes = watchlist_line
+    else:
+        db.add(
+            WatchlistEntry(
+                user_id=user.id,
+                owner_name=(user.display_name or user.email or "user").lower().replace(" ", "-"),
+                stock_id=stock.id,
+                notes=watchlist_line,
+            )
+        )
+
     db.commit()
     db.refresh(research_note)
     return research_note
@@ -1471,7 +1594,8 @@ def get_current_compliance_check(
         .order_by(Portfolio.created_at.asc())
         .all()
     )
-    return helpers.build_compliance_check(portfolios)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_compliance_check(portfolios, live_last_price_by_symbol=live_px)
 
 
 @router.get("/me/saved-screeners", response_model=list[SavedScreenerRead])
@@ -1565,12 +1689,15 @@ def list_watchlist(
     claims: dict = Depends(get_current_auth_claims_or_internal),
     db: Session = Depends(get_db),
 ):
-    return (
+    entries = (
         db.query(WatchlistEntry)
         .filter(WatchlistEntry.owner_name == owner_name)
         .order_by(WatchlistEntry.added_at.desc())
         .all()
     )
+    if not entries:
+        return []
+    return helpers.build_watchlist_entry_reads(db, entries[0].user_id, entries)
 
 
 @router.get("/screening-logs", response_model=list[ScreeningLogRead])
@@ -1596,7 +1723,10 @@ def dashboard(
 ):
     portfolios = db.query(Portfolio).filter(Portfolio.owner_name == owner_name).all()
     watchlist_entries = db.query(WatchlistEntry).filter(WatchlistEntry.owner_name == owner_name).all()
-    return helpers.build_dashboard_payload(owner_name, portfolios, watchlist_entries)
+    live_px = helpers.live_last_prices_for_portfolios(portfolios)
+    return helpers.build_dashboard_payload(
+        owner_name, portfolios, watchlist_entries, live_last_price_by_symbol=live_px
+    )
 
 
 @router.get("/admin/roles", response_model=AdminRolesResponse)
@@ -1742,260 +1872,72 @@ def admin_update_user_active(
     )
 
 
-# ---------------------------------------------------------------------------
-# Compliance History
-# ---------------------------------------------------------------------------
-@router.get("/compliance-history/{symbol}")
-def get_compliance_history(
-    symbol: str,
-    exchange: str | None = Query(default=None),
+# ═══════════════════════════════════════════════════════════════
+# TRENDING
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/trending/{category}")
+def get_trending(
+    category: str,
+    exchange: str | None = None,
+    limit: int = 20,
     db: Session = Depends(get_db),
 ):
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
-    if not stock:
-        raise HTTPException(404, f"Stock {symbol} not found")
-    history = (
-        db.query(ComplianceHistory)
-        .filter(ComplianceHistory.stock_id == stock.id)
-        .order_by(ComplianceHistory.changed_at.desc())
-        .limit(50)
-        .all()
-    )
-    return [
-        {
-            "old_status": h.old_status,
-            "new_status": h.new_status,
-            "old_rating": h.old_rating,
-            "new_rating": h.new_rating,
-            "profile_code": h.profile_code,
-            "changed_at": h.changed_at.isoformat(),
-        }
-        for h in history
-    ]
+    from app.services.trending_service import get_trending as _get_trending
+    return _get_trending(db, category=category, exchange=exchange, limit=min(limit, 50))
 
 
-# ---------------------------------------------------------------------------
-# Trending
-# ---------------------------------------------------------------------------
-@router.get("/trending/{category}")
-def get_trending(category: str, exchange: str = None, limit: int = 20, db: Session = Depends(get_db)):
-    from app.services.trending_service import (
-        get_top_gainers, get_top_losers, get_most_active,
-        get_52w_high, get_52w_low, get_most_popular,
-    )
+# ═══════════════════════════════════════════════════════════════
+# COLLECTIONS
+# ═══════════════════════════════════════════════════════════════
 
-    handlers = {
-        "gainers": get_top_gainers,
-        "losers": get_top_losers,
-        "most-active": get_most_active,
-        "52w-high": get_52w_high,
-        "52w-low": get_52w_low,
-        "popular": get_most_popular,
-    }
-    handler = handlers.get(category)
-    if not handler:
-        raise HTTPException(400, f"Unknown category: {category}. Options: {list(handlers.keys())}")
-
-    if category == "popular":
-        stocks = handler(db, limit=min(limit, 50))
-    else:
-        stocks = handler(db, exchange=exchange, limit=min(limit, 50))
-
-    results = []
-    for s in stocks:
-        sd = helpers.stock_to_dict(s)
-        screen = evaluate_stock(sd)
-        results.append({
-            "symbol": s.symbol,
-            "name": s.name,
-            "sector": s.sector,
-            "exchange": s.exchange,
-            "country": s.country,
-            "price": s.price,
-            "price_change_pct": s.price_change_pct,
-            "market_cap": s.market_cap,
-            "compliance_status": screen["status"],
-            "compliance_rating": screen.get("compliance_rating"),
-            "beta": s.beta,
-            "dividend_yield": s.dividend_yield,
-            "week_52_high": s.week_52_high,
-            "week_52_low": s.week_52_low,
-        })
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Collections
-# ---------------------------------------------------------------------------
 @router.get("/collections")
 def list_collections(db: Session = Depends(get_db)):
-    from app.models import StockCollection
-    collections = db.query(StockCollection).order_by(StockCollection.name).all()
-    return [
-        {
-            "id": c.id,
-            "name": c.name,
-            "slug": c.slug,
-            "description": c.description,
-            "icon": c.icon,
-            "is_featured": c.is_featured,
-            "stock_count": len(c.entries),
-        }
-        for c in collections
-    ]
+    from app.services.collection_service import get_collections
+    return get_collections(db)
 
 
 @router.get("/collections/{slug}")
 def get_collection(slug: str, db: Session = Depends(get_db)):
-    from app.models import StockCollection
-    collection = db.query(StockCollection).filter(StockCollection.slug == slug).first()
-    if not collection:
-        raise HTTPException(404, "Collection not found")
-    stocks = []
-    for entry in collection.entries:
-        sd = helpers.stock_to_dict(entry.stock)
-        screen = evaluate_stock(sd)
-        stocks.append({
-            "symbol": entry.stock.symbol,
-            "name": entry.stock.name,
-            "sector": entry.stock.sector,
-            "exchange": entry.stock.exchange,
-            "price": entry.stock.price,
-            "market_cap": entry.stock.market_cap,
-            "compliance_status": screen["status"],
-            "compliance_rating": screen.get("compliance_rating"),
-        })
-    return {
-        "name": collection.name,
-        "slug": collection.slug,
-        "description": collection.description,
-        "icon": collection.icon,
-        "stocks": stocks,
-    }
+    from app.services.collection_service import get_collection_detail
+    result = get_collection_detail(db, slug)
+    if not result:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return result
 
 
-# ---------------------------------------------------------------------------
-# Super Investors
-# ---------------------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════
+# SUPER INVESTORS
+# ═══════════════════════════════════════════════════════════════
+
 @router.get("/super-investors")
 def list_super_investors(db: Session = Depends(get_db)):
-    from app.models import SuperInvestor
-    investors = db.query(SuperInvestor).all()
-    return [
-        {
-            "name": inv.name,
-            "firm": inv.firm,
-            "slug": inv.slug,
-            "bio": inv.bio,
-            "image_url": inv.image_url,
-            "holdings_count": len(inv.holdings),
-        }
-        for inv in investors
-    ]
+    from app.services.investor_service import get_investors
+    return get_investors(db)
 
 
 @router.get("/super-investors/{slug}")
 def get_super_investor(slug: str, db: Session = Depends(get_db)):
-    from app.models import SuperInvestor
-    inv = db.query(SuperInvestor).filter(SuperInvestor.slug == slug).first()
-    if not inv:
-        raise HTTPException(404, "Investor not found")
-    return {
-        "name": inv.name,
-        "firm": inv.firm,
-        "slug": inv.slug,
-        "bio": inv.bio,
-        "image_url": inv.image_url,
-        "source_url": inv.source_url,
-        "holdings": [
-            {
-                "symbol": h.symbol,
-                "company_name": h.company_name,
-                "shares": h.shares,
-                "value": h.value,
-                "pct_portfolio": h.pct_portfolio,
-                "as_of_date": h.as_of_date.isoformat() if h.as_of_date else None,
-            }
-            for h in inv.holdings
-        ],
-    }
+    from app.services.investor_service import get_investor_detail
+    result = get_investor_detail(db, slug)
+    if not result:
+        raise HTTPException(status_code=404, detail="Investor not found")
+    return result
 
 
-# ---------------------------------------------------------------------------
-# Coverage Requests
-# ---------------------------------------------------------------------------
-@router.post("/me/coverage-requests")
-def create_coverage_request(
-    body: dict,
-    claims: dict = Depends(get_current_auth_claims),
-    db: Session = Depends(get_db),
-):
-    from app.models import CoverageRequest
-    user = helpers.get_current_user_from_claims(db, claims)
-    req = CoverageRequest(
-        user_id=user.id,
-        symbol=body.get("symbol", "").upper().strip(),
-        exchange=body.get("exchange", ""),
-        status="pending",
-    )
-    db.add(req)
-    db.commit()
-    db.refresh(req)
-    return {"id": req.id, "symbol": req.symbol, "status": req.status}
+# ═══════════════════════════════════════════════════════════════
+# ETFS
+# ═══════════════════════════════════════════════════════════════
 
-
-@router.get("/me/coverage-requests")
-def list_coverage_requests(
-    claims: dict = Depends(get_current_auth_claims),
-    db: Session = Depends(get_db),
-):
-    from app.models import CoverageRequest
-    user = helpers.get_current_user_from_claims(db, claims)
-    reqs = db.query(CoverageRequest).filter(CoverageRequest.user_id == user.id).order_by(CoverageRequest.requested_at.desc()).all()
-    return [
-        {
-            "id": r.id,
-            "symbol": r.symbol,
-            "exchange": r.exchange,
-            "status": r.status,
-            "result_status": r.result_status,
-            "requested_at": r.requested_at.isoformat(),
-            "resolved_at": r.resolved_at.isoformat() if r.resolved_at else None,
-        }
-        for r in reqs
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Investment Metrics
-# ---------------------------------------------------------------------------
-@router.get("/metrics/{symbol}")
-def get_investment_metrics(
-    symbol: str,
-    exchange: str | None = Query(default=None),
-    db: Session = Depends(get_db),
-):
-    stock = resolve_stock(db, symbol, exchange, active_only=True)
-    if not stock:
-        raise HTTPException(404, f"Stock {symbol} not found")
-    from app.services.metrics_service import get_investment_checklist
-    checklist = get_investment_checklist({
-        "beta": stock.beta,
-        "dividend_yield": stock.dividend_yield,
-        "pe_ratio": stock.pe_ratio,
-        "eps": stock.eps,
-    })
-    return checklist
-
-
-# ---------------------------------------------------------------------------
-# ETFs
-# ---------------------------------------------------------------------------
 @router.get("/etfs")
-def list_etfs(db: Session = Depends(get_db)):
+def list_etfs(exchange: str | None = None, db: Session = Depends(get_db)):
     from app.services.etf_service import list_etfs_with_compliance
 
-    return list_etfs_with_compliance(db)
+    rows = list_etfs_with_compliance(db)
+    if exchange:
+        ex = exchange.upper()
+        rows = [r for r in rows if (r.get("exchange") or "").upper() == ex]
+    return rows
 
 
 @router.get("/etfs/{symbol}")
@@ -2008,6 +1950,383 @@ def get_etf_detail(
 
     snap = screen_etf(db, symbol, exchange)
     if not snap:
-        raise HTTPException(404, "ETF not found")
+        raise HTTPException(status_code=404, detail="ETF not found")
     return snap
+
+
+# ═══════════════════════════════════════════════════════════════
+# INVESTMENT METRICS
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/metrics/{symbol}")
+def get_metrics(
+    symbol: str,
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    from app.services.metrics_service import get_investment_metrics
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    stock_data = helpers.stock_to_dict(stock)
+    return get_investment_metrics(stock_data)
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMPLIANCE HISTORY
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/compliance-history/{symbol}")
+def get_compliance_history(
+    symbol: str,
+    exchange: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    stock = resolve_stock(db, symbol, exchange, active_only=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    entries = (
+        db.query(ComplianceHistory)
+        .filter(ComplianceHistory.stock_id == stock.id)
+        .order_by(ComplianceHistory.recorded_at.desc())
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "status": e.status,
+            "profile_code": e.profile_code,
+            "recorded_at": e.recorded_at.isoformat() if e.recorded_at else None,
+        }
+        for e in entries
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════
+# COVERAGE REQUESTS
+# ═══════════════════════════════════════════════════════════════
+
+def _ensure_user_for_me(db: Session, claims: dict) -> User:
+    """Create user + workspace if missing (same pattern as GET /me/workspace)."""
+    auth_subject = claims.get("sub")
+    if not auth_subject:
+        raise HTTPException(status_code=401, detail="Token subject missing")
+    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+    if user:
+        return user
+    email = claims.get("email", "") or ""
+    display = email.split("@")[0] if email else auth_subject
+    try:
+        user = User(
+            email=email or f"{auth_subject}@example.local",
+            display_name=display,
+            auth_provider="clerk",
+            auth_subject=auth_subject,
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        helpers.create_default_workspace(db, user)
+        if not user.settings:
+            db.add(
+                UserSettings(
+                    user_id=user.id,
+                    preferred_currency="INR",
+                    risk_profile="moderate",
+                    notifications_enabled=True,
+                    theme="dark",
+                )
+            )
+        db.commit()
+        db.refresh(user)
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to auto-provision user")
+    return user
+
+
+@router.post("/me/coverage-requests")
+def create_coverage_request(
+    symbol: str = Body(...),
+    exchange: str = Body("NSE"),
+    notes: str = Body(""),
+    db: Session = Depends(get_db),
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+):
+    from app.models import CoverageRequest, utc_now
+    user = _ensure_user_for_me(db, claims)
+    now = utc_now()
+    req = CoverageRequest(
+        user_id=user.id,
+        symbol=symbol.upper().strip(),
+        exchange=exchange.upper().strip(),
+        notes=notes,
+        requested_at=now,
+        created_at=now,
+    )
+    db.add(req)
+    db.commit()
+    return {"id": req.id, "symbol": req.symbol, "exchange": req.exchange, "status": req.status}
+
+
+@router.get("/me/coverage-requests")
+def list_coverage_requests(
+    db: Session = Depends(get_db),
+    auth_subject: str = Depends(require_auth),
+):
+    from app.models import CoverageRequest
+    user = db.query(User).filter(User.auth_subject == auth_subject).first()
+    if not user:
+        return []
+    requests = db.query(CoverageRequest).filter(CoverageRequest.user_id == user.id).order_by(CoverageRequest.created_at.desc()).all()
+    return [
+        {"id": r.id, "symbol": r.symbol, "exchange": r.exchange, "notes": r.notes, "status": r.status, "created_at": r.created_at.isoformat() if r.created_at else None}
+        for r in requests
+    ]
+
+
+# ═══════════════════════════════════════════════════════════════
+# FEEDBACK (public + admin)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/feedback")
+def submit_feedback(
+    email: str = Body(""),
+    name: str = Body(""),
+    category: str = Body("general"),
+    message: str = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Public endpoint — no auth required. Anyone can submit feedback."""
+    from app.models import Feedback
+    fb = Feedback(
+        email=email.strip(),
+        name=name.strip(),
+        category=category.strip(),
+        message=message.strip(),
+    )
+    db.add(fb)
+    db.commit()
+    return {"id": fb.id, "status": fb.status, "message": "Thank you for your feedback!"}
+
+
+@router.get("/admin/feedback")
+def admin_list_feedback(
+    status: str | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — list all feedback."""
+    helpers.require_admin(db, claims)
+    from app.models import Feedback
+    query = db.query(Feedback).order_by(Feedback.created_at.desc())
+    if status:
+        query = query.filter(Feedback.status == status)
+    items = query.limit(min(limit, 200)).all()
+    return [
+        {
+            "id": f.id,
+            "email": f.email,
+            "name": f.name,
+            "category": f.category,
+            "message": f.message,
+            "status": f.status,
+            "admin_notes": f.admin_notes,
+            "created_at": f.created_at.isoformat() if f.created_at else None,
+        }
+        for f in items
+    ]
+
+
+@router.patch("/admin/feedback/{feedback_id}")
+def admin_update_feedback(
+    feedback_id: int,
+    status: str | None = Body(None),
+    admin_notes: str | None = Body(None),
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — update feedback status and/or admin notes."""
+    helpers.require_admin(db, claims)
+    from app.models import Feedback
+    fb = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if not fb:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    if status is not None:
+        fb.status = status
+    if admin_notes is not None:
+        fb.admin_notes = admin_notes
+    db.commit()
+    return {"id": fb.id, "status": fb.status, "admin_notes": fb.admin_notes}
+
+
+# ═══════════════════════════════════════════════════════════════
+# ADMIN: COVERAGE REQUESTS (all users)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/admin/coverage-requests")
+def admin_list_coverage_requests(
+    status: str | None = None,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — list ALL coverage requests from all users."""
+    helpers.require_admin(db, claims)
+    from app.models import CoverageRequest, User
+    query = (
+        db.query(CoverageRequest, User)
+        .outerjoin(User, CoverageRequest.user_id == User.id)
+        .order_by(CoverageRequest.created_at.desc())
+    )
+    if status:
+        query = query.filter(CoverageRequest.status == status)
+    items = query.limit(min(limit, 200)).all()
+    return [
+        {
+            "id": cr.id,
+            "symbol": cr.symbol,
+            "exchange": cr.exchange,
+            "notes": cr.notes,
+            "status": cr.status,
+            "created_at": cr.created_at.isoformat() if cr.created_at else None,
+            "user_email": u.email if u else "unknown",
+            "user_name": u.display_name if u else "unknown",
+        }
+        for cr, u in items
+    ]
+
+
+@router.patch("/admin/coverage-requests/{request_id}")
+def admin_update_coverage_request(
+    request_id: int,
+    status: str = Body(...),
+    db: Session = Depends(get_db),
+    claims: dict = Depends(helpers.verify_clerk_token),
+):
+    """Admin only — update coverage request status."""
+    helpers.require_admin(db, claims)
+    from app.models import CoverageRequest
+    cr = db.query(CoverageRequest).filter(CoverageRequest.id == request_id).first()
+    if not cr:
+        raise HTTPException(status_code=404, detail="Coverage request not found")
+    cr.status = status
+    db.commit()
+    return {"id": cr.id, "status": cr.status}
+
+# ═══════════════════════════════════════════════════════════════
+# NEWS (RSS-backed)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/news")
+def list_public_news(
+    limit: int = Query(default=24, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    from app.services.news_service import list_news
+    return list_news(db, limit=limit)
+
+
+@router.post("/internal/news/sync")
+def sync_news_feed(
+    db: Session = Depends(get_db),
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+):
+    from app.config import INTERNAL_SERVICE_TOKEN
+    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
+    if x_internal_service_token != INTERNAL_SERVICE_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    n_rss = fetch_and_upsert_news(db)
+    n_nd = fetch_and_upsert_newsdata(db)
+    return {"ok": True, "upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd}
+
+# ═══════════════════════════════════════════════════════════════
+# BROKER: Upstox OAuth
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/me/integrations/upstox/authorize-url")
+def upstox_authorize_url(auth_subject: str = Depends(require_auth)):
+    """Returns Upstox login URL with signed state (user must open in browser)."""
+    from app.config import UPSTOX_API_KEY, UPSTOX_REDIRECT_URI
+    from app.services.upstox_oauth import build_authorize_url, create_oauth_state
+    if not UPSTOX_API_KEY or not UPSTOX_REDIRECT_URI:
+        raise HTTPException(
+            status_code=503,
+            detail="Upstox is not configured. Set UPSTOX_API_KEY and UPSTOX_REDIRECT_URI on the API.",
+        )
+    state = create_oauth_state(auth_subject)
+    try:
+        url = build_authorize_url(state)
+    except ValueError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    return {"url": url}
+
+
+@router.get("/me/integrations/upstox/callback")
+def upstox_oauth_callback(
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """OAuth redirect from Upstox — exchanges code and stores encrypted token."""
+    from urllib.parse import quote
+    from app.models import BrokerConnection, User
+    from app.services.broker_token_store import encrypt_token
+    from app.services.upstox_oauth import exchange_code_for_token, verify_oauth_state
+
+    frontend = FRONTEND_APP_URL.rstrip("/")
+
+    def redirect_status(status: str, msg: str = "") -> RedirectResponse:
+        q = f"broker=upstox&status={quote(status)}"
+        if msg:
+            q += f"&message={quote(msg[:300])}"
+        return RedirectResponse(url=f"{frontend}/watchlist?{q}", status_code=302)
+
+    if error:
+        return redirect_status("error", error_description or error)
+    if not code or not state:
+        return redirect_status("error", "Missing code or state")
+
+    auth_subject = verify_oauth_state(state)
+    if not auth_subject:
+        return redirect_status("error", "Invalid or expired state")
+
+    user = db.query(User).filter(User.auth_subject == auth_subject).first()
+    if not user:
+        return redirect_status("error", "User not found")
+
+    try:
+        token_payload = exchange_code_for_token(code)
+    except Exception as exc:
+        return redirect_status("error", str(exc)[:200])
+
+    access = token_payload.get("access_token") if isinstance(token_payload, dict) else None
+    if not access:
+        return redirect_status("error", "No access_token in Upstox response")
+
+    row = (
+        db.query(BrokerConnection)
+        .filter(BrokerConnection.user_id == user.id, BrokerConnection.broker_id == "upstox")
+        .first()
+    )
+    enc = encrypt_token(access)
+    if row:
+        row.access_token_enc = enc
+        row.status = "connected"
+        row.error_message = ""
+    else:
+        db.add(
+            BrokerConnection(
+                user_id=user.id,
+                broker_id="upstox",
+                broker_name="Upstox",
+                status="connected",
+                access_token_enc=enc,
+            )
+        )
+    db.commit()
+    return redirect_status("connected")
 

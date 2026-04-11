@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 /* ── Performance hints ── */
 
@@ -53,7 +53,19 @@
   --purple-border: #c4b5fd;
 
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+  /* Product UI uses one typeface for clarity */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Status colors: Halal = green, Doubtful = yellow/amber, Haram = red (accessible on card backgrounds) */
+  --status-halal-fg: #047857;
+  --status-halal-bg: #ecfdf5;
+  --status-halal-border: #6ee7b7;
+  --status-doubtful-fg: #92400e;
+  --status-doubtful-bg: #fffbeb;
+  --status-doubtful-border: #fcd34d;
+  --status-haram-fg: #b91c1c;
+  --status-haram-bg: #fef2f2;
+  --status-haram-border: #fecaca;
 
   --radius-xs: 6px;
   --radius-sm: 8px;
@@ -85,6 +97,9 @@
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-blur: 12px;
   --gradient-emerald: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+
+  --section-gap: 2rem;
+  --section-gap-lg: 2.75rem;
 
   color-scheme: light;
 }
@@ -152,6 +167,16 @@
   --glass-blur: 12px;
   --gradient-emerald: linear-gradient(135deg, #047857 0%, #10b981 50%, #34d399 100%);
 
+  --status-halal-fg: #6ee7b7;
+  --status-halal-bg: rgba(52, 211, 153, 0.14);
+  --status-halal-border: rgba(52, 211, 153, 0.35);
+  --status-doubtful-fg: #fcd34d;
+  --status-doubtful-bg: rgba(251, 191, 36, 0.12);
+  --status-doubtful-border: rgba(251, 191, 36, 0.35);
+  --status-haram-fg: #fda4af;
+  --status-haram-bg: rgba(251, 113, 133, 0.12);
+  --status-haram-border: rgba(251, 113, 133, 0.35);
+
   color-scheme: dark;
 }
 
@@ -179,8 +204,8 @@ body {
   color: var(--text);
   background-color: var(--bg);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: clamp(15px, 0.35vw + 14px, 16px);
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color var(--transition-base), color var(--transition-base);
@@ -257,13 +282,20 @@ input, select, textarea, button {
   z-index: 100;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 24px;
+  gap: 12px;
+  padding: 0 12px;
   height: 56px;
   border-bottom: 1px solid var(--topbar-border);
   background: var(--topbar-bg);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+@media (min-width: 768px) {
+  .topbar {
+    gap: 16px;
+    padding: 0 32px;
+  }
 }
 
 .wordmark {
@@ -284,6 +316,83 @@ input, select, textarea, button {
 
 .wordmark:hover { opacity: 0.8; }
 
+/* Search slot: icon launcher (mobile) + field (desktop or overlay) */
+.topbarSearchSlot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  position: relative;
+}
+
+.topbarSearchOpenBtn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.topbarSearchOpenBtnIcon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+@media (max-width: 767px) {
+  .topbarSearchOpenBtn {
+    display: inline-flex;
+  }
+  .topbarSearch:not(.topbarSearchOverlay) {
+    display: none;
+  }
+  .topbarSearch.topbarSearchOverlay {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    max-width: none;
+    flex: none;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    background: var(--bg);
+    overflow: hidden;
+  }
+  .topbarSearch.topbarSearchOverlay form {
+    position: relative;
+    width: 100%;
+    margin-top: 40px;
+  }
+  .topbarSearchOverlayClose {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    right: 12px;
+    z-index: 2;
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  .topbarSearch.topbarSearchOverlay .searchDropdown {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    max-height: min(60vh, 420px);
+    margin-top: 8px;
+  }
+}
+
 /* ── Topbar Search ── */
 .topbarSearch {
   flex: 1;
@@ -291,6 +400,7 @@ input, select, textarea, button {
   position: relative;
   z-index: 100;
 }
+
 
 .topbarSearchInput {
   width: 100%;
@@ -417,15 +527,15 @@ input, select, textarea, button {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  right: 0;
-  background: var(--panel);
+  width: 100%;
+  background: var(--panel-solid);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08);
   list-style: none;
   margin: 0;
   padding: 4px;
-  z-index: 200;
+  z-index: 9999;
   max-height: 400px;
   overflow-y: auto;
   animation: dropdownIn 120ms ease-out;
@@ -447,6 +557,13 @@ input, select, textarea, button {
 .searchDropdownItem:hover,
 .searchDropdownItemFocused {
   background: var(--bg-soft);
+}
+.searchMatchHighlight {
+  background: color-mix(in srgb, var(--emerald) 28%, transparent);
+  color: var(--text);
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 2px;
 }
 .searchDropdownLeft {
   display: flex;
@@ -538,10 +655,17 @@ input, select, textarea, button {
   margin-left: auto;
 }
 
+/* Mobile: primary nav is bottom bar + drawer — hide desktop top nav CTAs */
+@media (max-width: 767px) {
+  .topbarActions {
+    display: none;
+  }
+}
+
 .topbarNav {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 4px;
 }
 
 .topbarNavSecondary {
@@ -552,7 +676,7 @@ input, select, textarea, button {
 
 /* Nav links */
 .ghostLink {
-  padding: 7px 14px;
+  padding: 7px 16px;
   color: var(--text-secondary);
   font-size: 0.82rem;
   font-weight: 500;
@@ -570,17 +694,27 @@ input, select, textarea, button {
   font-weight: 600;
 }
 
+/* Hide duplicate Watchlist in top bar on small screens (Watchlist is in bottom nav + drawer) */
+@media (max-width: 768px) {
+  .topbarWatchlistLink {
+    display: none;
+  }
+}
+
 /* Buttons */
 .ghostButton,
 .solidButton {
   border: 0;
   border-radius: var(--radius-sm);
   padding: 8px 16px;
+  min-height: 44px;
   font: inherit;
   font-weight: 600;
   font-size: 0.84rem;
   cursor: pointer;
   transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .ghostButton {
@@ -595,6 +729,8 @@ input, select, textarea, button {
 .ghostButtonLink {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 9px 20px;
   border-radius: var(--radius-full);
   background: transparent;
@@ -603,6 +739,8 @@ input, select, textarea, button {
   font-size: 0.84rem;
   border: 1px solid var(--line);
   transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .ghostButtonLink:hover {
   color: var(--text);
@@ -619,9 +757,18 @@ input, select, textarea, button {
   background: var(--emerald-hover);
 }
 
+@media (min-width: 769px) {
+  .ghostButton,
+  .solidButton {
+    min-height: 0;
+  }
+}
+
 .solidButtonLink {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 9px 20px;
   border-radius: var(--radius-full);
   background: var(--gradient-emerald);
@@ -630,11 +777,20 @@ input, select, textarea, button {
   font-size: 0.84rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-emerald);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .solidButtonLink:hover {
   box-shadow: var(--shadow-emerald-lg);
   transform: translateY(-1px);
   filter: brightness(1.08);
+}
+
+@media (min-width: 769px) {
+  .ghostButtonLink,
+  .solidButtonLink {
+    min-height: 0;
+  }
 }
 
 
@@ -680,8 +836,10 @@ input, select, textarea, button {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  padding: 6px 16px;
+  min-height: 44px;
+  padding: 6px 10px;
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   text-decoration: none;
@@ -693,6 +851,15 @@ input, select, textarea, button {
 .bottomNavItemActive:hover { color: var(--emerald); }
 .bottomNavIcon { font-size: 1.2rem; line-height: 1; }
 .bottomNavLabel { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.02em; }
+
+.bottomNav button.bottomNavItem {
+  font: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -852,6 +1019,9 @@ input, select, textarea, button {
 [data-theme="dark"] .searchDropdownItemFocused {
   background: rgba(16, 185, 129, 0.08);
 }
+[data-theme="dark"] .searchMatchHighlight {
+  background: rgba(16, 185, 129, 0.25);
+}
 
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -994,10 +1164,17 @@ textarea:focus::placeholder {
 
 /* Premium gradient variant for login/signup */
 .authSidebarGradient {
-  background: linear-gradient(170deg, #064e3b 0%, #065f46 40%, #047857 100%);
+  background: linear-gradient(135deg, #047857 0%, #059669 40%, #10b981 70%, #065f46 100%);
+  background-size: 200% 200%;
+  animation: authGradientShift 12s ease-in-out infinite;
   border-right: none;
   position: relative;
   overflow: hidden;
+}
+
+@keyframes authGradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 .authSidebarGradient::before {
   content: "";

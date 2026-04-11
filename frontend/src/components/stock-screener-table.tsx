@@ -11,6 +11,9 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockPreviewPopup } from "@/components/stock-preview-popup";
 import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
+import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
+import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -32,6 +35,13 @@ const MCAP_OPTIONS = [
   { key: "small", label: "Small Cap", min: 0, max: 20000 },
 ] as const;
 
+const EXCHANGE_OPTIONS = [
+  { key: "all", label: "All Markets" },
+  { key: "NSE", label: "India (NSE)" },
+  { key: "US", label: "US (NYSE/NASDAQ)" },
+  { key: "LSE", label: "UK (LSE)" },
+] as const;
+
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   HALAL: { cls: "statusHalal", label: "Halal" },
   CAUTIOUS: { cls: "statusReview", label: "Cautious" },
@@ -46,24 +56,23 @@ const EXAMPLE_STOCK_CHIPS = [
   { label: "Infosys", value: "INFY" },
 ] as const;
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)} Cr`;
-  if (value >= 1e5) return `₹${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
+function formatPrice(value: number, currency?: string) {
+  const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
+  return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }
 
 function formatPct(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function getSortValue(s: ScreenedStock, key: SortKey): number | string {
+function getSortValue(
+  s: ScreenedStock,
+  key: SortKey,
+  livePrice?: number | null,
+): number | string {
   switch (key) {
     case "symbol": return s.symbol;
-    case "price": return s.price;
+    case "price": return livePrice ?? s.price;
     case "market_cap": return s.market_cap;
     case "status": return STATUS_ORDER[s.screening.status] ?? 9;
     case "debt_ratio": return s.screening.breakdown.debt_to_36m_avg_market_cap_ratio;
@@ -80,7 +89,7 @@ function exportToCsv(stocks: ScreenedStock[]) {
       `"${s.name.replace(/"/g, '""')}"`,
       `"${s.sector}"`,
       s.price.toFixed(2),
-      (s.market_cap / 100).toFixed(2),
+      s.market_cap.toFixed(2),
       s.screening.status,
       (b.debt_to_36m_avg_market_cap_ratio * 100).toFixed(2) + "%",
       (b.non_permissible_income_ratio * 100).toFixed(2) + "%",
@@ -111,7 +120,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobileLayout = useIsMobileSidebarBreakpoint();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 960px)");
+    const sync = () => setSidebarOpen(!mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(query);
@@ -132,7 +151,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [isSavingFilter, setIsSavingFilter] = useState(false);
 
   const allSymbols = useMemo(() => screenedStocks.map((s) => s.symbol), [screenedStocks]);
-  const quotes = useBatchQuotes(allSymbols);
+  const exchangeBySymbol = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of screenedStocks) {
+      m[s.symbol] = exchangeForBatchQuote(s.exchange, s.currency);
+    }
+    return m;
+  }, [screenedStocks]);
+  const quotes = useBatchQuotes(allSymbols, exchangeBySymbol);
 
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
@@ -154,8 +180,8 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (mcap && MCAP_OPTIONS.some((o) => o.key === mcap)) setMcapFilter(mcap);
     const idx = searchParams.get("index");
     if (idx && INDEX_OPTIONS.some((o) => o.key === idx)) setIndexFilter(idx);
-    const ex = searchParams.get("exchange");
-    if (ex && ["NSE", "US", "LSE"].includes(ex)) setExchangeFilter(ex);
+    const exc = searchParams.get("exchange");
+    if (exc && EXCHANGE_OPTIONS.some((o) => o.key === exc)) setExchangeFilter(exc);
     setInitialized(true);
   }, [searchParams, screenedStocks]);
 
@@ -205,13 +231,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const sorted = useMemo(() => {
     const arr = [...filtered];
     arr.sort((a, b) => {
-      const va = getSortValue(a, sortKey);
-      const vb = getSortValue(b, sortKey);
+      const va = getSortValue(a, sortKey, quotes[a.symbol]?.last_price);
+      const vb = getSortValue(b, sortKey, quotes[b.symbol]?.last_price);
       if (typeof va === "number" && typeof vb === "number") return sortDir === "asc" ? va - vb : vb - va;
       return sortDir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
     return arr;
-  }, [filtered, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir, quotes]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
@@ -333,6 +359,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
 
   return (
     <div className={styles.screenerLayout}>
+      {isMobileLayout && sidebarOpen && (
+        <button
+          type="button"
+          className={styles.sidebarOverlay}
+          aria-label="Close filters"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* ── Left Sidebar ── */}
       <aside className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed}`}>
         <div className={styles.sidebarHeader}>
@@ -416,12 +450,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>Exchange</h4>
           <div className={styles.filterPills}>
-            {[
-              { key: "all", label: "All" },
-              { key: "NSE", label: "🇮🇳 NSE" },
-              { key: "US", label: "🇺🇸 US" },
-              { key: "LSE", label: "🇬🇧 LSE" },
-            ].map((opt) => (
+            {EXCHANGE_OPTIONS.map((opt) => (
               <button
                 key={opt.key}
                 type="button"
@@ -516,7 +545,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             )}
             {exchangeFilter !== "all" && (
               <span className={styles.chip}>
-                {exchangeFilter}
+                {EXCHANGE_OPTIONS.find((o) => o.key === exchangeFilter)?.label}
                 <button type="button" onClick={() => setExchangeFilter("all")}>&times;</button>
               </span>
             )}
@@ -541,7 +570,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
                 <SortTh col="status">Shariah</SortTh>
-                <th className={styles.th}>Rating</th>
                 <SortTh col="debt_ratio" numeric>Debt Ratio</SortTh>
                 <SortTh col="income_purity" numeric>Income Purity</SortTh>
               </tr>
@@ -574,9 +602,11 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       </StockPreviewPopup>
                     </td>
                     <td className={styles.tdSector}>{s.sector}</td>
-                    <td className={styles.tdRight}>{formatMcap(s.market_cap)}</td>
                     <td className={styles.tdRight}>
-                      {formatPrice(quotes[s.symbol]?.last_price ?? s.price)}
+                      {formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency))}
+                    </td>
+                    <td className={styles.tdRight}>
+                      {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
                       {quotes[s.symbol]?.change_percent != null && (
                         <span className={(quotes[s.symbol].change_percent ?? 0) >= 0 ? styles.up : styles.down}>
                           {" "}{(quotes[s.symbol].change_percent ?? 0) >= 0 ? "+" : ""}
@@ -587,16 +617,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                     <td>
                       <span className={`${styles.statusBadge} ${styles[cfg.cls]}`}>{cfg.label}</span>
                     </td>
-                    <td style={{ fontSize: "0.78rem", letterSpacing: 1 }}>
-                      {(s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating ? (
-                        <span style={{ color: (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating! >= 4 ? "var(--emerald)" : (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating! >= 3 ? "var(--gold)" : "var(--red)" }}>
-                          {"★".repeat((s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating!)}
-                          {"☆".repeat(5 - (s.screening as ScreeningResult & { compliance_rating?: number }).compliance_rating!)}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
-                      )}
-                    </td>
                     <td className={styles.tdRight}>{formatPct(b.debt_to_36m_avg_market_cap_ratio)}</td>
                     <td className={styles.tdRight}>{formatPct(b.non_permissible_income_ratio)}</td>
                   </tr>
@@ -604,7 +624,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={9} className={styles.emptyRow}>
+                  <td colSpan={8} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>
@@ -651,6 +671,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             </button>
           </div>
         )}
+
+        <div className={styles.screenerDisclaimer}>
+          Screening results are based on automated financial ratio analysis using publicly available data.
+          They do not constitute a fatwa or religious ruling.
+          Consult a qualified Shariah scholar for definitive investment guidance.
+          <Link href="/methodology" className={styles.screenerDisclaimerLink}>View methodology</Link>
+        </div>
       </div>
 
       {/* Save Filter Modal */}

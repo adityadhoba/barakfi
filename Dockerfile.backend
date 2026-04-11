@@ -25,12 +25,15 @@ RUN mkdir -p /app/data
 
 # Render uses PORT env var (default 10000), not a fixed port
 ENV PORT=10000
+ENV WEB_CONCURRENCY=1
 EXPOSE ${PORT}
 
 # Run with gunicorn — Render sets $PORT automatically
 CMD gunicorn app.main:app \
     --worker-class uvicorn.workers.UvicornWorker \
-    --workers 2 \
+    --workers ${WEB_CONCURRENCY} \
     --bind 0.0.0.0:${PORT} \
     --timeout 120 \
-    --access-logfile -
+    --access-logfile - \
+    --error-logfile - \
+    --capture-output

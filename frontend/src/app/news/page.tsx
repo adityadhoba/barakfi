@@ -1,116 +1,108 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { getNewsFeed } from "@/lib/api";
+import { NewsCarousel } from "./news-carousel";
+import styles from "./news.module.css";
 
 export const metadata: Metadata = {
-  title: "Islamic Finance News — Halal Investing Updates | Barakfi",
+  title: "Islamic Finance News — Halal Investing Updates India",
   description:
-    "Stay updated with the latest Islamic finance and halal investing news. Market updates, regulatory changes, and industry insights.",
-  keywords: [
-    "islamic finance news", "halal investing news", "shariah compliance updates",
-    "muslim investor news", "halal stock market news",
-  ],
+    "Stay updated with the latest Islamic finance news, Shariah-compliant investing trends, and halal market developments in India and globally.",
+  alternates: { canonical: "https://barakfi.in/news" },
 };
 
-const NEWS_ITEMS = [
+export const dynamic = "force-dynamic";
+
+const GUIDE_ITEMS = [
   {
-    title: "Global Islamic Finance Assets Expected to Reach $5.9 Trillion by 2026",
-    source: "Islamic Financial Services Board",
-    date: "2026-03-28",
-    category: "Industry",
-    summary: "The global Islamic finance industry continues its growth trajectory with increasing demand for Shariah-compliant financial products across Asia, Middle East, and Africa.",
+    title: "Understanding S&P Shariah Screening Methodology",
+    summary:
+      "How the S&P Dow Jones Shariah indices screen stocks for compliance. Learn about the 5 key financial ratios and sector exclusions that determine halal status.",
+    category: "Education",
+    date: "2026",
+    href: "/methodology",
   },
   {
-    title: "AAOIFI Updates Shariah Standards for Equity Screening",
-    source: "AAOIFI",
-    date: "2026-03-15",
-    category: "Regulation",
-    summary: "The Accounting and Auditing Organisation for Islamic Financial Institutions has released updated guidelines for equity screening methodologies.",
+    title: "Halal Investing: Why Debt Ratios Matter",
+    summary:
+      "A deep dive into why Shariah screening focuses heavily on debt ratios. Companies with excessive leverage are excluded — here's what the thresholds mean for your portfolio.",
+    category: "Analysis",
+    date: "2026",
+    href: "/shariah-compliance",
   },
   {
-    title: "Halal ETF Market Grows 40% Year-Over-Year",
-    source: "Bloomberg",
-    date: "2026-03-10",
-    category: "Markets",
-    summary: "The global halal ETF market has seen unprecedented growth, with new funds launching across Europe and Southeast Asia.",
-  },
-  {
-    title: "India Emerging as Key Market for Islamic Finance Products",
-    source: "Economic Times",
-    date: "2026-03-05",
-    category: "Markets",
-    summary: "With a growing Muslim population and increasing financial inclusion, India represents a significant opportunity for halal investment products.",
-  },
-  {
-    title: "Technology Sector Leads Shariah-Compliant Stock Performance",
-    source: "S&P Dow Jones Indices",
-    date: "2026-02-28",
-    category: "Performance",
-    summary: "Technology stocks continue to dominate Shariah-compliant indices, benefiting from low debt ratios and minimal non-permissible revenue.",
-  },
-  {
-    title: "New Research Shows Growing Demand for ESG + Shariah Investing",
-    source: "Reuters",
-    date: "2026-02-20",
-    category: "Research",
-    summary: "A convergence of Environmental, Social, and Governance (ESG) criteria with Shariah compliance is creating new opportunities for values-based investors.",
+    title: "Purification of Dividends: A Practical Guide",
+    summary:
+      "Even halal stocks may have small non-permissible income. Learn how to calculate and donate the purification amount from your dividend income.",
+    category: "Guide",
+    date: "2026",
+    href: "/tools/purification",
   },
 ];
 
-const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
-  Industry: { bg: "var(--emerald-dim)", fg: "var(--emerald)" },
-  Regulation: { bg: "var(--blue-dim)", fg: "var(--blue)" },
-  Markets: { bg: "var(--purple-dim)", fg: "var(--purple)" },
-  Performance: { bg: "var(--gold-dim)", fg: "var(--gold)" },
-  Research: { bg: "var(--blue-dim)", fg: "var(--blue)" },
-};
+export default async function NewsPage() {
+  const { items: feed, loadStatus, errorHint } = await getNewsFeed(24);
 
-export default function NewsPage() {
   return (
     <main className="shellPage">
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.6rem", fontWeight: 800, marginBottom: 6 }}>
-            Islamic Finance News
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", maxWidth: 600 }}>
-            Stay informed with the latest developments in Islamic finance, halal investing, and Shariah-compliant markets worldwide.
+      <div className={styles.container}>
+        <nav className={styles.breadcrumb}>
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <span>News</span>
+        </nav>
+        <header className={styles.header}>
+          <span className={styles.kicker}>Stay Informed</span>
+          <h1 className={styles.title}>Islamic Finance News</h1>
+          <p className={styles.subtitle}>
+            Islamic finance &amp; Shariah investing headlines (NewsData.io when configured, plus RSS). Opens in a new tab.
           </p>
-        </div>
+        </header>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {NEWS_ITEMS.map((item, i) => {
-            const catColor = CATEGORY_COLORS[item.category] ?? { bg: "var(--bg-soft)", fg: "var(--text-secondary)" };
-            return (
-              <article
-                key={i}
-                style={{
-                  padding: 24, background: "var(--bg-elevated)",
-                  borderRadius: "var(--radius-xl)", border: "1px solid var(--line)",
-                  transition: "border-color var(--transition-fast)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <span style={{
-                    padding: "2px 8px", borderRadius: 4, fontSize: "0.68rem",
-                    fontWeight: 600, background: catColor.bg, color: catColor.fg,
-                  }}>
-                    {item.category}
-                  </span>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>
-                    {new Date(item.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                </div>
-                <h2 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: 8, fontFamily: "var(--font-display)", lineHeight: 1.4 }}>
-                  {item.title}
-                </h2>
-                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 8 }}>
-                  {item.summary}
-                </p>
-                <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500 }}>
-                  Source: {item.source}
-                </span>
-              </article>
-            );
-          })}
+        {feed.length > 0 ? (
+          <>
+            <NewsCarousel items={feed.slice(0, 8)} />
+            <h2 className={styles.feedSectionTitle}>More headlines</h2>
+            <div className={styles.grid}>
+              {feed.map((item) => (
+                <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer" className={styles.card}>
+                  <div className={styles.cardTop}>
+                    <span className={styles.cardCategory}>{item.source || "News"}</span>
+                    <span className={styles.cardDate}>
+                      {item.published_at ? item.published_at.slice(0, 10) : ""}
+                    </span>
+                  </div>
+                  <h2 className={styles.cardTitle}>{item.title}</h2>
+                  {item.summary ? <p className={styles.cardSummary}>{item.summary}</p> : null}
+                  <span className={styles.cardLink}>Read on source site →</span>
+                </a>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className={styles.emptyFeed}>
+            {loadStatus === "error"
+              ? errorHint ||
+                "Could not load news from the API. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."
+              : "No headlines yet. Run POST /api/internal/news/sync with header X-Internal-Service-Token (same value as INTERNAL_SERVICE_TOKEN on Render). NEWS_RSS_URL is optional — a default Islamic-finance RSS is built in. Set NEWSDATA_API_KEY for NewsData.io."}
+          </p>
+        )}
+
+        <h2 className={styles.feedSectionTitle} style={{ marginTop: 40 }}>
+          Guides on Barakfi
+        </h2>
+        <div className={styles.grid}>
+          {GUIDE_ITEMS.map((item, i) => (
+            <Link key={i} href={item.href} className={styles.card}>
+              <div className={styles.cardTop}>
+                <span className={styles.cardCategory}>{item.category}</span>
+                <span className={styles.cardDate}>{item.date}</span>
+              </div>
+              <h2 className={styles.cardTitle}>{item.title}</h2>
+              <p className={styles.cardSummary}>{item.summary}</p>
+              <span className={styles.cardLink}>Read more →</span>
+            </Link>
+          ))}
         </div>
       </div>
     </main>

@@ -1,142 +1,87 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import styles from "./academy.module.css";
 
 export const metadata: Metadata = {
-  title: "Halal Investing Academy — Learn Islamic Finance | Barakfi",
-  description:
-    "Learn about halal investing, Shariah screening methodologies, purification, and AAOIFI standards. Free educational resources for Muslim investors.",
-  keywords: [
-    "halal investing guide", "islamic finance education", "shariah screening explained",
-    "AAOIFI standards", "halal stock screening guide", "purification calculator guide",
-    "how to invest halal", "islamic investment basics",
-  ],
+  title: "Academy — Learn Islamic Finance & Halal Investing",
+  description: "Free educational resources on Islamic finance, Shariah-compliant investing, halal stocks, purification, zakat, and more.",
+  alternates: { canonical: "https://barakfi.in/academy" },
 };
 
-const ARTICLES = [
+const LESSONS = [
   {
-    slug: "what-makes-a-stock-halal",
-    title: "What Makes a Stock Halal?",
-    description: "Understanding the financial ratios and sector screens that determine whether a stock is Shariah-compliant.",
-    category: "Basics",
-    readTime: "5 min read",
-    icon: "📖",
+    slug: "what-is-halal-investing",
+    title: "What is Halal Investing?",
+    summary: "An introduction to Islamic finance principles and how they apply to stock market investing.",
+    level: "Beginner",
+    readTime: "5 min",
   },
   {
-    slug: "understanding-purification",
-    title: "Understanding Purification (Tazkiyah)",
-    description: "How to calculate and donate the non-permissible portion of your investment returns.",
-    category: "Purification",
-    readTime: "4 min read",
-    icon: "🧹",
+    slug: "shariah-screening-explained",
+    title: "Shariah Screening Explained",
+    summary: "How stocks are evaluated for compliance using S&P, AAOIFI, and FTSE methodologies.",
+    level: "Beginner",
+    readTime: "8 min",
   },
   {
-    slug: "aaoifi-standards-explained",
-    title: "AAOIFI Standards Explained",
-    description: "A deep dive into the Accounting and Auditing Organisation for Islamic Financial Institutions standards.",
-    category: "Methodology",
-    readTime: "7 min read",
-    icon: "📋",
+    slug: "understanding-financial-ratios",
+    title: "Understanding Financial Ratios",
+    summary: "Deep dive into the 5 key ratios used in Shariah screening: debt, receivables, cash, income purity.",
+    level: "Intermediate",
+    readTime: "10 min",
   },
   {
-    slug: "sp-shariah-methodology",
-    title: "S&P Shariah Indices Methodology",
-    description: "How S&P screens stocks for Shariah compliance using market cap-based denominators.",
-    category: "Methodology",
-    readTime: "6 min read",
-    icon: "📊",
+    slug: "dividend-purification",
+    title: "Dividend Purification Guide",
+    summary: "How to calculate and donate the non-permissible portion of dividend income from halal stocks.",
+    level: "Intermediate",
+    readTime: "6 min",
   },
   {
-    slug: "financial-ratios-for-screening",
-    title: "Financial Ratios Used in Screening",
-    description: "Debt-to-equity, receivables ratio, non-permissible income — understanding each ratio and its threshold.",
-    category: "Technical",
-    readTime: "8 min read",
-    icon: "🔢",
+    slug: "zakat-on-investments",
+    title: "Zakat on Stock Investments",
+    summary: "Comprehensive guide to calculating zakat on shares, mutual funds, and other equity investments.",
+    level: "Intermediate",
+    readTime: "8 min",
   },
   {
-    slug: "halal-etf-investing",
-    title: "Halal ETF Investing Guide",
-    description: "Can you invest in ETFs as a Muslim? Understanding how to evaluate exchange-traded funds for compliance.",
-    category: "Investing",
-    readTime: "5 min read",
-    icon: "📈",
-  },
-  {
-    slug: "zakat-on-stocks",
-    title: "Calculating Zakat on Stock Investments",
-    description: "How to calculate zakat on your equity portfolio, dividends, and unrealized gains.",
-    category: "Zakat",
-    readTime: "6 min read",
-    icon: "🌙",
-  },
-  {
-    slug: "global-halal-markets",
-    title: "Global Halal Investment Markets",
-    description: "Overview of halal investing opportunities across US, UK, India, Southeast Asia, and MENA markets.",
-    category: "Markets",
-    readTime: "7 min read",
-    icon: "🌍",
+    slug: "building-halal-portfolio",
+    title: "Building a Halal Portfolio",
+    summary: "Practical strategies for constructing a diversified Shariah-compliant investment portfolio.",
+    level: "Advanced",
+    readTime: "12 min",
   },
 ];
-
-const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
-  Basics: { bg: "var(--emerald-dim)", fg: "var(--emerald)" },
-  Purification: { bg: "var(--purple-dim)", fg: "var(--purple)" },
-  Methodology: { bg: "var(--blue-dim)", fg: "var(--blue)" },
-  Technical: { bg: "var(--gold-dim)", fg: "var(--gold)" },
-  Investing: { bg: "var(--emerald-dim)", fg: "var(--emerald)" },
-  Zakat: { bg: "var(--purple-dim)", fg: "var(--purple)" },
-  Markets: { bg: "var(--blue-dim)", fg: "var(--blue)" },
-};
 
 export default function AcademyPage() {
   return (
     <main className="shellPage">
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.6rem", fontWeight: 800, marginBottom: 6 }}>
-            Halal Investing Academy
-          </h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", maxWidth: 600 }}>
-            Educational resources to help you understand Shariah-compliant investing, screening methodologies, and Islamic finance principles.
+      <div className={styles.container}>
+        <nav className={styles.breadcrumb}>
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <span>Academy</span>
+        </nav>
+        <header className={styles.header}>
+          <span className={styles.kicker}>Learn</span>
+          <h1 className={styles.title}>Barakfi Academy</h1>
+          <p className={styles.subtitle}>
+            Free educational resources to help you understand Islamic finance and make confident investment decisions.
           </p>
-        </div>
+        </header>
 
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-          {ARTICLES.map((article) => {
-            const catColor = CATEGORY_COLORS[article.category] ?? { bg: "var(--bg-soft)", fg: "var(--text-secondary)" };
-            return (
-              <Link
-                key={article.slug}
-                href={`/academy/${article.slug}`}
-                style={{
-                  display: "block", padding: 24,
-                  background: "var(--bg-elevated)", borderRadius: "var(--radius-xl)",
-                  border: "1px solid var(--line)", textDecoration: "none", color: "inherit",
-                  transition: "border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: "1.5rem" }}>{article.icon}</span>
-                  <span style={{
-                    padding: "2px 8px", borderRadius: 4, fontSize: "0.68rem",
-                    fontWeight: 600, background: catColor.bg, color: catColor.fg,
-                  }}>
-                    {article.category}
-                  </span>
-                </div>
-                <h2 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: 8, fontFamily: "var(--font-display)" }}>
-                  {article.title}
-                </h2>
-                <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
-                  {article.description}
-                </p>
-                <span style={{ fontSize: "0.72rem", color: "var(--text-tertiary)", fontWeight: 500 }}>
-                  {article.readTime}
-                </span>
-              </Link>
-            );
-          })}
+        <div className={styles.grid}>
+          {LESSONS.map((lesson) => (
+            <Link key={lesson.slug} href={`/academy/${lesson.slug}`} className={styles.card}>
+              <div className={styles.cardTop}>
+                <span className={styles.cardLevel}>{lesson.level}</span>
+                <span className={styles.cardTime}>{lesson.readTime}</span>
+              </div>
+              <h2 className={styles.cardTitle}>{lesson.title}</h2>
+              <p className={styles.cardSummary}>{lesson.summary}</p>
+              <span className={styles.cardLink}>Start learning →</span>
+            </Link>
+          ))}
         </div>
       </div>
     </main>

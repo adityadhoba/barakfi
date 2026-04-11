@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { getPublicApiBaseUrl } from "@/lib/api-base";
 import { AdminPanel } from "./admin-panel";
 import s from "./admin.module.css";
 
@@ -14,12 +15,12 @@ async function checkAdminAccess() {
   // Get Clerk JWT token for backend authentication
   const token = await authState.getToken();
   if (!token) {
-    redirect("/");
+    redirect("/sign-in?redirect_url=/admin");
   }
 
   // Fetch user details from API to check role
   try {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8001/api";
+    const apiBase = getPublicApiBaseUrl();
     const response = await fetch(`${apiBase}/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -28,20 +29,20 @@ async function checkAdminAccess() {
     });
 
     if (!response.ok) {
-      redirect("/");
+      redirect("/admin/forbidden");
     }
 
     const user = await response.json();
 
     // Check if user is admin (role = admin or is in legacy admin list)
     if (user.role !== "admin") {
-      redirect("/");
+      redirect("/admin/forbidden");
     }
 
     return user;
   } catch (error) {
     console.error("Admin access check failed:", error);
-    redirect("/");
+    redirect("/admin/forbidden");
   }
 }
 
@@ -51,7 +52,7 @@ export const metadata = {
 };
 
 export default async function AdminPage() {
-  const user = await checkAdminAccess();
+  await checkAdminAccess();
 
   return (
     <div className={s.adminPageContainer}>
@@ -59,7 +60,7 @@ export default async function AdminPage() {
         <h1>Admin Panel</h1>
         <p className={s.adminPageSubtitle}>User and role management</p>
       </div>
-      <AdminPanel currentUserEmail={user.email} />
+      <AdminPanel />
     </div>
   );
 }

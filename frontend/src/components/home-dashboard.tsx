@@ -1,28 +1,25 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNewsFeed } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
-import { TrendingCard } from "@/components/trending-card";
+import {
+  StatIconAvoid,
+  StatIconCautious,
+  StatIconHalal,
+  StatIconUniverse,
+} from "@/components/home-stats-icons";
+import { CollectionIcon } from "@/components/collection-icon";
+import { NewsCarousel } from "@/app/news/news-carousel";
+import { HomeHeroAuth } from "@/components/home-hero-auth";
+import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { HomeHeroVisual } from "@/components/home-hero-visual";
+import { ProductCheckHome } from "@/components/product-check-home";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatMcap(value: number) {
-  if (value >= 1e7) return `\u20B9${(value / 1e7).toFixed(0)} Cr`;
-  if (value >= 1e5) return `\u20B9${(value / 1e5).toFixed(1)} L`;
-  return formatPrice(value);
-}
 
 type Screened = Stock & { screening: ScreeningResult };
 
@@ -45,16 +42,18 @@ async function loadScreenedUniverse(stocks: Stock[]): Promise<{
   return { screened, skippedFullStats: false };
 }
 
-type Props = {
-  isSignedIn: boolean;
-};
-
-export async function HomeDashboard({ isSignedIn }: Props) {
-  const [stocks, trendingGainers, collections] = await Promise.all([
+export async function HomeDashboard() {
+  const [stocks, trendingStocks, collections, investors, etfs, newsResult] = await Promise.all([
     getStocks(),
-    getTrending("gainers", undefined, 8),
+    getTrending("popular", undefined, 6),
     getCollections(),
+    getSuperInvestors(),
+    getETFs(),
+    getNewsFeed(12),
   ]);
+  const newsFeed = newsResult.items;
+  const newsLoadStatus = newsResult.loadStatus;
+  const newsErrorHint = newsResult.errorHint;
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -78,42 +77,16 @@ export async function HomeDashboard({ isSignedIn }: Props) {
 
   return (
     <div className={styles.home}>
+      <ProductCheckHome />
+
       {/* ── Hero ── */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <span className={styles.heroBadgeDot} />
-            Global Shariah-Compliant Investing
+            Shariah-Compliant Indian Equities
           </div>
-          <h1 className={styles.heroTitle}>
-            {isSignedIn ? (
-              <>Welcome back.</>
-            ) : (
-              <>
-                Invest with <span className={styles.heroGradient}>clarity</span> and <span className={styles.heroGradient}>conviction</span>.
-              </>
-            )}
-          </h1>
-          <p className={styles.heroSub}>
-            Screen stocks across India, US &amp; UK using S&amp;P, AAOIFI &amp; FTSE Shariah standards.
-            Multi-methodology compliance, real-time data, zero cost.
-          </p>
-          <div className={styles.heroCtas}>
-            <Link href="/screener" className={styles.heroCtaPrimary}>
-              Open Screener
-              <span className={styles.heroCtaArrow}>&rarr;</span>
-            </Link>
-            {!isSignedIn && (
-              <Link href="/sign-up" className={styles.heroCtaSecondary}>
-                Create free account
-              </Link>
-            )}
-            {isSignedIn && (
-              <Link href="/workspace" className={styles.heroCtaSecondary}>
-                My Portfolio
-              </Link>
-            )}
-          </div>
+          <HomeHeroAuth />
 
           {/* Social Proof Numbers */}
           <div className={styles.socialProof}>
@@ -133,9 +106,9 @@ export async function HomeDashboard({ isSignedIn }: Props) {
             <span className={styles.proofDivider} />
             <div className={styles.proofItem}>
               <span className={styles.proofValue}>
-                <AnimatedCounter end={3} />
+                <AnimatedCounter end={5} />
               </span>
-              <span className={styles.proofLabel}>Global Exchanges</span>
+              <span className={styles.proofLabel}>Compliance Ratios</span>
             </div>
             {compliancePct != null && (
               <>
@@ -151,6 +124,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </div>
       </section>
+
+      <HomeHeroVisual />
 
       {/* ── Ad: after hero ── */}
       <AdUnit format="responsive" />
@@ -206,7 +181,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
       {/* ── Stats Strip ── */}
       <section className={styles.statsGrid}>
         <Link href="/screener" className={styles.statCard}>
-          <span className={styles.statIcon}>&#x25A3;</span>
+          <StatIconUniverse />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Universe</span>
             <span className={styles.statValue}>{total}</span>
@@ -214,7 +189,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=HALAL" className={`${styles.statCard} ${styles.statCardHalal}`}>
-          <span className={`${styles.statIcon} ${styles.statIconHalal}`}>&#x2713;</span>
+          <StatIconHalal />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Halal</span>
             <span className={`${styles.statValue} ${styles.valueHalal}`}>{hasStats ? halal : "\u2014"}</span>
@@ -222,7 +197,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=CAUTIOUS" className={`${styles.statCard} ${styles.statCardReview}`}>
-          <span className={`${styles.statIcon} ${styles.statIconReview}`}>?</span>
+          <StatIconCautious />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Cautious</span>
             <span className={`${styles.statValue} ${styles.valueReview}`}>{hasStats ? review : "\u2014"}</span>
@@ -230,7 +205,7 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </Link>
         <Link href="/screener?status=NON_COMPLIANT" className={`${styles.statCard} ${styles.statCardFail}`}>
-          <span className={`${styles.statIcon} ${styles.statIconFail}`}>&#x2717;</span>
+          <StatIconAvoid />
           <div className={styles.statBody}>
             <span className={styles.statLabel}>Avoid</span>
             <span className={`${styles.statValue} ${styles.valueFail}`}>{hasStats ? fail : "\u2014"}</span>
@@ -288,133 +263,8 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </h2>
           <Link href="/screener" className={styles.seeAll}>Full list &rarr;</Link>
         </div>
-        <div className={styles.stockGrid}>
-          {topHalal.map((row) => {
-            const scr = 'screening' in row ? (row as Screened) : null;
-            return (
-              <Link className={styles.stockItem} href={`/stocks/${encodeURIComponent(row.symbol)}`} key={row.symbol}>
-                <div className={styles.stockItemTop}>
-                  <StockLogo
-                    symbol={row.symbol}
-                    size={36}
-                    status={scr?.screening.status}
-                  />
-                  <div className={styles.stockIdentity}>
-                    <span className={styles.stockSymbol}>{row.symbol}</span>
-                    <span className={styles.stockName}>{row.name}</span>
-                  </div>
-                </div>
-                <div className={styles.stockItemBottom}>
-                  <div className={styles.stockPrice}>{formatPrice(row.price)}</div>
-                  <div className={styles.stockMcap}>{formatMcap(row.market_cap)}</div>
-                </div>
-                {scr && (
-                  <div className={styles.stockStatus}>
-                    <span className={`${styles.statusDot} ${
-                      scr.screening.status === 'HALAL' ? styles.statusDotHalal
-                      : scr.screening.status === 'CAUTIOUS' ? styles.statusDotReview
-                      : styles.statusDotFail
-                    }`} />
-                    {scr.screening.status === 'HALAL' ? 'Halal' : scr.screening.status === 'CAUTIOUS' ? 'Cautious' : 'Avoid'}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── Trending Stocks ── */}
-      {trendingGainers.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Trending Stocks</h2>
-            <Link href="/trending" className={styles.seeAll}>View all &rarr;</Link>
-          </div>
-          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}>
-            {trendingGainers.slice(0, 6).map((s) => (
-              <TrendingCard
-                key={s.symbol}
-                symbol={s.symbol}
-                name={s.name}
-                price={s.price}
-                priceChangePct={s.price_change_pct}
-                complianceStatus={s.compliance_status}
-                complianceRating={s.compliance_rating}
-                exchange={s.exchange}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Collections ── */}
-      {collections.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Halal Collections</h2>
-            <Link href="/collections" className={styles.seeAll}>Browse all &rarr;</Link>
-          </div>
-          <div style={{ display: "grid", gap: 14, gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
-            {collections.filter(c => c.is_featured).slice(0, 4).map((c) => (
-              <Link
-                key={c.slug}
-                href={`/collections/${c.slug}`}
-                style={{
-                  display: "block", padding: 20,
-                  background: "var(--bg-elevated)", borderRadius: "var(--radius-xl)",
-                  border: "1px solid var(--line)", textDecoration: "none", color: "inherit",
-                  transition: "border-color var(--transition-fast), box-shadow var(--transition-fast)",
-                }}
-              >
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: 6, fontFamily: "var(--font-display)" }}>{c.name}</h3>
-                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.4, marginBottom: 10 }}>{c.description}</p>
-                <span style={{
-                  padding: "3px 8px", borderRadius: "var(--radius-full)",
-                  background: "var(--emerald-dim)", color: "var(--emerald)",
-                  fontSize: "0.7rem", fontWeight: 600,
-                }}>
-                  {c.stock_count} stocks
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Explore More ── */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Explore Barakfi</h2>
-        </div>
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}>
-          {[
-            { href: "/trending", label: "Trending Stocks", icon: "📈", desc: "Top movers today" },
-            { href: "/collections", label: "Collections", icon: "📚", desc: "Curated halal lists" },
-            { href: "/super-investors", label: "Super Investors", icon: "👤", desc: "Track top portfolios" },
-            { href: "/academy", label: "Academy", icon: "🎓", desc: "Learn halal investing" },
-            { href: "/etfs", label: "Halal ETFs", icon: "📊", desc: "Screened ETFs" },
-            { href: "/news", label: "News", icon: "📰", desc: "Islamic finance updates" },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "14px 16px", background: "var(--bg-elevated)",
-                borderRadius: "var(--radius-lg)", border: "1px solid var(--line)",
-                textDecoration: "none", color: "inherit",
-                transition: "border-color var(--transition-fast), box-shadow var(--transition-fast)",
-              }}
-            >
-              <span style={{ fontSize: "1.3rem" }}>{item.icon}</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "0.85rem" }}>{item.label}</div>
-                <div style={{ fontSize: "0.72rem", color: "var(--text-tertiary)" }}>{item.desc}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <p className={styles.sectionFootnote}>Based on S&P Shariah screening criteria</p>
+        <HomeTopStocksLive rows={topHalal as (Stock & { screening?: ScreeningResult })[]} />
       </section>
 
       {/* ── Ad: between sections ── */}
@@ -443,6 +293,114 @@ export async function HomeDashboard({ isSignedIn }: Props) {
           </div>
         </div>
       </section>
+
+      {/* ── Islamic finance headlines ── */}
+      {(newsFeed.length > 0 || newsLoadStatus !== "ok") && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Islamic finance headlines</h2>
+            {newsFeed.length > 0 ? <Link href="/news" className={styles.seeAll}>All news →</Link> : null}
+          </div>
+          {newsFeed.length > 0 ? (
+            <NewsCarousel items={newsFeed.slice(0, 8)} />
+          ) : (
+            <p className={styles.newsHint}>
+              {newsLoadStatus === "empty"
+                ? "No headlines in the database yet. Trigger POST /api/internal/news/sync on your API with the X-Internal-Service-Token header (INTERNAL_SERVICE_TOKEN on Render). RSS uses the default feed unless you set NEWS_RSS_URL; NEWSDATA_API_KEY adds NewsData.io articles."
+                : newsErrorHint ||
+                  "News could not be loaded. Check NEXT_PUBLIC_API_BASE_URL on Vercel and that the API is reachable."}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ── Trending Preview ── */}
+      {trendingStocks.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Trending Stocks</h2>
+            <Link href="/trending" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.trendingGrid}>
+            {trendingStocks.slice(0, 6).map((stock, i) => (
+              <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.trendingCard}>
+                <span className={styles.trendingRank}>{i + 1}</span>
+                <StockLogo symbol={stock.symbol} size={40} exchange={stock.exchange} />
+                <div className={styles.trendingBody}>
+                  <span className={styles.trendingSymbol}>{stock.symbol}</span>
+                  <span className={styles.trendingName}>{stock.name}</span>
+                </div>
+                <span className={styles.trendingExchange}>{stock.exchange}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Collections Preview ── */}
+      {collections.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Halal Stock Collections</h2>
+            <Link href="/collections" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.collectionsGrid}>
+            {collections.slice(0, 4).map((coll) => (
+              <Link key={coll.slug} href={`/collections/${coll.slug}`} className={styles.collectionCard}>
+                <CollectionIcon slug={coll.slug} />
+                <span className={styles.collectionName}>{coll.name}</span>
+                <span className={styles.collectionCount}>{coll.stock_count} stocks</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Super Investors Preview ── */}
+      {investors.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Super Investor Tracker</h2>
+            <Link href="/super-investors" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.investorsGrid}>
+            {investors.slice(0, 4).map((inv) => (
+              <Link key={inv.slug} href={`/super-investors/${inv.slug}`} className={styles.investorCard}>
+                {inv.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={inv.image_url} alt="" className={styles.investorAvatarImg} width={40} height={40} />
+                ) : (
+                  <div className={styles.investorAvatar}>{inv.name.charAt(0)}</div>
+                )}
+                <div className={styles.investorBody}>
+                  <span className={styles.investorName}>{inv.name}</span>
+                  <span className={styles.investorTitle}>{inv.title}</span>
+                </div>
+                <span className={styles.investorCountry}>{inv.country}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── ETFs Preview ── */}
+      {etfs.length > 0 && (
+        <section className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Halal ETFs</h2>
+            <Link href="/etfs" className={styles.seeAll}>View all →</Link>
+          </div>
+          <div className={styles.etfsGrid}>
+            {etfs.slice(0, 4).map((etf) => (
+              <div key={etf.symbol} className={styles.etfCard}>
+                <span className={styles.etfSymbol}>{etf.symbol}</span>
+                <span className={styles.etfName}>{etf.name}</span>
+                <span className={styles.etfExchange}>{etf.exchange}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Halal Investing in India ── */}
       <section className={styles.section}>
@@ -529,43 +487,35 @@ export async function HomeDashboard({ isSignedIn }: Props) {
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
             <Logo size={24} showText />
-            <p className={styles.footerTagline}>Global Shariah-compliant equity screening across India, US &amp; UK markets.</p>
+            <p className={styles.footerTagline}>Shariah-compliant equity screening for the Indian market.</p>
           </div>
           <div className={styles.footerLinks}>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Screener</span>
-              <Link href="/screener" className={styles.footerLink}>Stock Screener</Link>
-              <Link href="/etfs" className={styles.footerLink}>Halal ETFs</Link>
-              <Link href="/trending" className={styles.footerLink}>Trending Stocks</Link>
-              <Link href="/collections" className={styles.footerLink}>Collections</Link>
-            </div>
-            <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Invest</span>
-              <Link href="/super-investors" className={styles.footerLink}>Super Investors</Link>
+              <span className={styles.footerColTitle}>Product</span>
+              <Link href="/screener" className={styles.footerLink}>Screener</Link>
               <Link href="/watchlist" className={styles.footerLink}>Watchlist</Link>
-              <Link href="/workspace" className={styles.footerLink}>Portfolio</Link>
-              <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
+              <Link href="/trending" className={styles.footerLink}>Trending</Link>
             </div>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>Learn</span>
-              <Link href="/academy" className={styles.footerLink}>Academy</Link>
-              <Link href="/news" className={styles.footerLink}>News</Link>
+              <span className={styles.footerColTitle}>Resources</span>
+              <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
+              <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
               <Link href="/tools/purification" className={styles.footerLink}>Purification Calculator</Link>
               <Link href="/tools/zakat" className={styles.footerLink}>Zakat Calculator</Link>
+              <Link href="/shariah-compliance" className={styles.footerLink}>Shariah Compliance</Link>
             </div>
             <div className={styles.footerCol}>
-              <span className={styles.footerColTitle}>More</span>
-              <Link href="/request-coverage" className={styles.footerLink}>Request Coverage</Link>
-              <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks</Link>
-              <Link href="/terms" className={styles.footerLink}>Terms</Link>
-              <Link href="/privacy" className={styles.footerLink}>Privacy</Link>
+              <span className={styles.footerColTitle}>Legal</span>
+              <Link href="/terms" className={styles.footerLink}>Terms of Service</Link>
+              <Link href="/privacy" className={styles.footerLink}>Privacy Policy</Link>
+              <Link href="/disclaimer" className={styles.footerLink}>Risk Disclaimer</Link>
             </div>
           </div>
         </div>
         <div className={styles.footerBottom}>
           <p>Built for disciplined investors. Always confirm with your scholar or advisor before investing.</p>
-          <p>Global screening powered by S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies. &copy; {new Date().getFullYear()} Barakfi.</p>
+          <p>Screening powered by S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies. &copy; {new Date().getFullYear()} Barakfi.</p>
         </div>
       </footer>
     </div>
