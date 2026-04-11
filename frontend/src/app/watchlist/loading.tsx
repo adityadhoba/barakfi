@@ -3,7 +3,7 @@ import styles from "@/app/screener.module.css";
 
 export default function WatchlistLoading() {
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         <div className={s.skeleton} style={{ width: 120, height: 12, borderRadius: 6, marginBottom: 16 }} />
         <div className={s.skeleton} style={{ width: 200, height: 28, borderRadius: 8, marginBottom: 8 }} />

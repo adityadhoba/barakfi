@@ -46,7 +46,7 @@ export default async function WatchlistPage() {
   }));
 
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         {/* Header */}
         <nav className={styles.breadcrumb} aria-label="Breadcrumb">
@@ -60,8 +60,8 @@ export default async function WatchlistPage() {
             <div>
               <h1 className={styles.pageTitle}>Watchlist</h1>
               <p className={styles.pageDesc}>
-                {enriched.length} stock{enriched.length !== 1 ? "s" : ""} you&apos;re tracking.
-                Add stocks from the <Link href="/screener" className={styles.methodologyLink}>screener</Link>.
+                {enriched.length} {enriched.length === 1 ? "stock" : "stocks"} you&apos;re tracking. Add stocks from
+                the <Link href="/screener" className={styles.methodologyLink}>screener</Link>.
               </p>
             </div>
           </div>

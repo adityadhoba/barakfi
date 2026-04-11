@@ -10,6 +10,14 @@
   flex-direction: column;
 }
 
+/* Watchlist and other tall pages: screenerPage alone clips with overflow:hidden + fixed height */
+.screenerPage.screenerPageFlow {
+  height: auto;
+  min-height: calc(100vh - 56px);
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
 .screenerFallback {
   min-height: 300px;
   display: flex;
