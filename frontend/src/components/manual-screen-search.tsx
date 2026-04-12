@@ -35,8 +35,8 @@ type ManualScreenResult = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 const STATUS_CLASSES: Record<string, string> = {

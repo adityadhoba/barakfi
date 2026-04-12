@@ -34,6 +34,8 @@ import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import { StockUpsellCard } from "@/components/stock-upsell-card";
+import { StockVerdictGate } from "@/components/stock-verdict-gate";
+import { LockedVerdict } from "@/components/locked-verdict";
 import {
   buildMethodologyTableRowsFromMulti,
   buildPrimaryRatioTableRows,
@@ -558,15 +560,17 @@ export default async function StockDetailPage({
               <span className={styles.stockMetaChip}>{displayCountry}</span>
             </div>
             <div className={styles.stockTitleRow}>
-              <StockLogo symbol={stock.symbol} size={44} status={screening.status} exchange={stock.exchange} />
+              <StockLogo symbol={stock.symbol} size={44} exchange={stock.exchange} />
               <div>
                 <h1 className={styles.stockTitle}>Is {stock.name} Halal?</h1>
                 <p className={styles.stockMetaLine} style={{ margin: "6px 0 0", fontSize: "0.95rem", color: "var(--text-secondary)" }}>
                   {stock.symbol} · {stock.exchange} · {stock.sector}
                 </p>
-                <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                  {STATUS_LABELS[screening.status] || screening.status}
-                </span>
+                <StockVerdictGate symbol={stock.symbol}>
+                  <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                    {STATUS_LABELS[screening.status] || screening.status}
+                  </span>
+                </StockVerdictGate>
               </div>
             </div>
             <div className={styles.stockMeta}>
@@ -609,10 +613,11 @@ export default async function StockDetailPage({
               <WatchlistActionButton symbol={stock.symbol} initialInWatchlist={isInWatchlist} />
               <ShareButton
                 title={`${stock.name} (${stock.symbol}) — Shariah Screening`}
-                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Cautious"}`}
+                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Doubtful"}`}
               />
             </div>
           </div>
+          <StockVerdictGate symbol={stock.symbol}>
           <div className={styles.complianceHeroRight}>
             <div className={styles.scorecardDonut}>
               <svg viewBox="0 0 120 120" className={styles.donutChart}>
@@ -657,12 +662,14 @@ export default async function StockDetailPage({
             </div>
             <p className={styles.complianceHeroSummary}>{takeaway}</p>
           </div>
+          </StockVerdictGate>
         </div>
 
         {/* Soft upsell — non-blocking */}
         <StockUpsellCard />
 
         {/* Compliance Verdict Banner */}
+        <StockVerdictGate symbol={stock.symbol}>
         <div className={`${styles.verdictBanner} ${
           screening.status === "HALAL" ? styles.verdictHalal
           : screening.status === "CAUTIOUS" ? styles.verdictReview
@@ -720,6 +727,8 @@ export default async function StockDetailPage({
             </ul>
           )}
         </div>
+
+        </StockVerdictGate>
 
         <p className={styles.retentionHint}>
           Halal status may change based on financial updates. Check regularly.
@@ -866,15 +875,17 @@ export default async function StockDetailPage({
                     </div>
                   </div>
                   <div className={styles.peopleAlsoMeta}>
-                    <div className={styles.peopleAlsoScoreWrap}>
-                      <span className={styles.peopleAlsoScore}>{item.score}</span>
-                      <span className={styles.peopleAlsoScoreSuffix}>/100</span>
-                    </div>
-                    <span
-                      className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
-                    >
-                      {STATUS_LABELS[item.status] || item.status}
-                    </span>
+                    <LockedVerdict symbol={item.symbol} compact>
+                      <div className={styles.peopleAlsoScoreWrap}>
+                        <span className={styles.peopleAlsoScore}>{item.score}</span>
+                        <span className={styles.peopleAlsoScoreSuffix}>/100</span>
+                      </div>
+                      <span
+                        className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
+                      >
+                        {STATUS_LABELS[item.status] || item.status}
+                      </span>
+                    </LockedVerdict>
                   </div>
                 </Link>
               ))}
@@ -1172,18 +1183,8 @@ export default async function StockDetailPage({
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
                   </tr>
                   <tr>
-                    <td>Fundamentals updated</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)", fontSize: "0.88rem" }}>
-                      {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ?? (
-                        <span style={{ fontStyle: "italic" }}>Not recorded — run your fundamentals sync (e.g. fetch_real_data)</span>
-                      )}
-                    </td>
-                  </tr>
-                  <tr>
                     <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
-                      {fundamentalsUnitNote(cur)}{" "}
-                      Fundamentals are derived from public market data (Yahoo Finance via our pipeline) and refreshed on a periodic schedule.
-                      They are indicative and may lag; do not use as the sole basis for investment decisions.
+                      {fundamentalsUnitNote(cur)}
                     </td>
                   </tr>
                 </tbody>

@@ -1260,3 +1260,152 @@
   flex-shrink: 0;
   border: 1px solid var(--line);
 }
+
+
+/* ══════════════════════════════════════════
+   Clean Hero — Google-like simplicity
+   ══════════════════════════════════════════ */
+.heroClean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 80px 0 48px;
+  position: relative;
+}
+
+.heroClean::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 350px;
+  background:
+    radial-gradient(ellipse at 40% 50%, var(--emerald-glow, rgba(16, 185, 129, 0.06)) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 30%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroKicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--emerald, #10b981);
+  margin-bottom: 12px;
+}
+
+.heroHeadline {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  color: var(--text-primary, #fff);
+  position: relative;
+  z-index: 1;
+}
+
+.heroSub {
+  font-size: 1.05rem;
+  color: var(--text-secondary, #aaa);
+  max-width: 440px;
+  margin: 0 0 28px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .heroClean { padding: 48px 0 32px; }
+  .heroHeadline { font-size: 1.6rem; }
+  .heroSub { font-size: 0.95rem; }
+}
+
+
+/* ══════════════════════════════════════════
+   Popular Stocks grid
+   ══════════════════════════════════════════ */
+.popularGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.popularCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--panel, #111827);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.popularCard:hover {
+  border-color: var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.popularTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popularSymbol {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary, #fff);
+}
+
+.popularSector {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.popularName {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #aaa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ══════════════════════════════════════════
+   Trust grid
+   ══════════════════════════════════════════ */
+.trustGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+}
+
+.trustIcon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.trustLabel {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #ccc);
+  font-weight: 500;
+}

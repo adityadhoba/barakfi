@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LockedVerdict } from "@/components/locked-verdict";
 import styles from "@/app/screener.module.css";
 
 type PeerComparisonItem = {
@@ -28,8 +29,8 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 function formatRatio(value: number) {
@@ -126,9 +127,11 @@ export function StockResearchSection({
                   </Link>
                 </td>
                 <td style={{ textAlign: "center" }}>
-                  <span className={`${styles.badge} ${styles[STATUS_BADGE[peer.status] || "badgeReview"]}`}>
-                    {STATUS_LABELS[peer.status] || peer.status}
-                  </span>
+                  <LockedVerdict symbol={peer.symbol} compact>
+                    <span className={`${styles.badge} ${styles[STATUS_BADGE[peer.status] || "badgeReview"]}`}>
+                      {STATUS_LABELS[peer.status] || peer.status}
+                    </span>
+                  </LockedVerdict>
                 </td>
                 <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
                   {Math.round(peer.score)}

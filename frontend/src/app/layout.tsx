@@ -15,6 +15,8 @@ import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
 import { Logo } from "@/components/logo";
 import { TopbarAuth } from "@/components/topbar-auth";
+import { ScreeningProvider } from "@/contexts/screening-context";
+import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
 import "./globals.css";
 import "./shell.css";
 
@@ -277,6 +279,7 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <NavProgress />
             </Suspense>
+            <HideTopbarSearchOnHome />
             <a className="skipToContent" href="#main-content">Skip to content</a>
             <MarketTicker />
             <header className="topbar" role="banner">
@@ -294,6 +297,7 @@ export default function RootLayout({
               <TopbarAuth />
             </header>
             <ToastProvider>
+              <ScreeningProvider>
               <Suspense fallback={null}>
                 <AnalyticsProvider>
                   <div id="main-content" role="main" aria-label="Page content">
@@ -303,6 +307,7 @@ export default function RootLayout({
               </Suspense>
               <BottomNav />
               <TopbarScroll />
+              </ScreeningProvider>
             </ToastProvider>
             </MobileNavProvider>
           </ThemeProvider>

@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { WatchlistActionButton } from "@/components/watchlist-action-button";
+import { useScreening } from "@/contexts/screening-context";
 import type { WatchlistEntry, ScreeningResult } from "@/lib/api";
 import styles from "./watchlist-dashboard.module.css";
 import { formatMoney, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
@@ -28,8 +30,8 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Avoid",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 const STATUS_ORDER: Record<string, number> = {
@@ -45,6 +47,8 @@ function formatPriceChange(change: number | null | undefined): string {
 }
 
 export function WatchlistDashboard({ entries }: Props) {
+  const { hasAccess, screenedSymbols } = useScreening();
+  const router = useRouter();
   const symbols = useMemo(() => entries.map((e) => e.stock.symbol), [entries]);
   const exchangeBySymbol = useMemo(() => {
     const m: Record<string, string> = {};
@@ -142,7 +146,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--gold)" }}>⚠</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Cautious</div>
+            <div className={styles.summaryLabel}>Doubtful</div>
             <div className={styles.summaryValue}>{summary.review}</div>
           </div>
         </div>
@@ -152,11 +156,29 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--red)" }}>✕</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Avoid</div>
+            <div className={styles.summaryLabel}>Haram</div>
             <div className={styles.summaryValue}>{summary.avoid}</div>
           </div>
         </div>
       </div>
+
+      {/* Screened Today section */}
+      {screenedSymbols.length > 0 && !screenedSymbols.includes("__all__") && (
+        <div className={styles.screenedTodaySection}>
+          <h3 className={styles.screenedTodayTitle}>Screened Today</h3>
+          <div className={styles.screenedTodayChips}>
+            {screenedSymbols.map((sym) => (
+              <Link
+                key={sym}
+                href={`/stocks/${encodeURIComponent(sym)}`}
+                className={styles.screenedChip}
+              >
+                {sym}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sortable Table (desktop) + cards (mobile) */}
       <div className={styles.tableContainer}>
@@ -243,9 +265,19 @@ export function WatchlistDashboard({ entries }: Props) {
                     </span>
                   </td>
                   <td className={styles.td}>
-                    <span className={`${styles.badge} ${styles[badgeClass]}`}>
-                      {badgeLabel}
-                    </span>
+                    {hasAccess(entry.stock.symbol) ? (
+                      <span className={`${styles.badge} ${styles[badgeClass]}`}>
+                        {badgeLabel}
+                      </span>
+                    ) : (
+                      <button
+                        className={styles.lockBtn}
+                        onClick={() => router.push(`/screening/${encodeURIComponent(entry.stock.symbol)}`)}
+                        title="Screen to reveal"
+                      >
+                        🔒
+                      </button>
+                    )}
                   </td>
                   <td className={styles.td}>
                     {entry.latest_research_summary ? (
@@ -293,7 +325,17 @@ export function WatchlistDashboard({ entries }: Props) {
                       <span className={styles.nameText}>{entry.stock.name}</span>
                     </Link>
                   </div>
-                  <span className={`${styles.badge} ${styles[badgeClass]}`}>{badgeLabel}</span>
+                  {hasAccess(entry.stock.symbol) ? (
+                    <span className={`${styles.badge} ${styles[badgeClass]}`}>{badgeLabel}</span>
+                  ) : (
+                    <button
+                      className={styles.lockBtn}
+                      onClick={() => router.push(`/screening/${encodeURIComponent(entry.stock.symbol)}`)}
+                      title="Screen to reveal"
+                    >
+                      🔒
+                    </button>
+                  )}
                 </div>
                 <div className={styles.cardMeta}>
                   <span className={styles.marketBadge}>

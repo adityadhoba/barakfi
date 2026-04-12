@@ -325,6 +325,10 @@ input, select, textarea, button {
   position: relative;
 }
 
+body[data-hide-topbar-search] .topbarSearchSlot {
+  display: none !important;
+}
+
 .topbarSearchOpenBtn {
   display: none;
   align-items: center;

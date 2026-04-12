@@ -544,7 +544,22 @@ class ScreeningQuota(Base):
     actor_key = Column(String, nullable=False, index=True)
     date = Column(String, nullable=False)
     count = Column(Integer, nullable=False, default=0)
+    quota_type = Column(String, nullable=False, default="screen")
 
     __table_args__ = (
-        Index("ix_screening_quota_actor_date", "actor_key", "date", unique=True),
+        Index("ix_screening_quota_actor_date", "actor_key", "date", "quota_type", unique=True),
+    )
+
+
+class ScreeningAccessLog(Base):
+    """Tracks which stocks a user has screened for 24h access gating."""
+    __tablename__ = "screening_access_logs"
+
+    id = Column(Integer, primary_key=True)
+    actor_key = Column(String, nullable=False, index=True)
+    symbol = Column(String, nullable=False, index=True)
+    screened_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    __table_args__ = (
+        Index("ix_screening_access_actor_symbol", "actor_key", "symbol"),
     )

@@ -1,0 +1,57 @@
+.gate {
+  margin: 20px 0;
+}
+
+.gateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 16px;
+  text-align: center;
+}
+
+.gateIcon {
+  width: 40px;
+  height: 40px;
+  color: var(--muted, #888);
+}
+
+.gateTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin: 0;
+}
+
+.gateSub {
+  font-size: 0.9rem;
+  color: var(--text-secondary, #aaa);
+  max-width: 360px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.gateCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 28px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent, #10b981);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  margin-top: 4px;
+}
+
+.gateCta:hover {
+  background: var(--accent-hover, #059669);
+  transform: translateY(-1px);
+}

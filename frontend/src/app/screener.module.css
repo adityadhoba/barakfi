@@ -873,22 +873,33 @@
 
 /* ── Table wrapper for detail page ── */
 .tableWrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
-  -webkit-overflow-scrolling: touch;
 }
 
 .tableWrap .table {
-  min-width: 420px;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .tableWrap .table th,
 .tableWrap .table td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.tableWrap .table th:first-child,
+.tableWrap .table td:first-child {
+  width: 45%;
+}
+
+.tableWrap .table th:last-child,
+.tableWrap .table td:last-child {
+  width: 55%;
 }
 
 .tableWrap .table th {
