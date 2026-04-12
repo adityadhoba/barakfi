@@ -25,7 +25,12 @@ export default function ScreeningAnimationPage() {
   const prefersReduced =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const startTime = useRef(Date.now());
+  const displayStep = prefersReduced ? STEPS.length : activeStep;
+  const startTime = useRef(0);
+
+  useEffect(() => {
+    startTime.current = Date.now();
+  }, []);
 
   useEffect(() => {
     if (!symbol) return;
@@ -62,17 +67,15 @@ export default function ScreeningAnimationPage() {
   }, [symbol]);
 
   useEffect(() => {
-    if (prefersReduced) {
-      setActiveStep(STEPS.length);
-      return;
-    }
+    if (prefersReduced) return;
     if (activeStep >= STEPS.length) return;
     const timer = setTimeout(() => setActiveStep((s) => s + 1), STEPS[activeStep].delay);
     return () => clearTimeout(timer);
   }, [activeStep, prefersReduced]);
 
   useEffect(() => {
-    if (verdict && activeStep >= STEPS.length) {
+    const motionComplete = prefersReduced || activeStep >= STEPS.length;
+    if (verdict && motionComplete) {
       const elapsed = Date.now() - startTime.current;
       const remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
       const timer = setTimeout(() => {
@@ -121,8 +124,8 @@ export default function ScreeningAnimationPage() {
         </h1>
         <div className={styles.steps}>
           {STEPS.map((step, i) => {
-            const done = i < activeStep;
-            const active = i === activeStep && activeStep < STEPS.length;
+            const done = i < displayStep;
+            const active = i === displayStep && displayStep < STEPS.length;
             return (
               <div
                 key={step.label}

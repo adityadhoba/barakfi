@@ -60,10 +60,6 @@ function formatPrice(value: number, currency?: string) {
   return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
 }
 
-function formatPct(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
 function getSortValue(
   s: ScreenedStock,
   key: SortKey,

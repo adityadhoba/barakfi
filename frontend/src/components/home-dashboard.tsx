@@ -4,7 +4,6 @@ import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSup
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
-import { StockLogo } from "@/components/stock-logo";
 import {
   StatIconAvoid,
   StatIconCautious,
@@ -13,7 +12,6 @@ import {
 } from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
-import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { ProductCheckHome } from "@/components/product-check-home";
 import { HomeTopStocks } from "@/components/home-top-stocks";
