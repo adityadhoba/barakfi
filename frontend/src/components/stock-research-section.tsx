@@ -107,7 +107,7 @@ export function StockResearchSection({
         <p className={styles.sectionSub}>How this stock stacks up against similar companies</p>
       </div>
 
-      <div className={styles.tableWrap}>
+      <div className={`${styles.tableWrap} ${styles.tableWrapPeer}`}>
         <table className={styles.table}>
           <thead>
             <tr>

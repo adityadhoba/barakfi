@@ -2,12 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useAuth, useUser } from "@clerk/nextjs";
 import { useScreening } from "@/contexts/screening-context";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./screening.module.css";
-
-const apiBaseUrl = getPublicApiBaseUrl();
 
 const STEPS = [
   { label: "Resolving listing", icon: "🔍", delay: 600 },
@@ -21,8 +17,6 @@ const MIN_DISPLAY_MS = 2800;
 export default function ScreeningAnimationPage() {
   const { symbol } = useParams<{ symbol: string }>();
   const router = useRouter();
-  const { userId } = useAuth();
-  const { user } = useUser();
   const { recordScreen, refreshQuota } = useScreening();
   const [activeStep, setActiveStep] = useState(0);
   const [verdict, setVerdict] = useState<string | null>(null);
@@ -37,7 +31,6 @@ export default function ScreeningAnimationPage() {
     startTime.current = Date.now();
   }, []);
 
-  const actorEmail = user?.primaryEmailAddress?.emailAddress ?? "";
   const screenedRef = useRef(false);
 
   useEffect(() => {
@@ -48,25 +41,40 @@ export default function ScreeningAnimationPage() {
 
     const runScreen = async () => {
       try {
-        const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (userId) headers["x-clerk-user-id"] = userId;
-        if (actorEmail) headers["x-actor-email"] = actorEmail;
-        const res = await fetch(`${apiBaseUrl}/screen/manual`, {
+        const res = await fetch("/api/screen/manual", {
           method: "POST",
-          headers,
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ symbol: decoded }),
           signal: controller.signal,
+          credentials: "same-origin",
         });
         if (!res.ok) {
-          const d = await res.json().catch(() => null);
+          const d: unknown = await res.json().catch(() => null);
           if (res.status === 429) {
             setError("limit");
             return;
           }
-          setError(d?.detail || "Screening failed");
+          let msg = "Screening failed";
+          if (d !== null && typeof d === "object") {
+            const o = d as Record<string, unknown>;
+            if (typeof o.detail === "string") msg = o.detail;
+            else if (o.error && typeof o.error === "object" && o.error !== null) {
+              const m = (o.error as { message?: string }).message;
+              if (typeof m === "string") msg = m;
+            }
+          }
+          setError(msg);
           return;
         }
-        const data = await res.json();
+        const raw: unknown = await res.json();
+        const data =
+          raw !== null &&
+          typeof raw === "object" &&
+          "success" in raw &&
+          (raw as { success: unknown }).success === true &&
+          "data" in raw
+            ? (raw as { data: { screening?: { status?: string } } }).data
+            : (raw as { screening?: { status?: string } });
         screenedRef.current = true;
         setVerdict(data.screening?.status || "UNKNOWN");
         recordScreen(decoded);
@@ -78,7 +86,7 @@ export default function ScreeningAnimationPage() {
 
     void runScreen();
     return () => controller.abort();
-  }, [symbol, userId, actorEmail, recordScreen, refreshQuota]);
+  }, [symbol, recordScreen, refreshQuota]);
 
   useEffect(() => {
     if (prefersReduced) return;

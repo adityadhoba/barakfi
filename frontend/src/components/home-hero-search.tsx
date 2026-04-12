@@ -2,10 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./home-hero-search.module.css";
-
-const apiBase = getPublicApiBaseUrl();
 
 interface StockItem {
   symbol: string;
@@ -28,7 +25,7 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${apiBase.replace("/api", "")}/api/stocks`)
+    fetch("/api/stocks", { credentials: "same-origin" })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled) return;

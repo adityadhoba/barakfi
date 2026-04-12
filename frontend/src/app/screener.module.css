@@ -922,6 +922,25 @@
   width: 55%;
 }
 
+/* 5+ column tables (e.g. peer comparison): undo two-column width hack */
+.tableWrapPeer .table {
+  table-layout: auto;
+}
+.tableWrapPeer .table th:first-child,
+.tableWrapPeer .table td:first-child {
+  width: auto;
+  min-width: 8.5rem;
+  max-width: 38%;
+}
+.tableWrapPeer .table th:last-child,
+.tableWrapPeer .table td:last-child {
+  width: auto;
+}
+.tableWrapPeer .table th,
+.tableWrapPeer .table td {
+  vertical-align: middle;
+}
+
 .tableWrap .table th {
   font-size: 0.72rem;
   font-weight: 700;

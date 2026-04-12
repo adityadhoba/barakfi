@@ -9,9 +9,6 @@ import {
   useState,
 } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
-
-const apiBase = getPublicApiBaseUrl();
 
 interface ScreeningState {
   remaining: number;
@@ -93,7 +90,7 @@ export function ScreeningProvider({ children }: { children: React.ReactNode }) {
       const headers: Record<string, string> = {};
       if (userId) headers["x-clerk-user-id"] = userId;
       if (userEmail) headers["x-actor-email"] = userEmail;
-      const res = await fetch(`${apiBase}/quota`, { headers });
+      const res = await fetch("/api/quota", { headers, credentials: "same-origin" });
       if (!res.ok) return;
       const data = await res.json();
       const payload =

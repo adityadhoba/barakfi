@@ -127,8 +127,48 @@ export function WatchlistDashboard({ entries }: Props) {
     return sortOrder === "asc" ? " ↑" : " ↓";
   }
 
+  const nonIndiaEntries = useMemo(
+    () =>
+      entries.filter(
+        (e) => resolveMarketLabel(e.stock.exchange, e.stock.currency) !== "India",
+      ),
+    [entries],
+  );
+  const [pruningForeign, setPruningForeign] = useState(false);
+
+  async function removeNonIndiaSymbols() {
+    if (nonIndiaEntries.length === 0) return;
+    setPruningForeign(true);
+    try {
+      for (const e of nonIndiaEntries) {
+        const sym = encodeURIComponent(e.stock.symbol);
+        await fetch(`/api/watchlist/${sym}`, { method: "DELETE", credentials: "same-origin" });
+      }
+      router.refresh();
+    } finally {
+      setPruningForeign(false);
+    }
+  }
+
   return (
     <div className={styles.dashboard}>
+      {nonIndiaEntries.length > 0 ? (
+        <div className={styles.foreignWatchlistBanner} role="region" aria-label="Non-India watchlist symbols">
+          <p className={styles.foreignWatchlistText}>
+            BarakFi focuses on Indian listings. You still have {nonIndiaEntries.length} US/UK symbol
+            {nonIndiaEntries.length === 1 ? "" : "s"} on this watchlist ({nonIndiaEntries.map((e) => e.stock.symbol).join(", ")}).
+          </p>
+          <button
+            type="button"
+            className={styles.foreignWatchlistBtn}
+            disabled={pruningForeign}
+            onClick={() => void removeNonIndiaSymbols()}
+          >
+            {pruningForeign ? "Removing…" : "Remove all non-India symbols"}
+          </button>
+        </div>
+      ) : null}
+
       {/* Compliance Summary Strip */}
       <div className={styles.complianceSummary}>
         <div className={styles.summaryItem}>
