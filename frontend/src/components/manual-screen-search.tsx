@@ -4,7 +4,6 @@ import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { StockLogo } from "@/components/stock-logo";
 import styles from "./manual-screen-search.module.css";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
 
 type ScreeningResult = {
   symbol: string;
@@ -45,8 +44,6 @@ const STATUS_CLASSES: Record<string, string> = {
   NON_COMPLIANT: "statusFail",
 };
 
-const apiBaseUrl = getPublicApiBaseUrl();
-
 const EXAMPLE_STOCK_CHIPS = [
   { label: "Reliance", value: "RELIANCE" },
   { label: "TCS", value: "TCS" },
@@ -73,11 +70,12 @@ export function ManualScreenSearch() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 60_000);
 
-      const response = await fetch(`${apiBaseUrl}/screen/manual`, {
+      const response = await fetch("/api/screen/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ symbol }),
         signal: controller.signal,
+        credentials: "same-origin",
       });
       clearTimeout(timeout);
 

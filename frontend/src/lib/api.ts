@@ -781,7 +781,7 @@ export async function getCompareScreeningResults(
   quotaHeaders?: HeadersInit,
 ): Promise<{ results: ScreeningResult[]; compareLimitReached: boolean }> {
   const sliced = symbols
-    .slice(0, 4)
+    .slice(0, 3)
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
   if (sliced.length === 0) {

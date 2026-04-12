@@ -2,6 +2,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 5.5rem;
+  min-height: 1.75rem;
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
   border-radius: 6px;

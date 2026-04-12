@@ -25,7 +25,7 @@ export default async function ComparePage({
         .split(",")
         .map((s) => s.trim().toUpperCase())
         .filter(Boolean)
-        .slice(0, 4)
+        .slice(0, 3)
     : [];
 
   const { userId } = await auth();
@@ -59,7 +59,7 @@ export default async function ComparePage({
             <div>
               <h1 className={styles.pageTitle}>Compare Stocks</h1>
               <p className={styles.pageDesc}>
-                Compare Shariah compliance, ratios, and financials side by side. Add up to 4 stocks.
+                Compare Shariah compliance, ratios, and financials side by side. Add up to 3 stocks.
                 Daily compare sessions are limited; see your quota on the screening flow.
               </p>
             </div>

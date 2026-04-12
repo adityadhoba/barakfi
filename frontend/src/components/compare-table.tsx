@@ -189,7 +189,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
   return (
     <div className={styles.compareContainer}>
       {/* Stock Picker */}
-      {currentSymbols.length < 4 && (
+      {currentSymbols.length < 3 && (
         <div className={styles.pickerWrap}>
           <div className={styles.pickerInput}>
             <svg className={styles.pickerIcon} width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -236,7 +236,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
           </div>
           <h3 className={styles.emptyTitle}>Compare stocks side by side</h3>
           <p className={styles.emptyDesc}>
-            Search above to add up to 4 stocks. Compare their Shariah compliance, financials, and key ratios at a glance.
+            Search above to add up to 3 stocks. Compare their Shariah compliance, financials, and key ratios at a glance.
           </p>
           <Link href="/screener" className={styles.emptyBtn}>
             Browse screener &rarr;

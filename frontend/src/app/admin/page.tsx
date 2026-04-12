@@ -1,8 +1,11 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
+import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
+import { buildBackendHeaders } from "@/lib/backend-auth";
 import { AdminPanel } from "./admin-panel";
 import s from "./admin.module.css";
+
+type MePayload = { role?: string; email?: string };
 
 async function checkAdminAccess() {
   const authState = await auth();
@@ -12,30 +15,32 @@ async function checkAdminAccess() {
     redirect("/sign-in?redirect_url=/admin");
   }
 
-  // Get Clerk JWT token for backend authentication
   const token = await authState.getToken();
   if (!token) {
     redirect("/sign-in?redirect_url=/admin");
   }
 
-  // Fetch user details from API to check role
+  const clerkUser = await currentUser();
+
   try {
     const apiBase = getPublicApiBaseUrl();
+    // Same path as GET /api/me: internal actor headers + JWT so ADMIN_EMAILS matches Clerk email
+    // even when the session JWT omits an `email` claim.
     const response = await fetch(`${apiBase}/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: buildBackendHeaders({
+        token,
+        actor: {
+          authSubject: clerkUser?.id ?? userId,
+          email: clerkUser?.primaryEmailAddress?.emailAddress,
+        },
+      }),
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      redirect("/admin/forbidden");
-    }
+    const body: unknown = await response.json().catch(() => null);
+    const user = adaptBackendJsonForProxy(body, response.ok) as MePayload | null;
 
-    const user = await response.json();
-
-    // Check if user is admin (role = admin or is in legacy admin list)
-    if (user.role !== "admin") {
+    if (!response.ok || !user || user.role !== "admin") {
       redirect("/admin/forbidden");
     }
 

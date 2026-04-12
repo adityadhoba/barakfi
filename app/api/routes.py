@@ -643,7 +643,7 @@ def compare_bulk_screen(
     """
     from app.services.quota_service import check_compare_quota
 
-    symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:4]
+    symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:3]
     if not symbols:
         return []
 
@@ -1362,6 +1362,15 @@ def get_workspace(
     }
 
 
+def _email_from_auth_claims(claims: dict) -> str:
+    """Clerk JWT may expose email under different keys depending on the session template."""
+    for key in ("email", "primary_email_address"):
+        val = claims.get(key)
+        if isinstance(val, str) and "@" in val:
+            return val.strip().lower()
+    return ""
+
+
 @router.get("/me", response_model=UserRead)
 def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal), db: Session = Depends(get_db)):
     auth_subject = claims.get("sub")
@@ -1372,7 +1381,10 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
     if not user:
         # Auto-provision: create the user from available claims so first-time
         # sign-ins "just work" without a separate bootstrap call.
-        email = claims.get("email", "")
+        email = _email_from_auth_claims(claims)
+        if not email:
+            raw_e = claims.get("email")
+            email = raw_e.strip().lower() if isinstance(raw_e, str) else ""
         display = email.split("@")[0] if email else auth_subject
         try:
             user = User(
@@ -1401,11 +1413,25 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
             db.rollback()
             raise HTTPException(status_code=500, detail="Failed to auto-provision user")
 
+    claim_email = _email_from_auth_claims(claims)
+    if claim_email and (not user.email or not str(user.email).strip()):
+        user.email = claim_email
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+
     # Auto-promote to admin if user's email is in ADMIN_EMAILS or auth_subject in ADMIN_AUTH_SUBJECTS.
     # This ensures founders/admins always see admin UI even before the role column migration runs.
     effective_role = getattr(user, "role", "user") or "user"
     if effective_role != "admin":
-        if (user.email and user.email.lower() in ADMIN_EMAILS) or (auth_subject in ADMIN_AUTH_SUBJECTS):
+        db_email = (user.email or "").strip().lower()
+        if (
+            (db_email and db_email in ADMIN_EMAILS)
+            or (claim_email and claim_email in ADMIN_EMAILS)
+            or (auth_subject in ADMIN_AUTH_SUBJECTS)
+        ):
             effective_role = "admin"
             # Persist the promotion so future checks are fast
             try:
