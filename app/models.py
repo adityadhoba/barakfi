@@ -10,7 +10,7 @@ Key relationships:
 - Stock (1) -> (N) PortfolioHolding, WatchlistEntry, ScreeningLog, ComplianceOverride
 """
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
@@ -510,3 +510,41 @@ class Feedback(Base):
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     user = relationship("User", foreign_keys=[user_id])
+
+
+class ProductEvent(Base):
+    """Analytics events for monetization / demand tracking."""
+    __tablename__ = "product_events"
+
+    id = Column(Integer, primary_key=True)
+    event_name = Column(String, nullable=False, index=True)
+    user_id = Column(String, nullable=True)
+    session_id = Column(String, nullable=True)
+    symbol = Column(String, nullable=True)
+    metadata_json = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=utc_now, index=True)
+
+
+class EarlyAccessSignup(Base):
+    """Email capture for BarakFi Premium early-access waitlist."""
+    __tablename__ = "early_access_signups"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String, nullable=False, unique=True)
+    name = Column(String, nullable=False, default="")
+    source = Column(String, nullable=False, default="premium_page")
+    created_at = Column(DateTime, nullable=False, default=utc_now)
+
+
+class ScreeningQuota(Base):
+    """Daily screening counter per actor (user or IP)."""
+    __tablename__ = "screening_quotas"
+
+    id = Column(Integer, primary_key=True)
+    actor_key = Column(String, nullable=False, index=True)
+    date = Column(String, nullable=False)
+    count = Column(Integer, nullable=False, default=0)
+
+    __table_args__ = (
+        Index("ix_screening_quota_actor_date", "actor_key", "date", unique=True),
+    )

@@ -50,8 +50,8 @@ const apiBaseUrl = getPublicApiBaseUrl();
 const EXAMPLE_STOCK_CHIPS = [
   { label: "Reliance", value: "RELIANCE" },
   { label: "TCS", value: "TCS" },
-  { label: "Tesla", value: "TSLA" },
   { label: "Infosys", value: "INFY" },
+  { label: "HDFC Bank", value: "HDFCBANK" },
 ] as const;
 
 export function ManualScreenSearch() {

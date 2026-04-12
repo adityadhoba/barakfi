@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Large Indian stocks investors often screen for halal compliance",
   description:
     "A tour of widely held NSE and BSE large-caps Muslim investors frequently check first — IT, pharma, FMCG, and banks (often excluded) — with internal links to BarakFi stock pages and the halal screener. Educational context only; not a buy list or fatwa.",
+  robots: { index: true, follow: true },
 };
 
 export default function TopHalalStocksIndiaPage() {
@@ -46,6 +47,21 @@ export default function TopHalalStocksIndiaPage() {
           business is interest-based. That does not mean every financial name is identical: insurance, asset management,
           and fintech platforms each raise different scholarly questions. If you are exploring edge cases, read business
           descriptions carefully and take specialist advice.
+        </p>
+        <h2>Industrials, materials, and commodity cycles</h2>
+        <p>
+          Cyclical names can flip between halal and cautious as market cap swings even when debt is unchanged — because many
+          screens scale leverage against equity value. That mechanical sensitivity is not a moral judgement on management;
+          it is a reminder to read the filing, not only the badge. When commodity prices spike, also watch receivables and
+          working-capital lines; downstream customers may stretch payment terms in ways that show up in Islamic receivable
+          tests.
+        </p>
+        <h2>Mid-caps, liquidity, and data freshness</h2>
+        <p>
+          Smaller listings may pass activity screens yet show medium or low data-quality hints if filings are sparse or our
+          pipeline has not mapped every note. Prefer to cross-check promoters&apos; qualitative disclosures and auditor
+          emphasis paragraphs before sizing a position. Liquidity on the exchange is a practical constraint as well: a
+          halal label does not guarantee you can build or exit a line without impact cost.
         </p>
         <h2>How to go deeper</h2>
         <p>

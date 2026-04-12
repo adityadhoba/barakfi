@@ -4,10 +4,10 @@
 
 /* ═══════════════════════════════════════════════════════════════════
    HALAL INVEST INDIA — Global Design System
-   Light-first, clean, Tickertape-quality fintech UI
+   Dark-first, calm fintech UI (light theme available); motion stays subtle
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ── Light Theme (Default) ── */
+/* ── Light Theme ── */
 :root,
 [data-theme="light"] {
   --bg: #f7f8fa;

@@ -58,7 +58,7 @@ export default function RequestCoveragePage() {
           <RequestCoverageForm />
 
           <p className={styles.note}>
-            We maintain a growing universe of NSE, US, and LSE names and add new stocks regularly.
+            We maintain a growing universe of NSE and BSE-listed Indian stocks and add new names regularly.
           </p>
         </div>
       </div>

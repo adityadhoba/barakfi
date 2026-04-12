@@ -36,10 +36,9 @@ const MCAP_OPTIONS = [
 ] as const;
 
 const EXCHANGE_OPTIONS = [
-  { key: "all", label: "All Markets" },
-  { key: "NSE", label: "India (NSE)" },
-  { key: "US", label: "US (NYSE/NASDAQ)" },
-  { key: "LSE", label: "UK (LSE)" },
+  { key: "all", label: "All Exchanges" },
+  { key: "NSE", label: "NSE" },
+  { key: "BSE", label: "BSE" },
 ] as const;
 
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
@@ -52,8 +51,8 @@ const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
 const EXAMPLE_STOCK_CHIPS = [
   { label: "Reliance", value: "RELIANCE" },
   { label: "TCS", value: "TCS" },
-  { label: "Tesla", value: "TSLA" },
   { label: "Infosys", value: "INFY" },
+  { label: "HDFC Bank", value: "HDFCBANK" },
 ] as const;
 
 function formatPrice(value: number, currency?: string) {
@@ -463,6 +462,44 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
+        {/* Locked premium filters */}
+        <div className={styles.filterSection}>
+          <h4 className={styles.filterLabel}>
+            Compliance Score <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
+          </h4>
+          <button
+            type="button"
+            className={styles.lockedFilter}
+            onClick={() => router.push("/premium")}
+          >
+            Score range filter — Premium (Coming Soon)
+          </button>
+        </div>
+        <div className={styles.filterSection}>
+          <h4 className={styles.filterLabel}>
+            Debt Ratio <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
+          </h4>
+          <button
+            type="button"
+            className={styles.lockedFilter}
+            onClick={() => router.push("/premium")}
+          >
+            Debt ratio filter — Premium (Coming Soon)
+          </button>
+        </div>
+        <div className={styles.filterSection}>
+          <h4 className={styles.filterLabel}>
+            Interest Income % <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
+          </h4>
+          <button
+            type="button"
+            className={styles.lockedFilter}
+            onClick={() => router.push("/premium")}
+          >
+            Income filter — Premium (Coming Soon)
+          </button>
+        </div>
+
         {/* Sidebar toggle on mobile */}
         <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
           {sidebarOpen ? "Hide Filters" : "Show Filters"}
@@ -569,15 +606,11 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <th className={styles.th}>Sector</th>
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
-                <SortTh col="status">Shariah</SortTh>
-                <SortTh col="debt_ratio" numeric>Debt Ratio</SortTh>
-                <SortTh col="income_purity" numeric>Income Purity</SortTh>
+                <th className={styles.th} style={{ width: 100 }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {pageItems.map((s, idx) => {
-                const cfg = STATUS_CONFIG[s.screening.status] || STATUS_CONFIG.CAUTIOUS;
-                const b = s.screening.breakdown;
                 const globalIdx = pageStart + idx + 1;
                 return (
                   <tr
@@ -594,7 +627,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                         price={quotes[s.symbol]?.last_price ?? s.price}
                         changePct={quotes[s.symbol]?.change_percent ?? null}
                       >
-                        <StockLogo symbol={s.symbol} size={32} status={s.screening.status} />
+                        <StockLogo symbol={s.symbol} size={32} />
                         <div className={styles.nameBlock}>
                           <span className={styles.stockName}>{s.name}</span>
                           <span className={styles.stockSymbol}>{s.symbol}</span>
@@ -615,16 +648,20 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       )}
                     </td>
                     <td>
-                      <span className={`${styles.statusBadge} ${styles[cfg.cls]}`}>{cfg.label}</span>
+                      <button
+                        type="button"
+                        className={styles.screenRowBtn}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/screening/${encodeURIComponent(s.symbol)}`); }}
+                      >
+                        Screen
+                      </button>
                     </td>
-                    <td className={styles.tdRight}>{formatPct(b.debt_to_36m_avg_market_cap_ratio)}</td>
-                    <td className={styles.tdRight}>{formatPct(b.non_permissible_income_ratio)}</td>
                   </tr>
                 );
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={8} className={styles.emptyRow}>
+                  <td colSpan={6} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>

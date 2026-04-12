@@ -1,0 +1,165 @@
+.container {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 2rem 1rem;
+}
+
+.card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 1.5rem;
+}
+
+.symbol {
+  color: var(--emerald);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid transparent;
+  opacity: 0.4;
+  transition: opacity 0.3s, border-color 0.3s;
+}
+
+.stepDone {
+  opacity: 1;
+  border-color: var(--emerald);
+}
+
+.stepActive {
+  opacity: 1;
+  border-color: var(--accent);
+}
+
+.stepIcon {
+  font-size: 1.15rem;
+}
+
+.stepLabel {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--fg);
+}
+
+.stepCheck {
+  color: var(--emerald);
+  font-weight: 700;
+}
+
+.stepSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.verdictRow {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.verdictBadge {
+  display: inline-block;
+  padding: 0.4rem 1.2rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.verdictHalal {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--emerald);
+}
+
+.verdictCautious {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber);
+}
+
+.verdictFail {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--red);
+}
+
+.redirectHint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+
+.ctaBtn {
+  display: inline-block;
+  padding: 0.65rem 1.8rem;
+  border-radius: 10px;
+  background: var(--emerald);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.ctaBtn:hover {
+  opacity: 0.88;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepSpinner { animation: none; }
+  .verdictRow { animation: none; }
+  .step { transition: none; }
+}

@@ -13,7 +13,9 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Watchlist — Barakfi",
-  description: "Track your Shariah-compliant stock watchlist with live compliance status.",
+  description:
+    "Private watchlist for signed-in BarakFi users: track NSE and BSE names, refresh Shariah-style compliance labels when fundamentals update, and jump back to the screener or stock pages. Not intended for public search — sign in to manage your list.",
+  robots: { index: false, follow: true },
 };
 
 export default async function WatchlistPage() {

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Halal stocks in India — NSE & BSE Shariah screening guide",
   description:
     "How halal stock screening works for Indian equities: NSE and BSE reporting, common financial ratios, sector exclusions, and how to read BarakFi results alongside annual reports. Includes internal links to live stock pages and the screener for NSE/BSE-listed names.",
+  robots: { index: true, follow: true },
 };
 
 export default function HalalStocksIndiaPage() {
@@ -55,6 +56,27 @@ export default function HalalStocksIndiaPage() {
           slowly. If a company is flagged as cautious, read the bullets explaining which denominator is thin or which ratio
           sits close to the line. Where fundamentals look stale, wait for the next filing cycle before drawing strong
           conclusions — especially after mergers or demergers when restated series need time to settle.
+        </p>
+        <h2>Ind AS presentation and “where did this number come from?”</h2>
+        <p>
+          Indian companies report under Ind AS, which means leases, financial instruments, and consolidation boundaries
+          can look different from older GAAP snapshots you may have studied abroad. When BarakFi shows receivables,
+          cash-like balances, or debt ratios, the engine is only as faithful as the mapped line items in our database. If a
+          footnote explains a large related-party loan or a hybrid instrument, bring that context to your scholar — the
+          screener cannot negotiate how a supervisory board should classify a structured note.
+        </p>
+        <p>
+          Quarterly results sometimes omit full balance-sheet detail; annual reports remain the anchor for structural
+          leverage and segment profitability. Use short-term price screens for timing, but lean on annual and investor
+          presentation packs when you want to understand whether a cautious flag is a data artefact or a genuine ratio
+          pressure point.
+        </p>
+        <h2>Index membership is not a halal certificate</h2>
+        <p>
+          Being in NIFTY or another benchmark says nothing about Shariah compliance. Indices optimise for liquidity and
+          representation; Islamic indices apply an additional ruleset with different thresholds. You may therefore see a
+          household name in a broad market index yet flagged cautious on BarakFi — that is not a bug, it is a reminder that
+          benchmark inclusion and religious screening answer different questions.
         </p>
         <h2>Links to explore</h2>
         <ul>

@@ -6,7 +6,7 @@ import styles from "./trending.module.css";
 
 export const metadata: Metadata = {
   title: "Trending Stocks — Halal Gainers, Losers & Most Active",
-  description: "Discover trending halal stocks across India, US, and UK markets. See top gainers, losers, most active, and 52-week highs and lows.",
+  description: "Discover trending halal stocks on NSE and BSE. See top gainers, losers, most active, and 52-week highs and lows in the Indian market.",
   alternates: { canonical: "https://barakfi.in/trending" },
 };
 
@@ -36,7 +36,7 @@ export default async function TrendingPage() {
           <span className={styles.kicker}>Live Market</span>
           <h1 className={styles.title}>Trending Stocks</h1>
           <p className={styles.subtitle}>
-            Most popular stocks across Indian, US, and UK markets.
+            Most popular stocks on NSE and BSE.
           </p>
         </header>
 

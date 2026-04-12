@@ -1,8 +1,9 @@
--- One-time cleanup: remove non-Indian listings after verifying dependents.
--- Run manually on Postgres/SQLite after backing up. Adjust FK handling for your DB.
-
--- Example: delete stocks not on NSE/BSE (review orphan FKs first: etf_holdings, watchlist_entries, etc.)
--- DELETE FROM stocks WHERE UPPER(exchange) NOT IN ('NSE', 'BSE');
-
--- Safer: preview count
--- SELECT exchange, COUNT(*) FROM stocks GROUP BY exchange;
+-- India-only DB cleanup (manual).
+--
+-- Prefer the FK-safe Python helper (deletes dependent rows in the correct order):
+--   PYTHONPATH=. python3 scripts/purge_non_indian_stocks.py
+--   PYTHONPATH=. python3 scripts/purge_non_indian_stocks.py --execute
+--
+-- Raw SQL is unsafe unless every FK from child tables to stocks.id is cleared first.
+-- Preview exchanges:
+--   SELECT UPPER(exchange) AS ex, COUNT(*) FROM stocks GROUP BY 1 ORDER BY 2 DESC;

@@ -252,10 +252,14 @@ SUPER_INVESTORS: list[dict] = [
     },
 ]
 
-# Profiles removed from the public site (no reliable photo); seed deactivates these slugs.
+# Profiles removed from the public site (no reliable photo or global-only holdings).
 DEACTIVATED_SUPER_INVESTOR_SLUGS: list[str] = [
     "radhakishan-damani",
     "dolly-khanna",
     "ashish-dhawan",
     "mohnish-pabrai",
+    "warren-buffett",
+    "ray-dalio",
+    "howard-marks",
+    "charlie-munger",
 ]

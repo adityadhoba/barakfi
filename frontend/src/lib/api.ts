@@ -124,6 +124,8 @@ export type Stock = {
   index_memberships?: string[];
   /** API-computed fundamentals completeness hint */
   data_quality?: "high" | "medium" | "low" | null;
+  /** Field keys that were zero or missing when computing screening ratios */
+  fundamentals_fields_missing?: string[];
 };
 
 export type Holding = {

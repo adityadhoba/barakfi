@@ -40,9 +40,9 @@ export function BottomNav() {
       })}
       <button
         type="button"
-        className={`bottomNavItem ${pathname.startsWith("/news") || pathname.startsWith("/compare") || pathname.startsWith("/tools") ? "bottomNavItemActive" : ""}`}
+        className={`bottomNavItem ${pathname.startsWith("/compare") || pathname.startsWith("/tools") ? "bottomNavItemActive" : ""}`}
         onClick={open}
-        aria-label="Open menu for News, Compare, and more"
+        aria-label="Open menu for Compare, Tools, and more"
       >
         <span className="bottomNavIcon" aria-hidden>{"\u2630"}</span>
         <span className="bottomNavLabel">More</span>
