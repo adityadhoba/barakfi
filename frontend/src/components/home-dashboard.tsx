@@ -497,6 +497,7 @@ export async function HomeDashboard() {
             </div>
             <div className={styles.footerCol}>
               <span className={styles.footerColTitle}>Resources</span>
+              <Link href="/how-it-works" className={styles.footerLink}>How it works</Link>
               <Link href="/halal-stocks" className={styles.footerLink}>Halal Stocks India</Link>
               <Link href="/methodology" className={styles.footerLink}>Methodology</Link>
               <Link href="/compare" className={styles.footerLink}>Compare Stocks</Link>
