@@ -77,6 +77,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://barakfi.in",
   },
+  // Explicit default so Google never infers noindex for public pages (GSC may cache older crawls).
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
