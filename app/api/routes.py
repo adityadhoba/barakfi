@@ -124,7 +124,7 @@ from app.services.market_data_service import get_data_stack_status, get_fundamen
 from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
-from app.services.stock_data_quality import compute_fundamentals_data_quality
+from app.services.stock_data_quality import fundamentals_completeness_payload
 from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
@@ -141,10 +141,12 @@ def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, lis
 
 def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
+    dq, missing = fundamentals_completeness_payload(stock)
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
-            "data_quality": compute_fundamentals_data_quality(stock),
+            "data_quality": dq,
+            "fundamentals_fields_missing": missing,
         }
     )
 
@@ -152,15 +154,19 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
 def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     ids = [s.id for s in stocks]
     code_map = _index_codes_by_stock_id(db, ids)
-    return [
-        StockRead.model_validate(s).model_copy(
-            update={
-                "index_memberships": code_map.get(s.id, []),
-                "data_quality": compute_fundamentals_data_quality(s),
-            }
+    out: list[StockRead] = []
+    for s in stocks:
+        dq, missing = fundamentals_completeness_payload(s)
+        out.append(
+            StockRead.model_validate(s).model_copy(
+                update={
+                    "index_memberships": code_map.get(s.id, []),
+                    "data_quality": dq,
+                    "fundamentals_fields_missing": missing,
+                }
+            )
         )
-        for s in stocks
-    ]
+    return out
 
 
 def _stock_has_compliance_override(db: Session, stock_id: int) -> bool:
@@ -856,20 +862,30 @@ def track_symbol_delete(
 
 @router.post("/screen/manual")
 def screen_stock_manual(
+    request: Request,
     symbol: str = Body(..., embed=True),
     db: Session = Depends(get_db),
 ):
     """
     Manually screen any NSE stock by fetching live data from Yahoo Finance.
 
-    Auth: None (public, free for now)
+    Auth: None (public, free for now — ~5 screens/day quota)
 
     Fetches real-time financial data and screens against all three methodologies.
     Results are cached for 1 hour to reduce API calls.
     """
     from app.services.manual_screen_service import fetch_and_screen
+    from app.services.quota_service import check_and_increment_quota
 
     clean_symbol = symbol.strip().upper().replace(".NS", "")
+
+    quota = check_and_increment_quota(db, request)
+    if not quota["allowed"]:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily screening limit reached",
+            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
+        )
 
     # Check if stock already exists in database (manual flow is India-first)
     existing = resolve_stock(db, clean_symbol, "NSE", active_only=True, require_indian_listing=True)
@@ -2239,33 +2255,8 @@ def get_super_investor(slug: str, db: Session = Depends(get_db)):
     return result
 
 
-# ═══════════════════════════════════════════════════════════════
-# ETFS
-# ═══════════════════════════════════════════════════════════════
-
-@router.get("/etfs")
-def list_etfs(exchange: str | None = None, db: Session = Depends(get_db)):
-    from app.services.etf_service import list_etfs_with_compliance
-
-    rows = list_etfs_with_compliance(db)
-    if exchange:
-        ex = exchange.upper()
-        rows = [r for r in rows if (r.get("exchange") or "").upper() == ex]
-    return rows
 
 
-@router.get("/etfs/{symbol}")
-def get_etf_detail(
-    symbol: str,
-    exchange: str | None = Query(default=None),
-    db: Session = Depends(get_db),
-):
-    from app.services.etf_service import screen_etf
-
-    snap = screen_etf(db, symbol, exchange)
-    if not snap:
-        raise HTTPException(status_code=404, detail="ETF not found")
-    return snap
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -2529,31 +2520,8 @@ def admin_update_coverage_request(
     db.commit()
     return {"id": cr.id, "status": cr.status}
 
-# ═══════════════════════════════════════════════════════════════
-# NEWS (RSS-backed)
-# ═══════════════════════════════════════════════════════════════
-
-@router.get("/news")
-def list_public_news(
-    limit: int = Query(default=24, ge=1, le=100),
-    db: Session = Depends(get_db),
-):
-    from app.services.news_service import list_news
-    return list_news(db, limit=limit)
 
 
-@router.post("/internal/news/sync")
-def sync_news_feed(
-    db: Session = Depends(get_db),
-    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
-):
-    from app.config import INTERNAL_SERVICE_TOKEN
-    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
-    if x_internal_service_token != INTERNAL_SERVICE_TOKEN:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    n_rss = fetch_and_upsert_news(db)
-    n_nd = fetch_and_upsert_newsdata(db)
-    return {"ok": True, "upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd}
 
 
 @router.post("/internal/daily-refresh")
@@ -2691,4 +2659,105 @@ def upstox_oauth_callback(
         )
     db.commit()
     return redirect_status("connected")
+
+
+# ═══════════════════════════════════════════════════════════════
+# EARLY ACCESS SIGNUPS
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/early-access")
+def submit_early_access(
+    email: str = Body(..., embed=False),
+    name: str = Body(default="", embed=False),
+    source: str = Body(default="premium_page", embed=False),
+    db: Session = Depends(get_db),
+):
+    from app.models import EarlyAccessSignup
+    existing = db.query(EarlyAccessSignup).filter(EarlyAccessSignup.email == email).first()
+    if existing:
+        return {"ok": True, "message": "Already signed up"}
+    db.add(EarlyAccessSignup(email=email, name=name, source=source))
+    db.commit()
+    return {"ok": True, "message": "You'll be notified when Premium launches"}
+
+
+# ═══════════════════════════════════════════════════════════════
+# PRODUCT EVENTS (analytics / monetization signals)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/product-events")
+def ingest_product_event(
+    event_name: str = Body(...),
+    user_id: str | None = Body(default=None),
+    session_id: str | None = Body(default=None),
+    symbol: str | None = Body(default=None),
+    metadata: dict | None = Body(default=None),
+    db: Session = Depends(get_db),
+):
+    import json
+    from app.models import ProductEvent
+    db.add(ProductEvent(
+        event_name=event_name,
+        user_id=user_id,
+        session_id=session_id,
+        symbol=symbol,
+        metadata_json=json.dumps(metadata) if metadata else None,
+    ))
+    db.commit()
+    return {"ok": True}
+
+
+# ═══════════════════════════════════════════════════════════════
+# ADMIN: DEMAND / MONETIZATION DASHBOARD
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/admin/product-events")
+def admin_product_events(
+    db: Session = Depends(get_db),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    from app.models import ProductEvent
+    from sqlalchemy import func
+
+    recent = (
+        db.query(ProductEvent)
+        .order_by(ProductEvent.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    aggregates = (
+        db.query(
+            ProductEvent.event_name,
+            func.count(ProductEvent.id).label("count"),
+        )
+        .group_by(ProductEvent.event_name)
+        .all()
+    )
+
+    return {
+        "aggregates": [{"event_name": a.event_name, "count": a.count} for a in aggregates],
+        "recent": [
+            {
+                "id": e.id,
+                "event_name": e.event_name,
+                "user_id": e.user_id,
+                "session_id": e.session_id,
+                "symbol": e.symbol,
+                "metadata": e.metadata_json,
+                "created_at": e.created_at.isoformat() if e.created_at else None,
+            }
+            for e in recent
+        ],
+    }
+
+
+@router.get("/admin/early-access")
+def admin_early_access(db: Session = Depends(get_db)):
+    from app.models import EarlyAccessSignup
+    rows = db.query(EarlyAccessSignup).order_by(EarlyAccessSignup.created_at.desc()).all()
+    return [
+        {"id": r.id, "email": r.email, "name": r.name, "source": r.source, "created_at": r.created_at.isoformat() if r.created_at else None}
+        for r in rows
+    ]
 

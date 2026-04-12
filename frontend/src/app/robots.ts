@@ -8,12 +8,23 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/workspace", "/account", "/governance", "/admin", "/onboarding"],
+        disallow: [
+          "/api/",
+          "/workspace",
+          "/account",
+          "/governance",
+          "/admin",
+          "/onboarding",
+          "/sign-in",
+          "/sign-up",
+          "/notifications",
+          "/watchlist",
+        ],
       },
       {
         userAgent: "GPTBot",
         allow: "/",
-        disallow: ["/api/", "/workspace", "/account", "/governance", "/admin"],
+        disallow: ["/api/", "/workspace", "/account", "/governance", "/admin", "/sign-in", "/sign-up", "/watchlist"],
       },
       {
         userAgent: "ChatGPT-User",

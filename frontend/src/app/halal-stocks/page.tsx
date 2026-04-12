@@ -93,12 +93,16 @@ export default async function HalalStocksPage() {
           Halal Stocks in India <span className={styles.year}>2026</span>
         </h1>
         <p className={styles.subtitle}>
-          Curated list of {halalStocks.length} Shariah-compliant NSE/BSE listings (India).
-          Screened using S&amp;P Shariah methodology with live data. US and UK listings are in the screener.
+          Curated list of {halalStocks.length} Shariah-compliant NSE/BSE listings in India, screened with S&amp;P
+          Shariah–style financial tests and refreshed when fundamentals update. BarakFi&apos;s public product is
+          India-first — explore methodology and long-form guides in our learn hub.
           {reviewStocks.length > 0 ? ` ${reviewStocks.length} cautious NSE/BSE names need extra verification.` : ""}
         </p>
         <div className={styles.ctas}>
           <Link href="/screener" className={styles.ctaPrimary}>Open Full Screener</Link>
+          <Link href="/learn/halal-stocks-india" className={styles.ctaSecondary}>
+            Learn: halal stocks in India
+          </Link>
           <Link href="/shariah-compliance" className={styles.ctaSecondary}>Our Methodology</Link>
         </div>
       </header>
@@ -171,7 +175,10 @@ export default async function HalalStocksPage() {
             providing a free, transparent, and technology-driven halal stock screener specifically
             built for the Indian market. Whether you&apos;re looking for large-cap blue chips or
             emerging mid-cap opportunities, our screener helps you invest with both financial
-            wisdom and religious compliance.
+            wisdom and religious compliance. For longer explainers, start with the{" "}
+            <Link href="/learn">learn hub</Link> — especially{" "}
+            <Link href="/learn/halal-stocks-india">halal stocks in India</Link> and{" "}
+            <Link href="/learn/what-is-halal-investing">what is halal investing</Link>.
           </p>
           <h3>Is Investing in Stocks Halal?</h3>
           <p>

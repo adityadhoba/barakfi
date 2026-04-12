@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "What is halal investing? — Shariah-compliant equities explained",
   description:
     "A practical introduction to halal investing: avoiding riba-heavy business models, understanding purification, and how automated Shariah stock screening on Indian exchanges fits into a disciplined Muslim portfolio — with links to BarakFi tools and live NSE/BSE pages.",
+  robots: { index: true, follow: true },
 };
 
 export default function WhatIsHalalInvestingPage() {
@@ -78,6 +79,27 @@ export default function WhatIsHalalInvestingPage() {
           segment revenue, and then taking questions about edge cases to a scholar. Revisit positions when there is a major
           acquisition, a large new debt programme, or a pivot into regulated financial services — those events frequently
           change ratio outcomes overnight even when the brand name on the ticker is unchanged.
+        </p>
+        <h2>Corporate actions that quietly move ratios</h2>
+        <p>
+          Rights issues, buybacks funded with new debt, large related-party leases, and demergers can all restate the
+          balance sheet in ways that automated pipelines need a filing cycle to absorb. If you see a sudden jump from
+          halal to cautious without a clear narrative, check whether the company filed a scheme of arrangement, raised
+          overseas bonds, or consolidated a financing subsidiary — those are exactly the footnotes scholars and analysts read
+          before trusting a traffic-light label.
+        </p>
+        <p>
+          Indian promoters also recycle capital through holding companies. A standalone listed entity can look pristine
+          while group leverage sits one layer up. Screening tools usually work from consolidated accounts when available,
+          but presentation choices still differ. That is another reason to treat BarakFi as a structured checklist, not the
+          final word on permissibility.
+        </p>
+        <h2>Fees, wrappers, and everyday accounts</h2>
+        <p>
+          Beyond single stocks, many families ask about brokerage cash balances, systematic investment plans, and small
+          slices of mixed funds. Those questions blend fiqh of contracts with platform economics. This article stays focused
+          on plain equity screening; for mixed products, seek product-specific guidance because the same ratio engine cannot
+          infer whether a wrapper embeds impermissible income in ways the prospectus obscures.
         </p>
         <h2>Key takeaways</h2>
         <ul>

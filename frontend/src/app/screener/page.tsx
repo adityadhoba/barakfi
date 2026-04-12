@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import styles from "@/app/screener.module.css";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
@@ -9,7 +10,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Shariah Stock Screener — Barakfi",
   description:
-    "Screen Indian stocks for Shariah compliance. Filter by sector, sort by financial ratios, and find halal investment opportunities in the Indian equity market.",
+    "Screen NSE and BSE-listed Indian equities for Shariah-style compliance: filter by sector and halal status, sort by market cap and financial ratios, and open any symbol for a full ratio breakdown. Free educational screener — pair with our learn guides and methodology pages before investing.",
+  robots: { index: true, follow: true },
 };
 
 export default async function ScreenerPage() {
@@ -28,6 +30,13 @@ export default async function ScreenerPage() {
 
   return (
     <main className={styles.screenerPage}>
+      <nav className={styles.screenerLearnLinks} aria-label="Learn and lists">
+        <Link href="/learn/halal-stocks-india">Halal stocks in India — guide</Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/learn/what-is-halal-investing">What is halal investing?</Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/halal-stocks">Curated halal list</Link>
+      </nav>
       <Suspense fallback={<div className={styles.screenerFallback}>Loading screener&hellip;</div>}>
         <StockScreenerTable screenedStocks={validStocks} />
       </Suspense>

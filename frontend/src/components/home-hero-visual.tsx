@@ -109,7 +109,7 @@ export function HomeHeroVisual() {
         <Link
           href="/screener"
           className={styles.cardLink}
-          aria-label="Open the stock screener for NSE, US, and LSE listings"
+          aria-label="Open the stock screener for NSE and BSE listings"
         >
           <motion.div
             className={styles.cardGlobe}
@@ -122,9 +122,9 @@ export function HomeHeroVisual() {
             <div className={styles.cardGlobeText}>
               <div className={styles.cardGlobeKicker}>Markets</div>
               <div className={styles.cardGlobeTitle}>
-                India-first,
+                India-focused,
                 <br />
-                global where you need it
+                NSE &amp; BSE screened
               </div>
             </div>
           </motion.div>

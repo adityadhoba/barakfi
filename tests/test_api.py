@@ -97,6 +97,18 @@ def test_list_stocks():
     assert isinstance(api_json(response), list)
 
 
+def test_list_stocks_includes_fundamentals_completeness_fields():
+    response = client.get("/api/stocks")
+    assert response.status_code == 200
+    rows = api_json(response)
+    assert len(rows) >= 1
+    row = rows[0]
+    assert "data_quality" in row
+    assert row["data_quality"] in ("high", "medium", "low", None)
+    assert "fundamentals_fields_missing" in row
+    assert isinstance(row["fundamentals_fields_missing"], list)
+
+
 def test_screen_stock():
     db = SessionLocal()
     try:

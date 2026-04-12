@@ -33,6 +33,7 @@ import { StockTabs } from "@/components/stock-tabs";
 import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import { StockUpsellCard } from "@/components/stock-upsell-card";
 import {
   buildMethodologyTableRowsFromMulti,
   buildPrimaryRatioTableRows,
@@ -59,6 +60,7 @@ export async function generateMetadata({
       title: `${sym} — Shariah screening`,
       description:
         `See whether ${sym} is halal, doubtful, or haram under Shariah financial screening for NSE/BSE-listed Indian equities. BarakFi explains debt, non-permissible income, interest income, and other ratios used in compliance checks — not a fatwa; consult a qualified scholar for personal rulings.`,
+      robots: { index: true, follow: true },
     };
   }
   const { stock, statusLabel } = bundle;
@@ -68,6 +70,7 @@ export async function generateMetadata({
   return {
     title,
     description,
+    robots: { index: true, follow: true },
     alternates: { canonical: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}` },
     openGraph: {
       title,
@@ -480,6 +483,15 @@ export default async function StockDetailPage({
       ...(stock.data_quality
         ? [{ "@type": "PropertyValue", name: "dataQuality", value: stock.data_quality }]
         : []),
+      ...(stock.fundamentals_fields_missing && stock.fundamentals_fields_missing.length > 0
+        ? [
+            {
+              "@type": "PropertyValue",
+              name: "fundamentalsFieldsMissing",
+              value: stock.fundamentals_fields_missing.join(", "),
+            },
+          ]
+        : []),
     ],
   };
 
@@ -647,6 +659,9 @@ export default async function StockDetailPage({
           </div>
         </div>
 
+        {/* Soft upsell — non-blocking */}
+        <StockUpsellCard />
+
         {/* Compliance Verdict Banner */}
         <div className={`${styles.verdictBanner} ${
           screening.status === "HALAL" ? styles.verdictHalal
@@ -740,6 +755,13 @@ export default async function StockDetailPage({
             <p className={styles.seoProse}>
               <strong>Data quality:</strong> {stock.data_quality === "high" ? "High" : stock.data_quality === "medium" ? "Medium" : "Low"}
               — indicates how complete the fundamentals are for ratio screening. Source: {stock.data_source}.
+              {stock.fundamentals_fields_missing && stock.fundamentals_fields_missing.length > 0 ? (
+                <>
+                  {" "}
+                  <strong>Missing or zero inputs:</strong> {stock.fundamentals_fields_missing.join(", ")} — treat nearby
+                  ratio thresholds as less certain until filings populate those lines.
+                </>
+              ) : null}
             </p>
           )}
         </section>

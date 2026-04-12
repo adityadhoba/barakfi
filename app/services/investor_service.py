@@ -1,10 +1,15 @@
-"""Super investors service — returns investor profiles and their holdings."""
+"""Super investors service — returns investor profiles and their holdings (India-only)."""
 
 from __future__ import annotations
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from app.models import SuperInvestor, SuperInvestorHolding, Stock
 from app.services.halal_service import evaluate_stock
+
+_INDIAN_EXCHANGES = {"NSE", "BSE"}
+
+def _is_indian_exchange(ex: str | None) -> bool:
+    return (ex or "").upper() in _INDIAN_EXCHANGES
 
 def _safe_str(value: object) -> str:
     try:
@@ -22,7 +27,17 @@ def get_investors(db: Session) -> list[dict]:
     )
     result = []
     for inv in investors:
-        holding_count = db.query(SuperInvestorHolding).filter(SuperInvestorHolding.investor_id == inv.id).count()
+        indian_count = (
+            db.query(SuperInvestorHolding)
+            .join(Stock, SuperInvestorHolding.stock_id == Stock.id)
+            .filter(
+                SuperInvestorHolding.investor_id == inv.id,
+                Stock.exchange.in_(_INDIAN_EXCHANGES),
+            )
+            .count()
+        )
+        if indian_count == 0:
+            continue
         result.append({
             "id": inv.id,
             "name": inv.name,
@@ -32,7 +47,7 @@ def get_investors(db: Session) -> list[dict]:
             "country": inv.country,
             "investment_style": inv.investment_style,
             "image_url": inv.image_url,
-            "holding_count": holding_count,
+            "holding_count": indian_count,
         })
     return result
 
@@ -52,7 +67,7 @@ def get_investor_detail(db: Session, slug: str) -> dict | None:
     holding_list = []
     for h in holdings:
         stock = db.query(Stock).filter(Stock.id == h.stock_id).first()
-        if stock:
+        if stock and _is_indian_exchange(stock.exchange):
             holding_list.append({
                 "symbol": stock.symbol,
                 "name": stock.name,
@@ -203,7 +218,7 @@ def get_investor_with_compliance(db: Session, slug: str) -> dict | None:
     from app.services.stock_lookup import resolve_stock
 
     for h in inv.holdings:
-        stock = resolve_stock(db, h.symbol, "US", active_only=True) or resolve_stock(db, h.symbol, None, active_only=True)
+        stock = resolve_stock(db, h.symbol, "NSE", active_only=True) or resolve_stock(db, h.symbol, "BSE", active_only=True) or resolve_stock(db, h.symbol, None, active_only=True)
         compliance_status = "UNKNOWN"
         compliance_rating = None
 

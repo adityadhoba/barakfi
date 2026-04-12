@@ -39,6 +39,10 @@ class StockRead(StockBase):
         default=None,
         description="Heuristic completeness of fundamentals for screening (high/medium/low).",
     )
+    fundamentals_fields_missing: list[str] = Field(
+        default_factory=list,
+        description="Fundamental field keys that are zero or missing (screening may be unreliable).",
+    )
     exchange_code: str | None = None
     isin: str | None = None
     beta: float | None = None

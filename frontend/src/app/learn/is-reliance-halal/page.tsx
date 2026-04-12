@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Is Reliance halal? — Context for Shariah screening (NSE: RELIANCE)",
   description:
     "Educational article on how investors evaluate Reliance Industries for Shariah-aligned equity screening: conglomerate structure, energy and retail segments, debt and treasury considerations, and how to read BarakFi’s live RELIANCE page — not a fatwa or personalised ruling.",
+  robots: { index: true, follow: true },
 };
 
 export default function IsRelianceHalalPage() {
@@ -54,6 +55,23 @@ export default function IsRelianceHalalPage() {
           question really points to a different layer: business-line permissibility, interest-bearing balance sheet
           components, and operating versus non-operating income classification. Public methodologies disagree on edge cases,
           which is why multiple standards exist. Treat this article as orientation, not a verdict.
+        </p>
+        <h2>Retail, telecom, and “where does the cash sit?”</h2>
+        <p>
+          Organised retail and digital consumer businesses can generate permissible core revenue while still carrying
+          vendor finance, lease liabilities, or customer float on the balance sheet. Telecom and spectrum-related obligations
+          add another layer: some accounting treatments move costs off the narrow definitions a screener uses for debt,
+          while scholars still want to understand economic substance. That gap between accounting presentation and fiqh
+          reasoning is why Reliance prompts more forum threads than a plain IT exporter — not because the ticker is
+          inherently suspect, but because the group is a bundle of moving parts.
+        </p>
+        <h2>How often should you revisit the live page?</h2>
+        <p>
+          After major results, annual report publication, or any announcement that mentions new bonds, large M&amp;A, or a
+          reorganisation of subsidiaries, reopen{" "}
+          <Link href="/stocks/RELIANCE">the RELIANCE stock page</Link> and compare timestamps on fundamentals versus price.
+          If the data-quality hint flags missing inputs, wait for the next sync rather than over-interpreting a borderline
+          ratio built on incomplete denominators.
         </p>
         <h2>Broader context</h2>
         <p>

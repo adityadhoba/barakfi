@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors, getETFs, getNewsFeed } from "@/lib/api";
+import { getStocks, getBulkScreeningResults, getTrending, getCollections, getSuperInvestors } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { AdUnit } from "@/components/ad-unit";
-import { StockLogo } from "@/components/stock-logo";
 import {
   StatIconAvoid,
   StatIconCautious,
@@ -12,11 +11,12 @@ import {
   StatIconUniverse,
 } from "@/components/home-stats-icons";
 import { CollectionIcon } from "@/components/collection-icon";
-import { NewsCarousel } from "@/app/news/news-carousel";
 import { HomeHeroAuth } from "@/components/home-hero-auth";
-import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import { HomeHeroVisual } from "@/components/home-hero-visual";
 import { ProductCheckHome } from "@/components/product-check-home";
+import { HomeTopStocks } from "@/components/home-top-stocks";
+import { HomeScreeningCta } from "@/components/home-screening-cta";
+import { HomeTrending } from "@/components/home-trending";
 import styles from "./home-dashboard.module.css";
 
 const MAX_SCREEN_ON_HOME = 500;
@@ -43,17 +43,12 @@ async function loadScreenedUniverse(stocks: Stock[]): Promise<{
 }
 
 export async function HomeDashboard() {
-  const [stocks, trendingStocks, collections, investors, etfs, newsResult] = await Promise.all([
+  const [stocks, trendingStocks, collections, investors] = await Promise.all([
     getStocks(),
     getTrending("popular", undefined, 6),
     getCollections(),
     getSuperInvestors(),
-    getETFs(),
-    getNewsFeed(12),
   ]);
-  const newsFeed = newsResult.items;
-  const newsLoadStatus = newsResult.loadStatus;
-  const newsErrorHint = newsResult.errorHint;
   const { screened, skippedFullStats } = await loadScreenedUniverse(stocks);
   const total = stocks.length;
 
@@ -71,9 +66,9 @@ export async function HomeDashboard() {
   const sectorSet = new Set(stocks.map((s) => s.sector));
   const sectorCount = sectorSet.size;
 
-  const topHalal = hasStats
-    ? [...screened].filter((s) => s.screening.status === "HALAL").sort((a, b) => b.market_cap - a.market_cap).slice(0, 6)
-    : [...stocks].sort((a, b) => b.market_cap - a.market_cap).slice(0, 6);
+  const top20 = hasStats
+    ? [...screened].sort((a, b) => b.market_cap - a.market_cap).slice(0, 20)
+    : [...stocks].sort((a, b) => b.market_cap - a.market_cap).slice(0, 20);
 
   return (
     <div className={styles.home}>
@@ -255,17 +250,11 @@ export async function HomeDashboard() {
         </section>
       )}
 
-      {/* ── Top Stocks ── */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>
-            {hasStats ? "Top Halal Stocks" : "Largest by Market Cap"}
-          </h2>
-          <Link href="/screener" className={styles.seeAll}>Full list &rarr;</Link>
-        </div>
-        <p className={styles.sectionFootnote}>Based on S&P Shariah screening criteria</p>
-        <HomeTopStocksLive rows={topHalal as (Stock & { screening?: ScreeningResult })[]} />
-      </section>
+      {/* ── Top Indian Stocks (Shariah Screened) — 20 cached, glass cards ── */}
+      <HomeTopStocks stocks={top20} />
+
+      {/* ── Screen Any Stock CTA ── */}
+      <HomeScreeningCta />
 
       {/* ── Ad: between sections ── */}
       <AdUnit format="rectangle" />
@@ -294,47 +283,8 @@ export async function HomeDashboard() {
         </div>
       </section>
 
-      {/* ── Islamic finance headlines ── */}
-      {(newsFeed.length > 0 || newsLoadStatus !== "ok") && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Islamic finance headlines</h2>
-            {newsFeed.length > 0 ? <Link href="/news" className={styles.seeAll}>All news →</Link> : null}
-          </div>
-          {newsFeed.length > 0 ? (
-            <NewsCarousel items={newsFeed.slice(0, 8)} />
-          ) : (
-            <p className={styles.newsHint}>
-              {newsLoadStatus === "empty"
-                ? "No headlines yet. We refresh news on a schedule; check back soon. If you run the app yourself, see docs/data-freshness.md for how to trigger a news sync."
-                : newsErrorHint || "We could not load headlines right now. Please try again in a few minutes."}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* ── Trending Preview ── */}
-      {trendingStocks.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Trending Stocks</h2>
-            <Link href="/trending" className={styles.seeAll}>View all →</Link>
-          </div>
-          <div className={styles.trendingGrid}>
-            {trendingStocks.slice(0, 6).map((stock, i) => (
-              <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.trendingCard}>
-                <span className={styles.trendingRank}>{i + 1}</span>
-                <StockLogo symbol={stock.symbol} size={40} exchange={stock.exchange} />
-                <div className={styles.trendingBody}>
-                  <span className={styles.trendingSymbol}>{stock.symbol}</span>
-                  <span className={styles.trendingName}>{stock.name}</span>
-                </div>
-                <span className={styles.trendingExchange}>{stock.exchange}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── Trending Now ── */}
+      <HomeTrending stocks={trendingStocks} />
 
       {/* ── Collections Preview ── */}
       {collections.length > 0 && (
@@ -377,25 +327,6 @@ export async function HomeDashboard() {
                 </div>
                 <span className={styles.investorCountry}>{inv.country}</span>
               </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── ETFs Preview ── */}
-      {etfs.length > 0 && (
-        <section className={styles.section}>
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Halal ETFs</h2>
-            <Link href="/etfs" className={styles.seeAll}>View all →</Link>
-          </div>
-          <div className={styles.etfsGrid}>
-            {etfs.slice(0, 4).map((etf) => (
-              <div key={etf.symbol} className={styles.etfCard}>
-                <span className={styles.etfSymbol}>{etf.symbol}</span>
-                <span className={styles.etfName}>{etf.name}</span>
-                <span className={styles.etfExchange}>{etf.exchange}</span>
-              </div>
             ))}
           </div>
         </section>

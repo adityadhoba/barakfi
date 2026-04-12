@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import s from "../../request-coverage/request.module.css";
 
-export const metadata = { title: "Access denied — Barakfi" };
+export const metadata: Metadata = {
+  title: "Access denied — Barakfi",
+  description:
+    "This BarakFi admin console URL is restricted to authorised operator accounts. If you reached this page by mistake, return to the public halal stock screener; for access requests, contact the team through normal support channels.",
+  robots: { index: false, follow: true },
+};
 
 export default function AdminForbiddenPage() {
   return (

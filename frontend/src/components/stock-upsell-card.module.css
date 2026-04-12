@@ -1,0 +1,48 @@
+.card {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0 0 0.6rem;
+}
+
+.bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+}
+
+.bullets li {
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 0.25rem 0;
+}
+
+.bullets li::before {
+  content: "✦ ";
+  color: var(--emerald);
+}
+
+.cta {
+  display: inline-block;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--emerald);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.cta:hover {
+  background: rgba(16, 185, 129, 0.2);
+}

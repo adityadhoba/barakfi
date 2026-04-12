@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function InvestorDetailPage({ params }: Props) {
   const { slug } = await params;
   const inv = await getSuperInvestor(slug);
-  if (!inv) notFound();
+  if (!inv || !inv.holdings || inv.holdings.length === 0) notFound();
 
   return (
     <main className="shellPage">

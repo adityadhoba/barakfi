@@ -1,10 +1,9 @@
 """
-Manual stock screening service.
+Manual stock screening service (India-only).
 
-Fetches live financial data from Yahoo Finance for any symbol on NSE, US,
-or LSE exchanges and screens it on-the-fly using all three Shariah
-methodologies.  Results are cached in-memory for 1 hour to avoid repeated
-API calls.
+Fetches live financial data from Yahoo Finance for NSE / BSE symbols and
+screens on-the-fly using all three Shariah methodologies.  Results are
+cached in-memory for 1 hour to avoid repeated API calls.
 """
 
 import logging
@@ -61,24 +60,16 @@ def _set_cached(symbol: str, data: dict | None):
     _cache[symbol] = (time.time(), data)
 
 
+_INDIAN_EXCHANGES = {"NSE", "BSE"}
+
 _EXCHANGE_SUFFIX: dict[str, str] = {
     "NSE": ".NS",
     "BSE": ".BO",
-    "US": "",
-    "NYSE": "",
-    "NASDAQ": "",
-    "LSE": ".L",
-    "LON": ".L",
 }
 
 _EXCHANGE_META: dict[str, dict[str, str]] = {
-    "NSE":    {"exchange": "NSE",    "country": "India", "currency": "INR"},
-    "BSE":    {"exchange": "BSE",    "country": "India", "currency": "INR"},
-    "US":     {"exchange": "US",     "country": "US",    "currency": "USD"},
-    "NYSE":   {"exchange": "NYSE",   "country": "US",    "currency": "USD"},
-    "NASDAQ": {"exchange": "NASDAQ", "country": "US",    "currency": "USD"},
-    "LSE":    {"exchange": "LSE",    "country": "UK",    "currency": "GBP"},
-    "LON":    {"exchange": "LSE",    "country": "UK",    "currency": "GBP"},
+    "NSE": {"exchange": "NSE", "country": "India", "currency": "INR"},
+    "BSE": {"exchange": "BSE", "country": "India", "currency": "INR"},
 }
 
 MILLION = 1e6

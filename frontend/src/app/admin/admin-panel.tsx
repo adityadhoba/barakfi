@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import styles from "./admin-panel.module.css";
 
-type Tab = "overview" | "coverage" | "feedback" | "users";
+type Tab = "overview" | "coverage" | "feedback" | "users" | "demand";
 
 type CoverageRequest = {
   id: number;
@@ -44,6 +44,9 @@ export function AdminPanel() {
   const [coverageRequests, setCoverageRequests] = useState<CoverageRequest[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [demandAggregates, setDemandAggregates] = useState<{ event_name: string; count: number }[]>([]);
+  const [demandRecent, setDemandRecent] = useState<Record<string, unknown>[]>([]);
+  const [earlyAccess, setEarlyAccess] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
 
   const apiBase = "/api";
@@ -61,14 +64,18 @@ export function AdminPanel() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [crData, fbData, userData] = await Promise.all([
+      const [crData, fbData, userData, evData, eaData] = await Promise.all([
         fetchWithAuth<CoverageRequest[]>("/admin/coverage-requests"),
         fetchWithAuth<FeedbackItem[]>("/admin/feedback"),
         fetchWithAuth<{ items: AdminUser[]; total: number }>("/admin/users"),
+        fetchWithAuth<{ aggregates: { event_name: string; count: number }[]; recent: Record<string, unknown>[] }>("/admin/product-events"),
+        fetchWithAuth<Record<string, unknown>[]>("/admin/early-access"),
       ]);
       if (crData) setCoverageRequests(crData);
       if (fbData) setFeedbackItems(fbData);
       if (userData?.items) setUsers(userData.items);
+      if (evData) { setDemandAggregates(evData.aggregates || []); setDemandRecent(evData.recent || []); }
+      if (eaData) setEarlyAccess(eaData);
       setStats({
         users: userData?.total ?? (userData?.items?.length || 0),
         stocks: 0,
@@ -121,6 +128,7 @@ export function AdminPanel() {
     { key: "coverage", label: "Coverage Requests", count: stats.pendingRequests },
     { key: "feedback", label: "Feedback", count: stats.newFeedback },
     { key: "users", label: "Users", count: stats.users },
+    { key: "demand", label: "Demand", count: earlyAccess.length },
   ];
 
   return (
@@ -274,6 +282,65 @@ export function AdminPanel() {
               </tbody>
             </table>
           </div>
+        )}
+
+        {tab === "demand" && !loading && (
+          <>
+            <h3 className={styles.sectionTitle}>Event Aggregates</h3>
+            <div className={styles.statsGrid}>
+              {demandAggregates.map((a) => (
+                <div key={a.event_name} className={styles.statCard}>
+                  <span className={styles.statValue}>{a.count}</span>
+                  <span className={styles.statLabel}>{a.event_name}</span>
+                </div>
+              ))}
+              {demandAggregates.length === 0 && <p className={styles.empty}>No events recorded yet</p>}
+            </div>
+
+            <h3 className={styles.sectionTitle} style={{ marginTop: 24 }}>Early Access Signups ({earlyAccess.length})</h3>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr><th>Email</th><th>Name</th><th>Source</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                  {earlyAccess.map((r, i) => (
+                    <tr key={i}>
+                      <td>{String(r.email ?? "")}</td>
+                      <td>{String(r.name ?? "")}</td>
+                      <td>{String(r.source ?? "")}</td>
+                      <td className={styles.date}>{String(r.created_at ?? "").split("T")[0]}</td>
+                    </tr>
+                  ))}
+                  {earlyAccess.length === 0 && (
+                    <tr><td colSpan={4} className={styles.empty}>No signups yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className={styles.sectionTitle} style={{ marginTop: 24 }}>Recent Events</h3>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr><th>Event</th><th>Symbol</th><th>User</th><th>Time</th></tr>
+                </thead>
+                <tbody>
+                  {demandRecent.slice(0, 50).map((e, i) => (
+                    <tr key={i}>
+                      <td>{String(e.event_name ?? "")}</td>
+                      <td>{String(e.symbol ?? "—")}</td>
+                      <td>{String(e.user_id ?? e.session_id ?? "anon")}</td>
+                      <td className={styles.date}>{String(e.created_at ?? "").slice(0, 16)}</td>
+                    </tr>
+                  ))}
+                  {demandRecent.length === 0 && (
+                    <tr><td colSpan={4} className={styles.empty}>No events yet</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
 export function GET() {
   const content = `# Halal Stock Checker (Barakfi)
 
-> Halal Stock Checker helps you **check if a stock is Halal** and see **instant Halal status** for Indian (NSE), US, and UK listings. Screening uses S&P Shariah, AAOIFI, and FTSE/Maxis-style ratios.
+> Halal Stock Checker helps you **check if a stock is Halal** and see **instant Halal status** for Indian NSE and BSE listings. Screening uses S&P Shariah, AAOIFI, and FTSE/Maxis-style ratios.
 
 ## What is it?
 
@@ -9,15 +9,14 @@ A simple halal check: type a ticker, get a clear status and score, then open ful
 
 ## Key features
 
-- **Instant Halal status** for stocks
+- **Instant Halal status** for Indian stocks
 - **Multi-methodology** ratios (S&P, AAOIFI, FTSE/Maxis-style)
 - **Collections** — themed stock lists
-- **Super Investors** — follow well-known investors
-- **Halal ETFs** — Shariah-compliant ETFs
+- **Super Investors** — follow well-known Indian investors
 - **Saved lists & watchlist** — keep symbols handy
 - **Purification & Zakat calculators**
 - **Stock comparison**
-- **Academy & news** — context and learning
+- **Academy** — context and learning
 
 ## Links
 
@@ -26,11 +25,9 @@ A simple halal check: type a ticker, get a clear status and score, then open ful
 - Halal stocks: https://barakfi.in/halal-stocks
 - Collections: https://barakfi.in/collections
 - Super Investors: https://barakfi.in/super-investors
-- Halal ETFs: https://barakfi.in/etfs
 - Tools: https://barakfi.in/tools
 - Methodology: https://barakfi.in/methodology
 - Academy: https://barakfi.in/academy
-- News: https://barakfi.in/news
 - Request coverage: https://barakfi.in/request-coverage
 
 ## For AI agents

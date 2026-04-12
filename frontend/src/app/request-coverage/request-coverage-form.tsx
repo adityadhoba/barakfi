@@ -82,7 +82,7 @@ export function RequestCoverageForm() {
           type="text"
           required
           autoComplete="off"
-          placeholder="e.g. RELIANCE or AAPL"
+          placeholder="e.g. RELIANCE"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
         />
@@ -92,8 +92,6 @@ export function RequestCoverageForm() {
         <select value={exchange} onChange={(e) => setExchange(e.target.value)}>
           <option value="NSE">NSE (India)</option>
           <option value="BSE">BSE (India)</option>
-          <option value="US">US (NYSE / NASDAQ)</option>
-          <option value="LSE">LSE (London)</option>
         </select>
       </label>
       <label className={styles.field}>

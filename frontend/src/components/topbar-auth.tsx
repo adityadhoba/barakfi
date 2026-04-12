@@ -19,9 +19,7 @@ function PrimaryNav() {
           { href: "/halal-stocks", label: "Halal stocks" },
           { href: "/learn", label: "Learn" },
           { href: "/super-investors", label: "Super Investors" },
-          { href: "/etfs", label: "Halal ETFs" },
           { href: "/academy", label: "Academy" },
-          { href: "/news", label: "News" },
         ]}
       />
       <TopbarDropdown

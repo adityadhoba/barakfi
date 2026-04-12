@@ -27,6 +27,28 @@
   font-size: 0.85rem;
 }
 
+.screenerLearnLinks {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.screenerLearnLinks a {
+  color: var(--emerald);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.screenerLearnLinks a:hover {
+  text-decoration: underline;
+}
+
 /* ── Manual Screen Section ── */
 .manualScreenSection {
   padding: 24px 20px 0;
@@ -182,6 +204,29 @@
   background: var(--emerald);
   color: #fff;
   border-color: var(--emerald);
+}
+
+.lockIcon {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-left: 4px;
+}
+
+.lockedFilter {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s;
+}
+.lockedFilter:hover {
+  border-color: var(--emerald);
+  color: var(--text-secondary);
 }
 
 .sidebarToggle {
@@ -555,6 +600,24 @@
 .statusHalal { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-border); }
 .statusReview { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-border); }
 .statusFail { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+.screenRowBtn {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--emerald-bg);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.screenRowBtn:hover {
+  background: var(--emerald);
+  color: #fff;
+}
 
 .emptyRow {
   text-align: center;
