@@ -33,7 +33,7 @@ export function HomeTopStocksLive({ rows }: { rows: Row[] }) {
         const displayPx = livePriceFromQuoteOrDb(quotes, row);
         const cur = resolveDisplayCurrency(row.exchange, row.currency);
         return (
-          <Link className={styles.stockItem} href={`/stocks/${encodeURIComponent(row.symbol)}`} key={row.symbol}>
+          <Link className={styles.stockItem} href={`/screening/${encodeURIComponent(row.symbol)}`} key={row.symbol}>
             <div className={styles.stockItemTop}>
               <StockLogo
                 symbol={row.symbol}

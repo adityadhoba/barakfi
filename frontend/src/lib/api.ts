@@ -773,6 +773,53 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
 }
 
 /**
+ * Compare Stocks page only: uses POST /compare/bulk (counts against daily compare quota).
+ * Pass Clerk actor headers from a Server Component so quota applies per user/IP.
+ */
+export async function getCompareScreeningResults(
+  symbols: string[],
+  quotaHeaders?: HeadersInit,
+): Promise<{ results: ScreeningResult[]; compareLimitReached: boolean }> {
+  const sliced = symbols
+    .slice(0, 4)
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+  if (sliced.length === 0) {
+    return { results: [], compareLimitReached: false };
+  }
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (quotaHeaders) {
+    new Headers(quotaHeaders).forEach((value, key) => {
+      headers.set(key, value);
+    });
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/compare/bulk`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(sliced),
+      cache: "no-store",
+    });
+    if (response.status === 429) {
+      return { results: [], compareLimitReached: true };
+    }
+    if (!response.ok) {
+      return { results: [], compareLimitReached: false };
+    }
+    const body: unknown = await response.json();
+    const data = unwrapBackendEnvelope<ScreeningResult[]>(body);
+    return {
+      results: Array.isArray(data) ? data : [],
+      compareLimitReached: false,
+    };
+  } catch {
+    return { results: [], compareLimitReached: false };
+  }
+}
+
+/**
  * Get authentication provider strategy and readiness status.
  * Used by home page to detect if Clerk is properly configured.
  * Cached for 30 seconds.

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { getStocks, getTrending } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
+import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import styles from "./home-dashboard.module.css";
 
 export async function HomeDashboard() {
@@ -22,7 +23,7 @@ export async function HomeDashboard() {
       <section className={styles.heroClean}>
         <span className={styles.heroKicker}>Instant Halal Status</span>
         <h1 className={styles.heroHeadline}>
-          Check if a stock is Halal
+          Check if a Stock is Halal in Seconds
         </h1>
         <p className={styles.heroSub}>
           Shariah-compliant screening for Indian stocks using real financial data
@@ -36,21 +37,7 @@ export async function HomeDashboard() {
           <h2 className={styles.sectionTitle}>Popular Stocks Right Now</h2>
           <Link href="/screener" className={styles.seeAll}>Browse all stocks &rarr;</Link>
         </div>
-        <div className={styles.popularGrid}>
-          {popular.map((s) => (
-            <Link
-              key={s.symbol}
-              href={`/screening/${encodeURIComponent(s.symbol)}`}
-              className={styles.popularCard}
-            >
-              <div className={styles.popularTop}>
-                <span className={styles.popularSymbol}>{s.symbol}</span>
-                <span className={styles.popularSector}>{s.sector}</span>
-              </div>
-              <span className={styles.popularName}>{s.name}</span>
-            </Link>
-          ))}
-        </div>
+        <HomeTopStocksLive rows={popular} />
       </section>
 
       {/* ── How It Works ── */}

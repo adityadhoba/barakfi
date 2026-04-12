@@ -105,7 +105,7 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
           autoComplete="off"
         />
         <button type="submit" className={styles.cta}>
-          Check if Halal
+          Check Now
         </button>
       </form>
 
