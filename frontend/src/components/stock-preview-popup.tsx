@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "./stock-preview-popup.module.css";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { StockLogo } from "@/components/stock-logo";
@@ -26,21 +26,11 @@ function resolveCurrencyCode(stock: Stock): "INR" | "USD" | "GBP" {
   return resolveDisplayCurrency(stock.exchange, stock.currency);
 }
 
-function formatPct(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
 function getMcapCategory(mcap: number): string {
   if (mcap >= 100000) return "Large Cap";
   if (mcap >= 20000) return "Mid Cap";
   return "Small Cap";
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
-};
 
 const POPUP_WIDTH = 320;
 const POPUP_PADDING = 8;
@@ -102,13 +92,9 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
-  const b = stock.screening.breakdown;
-  const statusCls = stock.screening.status === "HALAL" ? styles.statusHalal
-    : stock.screening.status === "CAUTIOUS" ? styles.statusReview
-    : styles.statusFail;
-
   const cur = resolveCurrencyCode(stock);
   const market = resolveMarketLabel(stock.exchange, stock.currency);
+  const routerRef = useRouter();
 
   const popupContent = visible ? createPortal(
     <div
@@ -121,7 +107,7 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
       <div className={`${styles.popupArrow} ${pos.arrowSide === "bottom" ? styles.popupArrowBottom : ""}`} />
 
       <div className={styles.popupHeader}>
-        <StockLogo symbol={stock.symbol} size={36} status={stock.screening.status} />
+        <StockLogo symbol={stock.symbol} size={36} exchange={stock.exchange} />
         <div className={styles.popupIdentity}>
           <span className={styles.popupName}>{stock.name}</span>
           <span className={styles.popupSymbol}>{stock.symbol}</span>
@@ -130,9 +116,6 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
 
       <div className={styles.popupMeta}>
         <span className={styles.popupSector}>{stock.sector} · {market}</span>
-        <span className={`${styles.popupStatus} ${statusCls}`}>
-          {STATUS_LABELS[stock.screening.status]}
-        </span>
       </div>
 
       <div className={styles.popupPriceRow}>
@@ -153,27 +136,14 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
           <span className={styles.popupStatLabel}>Cap Type</span>
           <span className={styles.popupStatValue}>{getMcapCategory(stock.market_cap)}</span>
         </div>
-        <div className={styles.popupStat}>
-          <span className={styles.popupStatLabel}>Debt Ratio</span>
-          <span className={`${styles.popupStatValue} ${b.debt_to_36m_avg_market_cap_ratio <= 0.23 ? styles.popupGood : b.debt_to_36m_avg_market_cap_ratio <= 0.33 ? styles.popupWarn : styles.popupBad}`}>
-            {formatPct(b.debt_to_36m_avg_market_cap_ratio)}
-          </span>
-        </div>
-        <div className={styles.popupStat}>
-          <span className={styles.popupStatLabel}>Income Purity</span>
-          <span className={`${styles.popupStatValue} ${b.non_permissible_income_ratio <= 0.035 ? styles.popupGood : b.non_permissible_income_ratio <= 0.05 ? styles.popupWarn : styles.popupBad}`}>
-            {formatPct(b.non_permissible_income_ratio)}
-          </span>
-        </div>
       </div>
 
-      <Link
-        href={`/stocks/${encodeURIComponent(stock.symbol)}`}
+      <button
         className={styles.popupCta}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); routerRef.push(`/screening/${encodeURIComponent(stock.symbol)}`); }}
       >
-        View Details
-      </Link>
+        Screen this stock
+      </button>
     </div>,
     document.body
   ) : null;

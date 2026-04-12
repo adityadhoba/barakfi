@@ -1,0 +1,60 @@
+.lockBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lockBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.lockIcon {
+  width: 16px;
+  height: 16px;
+  color: var(--muted, #888);
+}
+
+.lockCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--line, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  width: 100%;
+}
+
+.lockCard:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent, #10b981);
+}
+
+.lockIconLg {
+  width: 28px;
+  height: 28px;
+  color: var(--muted, #888);
+}
+
+.lockCard:hover .lockIconLg {
+  color: var(--accent, #10b981);
+}
+
+.lockText {
+  font-size: 0.85rem;
+  color: var(--muted, #888);
+  font-weight: 500;
+}
+
+.lockCard:hover .lockText {
+  color: var(--accent, #10b981);
+}

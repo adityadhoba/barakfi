@@ -267,8 +267,8 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
                         {h.complianceStatus === "COMPLIANT"
                           ? "Halal"
                           : h.complianceStatus === "NON_COMPLIANT"
-                            ? "Non-Compliant"
-                            : "Review"}
+                            ? "Haram"
+                            : "Doubtful"}
                       </span>
                     </td>
                   </tr>

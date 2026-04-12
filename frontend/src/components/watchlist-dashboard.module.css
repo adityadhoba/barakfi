@@ -388,3 +388,59 @@
   color: var(--text-secondary);
 }
 
+/* Screened Today */
+.screenedTodaySection {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.screenedTodayTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+}
+
+.screenedTodayChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.screenedChip {
+  display: inline-flex;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--emerald-bg, rgba(16, 185, 129, 0.1));
+  color: var(--emerald, #10b981);
+  text-decoration: none;
+  border: 1px solid var(--emerald, #10b981);
+  transition: background 0.15s;
+}
+
+.screenedChip:hover {
+  background: var(--emerald, #10b981);
+  color: #fff;
+}
+
+.lockBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.lockBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+

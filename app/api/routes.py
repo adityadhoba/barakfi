@@ -860,6 +860,17 @@ def track_symbol_delete(
     return _tracked_rows_for_user(db, user)
 
 
+@router.get("/quota")
+def get_quota(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Return current actor's screening quota status (no auth required)."""
+    from app.services.quota_service import get_quota_status
+
+    return get_quota_status(db, request)
+
+
 @router.post("/screen/manual")
 def screen_stock_manual(
     request: Request,
@@ -869,13 +880,14 @@ def screen_stock_manual(
     """
     Manually screen any NSE stock by fetching live data from Yahoo Finance.
 
-    Auth: None (public, free for now — ~5 screens/day quota)
-
-    Fetches real-time financial data and screens against all three methodologies.
-    Results are cached for 1 hour to reduce API calls.
+    Auth: None (public — 2 anon / 5 auth screens per IST day, admin unlimited)
     """
     from app.services.manual_screen_service import fetch_and_screen
-    from app.services.quota_service import check_and_increment_quota
+    from app.services.quota_service import (
+        check_and_increment_quota,
+        log_screening_access,
+        get_accessible_symbols,
+    )
 
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
@@ -887,19 +899,22 @@ def screen_stock_manual(
             headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
         )
 
-    # Check if stock already exists in database (manual flow is India-first)
     existing = resolve_stock(db, clean_symbol, "NSE", active_only=True, require_indian_listing=True)
 
     if existing:
         stock_data = helpers.stock_to_dict(existing)
         multi_result = evaluate_stock_multi(stock_data)
         primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+        log_screening_access(db, request, clean_symbol)
+        db.commit()
         return {
             "symbol": existing.symbol,
             "name": existing.name,
             "is_prescreened": True,
             "screening": {**primary_result, "symbol": existing.symbol, "name": existing.name},
             "multi": {"symbol": existing.symbol, "name": existing.name, **multi_result},
+            "quota": {"remaining": quota["remaining"], "resets_at": quota["resets_at"]},
+            "screened_symbols": get_accessible_symbols(db, request),
         }
 
     stock_data = fetch_and_screen(clean_symbol)
@@ -908,6 +923,8 @@ def screen_stock_manual(
 
     multi_result = evaluate_stock_multi(stock_data)
     primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
+    log_screening_access(db, request, clean_symbol)
+    db.commit()
 
     return {
         "symbol": stock_data["symbol"],
@@ -915,6 +932,8 @@ def screen_stock_manual(
         "is_prescreened": False,
         "screening": {**primary_result, "symbol": stock_data["symbol"], "name": stock_data["name"]},
         "multi": {"symbol": stock_data["symbol"], "name": stock_data["name"], **multi_result},
+        "quota": {"remaining": quota["remaining"], "resets_at": quota["resets_at"]},
+        "screened_symbols": get_accessible_symbols(db, request),
     }
 
 

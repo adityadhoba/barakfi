@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { useScreening } from "@/contexts/screening-context";
 import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./screening.module.css";
 
@@ -19,6 +21,9 @@ const MIN_DISPLAY_MS = 2800;
 export default function ScreeningAnimationPage() {
   const { symbol } = useParams<{ symbol: string }>();
   const router = useRouter();
+  const { userId } = useAuth();
+  const { user } = useUser();
+  const { recordScreen, refreshQuota } = useScreening();
   const [activeStep, setActiveStep] = useState(0);
   const [verdict, setVerdict] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,17 +37,23 @@ export default function ScreeningAnimationPage() {
     startTime.current = Date.now();
   }, []);
 
+  const actorEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+  const screenedRef = useRef(false);
+
   useEffect(() => {
-    if (!symbol) return;
+    if (!symbol || screenedRef.current) return;
 
     const decoded = decodeURIComponent(symbol as string);
     const controller = new AbortController();
 
     const runScreen = async () => {
       try {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (userId) headers["x-clerk-user-id"] = userId;
+        if (actorEmail) headers["x-actor-email"] = actorEmail;
         const res = await fetch(`${apiBaseUrl}/screen/manual`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({ symbol: decoded }),
           signal: controller.signal,
         });
@@ -56,7 +67,10 @@ export default function ScreeningAnimationPage() {
           return;
         }
         const data = await res.json();
+        screenedRef.current = true;
         setVerdict(data.screening?.status || "UNKNOWN");
+        recordScreen(decoded);
+        void refreshQuota();
       } catch {
         if (!controller.signal.aborted) setError("Network error");
       }
@@ -64,7 +78,7 @@ export default function ScreeningAnimationPage() {
 
     void runScreen();
     return () => controller.abort();
-  }, [symbol]);
+  }, [symbol, userId, actorEmail, recordScreen, refreshQuota]);
 
   useEffect(() => {
     if (prefersReduced) return;
@@ -146,7 +160,7 @@ export default function ScreeningAnimationPage() {
                 verdict === "HALAL" ? styles.verdictHalal : verdict === "CAUTIOUS" ? styles.verdictCautious : styles.verdictFail
               }`}
             >
-              {verdict === "HALAL" ? "Halal" : verdict === "CAUTIOUS" ? "Cautious" : "Non-Compliant"}
+              {verdict === "HALAL" ? "Halal" : verdict === "CAUTIOUS" ? "Doubtful" : "Haram"}
             </span>
             <span className={styles.redirectHint}>Redirecting to details…</span>
           </div>

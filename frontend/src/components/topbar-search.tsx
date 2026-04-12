@@ -153,7 +153,7 @@ export function TopbarSearch() {
       setFocusIdx(-1);
       closeSearch();
       inputRef.current?.blur();
-      router.push(`/stocks/${encodeURIComponent(symbol)}`);
+      router.push(`/screening/${encodeURIComponent(symbol)}`);
     },
     [router, closeSearch]
   );

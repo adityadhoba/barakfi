@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { StockLogo } from "@/components/stock-logo";
+import { LockedVerdict } from "@/components/locked-verdict";
 import type { Stock } from "@/lib/api";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
@@ -25,8 +26,8 @@ const STATUS_BADGE: Record<string, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   HALAL: "Halal",
-  CAUTIOUS: "Cautious",
-  NON_COMPLIANT: "Non-Compliant",
+  CAUTIOUS: "Doubtful",
+  NON_COMPLIANT: "Haram",
 };
 
 type Props = {
@@ -57,15 +58,17 @@ export function SimilarStocksQuotes({ peers, peerComparison }: Props) {
         return (
           <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
             <div className={styles.similarCardTop}>
-              <StockLogo symbol={s.symbol} size={34} status={peerData?.status} exchange={s.exchange} />
+              <StockLogo symbol={s.symbol} size={34} exchange={s.exchange} />
               <div className={styles.similarIdentity}>
                 <span className={styles.similarSymbol}>{s.symbol}</span>
                 <span className={styles.similarName}>{s.name}</span>
               </div>
               {peerData && (
-                <span className={`${styles.badge} ${styles[STATUS_BADGE[peerData.status] || "badgeReview"]} ${styles.similarBadge}`}>
-                  {STATUS_LABELS[peerData.status] || peerData.status}
-                </span>
+                <LockedVerdict symbol={s.symbol} compact>
+                  <span className={`${styles.badge} ${styles[STATUS_BADGE[peerData.status] || "badgeReview"]} ${styles.similarBadge}`}>
+                    {STATUS_LABELS[peerData.status] || peerData.status}
+                  </span>
+                </LockedVerdict>
               )}
             </div>
             <div className={styles.similarCardBottom}>
