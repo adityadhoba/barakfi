@@ -128,6 +128,21 @@ def check_peer_quota(db: Session, request: Request) -> dict:
     return _check_quota(db, request, "peer", PEER_COMPARISON_PER_DAY)
 
 
+def _quota_used_today(
+    db: Session, actor: str, today: str, quota_type: str
+) -> int:
+    row = (
+        db.query(ScreeningQuota)
+        .filter(
+            ScreeningQuota.actor_key == actor,
+            ScreeningQuota.date == today,
+            ScreeningQuota.quota_type == quota_type,
+        )
+        .first()
+    )
+    return row.count if row else 0
+
+
 def get_quota_status(db: Session, request: Request) -> dict:
     """Read-only quota status without incrementing."""
     actor = _actor_key(request)
@@ -136,18 +151,14 @@ def get_quota_status(db: Session, request: Request) -> dict:
     admin = _is_admin(request)
     limit = 999 if admin else (AUTH_SCREENS_PER_DAY if is_auth else ANON_SCREENS_PER_DAY)
 
-    row = (
-        db.query(ScreeningQuota)
-        .filter(
-            ScreeningQuota.actor_key == actor,
-            ScreeningQuota.date == today,
-            ScreeningQuota.quota_type == "screen",
-        )
-        .first()
-    )
-    used = row.count if row else 0
+    used = _quota_used_today(db, actor, today, "screen")
 
     screened = get_accessible_symbols(db, request)
+
+    cmp_limit = 999 if admin else COMPARE_PER_DAY
+    cmp_used = _quota_used_today(db, actor, today, "compare")
+    peer_limit = 999 if admin else PEER_COMPARISON_PER_DAY
+    peer_used = _quota_used_today(db, actor, today, "peer")
 
     return {
         "remaining": max(0, limit - used) if not admin else 999,
@@ -156,6 +167,12 @@ def get_quota_status(db: Session, request: Request) -> dict:
         "is_admin": admin,
         "resets_at": _ist_midnight_utc(),
         "screened_symbols": screened,
+        "compare_remaining": max(0, cmp_limit - cmp_used) if not admin else 999,
+        "compare_limit": cmp_limit,
+        "compare_used": cmp_used,
+        "peer_remaining": max(0, peer_limit - peer_used) if not admin else 999,
+        "peer_limit": peer_limit,
+        "peer_used": peer_used,
     }
 
 

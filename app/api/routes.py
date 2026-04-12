@@ -630,6 +630,34 @@ def bulk_screen(
     return _screen_stocks_bulk_impl(symbols, db)
 
 
+@router.post("/compare/bulk", response_model=list[ScreeningResult])
+def compare_bulk_screen(
+    request: Request,
+    symbols: list[str] = Body(...),
+    db: Session = Depends(get_db),
+    _: None = Depends(enforce_screening_budget),
+):
+    """
+    Batch screening for the Compare Stocks tool only.
+    Counts against the actor's daily compare quota (see GET /quota compare_* fields).
+    """
+    from app.services.quota_service import check_compare_quota
+
+    symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:4]
+    if not symbols:
+        return []
+
+    quota = check_compare_quota(db, request)
+    if not quota["allowed"]:
+        raise HTTPException(
+            status_code=429,
+            detail="Daily compare limit reached",
+            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
+        )
+
+    return _screen_stocks_bulk_impl(symbols, db)
+
+
 @router.get("/screen/{symbol}/multi")
 def screen_stock_multi(
     symbol: str,
