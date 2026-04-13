@@ -7,6 +7,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type ReactNode,
 } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 
@@ -43,10 +44,13 @@ export function useScreening() {
 const IST_LS_KEY = "barakfi_screened";
 
 function getIstDateString(): string {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset);
-  return ist.toISOString().slice(0, 10);
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date());
 }
 
 function getLocalScreened(): string[] {
@@ -73,7 +77,7 @@ function saveLocalScreened(symbols: string[]) {
   );
 }
 
-export function ScreeningProvider({ children }: { children: React.ReactNode }) {
+export function ScreeningProvider({ children }: { children: ReactNode }) {
   const { userId } = useAuth();
   const { user } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -123,12 +127,11 @@ export function ScreeningProvider({ children }: { children: React.ReactNode }) {
     (symbol: string) => {
       const clean = symbol.trim().toUpperCase();
       setScreenedSymbols((prev) => {
-        const next = prev.includes(clean) ? prev : [...prev, clean];
+        if (prev.includes(clean)) return prev;
+        const next = [...prev, clean];
         if (!userId) saveLocalScreened(next);
         return next;
       });
-      setUsed((u) => u + 1);
-      setRemaining((r) => Math.max(0, r - 1));
     },
     [userId]
   );

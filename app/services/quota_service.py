@@ -24,6 +24,13 @@ def _ist_today() -> str:
     return datetime.now(IST).strftime("%Y-%m-%d")
 
 
+def _ist_day_start_utc() -> datetime:
+    """Current IST day start expressed as a UTC datetime."""
+    now_ist = datetime.now(IST)
+    day_start_ist = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+    return day_start_ist.astimezone(timezone.utc)
+
+
 def _ist_midnight_utc() -> str:
     """Next midnight IST expressed as UTC ISO string for resets_at."""
     now_ist = datetime.now(IST)
@@ -68,6 +75,7 @@ def _check_quota(
     request: Request,
     quota_type: str,
     limit: int | None = None,
+    amount: int = 1,
 ) -> dict:
     """Generic quota check+increment for a given quota_type."""
     if _is_admin(request):
@@ -95,14 +103,24 @@ def _check_quota(
 
     resets_at = _ist_midnight_utc()
 
-    if row and row.count >= limit:
-        return {"allowed": False, "remaining": 0, "resets_at": resets_at}
+    used = row.count if row else 0
+    remaining_before = max(0, limit - used)
+
+    if amount <= 0:
+        return {
+            "allowed": True,
+            "remaining": remaining_before,
+            "resets_at": resets_at,
+        }
+
+    if used + amount > limit:
+        return {"allowed": False, "remaining": remaining_before, "resets_at": resets_at}
 
     if row:
-        row.count += 1
+        row.count += amount
     else:
         row = ScreeningQuota(
-            actor_key=actor, date=today, count=1, quota_type=quota_type
+            actor_key=actor, date=today, count=amount, quota_type=quota_type
         )
         db.add(row)
 
@@ -126,6 +144,68 @@ def check_compare_quota(db: Session, request: Request) -> dict:
 
 def check_peer_quota(db: Session, request: Request) -> dict:
     return _check_quota(db, request, "peer", PEER_COMPARISON_PER_DAY)
+
+
+def _clean_unique_symbols(symbols: list[str]) -> list[str]:
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for symbol in symbols:
+        clean = str(symbol).strip().upper()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        cleaned.append(clean)
+    return cleaned
+
+
+def _screened_symbols_since_ist_day_start(
+    db: Session,
+    request: Request,
+    symbols: list[str],
+) -> set[str]:
+    clean_symbols = _clean_unique_symbols(symbols)
+    if not clean_symbols or _is_admin(request):
+        return set()
+
+    actor = _actor_key(request)
+    cutoff = _ist_day_start_utc()
+    rows = (
+        db.query(ScreeningAccessLog.symbol)
+        .filter(
+            ScreeningAccessLog.actor_key == actor,
+            ScreeningAccessLog.symbol.in_(clean_symbols),
+            ScreeningAccessLog.screened_at >= cutoff,
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def check_and_increment_unique_screen_quota(
+    db: Session,
+    request: Request,
+    symbols: list[str],
+) -> dict:
+    """
+    Reserve daily screen quota only for symbols not already screened today (IST).
+
+    Returns the usual quota payload plus `new_symbols`, which are the symbols that
+    consumed quota during this call.
+    """
+    clean_symbols = _clean_unique_symbols(symbols)
+    if _is_admin(request):
+        return {
+            "allowed": True,
+            "remaining": 999,
+            "resets_at": _ist_midnight_utc(),
+            "new_symbols": clean_symbols,
+        }
+
+    screened_today = _screened_symbols_since_ist_day_start(db, request, clean_symbols)
+    new_symbols = [symbol for symbol in clean_symbols if symbol not in screened_today]
+    quota = _check_quota(db, request, "screen", amount=len(new_symbols))
+    quota["new_symbols"] = new_symbols
+    return quota
 
 
 def _quota_used_today(
@@ -201,6 +281,12 @@ def log_screening_access(db: Session, request: Request, symbol: str) -> None:
             )
         )
     db.flush()
+
+
+def log_screening_accesses(db: Session, request: Request, symbols: list[str]) -> None:
+    """Record access for multiple symbols, deduped and normalized."""
+    for symbol in _clean_unique_symbols(symbols):
+        log_screening_access(db, request, symbol)
 
 
 def get_accessible_symbols(db: Session, request: Request) -> list[str]:

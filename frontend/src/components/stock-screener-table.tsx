@@ -35,12 +35,6 @@ const MCAP_OPTIONS = [
   { key: "small", label: "Small Cap", min: 0, max: 20000 },
 ] as const;
 
-const EXCHANGE_OPTIONS = [
-  { key: "all", label: "All Exchanges" },
-  { key: "NSE", label: "NSE" },
-  { key: "BSE", label: "BSE" },
-] as const;
-
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
   HALAL: { cls: "statusHalal", label: "Halal" },
   CAUTIOUS: { cls: "statusReview", label: "Doubtful" },
@@ -57,7 +51,12 @@ const EXAMPLE_STOCK_CHIPS = [
 
 function formatPrice(value: number, currency?: string) {
   const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
-  return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency || "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function getSortValue(
@@ -111,7 +110,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [sectorFilter, setSectorFilter] = useState("All");
   const [mcapFilter, setMcapFilter] = useState("all");
   const [indexFilter, setIndexFilter] = useState("all");
-  const [exchangeFilter, setExchangeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -175,8 +173,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (mcap && MCAP_OPTIONS.some((o) => o.key === mcap)) setMcapFilter(mcap);
     const idx = searchParams.get("index");
     if (idx && INDEX_OPTIONS.some((o) => o.key === idx)) setIndexFilter(idx);
-    const exc = searchParams.get("exchange");
-    if (exc && EXCHANGE_OPTIONS.some((o) => o.key === exc)) setExchangeFilter(exc);
     setInitialized(true);
   }, [searchParams, screenedStocks]);
 
@@ -190,7 +186,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (mcapFilter !== "all") params.set("mcap", mcapFilter);
     if (indexFilter !== "all") params.set("index", indexFilter);
-    if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
     const base = qs ? `/screener?${qs}` : "/screener";
     const hash =
@@ -198,7 +193,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         ? "#stock-search"
         : "";
     router.replace(`${base}${hash}`, { scroll: false });
-  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, exchangeFilter, router]);
+  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, router]);
 
   const sectorCounts = useMemo(() => {
     const counts: Record<string, number> = { All: screenedStocks.length };
@@ -218,10 +213,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
       if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter, s.index_memberships)) return false;
-      if (exchangeFilter !== "all" && s.exchange !== exchangeFilter) return false;
       return true;
     });
-  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter, exchangeFilter]);
+  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -285,14 +279,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusedIdx]);
 
-  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || exchangeFilter !== "all" || query.trim() !== "";
+  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || query.trim() !== "";
 
   function resetAllFilters() {
-    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all"); setExchangeFilter("all");
+    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
     setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
   }
 
-  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", exchangeFilter !== "all", query.trim() !== ""].filter(Boolean).length;
+  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", query.trim() !== ""].filter(Boolean).length;
 
   async function handleSaveFilter() {
     if (!saveFilterName.trim()) return;
@@ -441,23 +435,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
-        {/* Exchange */}
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>Exchange</h4>
-          <div className={styles.filterPills}>
-            {EXCHANGE_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`${styles.filterPill} ${exchangeFilter === opt.key ? styles.filterPillActive : ""}`}
-                onClick={() => setExchangeFilter(opt.key)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Locked premium filters */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>
@@ -574,12 +551,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               <span className={styles.chip}>
                 {INDEX_OPTIONS.find((o) => o.key === indexFilter)?.label}
                 <button type="button" onClick={() => setIndexFilter("all")}>&times;</button>
-              </span>
-            )}
-            {exchangeFilter !== "all" && (
-              <span className={styles.chip}>
-                {EXCHANGE_OPTIONS.find((o) => o.key === exchangeFilter)?.label}
-                <button type="button" onClick={() => setExchangeFilter("all")}>&times;</button>
               </span>
             )}
             {query.trim() && (

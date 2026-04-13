@@ -941,6 +941,83 @@
   vertical-align: middle;
 }
 
+.peerRowLocked {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.07), rgba(148, 163, 184, 0.03));
+}
+
+.peerRowLocked:hover {
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.07), rgba(148, 163, 184, 0.03)) !important;
+}
+
+.peerRowLinkLocked {
+  color: var(--text-secondary);
+  opacity: 0.78;
+}
+
+.peerLockPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.peerPremiumCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(255, 255, 255, 0)),
+    var(--panel);
+}
+
+.peerPremiumText {
+  margin: 0;
+  max-width: 38rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.peerPremiumCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  background: var(--emerald);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: var(--shadow-emerald);
+  transition:
+    background var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.peerPremiumCta:hover {
+  background: var(--emerald-hover);
+  box-shadow: var(--shadow-emerald-lg);
+}
+
+.peerPremiumCta:active {
+  transform: scale(0.98);
+}
+
 .tableWrap .table th {
   font-size: 0.72rem;
   font-weight: 700;
@@ -1054,6 +1131,39 @@
 .complianceHeroStatus.review { color: var(--gold); }
 .complianceHeroStatus.fail { color: var(--red); }
 .complianceHeroSummary { font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45; }
+
+.heroRiskCard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  text-align: left;
+}
+
+.heroRiskEyebrow {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+
+.heroRiskTitle {
+  font-family: var(--font-display);
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.heroRiskSub {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
 
 /* ── Compliance Verdict Banner ── */
 .verdictBanner {
@@ -1445,6 +1555,11 @@
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
 }
+.keyMetricSubvalue {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
 .keyMetricGood { color: var(--emerald); }
 .keyMetricWarn { color: var(--gold); }
 .keyMetricBad { color: var(--red); }
@@ -1506,6 +1621,61 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
+}
+
+.stockDetailLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.stockDetailMain {
+  min-width: 0;
+}
+
+.stockDetailAside {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+}
+
+.readMoreCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+}
+
+.readMoreDetails {
+  width: 100%;
+}
+
+.readMoreSummary {
+  list-style: none;
+  cursor: pointer;
+  padding: 16px 18px;
+  font-family: var(--font-display);
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.readMoreSummary::-webkit-details-marker {
+  display: none;
+}
+
+.readMoreBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 18px 18px;
+}
+
+.readMoreDetails[open] .readMoreSummary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
 }
 
 .financialCard {
@@ -1610,6 +1780,8 @@
 
 @media (max-width: 860px) {
   .complianceHero { grid-template-columns: 1fr; }
+  .stockDetailLayout { grid-template-columns: 1fr; }
+  .stockDetailAside { position: static; }
 }
 
 @media (max-width: 600px) {
@@ -1618,6 +1790,16 @@
   .keyMetricsStrip { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .keyMetricValue { font-size: 0.82rem; }
   .breadcrumb { font-size: 0.7rem; }
+  .stockDetailLayout { gap: 18px; }
+  .readMoreSummary,
+  .readMoreBody { padding-left: 14px; padding-right: 14px; }
+  .peerPremiumCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .peerPremiumCta {
+    width: 100%;
+  }
 }
 
 /* ── 52-Week Range Bar ── */

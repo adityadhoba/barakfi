@@ -160,7 +160,12 @@ function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
 function formatCurrency(value: number, currency: string = "INR") {
   const cur = currency || "INR";
   const locale = cur === "INR" ? "en-IN" : cur === "GBP" ? "en-GB" : "en-US";
-  return new Intl.NumberFormat(locale, { style: "currency", currency: cur, maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: cur,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
 function formatVolumeShorthand(volume: number, currency: string) {
@@ -187,7 +192,7 @@ function ratioBarColor(value: number, threshold: number): string {
 
 function buildTakeaway(status: string, reasons: string[], flags: string[]) {
   if (status === "HALAL") {
-    return "This stock passes all Shariah rules. You can invest with confidence. Check the numbers below for details.";
+    return "This stock passes all Shariah rules. Check the numbers below for the detailed breakdown.";
   }
   if (status === "NON_COMPLIANT") {
     return `This stock doesn't meet ${reasons.length} Shariah rule${reasons.length > 1 ? "s" : ""}. See below to understand why.`;
@@ -303,6 +308,13 @@ export default async function StockDetailPage({
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
   const displayCountry = displayCountryForStock(stock.exchange, stock.country);
+  const marketCapTier = capTierLabel(stock.market_cap, cur);
+  const riskLabel =
+    b.debt_to_36m_avg_market_cap_ratio <= 0.15
+      ? "Low Risk"
+      : b.debt_to_36m_avg_market_cap_ratio <= 0.25
+        ? "Medium Risk"
+        : "Higher Risk";
   const financials = [
     { label: "Market Cap", value: formatFundamentalAmount(stock.market_cap, cur) },
     { label: "36M Avg Market Cap", value: formatFundamentalAmount(stock.average_market_cap_36m, cur) },
@@ -661,6 +673,13 @@ export default async function StockDetailPage({
               </svg>
             </div>
             <p className={styles.complianceHeroSummary}>{takeaway}</p>
+            <div className={styles.heroRiskCard}>
+              <span className={styles.heroRiskEyebrow}>Risk analysis</span>
+              <strong className={styles.heroRiskTitle}>{riskLabel}</strong>
+              <span className={styles.heroRiskSub}>
+                Debt ratio {formatRatio(b.debt_to_36m_avg_market_cap_ratio)} against the 33% screen.
+              </span>
+            </div>
           </div>
           </StockVerdictGate>
         </div>
@@ -749,310 +768,101 @@ export default async function StockDetailPage({
           </Link>
         </div>
 
-        <section className={styles.seoArticle} aria-labelledby="why-status-heading">
-          <h2 id="why-status-heading" className={styles.sectionTitle}>
-            Why is this stock {STATUS_LABELS[screening.status] || screening.status}?
-          </h2>
-          <p className={styles.seoProse}>
-            {takeaway} BarakFi applies transparent financial tests inspired by widely cited Shariah equity standards
-            (for example S&amp;P Shariah-style debt and income screens, AAOIFI-style balance-sheet tests, and related
-            ratio work). Sector activity is also checked for obvious non-permissible business lines. This page shows
-            the outcome for <strong>{stock.name}</strong> ({stock.symbol}) on <strong>{stock.exchange}</strong> using
-            numbers stored in our database — not a substitute for your own due diligence or a scholar&apos;s guidance.
-          </p>
-          {stock.data_quality && (
-            <p className={styles.seoProse}>
-              <strong>Data quality:</strong> {stock.data_quality === "high" ? "High" : stock.data_quality === "medium" ? "Medium" : "Low"}
-              — indicates how complete the fundamentals are for ratio screening. Source: {stock.data_source}.
-              {stock.fundamentals_fields_missing && stock.fundamentals_fields_missing.length > 0 ? (
-                <>
-                  {" "}
-                  <strong>Missing or zero inputs:</strong> {stock.fundamentals_fields_missing.join(", ")} — treat nearby
-                  ratio thresholds as less certain until filings populate those lines.
-                </>
-              ) : null}
-            </p>
-          )}
-        </section>
+        <div className={styles.stockDetailLayout}>
+          <div className={styles.stockDetailMain}>
+            <div style={{ marginBottom: 28 }}>
+              <PriceChart
+                symbol={stock.symbol}
+                exchange={stock.exchange}
+                liveClose={liveQuote?.last_price ?? stock.price}
+                currentPrice={liveQuote?.last_price ?? stock.price}
+                currency={quoteCur}
+                week52Low={liveQuote?.week_52_low}
+                week52High={liveQuote?.week_52_high}
+              />
+            </div>
 
-        <section className={styles.seoArticle} aria-labelledby="key-ratios-heading">
-          <h2 id="key-ratios-heading" className={styles.sectionTitle}>
-            Key financial ratios
-          </h2>
-          <p className={styles.seoProse}>
-            The strip below summarizes debt versus market cap, non-permissible income, interest-related income, cash and
-            interest-bearing balances, and receivables — the same families of ratios many Islamic index providers use in
-            different forms. Expand the detailed tables for exact numerators and denominators used on this listing.
-          </p>
-        </section>
-
-        <section className={styles.seoArticle} aria-labelledby="breakdown-heading">
-          <h2 id="breakdown-heading" className={styles.sectionTitle}>
-            Shariah screening breakdown
-          </h2>
-          <p className={styles.seoProse}>
-            Use the <strong>Compliance</strong> tab for per-ratio gauges, the <strong>Financials</strong> tab for raw
-            inputs, and the methodology comparison (where available) to see how {stock.name} performs across multiple
-            reference styles. If you are new to these concepts, start with our{" "}
-            <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link> or{" "}
-            <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
-          </p>
-        </section>
-
-        <section className={styles.seoArticle} aria-labelledby="conclusion-heading">
-          <h2 id="conclusion-heading" className={styles.sectionTitle}>
-            Conclusion
-          </h2>
-          <p className={styles.seoProse}>
-            For <strong>{stock.name}</strong>, the automated label is <strong>{STATUS_LABELS[screening.status] || screening.status}</strong>{" "}
-            with a compliance-style score of <strong>{complianceScore}</strong> out of 100 on the primary profile shown
-            on this page. Re-run your checks after major results or restructuring events, and always align investments with
-            your values, risk tolerance, and qualified advice.
-          </p>
-        </section>
-
-        <section className={styles.seoArticle} aria-labelledby="learn-more-stock">
-          <h2 id="learn-more-stock" className={styles.sectionTitle}>
-            Learn more
-          </h2>
-          <ul className={styles.seoLinkList}>
-            <li>
-              <Link href="/learn/halal-stocks-india">Halal stocks in India — how screening works on NSE &amp; BSE</Link>
-            </li>
-            <li>
-              <Link href="/learn/top-halal-stocks-india">Examples of large Indian names investors often ask about</Link>
-            </li>
-            {stock.symbol.toUpperCase() === "RELIANCE" && (
-              <li>
-                <Link href="/learn/is-reliance-halal">Is Reliance halal? — context article</Link>
-              </li>
-            )}
-            <li>
-              <Link href="/methodology">Full methodology reference</Link>
-            </li>
-          </ul>
-        </section>
-
-        <section className={styles.seoArticle} aria-labelledby="faq-heading">
-          <h2 id="faq-heading" className={styles.sectionTitle}>
-            Frequently asked questions
-          </h2>
-          <dl className={styles.seoFaq}>
-            <dt>Is {stock.name} halal to invest in?</dt>
-            <dd>
-              Our engine shows <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> based on financial
-              ratios and sector rules — educational only. Personal investability can depend on your madhhab, portfolio
-              mix, and scholar guidance.
-            </dd>
-            <dt>Why is it considered {STATUS_LABELS[screening.status] || screening.status}?</dt>
-            <dd>{reasons.join(" ")}</dd>
-            <dt>When was this last updated?</dt>
-            <dd>
-              {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ??
-                "We do not yet show a fundamentals sync timestamp for this company in our database."}{" "}
-              Market prices may update more frequently than filing-based ratios.
-            </dd>
-          </dl>
-        </section>
-
-        {peopleAlsoChecked.length > 0 && (
-          <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">
-            <h2 id="people-also-heading" className={styles.peopleAlsoTitle}>
-              People also checked
-            </h2>
-            <div className={styles.peopleAlsoGrid}>
-              {peopleAlsoChecked.map((item) => (
-                <Link
-                  key={item.symbol}
-                  href={`/stocks/${encodeURIComponent(item.symbol)}`}
-                  className={styles.peopleAlsoCard}
-                >
-                  <div className={styles.peopleAlsoCardTop}>
-                    <StockLogo symbol={item.symbol} size={36} status={item.status} />
-                    <div className={styles.peopleAlsoIdentity}>
-                      <span className={styles.peopleAlsoName}>{item.name}</span>
-                      <span className={styles.peopleAlsoSymbol}>{item.symbol}</span>
-                    </div>
+            {liveQuote &&
+            (liveQuote.week_52_low != null ||
+              liveQuote.week_52_high != null ||
+              liveQuote.previous_close != null ||
+              liveQuote.volume != null) ? (
+              <div className={styles.financialGrid} style={{ marginBottom: 28 }}>
+                {liveQuote.week_52_low != null && (
+                  <div className={styles.financialCard}>
+                    <span className={styles.financialCardLabel}>52-Week Low</span>
+                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
                   </div>
-                  <div className={styles.peopleAlsoMeta}>
-                    <LockedVerdict symbol={item.symbol} compact>
-                      <div className={styles.peopleAlsoScoreWrap}>
-                        <span className={styles.peopleAlsoScore}>{item.score}</span>
-                        <span className={styles.peopleAlsoScoreSuffix}>/100</span>
-                      </div>
-                      <span
-                        className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
-                      >
-                        {STATUS_LABELS[item.status] || item.status}
-                      </span>
-                    </LockedVerdict>
+                )}
+                {liveQuote.week_52_high != null && (
+                  <div className={styles.financialCard}>
+                    <span className={styles.financialCardLabel}>52-Week High</span>
+                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
                   </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Key Metrics Strip */}
-        <div className={styles.keyMetricsStrip}>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Market Cap</span>
-            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
-          </div>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Revenue</span>
-            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
-          </div>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Total Debt</span>
-            <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
-          </div>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Debt / Mcap</span>
-            <span className={`${styles.keyMetricValue} ${
-              b.debt_to_36m_avg_market_cap_ratio <= 0.33 * 0.7 ? styles.keyMetricGood
-              : b.debt_to_36m_avg_market_cap_ratio <= 0.33 ? styles.keyMetricWarn
-              : styles.keyMetricBad
-            }`}>{formatRatio(b.debt_to_36m_avg_market_cap_ratio)}</span>
-          </div>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Non-Halal Income</span>
-            <span className={`${styles.keyMetricValue} ${
-              b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.keyMetricGood
-              : b.non_permissible_income_ratio <= 0.05 ? styles.keyMetricWarn
-              : styles.keyMetricBad
-            }`}>{formatRatio(b.non_permissible_income_ratio)}</span>
-          </div>
-          <div className={styles.keyMetricCard}>
-            <span className={styles.keyMetricLabel}>Sector</span>
-            <span className={styles.keyMetricValue} style={{ fontSize: "0.78rem" }}>{stock.sector}</span>
-          </div>
-        </div>
-
-        {/* Category Info Cards — like Tickertape */}
-        <div className={styles.categoryCards}>
-          <div className={styles.categoryCard}>
-            <span className={styles.categoryIcon} style={{ color: "var(--emerald)" }}>&#x2726;</span>
-            <div className={styles.categoryContent}>
-              <Link href={`/screener?sector=${encodeURIComponent(stock.sector)}`} className={styles.categoryTitle}>
-                {stock.sector} &rsaquo;
-              </Link>
-              <span className={styles.categorySub}>{stock.sector}</span>
-            </div>
-          </div>
-          <div className={styles.categoryCard}>
-            <span className={styles.categoryIcon} style={{ color: "#3b82f6" }}>&#x25B2;</span>
-            <div className={styles.categoryContent}>
-              <span className={styles.categoryTitle}>
-                {capTierLabel(stock.market_cap, cur)} &rsaquo;
-              </span>
-              <span className={styles.categorySub}>
-                Market cap {formatFundamentalAmount(stock.market_cap, cur)} (size band is approximate)
-              </span>
-            </div>
-          </div>
-          <div className={styles.categoryCard}>
-            <span className={styles.categoryIcon} style={{ color: b.debt_to_36m_avg_market_cap_ratio <= 0.23 ? "var(--emerald)" : "var(--gold)" }}>&#x21C5;</span>
-            <div className={styles.categoryContent}>
-              <span className={styles.categoryTitle}>
-                {b.debt_to_36m_avg_market_cap_ratio <= 0.15 ? "Low Risk" : b.debt_to_36m_avg_market_cap_ratio <= 0.25 ? "Medium Risk" : "Higher Risk"} &rsaquo;
-              </span>
-              <span className={styles.categorySub}>
-                Debt ratio {formatRatio(b.debt_to_36m_avg_market_cap_ratio)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Ad: below chart area */}
-        <AdUnit format="rectangle" />
-
-        {/* Price Chart */}
-        <div style={{ marginBottom: 28 }}>
-          <PriceChart
-            symbol={stock.symbol}
-            exchange={stock.exchange}
-            liveClose={liveQuote?.last_price ?? stock.price}
-          />
-        </div>
-
-        {/* 52-Week Range Visual + Volume Summary */}
-        {liveQuote && (liveQuote.week_52_high != null || liveQuote.week_52_low != null) && (
-          <div style={{ marginBottom: 28 }}>
-            {/* 52W Range Bar */}
-            {liveQuote.week_52_low != null && liveQuote.week_52_high != null && liveQuote.week_52_high > liveQuote.week_52_low && (
-              <div className={styles.rangeBarSection}>
-                <div className={styles.rangeBarHeader}>
-                  <span className={styles.rangeBarLabel}>52-Week Range</span>
-                  <span className={styles.rangeBarLabel}>
-                    {(() => {
-                      const curPrice = liveQuote.last_price ?? stock.price;
-                      const pctFromLow = ((curPrice - liveQuote.week_52_low!) / (liveQuote.week_52_high! - liveQuote.week_52_low!)) * 100;
-                      return `${Math.round(Math.max(0, Math.min(100, pctFromLow)))}% from low`;
-                    })()}
-                  </span>
-                </div>
-                <div className={styles.rangeBarTrack}>
-                  <div
-                    className={styles.rangeBarFill}
-                    style={{
-                      width: `${Math.max(2, Math.min(100, ((liveQuote.last_price ?? stock.price) - liveQuote.week_52_low!) / (liveQuote.week_52_high! - liveQuote.week_52_low!) * 100))}%`,
-                    }}
-                  />
-                  <div
-                    className={styles.rangeBarThumb}
-                    style={{
-                      left: `${Math.max(1, Math.min(99, ((liveQuote.last_price ?? stock.price) - liveQuote.week_52_low!) / (liveQuote.week_52_high! - liveQuote.week_52_low!) * 100))}%`,
-                    }}
-                  />
-                </div>
-                <div className={styles.rangeBarFooter}>
-                  <span>{formatCurrency(liveQuote.week_52_low!, quoteCur)}</span>
-                  <span className={styles.rangeBarCurrent}>{formatCurrency(liveQuote.last_price ?? stock.price, quoteCur)}</span>
-                  <span>{formatCurrency(liveQuote.week_52_high!, quoteCur)}</span>
-                </div>
+                )}
+                {liveQuote.previous_close != null && (
+                  <div className={styles.financialCard}>
+                    <span className={styles.financialCardLabel}>Prev Close</span>
+                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close, quoteCur)}</span>
+                  </div>
+                )}
+                {liveQuote.volume != null && (
+                  <div className={styles.financialCard}>
+                    <span className={styles.financialCardLabel}>Volume</span>
+                    <span className={styles.financialCardValue}>
+                      {formatVolumeShorthand(liveQuote.volume, quoteCur)}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+            ) : null}
 
-            <div className={styles.financialGrid}>
-              {liveQuote.week_52_low != null && (
-                <div className={styles.financialCard}>
-                  <span className={styles.financialCardLabel}>52-Week Low</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
-                </div>
-              )}
-              {liveQuote.week_52_high != null && (
-                <div className={styles.financialCard}>
-                  <span className={styles.financialCardLabel}>52-Week High</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
-                </div>
-              )}
-              {liveQuote.previous_close != null && (
-                <div className={styles.financialCard}>
-                  <span className={styles.financialCardLabel}>Prev Close</span>
-                  <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close, quoteCur)}</span>
-                </div>
-              )}
-              {liveQuote.volume != null && (
-                <div className={styles.financialCard}>
-                  <span className={styles.financialCardLabel}>Volume</span>
-                  <span className={styles.financialCardValue}>
-                    {formatVolumeShorthand(liveQuote.volume, quoteCur)}
-                  </span>
-                </div>
-              )}
+            <div className={styles.keyMetricsStrip}>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Market Cap</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
+                <span className={styles.keyMetricSubvalue}>{marketCapTier}</span>
+              </div>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Revenue</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
+              </div>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Total Debt</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
+              </div>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Debt / Mcap</span>
+                <span className={`${styles.keyMetricValue} ${
+                  b.debt_to_36m_avg_market_cap_ratio <= 0.33 * 0.7 ? styles.keyMetricGood
+                  : b.debt_to_36m_avg_market_cap_ratio <= 0.33 ? styles.keyMetricWarn
+                  : styles.keyMetricBad
+                }`}>{formatRatio(b.debt_to_36m_avg_market_cap_ratio)}</span>
+              </div>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Non-Halal Income</span>
+                <span className={`${styles.keyMetricValue} ${
+                  b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.keyMetricGood
+                  : b.non_permissible_income_ratio <= 0.05 ? styles.keyMetricWarn
+                  : styles.keyMetricBad
+                }`}>{formatRatio(b.non_permissible_income_ratio)}</span>
+              </div>
+              <div className={styles.keyMetricCard}>
+                <span className={styles.keyMetricLabel}>Sector</span>
+                <span className={styles.keyMetricValue} style={{ fontSize: "0.78rem" }}>{stock.sector}</span>
+              </div>
             </div>
-          </div>
-        )}
 
-        <StockDetailTablesCollapsible
-          ratioRows={ratioRowsForCollapsible}
-          methodologyCaption={methodologyCaptionForCollapsible}
-          methodologyRows={methodologyRowsForCollapsible}
-        />
+            <AdUnit format="rectangle" />
 
-        {/* Tabbed Content: Compliance | Financials | Actions */}
-        <StockTabs>
+            <StockDetailTablesCollapsible
+              ratioRows={ratioRowsForCollapsible}
+              methodologyCaption={methodologyCaptionForCollapsible}
+              methodologyRows={methodologyRowsForCollapsible}
+            />
+
+            {/* Tabbed Content: Compliance | Financials | Actions */}
+            <StockTabs>
           {/* Tab 1: Compliance */}
           <div>
             <div className={styles.sectionHeading}>
@@ -1220,20 +1030,195 @@ export default async function StockDetailPage({
               </article>
             </div>
           </div>
-        </StockTabs>
+            </StockTabs>
 
-        {/* Similar Stocks */}
-        {similarStocks.length > 0 && (
-          <>
-            <div className={styles.sectionHeading} style={{ marginTop: 12 }}>
-              <h2 className={styles.sectionTitle}>Similar stocks</h2>
-              <p className={styles.sectionSub}>
-                {sameSecStocks.length > 0 ? `Other stocks in ${stock.sector}` : "Other stocks to explore"}
-              </p>
+            {similarStocks.length > 0 && (
+              <>
+                <div className={styles.sectionHeading} style={{ marginTop: 12 }}>
+                  <h2 className={styles.sectionTitle}>Similar stocks</h2>
+                  <p className={styles.sectionSub}>
+                    {sameSecStocks.length > 0 ? `Other stocks in ${stock.sector}` : "Other stocks to explore"}
+                  </p>
+                </div>
+                <SimilarStocksQuotes peers={similarStocks} peerComparison={peerComparison} />
+              </>
+            )}
+
+            {peopleAlsoChecked.length > 0 && (
+              <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">
+                <h2 id="people-also-heading" className={styles.peopleAlsoTitle}>
+                  People also checked
+                </h2>
+                <div className={styles.peopleAlsoGrid}>
+                  {peopleAlsoChecked.map((item) => (
+                    <Link
+                      key={item.symbol}
+                      href={`/stocks/${encodeURIComponent(item.symbol)}`}
+                      className={styles.peopleAlsoCard}
+                    >
+                      <div className={styles.peopleAlsoCardTop}>
+                        <StockLogo symbol={item.symbol} size={36} status={item.status} />
+                        <div className={styles.peopleAlsoIdentity}>
+                          <span className={styles.peopleAlsoName}>{item.name}</span>
+                          <span className={styles.peopleAlsoSymbol}>{item.symbol}</span>
+                        </div>
+                      </div>
+                      <div className={styles.peopleAlsoMeta}>
+                        <LockedVerdict symbol={item.symbol} compact>
+                          <div className={styles.peopleAlsoScoreWrap}>
+                            <span className={styles.peopleAlsoScore}>{item.score}</span>
+                            <span className={styles.peopleAlsoScoreSuffix}>/100</span>
+                          </div>
+                          <span
+                            className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
+                          >
+                            {STATUS_LABELS[item.status] || item.status}
+                          </span>
+                        </LockedVerdict>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <aside className={styles.stockDetailAside}>
+            <div className={styles.readMoreCard}>
+              <details className={styles.readMoreDetails}>
+                <summary className={styles.readMoreSummary}>Read more</summary>
+                <div className={styles.readMoreBody}>
+                  <section className={styles.seoArticle} aria-labelledby="why-status-heading">
+                    <h2 id="why-status-heading" className={styles.sectionTitle}>
+                      Why is this stock {STATUS_LABELS[screening.status] || screening.status}?
+                    </h2>
+                    <p className={styles.seoProse}>
+                      {takeaway} BarakFi applies transparent financial tests inspired by widely cited
+                      Shariah equity standards (for example S&amp;P Shariah-style debt and income
+                      screens, AAOIFI-style balance-sheet tests, and related ratio work). Sector
+                      activity is also checked for obvious non-permissible business lines. This page
+                      shows the outcome for <strong>{stock.name}</strong> ({stock.symbol}) on{" "}
+                      <strong>{stock.exchange}</strong> using numbers stored in our database — not a
+                      substitute for your own due diligence or a scholar&apos;s guidance.
+                    </p>
+                    {stock.data_quality && (
+                      <p className={styles.seoProse}>
+                        <strong>Data quality:</strong>{" "}
+                        {stock.data_quality === "high"
+                          ? "High"
+                          : stock.data_quality === "medium"
+                            ? "Medium"
+                            : "Low"}
+                        — indicates how complete the fundamentals are for ratio screening. Source:{" "}
+                        {stock.data_source}.
+                        {stock.fundamentals_fields_missing &&
+                        stock.fundamentals_fields_missing.length > 0 ? (
+                          <>
+                            {" "}
+                            <strong>Missing or zero inputs:</strong>{" "}
+                            {stock.fundamentals_fields_missing.join(", ")} — treat nearby ratio
+                            thresholds as less certain until filings populate those lines.
+                          </>
+                        ) : null}
+                      </p>
+                    )}
+                  </section>
+
+                  <section className={styles.seoArticle} aria-labelledby="key-ratios-heading">
+                    <h2 id="key-ratios-heading" className={styles.sectionTitle}>
+                      Key financial ratios
+                    </h2>
+                    <p className={styles.seoProse}>
+                      The strip below summarizes debt versus market cap, non-permissible income,
+                      interest-related income, cash and interest-bearing balances, and receivables —
+                      the same families of ratios many Islamic index providers use in different
+                      forms. Expand the detailed tables for exact numerators and denominators used
+                      on this listing.
+                    </p>
+                  </section>
+
+                  <section className={styles.seoArticle} aria-labelledby="breakdown-heading">
+                    <h2 id="breakdown-heading" className={styles.sectionTitle}>
+                      Shariah screening breakdown
+                    </h2>
+                    <p className={styles.seoProse}>
+                      Use the <strong>Compliance</strong> tab for per-ratio gauges, the{" "}
+                      <strong>Financials</strong> tab for raw inputs, and the methodology comparison
+                      (where available) to see how {stock.name} performs across multiple reference
+                      styles. If you are new to these concepts, start with our{" "}
+                      <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link>{" "}
+                      or <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
+                    </p>
+                  </section>
+
+                  <section className={styles.seoArticle} aria-labelledby="conclusion-heading">
+                    <h2 id="conclusion-heading" className={styles.sectionTitle}>
+                      Conclusion
+                    </h2>
+                    <p className={styles.seoProse}>
+                      For <strong>{stock.name}</strong>, the automated label is{" "}
+                      <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> with a
+                      compliance-style score of <strong>{complianceScore}</strong> out of 100 on the
+                      primary profile shown on this page. Re-run your checks after major results or
+                      restructuring events, and always align investments with your values, risk
+                      tolerance, and qualified advice.
+                    </p>
+                  </section>
+
+                  <section className={styles.seoArticle} aria-labelledby="learn-more-stock">
+                    <h2 id="learn-more-stock" className={styles.sectionTitle}>
+                      Learn more
+                    </h2>
+                    <ul className={styles.seoLinkList}>
+                      <li>
+                        <Link href="/learn/halal-stocks-india">
+                          Halal stocks in India — how screening works on NSE &amp; BSE
+                        </Link>
+                      </li>
+                      <li>
+                        <Link href="/learn/top-halal-stocks-india">
+                          Examples of large Indian names investors often ask about
+                        </Link>
+                      </li>
+                      {stock.symbol.toUpperCase() === "RELIANCE" && (
+                        <li>
+                          <Link href="/learn/is-reliance-halal">Is Reliance halal? — context article</Link>
+                        </li>
+                      )}
+                      <li>
+                        <Link href="/methodology">Full methodology reference</Link>
+                      </li>
+                    </ul>
+                  </section>
+
+                  <section className={styles.seoArticle} aria-labelledby="faq-heading">
+                    <h2 id="faq-heading" className={styles.sectionTitle}>
+                      Frequently asked questions
+                    </h2>
+                    <dl className={styles.seoFaq}>
+                      <dt>Is {stock.name} halal to invest in?</dt>
+                      <dd>
+                        Our engine shows{" "}
+                        <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> based
+                        on financial ratios and sector rules — educational only. Personal
+                        investability can depend on your madhhab, portfolio mix, and scholar
+                        guidance.
+                      </dd>
+                      <dt>Why is it considered {STATUS_LABELS[screening.status] || screening.status}?</dt>
+                      <dd>{reasons.join(" ")}</dd>
+                      <dt>When was this last updated?</dt>
+                      <dd>
+                        {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ??
+                          "We do not yet show a fundamentals sync timestamp for this company in our database."}{" "}
+                        Market prices may update more frequently than filing-based ratios.
+                      </dd>
+                    </dl>
+                  </section>
+                </div>
+              </details>
             </div>
-            <SimilarStocksQuotes peers={similarStocks} peerComparison={peerComparison} />
-          </>
-        )}
+          </aside>
+        </div>
       </div>
     </main>
   );
