@@ -6,12 +6,12 @@ import styles from "@/app/screener.module.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Compare Stocks — Barakfi",
+  title: "Compare Results — Barakfi",
   description:
-    "Compare Shariah compliance ratios, financials, and screening status side by side for Indian stocks.",
+    "Review Shariah compliance, financial ratios, and market data side by side for selected Indian stocks.",
 };
 
-export default async function ComparePage({
+export default async function CompareResultsPage({
   searchParams,
 }: {
   searchParams: Promise<{ symbols?: string }>;
@@ -22,7 +22,7 @@ export default async function ComparePage({
   const requestedSymbols = rawSymbols
     ? rawSymbols
         .split(",")
-        .map((s) => s.trim().toUpperCase())
+        .map((symbol) => symbol.trim().toUpperCase())
         .filter(Boolean)
         .slice(0, 3)
     : [];
@@ -33,16 +33,16 @@ export default async function ComparePage({
         <header className={styles.screenerHeader}>
           <div className={styles.headerRow}>
             <div>
-              <h1 className={styles.pageTitle}>Compare Stocks</h1>
+              <h1 className={styles.pageTitle}>Comparison Results</h1>
               <p className={styles.pageDesc}>
-                Build your comparison first, then run it when you’re ready. Add up to 3 stocks and
-                only use your daily compare session after you click Compare.
+                Side-by-side Shariah screening, ratios, and financial data for your selected
+                stocks.
               </p>
             </div>
           </div>
         </header>
 
-        <CompareTable allStocks={stocks} initialSymbols={requestedSymbols} mode="select" />
+        <CompareTable allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
       </div>
     </main>
   );

@@ -639,9 +639,14 @@ def compare_bulk_screen(
 ):
     """
     Batch screening for the Compare Stocks tool only.
-    Counts against the actor's daily compare quota (see GET /quota compare_* fields).
+    Counts against the actor's daily compare quota and consumes screen quota only
+    for symbols the actor has not already screened today (IST).
     """
-    from app.services.quota_service import check_compare_quota
+    from app.services.quota_service import (
+        check_and_increment_unique_screen_quota,
+        check_compare_quota,
+        log_screening_accesses,
+    )
 
     symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:3]
     if not symbols:
@@ -654,6 +659,21 @@ def compare_bulk_screen(
             detail="Daily compare limit reached",
             headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
         )
+
+    screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
+    if not screen_quota["allowed"]:
+        db.rollback()
+        raise HTTPException(
+            status_code=429,
+            detail="Daily screening limit reached",
+            headers={
+                "X-Remaining": str(screen_quota.get("remaining", 0)),
+                "X-Resets-At": screen_quota.get("resets_at", ""),
+            },
+        )
+
+    log_screening_accesses(db, request, symbols)
+    db.commit()
 
     return _screen_stocks_bulk_impl(symbols, db)
 
@@ -912,14 +932,14 @@ def screen_stock_manual(
     """
     from app.services.manual_screen_service import fetch_and_screen
     from app.services.quota_service import (
-        check_and_increment_quota,
-        log_screening_access,
+        check_and_increment_unique_screen_quota,
         get_accessible_symbols,
+        log_screening_accesses,
     )
 
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
-    quota = check_and_increment_quota(db, request)
+    quota = check_and_increment_unique_screen_quota(db, request, [clean_symbol])
     if not quota["allowed"]:
         raise HTTPException(
             status_code=429,
@@ -933,7 +953,7 @@ def screen_stock_manual(
         stock_data = helpers.stock_to_dict(existing)
         multi_result = evaluate_stock_multi(stock_data)
         primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
-        log_screening_access(db, request, clean_symbol)
+        log_screening_accesses(db, request, [clean_symbol])
         db.commit()
         return {
             "symbol": existing.symbol,
@@ -951,7 +971,7 @@ def screen_stock_manual(
 
     multi_result = evaluate_stock_multi(stock_data)
     primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
-    log_screening_access(db, request, clean_symbol)
+    log_screening_accesses(db, request, [clean_symbol])
     db.commit()
 
     return {
@@ -2833,4 +2853,3 @@ def admin_early_access(db: Session = Depends(get_db)):
         {"id": r.id, "email": r.email, "name": r.name, "source": r.source, "created_at": r.created_at.isoformat() if r.created_at else None}
         for r in rows
     ]
-

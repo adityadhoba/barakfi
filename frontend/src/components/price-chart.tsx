@@ -12,6 +12,16 @@ type Candle = {
 
 type ChartRange = "1mo" | "3mo" | "6mo" | "1y" | "5y";
 
+function formatQuotePrice(value: number, currency: string = "INR") {
+  const locale = currency === "INR" ? "en-IN" : currency === "GBP" ? "en-GB" : "en-US";
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 /**
  * Yahoo daily OHLC often ends at the prior session close while /market-data/quote
  * returns regularMarketPrice — the line would otherwise disagree with the hero price.
@@ -45,16 +55,33 @@ export function PriceChart({
   exchange,
   /** Same last_price as stock hero / 52w bar when available */
   liveClose,
+  currentPrice,
+  currency = "INR",
+  week52Low,
+  week52High,
 }: {
   symbol: string;
   exchange?: string;
   liveClose?: number | null;
+  currentPrice?: number | null;
+  currency?: string;
+  week52Low?: number | null;
+  week52High?: number | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import("lightweight-charts").createChart> | null>(null);
   const [range, setRange] = useState<ChartRange>("6mo");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const latestPrice = currentPrice ?? liveClose ?? null;
+  const has52WeekRange =
+    week52Low != null &&
+    week52High != null &&
+    Number.isFinite(week52Low) &&
+    Number.isFinite(week52High) &&
+    week52High > week52Low;
+  const rangeLow = has52WeekRange ? (week52Low as number) : 0;
+  const rangeHigh = has52WeekRange ? (week52High as number) : 0;
 
   const fetchData = useCallback(async (r: ChartRange) => {
     const cfg = RANGES.find((x) => x.value === r) || RANGES[2];
@@ -227,7 +254,7 @@ export function PriceChart({
           >
             Price Chart
           </span>
-          {liveClose != null && liveClose > 0 && (
+          {latestPrice != null && latestPrice > 0 && (
             <span style={{ fontSize: "0.68rem", color: "var(--text-tertiary)", fontWeight: 500 }}>
               Last point matches quote snapshot (daily history may lag by a session)
             </span>
@@ -295,6 +322,123 @@ export function PriceChart({
         )}
         <div ref={containerRef} style={{ borderRadius: "var(--radius-lg)", overflow: "hidden" }} />
       </div>
+
+      {has52WeekRange && latestPrice != null && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: "18px 20px",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--radius-xl)",
+            background: "var(--panel)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                color: "var(--text-tertiary)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              52-Week Range
+            </span>
+            <span
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: 600,
+                color: "var(--text-tertiary)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {`${Math.round(
+                Math.max(
+                  0,
+                  Math.min(100, ((latestPrice - rangeLow) / (rangeHigh - rangeLow)) * 100),
+                ),
+              )}% from low`}
+            </span>
+          </div>
+          <div
+            style={{
+              position: "relative",
+              height: 8,
+              borderRadius: 4,
+              background: "var(--bg-soft)",
+              overflow: "visible",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${Math.max(
+                  2,
+                  Math.min(100, ((latestPrice - rangeLow) / (rangeHigh - rangeLow)) * 100),
+                )}%`,
+                borderRadius: 4,
+                background: "linear-gradient(90deg, var(--emerald-border), var(--emerald))",
+                transition: "width 600ms cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: `${Math.max(
+                  1,
+                  Math.min(99, ((latestPrice - rangeLow) / (rangeHigh - rangeLow)) * 100),
+                )}%`,
+                width: 14,
+                height: 14,
+                borderRadius: "50%",
+                background: "var(--emerald)",
+                border: "2px solid var(--panel)",
+                boxShadow: "0 1px 4px rgba(0, 0, 0, 0.15)",
+                transform: "translate(-50%, -50%)",
+              }}
+            />
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              marginTop: 8,
+              flexWrap: "wrap",
+              fontSize: "0.78rem",
+              fontVariantNumeric: "tabular-nums",
+              color: "var(--text-tertiary)",
+            }}
+          >
+            <span>{formatQuotePrice(rangeLow, currency)}</span>
+            <span
+              style={{
+                fontWeight: 700,
+                color: "var(--text)",
+                padding: "2px 8px",
+                background: "var(--bg-soft)",
+                borderRadius: "var(--radius-full)",
+                fontSize: "0.82rem",
+              }}
+            >
+              {formatQuotePrice(latestPrice, currency)}
+            </span>
+            <span>{formatQuotePrice(rangeHigh, currency)}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
