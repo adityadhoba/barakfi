@@ -7,7 +7,7 @@ import collectionsExtras from "./collections-icons.module.css";
 
 export const metadata: Metadata = {
   title: "Halal Stock Collections — Curated Shariah-Compliant Baskets",
-  description: "Explore curated halal stock collections. Thematic baskets of Shariah-compliant stocks across sectors, markets, and investment styles.",
+  description: "Explore curated halal stock collections. Thematic baskets of Shariah-compliant stocks across sectors, markets, and research styles.",
   alternates: { canonical: "https://barakfi.in/collections" },
 };
 
@@ -28,7 +28,7 @@ export default async function CollectionsPage() {
           <span className={styles.kicker}>Curated Baskets</span>
           <h1 className={styles.title}>Halal Stock Collections</h1>
           <p className={styles.subtitle}>
-            Explore thematic groups of Shariah-compliant stocks across sectors, markets, and investment styles.
+            Explore thematic groups of Shariah-compliant stocks across sectors, markets, and research styles.
           </p>
         </header>
 

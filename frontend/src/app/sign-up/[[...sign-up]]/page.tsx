@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
   description:
-    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use calculators built for Indian Muslim investors screening NSE and BSE equities — private sign-up flow, not for search indexing.",
+    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use stock screening tools for NSE and BSE equities — private sign-up flow, not for search indexing.",
   robots: { index: false, follow: true },
 };
 
@@ -19,11 +19,11 @@ export default function SignUpPage() {
             <Logo size={28} showText variant="light" />
           </Link>
           <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
-            Shariah-Compliant Investing
+            Shariah Stock Screening
           </div>
-          <h2 className="authSidebarTitle">Start Your Halal Journey</h2>
+          <h2 className="authSidebarTitle">Start screening stocks</h2>
           <p className="authSidebarDesc">
-            Create your free account to screen, track, and invest in Shariah-compliant Indian stocks on NSE and BSE.
+            Create your free account to screen, track, and research Shariah-compliant Indian stocks on NSE and BSE.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
@@ -32,7 +32,7 @@ export default function SignUpPage() {
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>
-              <span>Track Shariah compliance across your portfolio</span>
+              <span>Track compliance status across your watchlist</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x25A6;</span>
@@ -47,7 +47,7 @@ export default function SignUpPage() {
           {/* Trust badges */}
           <div className="authTestimonial">
             <p className="authTestimonialQuote">
-              &ldquo;The compliance breakdown on each stock is exactly what I needed to invest with peace of mind.&rdquo;
+              &ldquo;The compliance breakdown on each stock gives clear, transparent context for my research.&rdquo;
             </p>
             <span className="authTestimonialAttr">— Early beta user, Hyderabad</span>
           </div>

@@ -10,8 +10,8 @@ import {
 import styles from "./check-stock-discovery.module.css";
 
 function badgeClass(status: CheckDiscoveryPick["status"]): string {
-  if (status === "Halal") return styles.badgeHalal;
-  if (status === "Haram") return styles.badgeHaram;
+  if (status === "Shariah Compliant") return styles.badgeHalal;
+  if (status === "Not Compliant") return styles.badgeHaram;
   return styles.badgeDoubt;
 }
 
@@ -46,7 +46,7 @@ export function CheckStockDiscovery({ excludeSymbol }: Props) {
       <h2 id="check-discovery-heading" className={styles.title}>
         Top Halal stocks today
       </h2>
-      <p className={styles.sub}>People also checked these — tap for instant Halal status.</p>
+      <p className={styles.sub}>People also checked these — tap for instant compliance status.</p>
       <ul className={styles.grid}>
         {picks.map((p) => (
           <li key={p.symbol}>

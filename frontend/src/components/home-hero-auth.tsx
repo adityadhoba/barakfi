@@ -18,8 +18,8 @@ export function HomeHeroAuth() {
           <>As-salamu alaykum.</>
         ) : (
           <>
-            Invest with <span className={styles.heroGradient}>clarity</span> and{" "}
-            <span className={styles.heroGradient}>conviction</span>.
+            Screen stocks with <span className={styles.heroGradient}>clarity</span> and{" "}
+            <span className={styles.heroGradient}>confidence</span>.
           </>
         )}
       </h1>

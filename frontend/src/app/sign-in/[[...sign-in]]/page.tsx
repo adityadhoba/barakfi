@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = {
   title: "Sign In — Barakfi",
   description:
-    "Sign in to BarakFi to sync your Shariah-compliant watchlist, research notes, and portfolio tools for Indian equities (NSE & BSE). Clerk-secured authentication — private page, not intended for search indexing.",
+    "Sign in to BarakFi to sync your Shariah-compliant watchlist, research notes, and stock screening tools for Indian equities (NSE & BSE). Clerk-secured authentication — private page, not intended for search indexing.",
   robots: { index: false, follow: true },
 };
 
@@ -19,11 +19,11 @@ export default function SignInPage() {
             <Logo size={28} showText variant="light" />
           </Link>
           <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
-            Shariah-Compliant Investing
+            Shariah Stock Screening
           </div>
           <h2 className="authSidebarTitle">Assalamu Alaikum — welcome to Barakfi</h2>
           <p className="authSidebarDesc">
-            Sign in to access your halal portfolio tracker, watchlist, and screening results for NSE and BSE-listed Indian equities.
+            Sign in to access your screened stocks dashboard, watchlist, and screening results for NSE and BSE-listed Indian equities.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
@@ -32,7 +32,7 @@ export default function SignInPage() {
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x2606;</span>
-              <span>Track Shariah compliance across your portfolio</span>
+              <span>Track Shariah compliance across your watchlist</span>
             </div>
             <div className="authFeature">
               <span className="authFeatureIcon">&#x25A6;</span>
@@ -43,7 +43,7 @@ export default function SignInPage() {
           {/* Testimonial */}
           <div className="authTestimonial">
             <p className="authTestimonialQuote">
-              &ldquo;Finally, a screening tool that shows me exactly why a stock is halal — with real financial data, not just opinions.&rdquo;
+              &ldquo;Finally, a screening tool that shows me exactly why a stock is classified this way — with real financial data, not just opinions.&rdquo;
             </p>
             <span className="authTestimonialAttr">— Early beta user, Mumbai</span>
           </div>

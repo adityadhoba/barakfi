@@ -133,7 +133,7 @@ export function StockResearchSection({
               <th style={{ textAlign: "center" }}>Status</th>
               <th style={{ textAlign: "right" }}>Score</th>
               <th style={{ textAlign: "right" }}>Debt/MCap</th>
-              <th style={{ textAlign: "right" }}>Non-Halal</th>
+              <th style={{ textAlign: "right" }}>Non-permissible Income</th>
             </tr>
           </thead>
           <tbody>

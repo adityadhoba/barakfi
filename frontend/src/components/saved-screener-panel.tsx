@@ -14,7 +14,7 @@ type Props = {
 
 const statusOptions = [
   { value: "all", label: "All statuses" },
-  { value: "halal", label: "Halal only" },
+  { value: "halal", label: "Shariah Compliant only" },
   { value: "requires_review", label: "Requires review" },
   { value: "non_compliant", label: "Non-compliant" },
 ];
@@ -125,7 +125,7 @@ export function SavedScreenerPanel({
             <input
               maxLength={80}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. High-quality halal compounders"
+              placeholder="e.g. High-quality compliant stocks"
               required
               value={name}
             />
@@ -175,7 +175,7 @@ export function SavedScreenerPanel({
               onChange={(e) => setHalalOnly(e.target.checked)}
               type="checkbox"
             />
-            <span>Only include stocks screened as halal</span>
+            <span>Only include stocks screened as Shariah Compliant</span>
           </label>
         </div>
 
@@ -219,7 +219,7 @@ export function SavedScreenerPanel({
                   <span className={styles.tag}>query: {screener.search_query}</span>
                 )}
                 <span className={styles.tag}>
-                  {screener.halal_only ? "halal only" : "all results"}
+                  {screener.halal_only ? "Shariah Compliant only" : "all results"}
                 </span>
               </div>
               {screener.notes && (

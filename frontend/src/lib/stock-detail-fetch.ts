@@ -122,9 +122,9 @@ export async function fetchStockMetadataBundle(
     if (resScreen.ok) {
       const scr = unwrapBackendEnvelope<{ status?: string }>(await resScreen.json());
       const s = (scr.status || "").toUpperCase();
-      if (s === "HALAL") statusLabel = "Halal";
-      else if (s === "NON_COMPLIANT") statusLabel = "Haram";
-      else if (s === "CAUTIOUS" || s === "REVIEW") statusLabel = "Doubtful";
+      if (s === "HALAL") statusLabel = "Shariah Compliant";
+      else if (s === "NON_COMPLIANT") statusLabel = "Not Compliant";
+      else if (s === "CAUTIOUS" || s === "REVIEW") statusLabel = "Requires Review";
     }
     return { stock, statusLabel };
   } catch {

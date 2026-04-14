@@ -49,7 +49,8 @@ import {
   fundamentalsUnitNote,
 } from "@/lib/fundamentals-format";
 import {
-  screeningEditorialLabel,
+  SCREENING_LEGAL_DISCLAIMER,
+  screeningDiscoveryLabel,
   screeningUiLabel,
 } from "@/lib/screening-status";
 
@@ -65,14 +66,14 @@ export async function generateMetadata({
     return {
       title: `${sym} — Shariah screening`,
       description:
-        `See whether ${sym} is halal, doubtful, or haram under Shariah financial screening for NSE/BSE-listed Indian equities. BarakFi explains debt, non-permissible income, interest income, and other ratios used in compliance checks — not a fatwa; consult a qualified scholar for personal rulings.`,
+        `See whether ${sym} is Shariah Compliant, Requires Review, or Not Compliant under Shariah financial screening for NSE/BSE-listed Indian equities. BarakFi explains debt, non-permissible income, interest income, and other ratios used in compliance checks.`,
       robots: { index: true, follow: true },
     };
   }
   const { stock, statusLabel } = bundle;
   const title = `Is ${stock.name} Halal? Shariah compliance (${stock.symbol}) | BarakFi`;
   const description =
-    `Check if ${stock.name} (${stock.symbol}) on ${stock.exchange} is halal or haram using Shariah stock screening: current status ${statusLabel}, with debt, revenue, interest income, and asset ratios compared to widely used Islamic finance benchmarks. Updated when fundamentals sync runs; educational only — not investment advice.`;
+    `Check halal stock status for ${stock.name} (${stock.symbol}) on ${stock.exchange} using Shariah stock screening: current classification ${statusLabel}, with debt, revenue, interest income, and asset ratios compared to widely used Islamic finance benchmarks. Updated when fundamentals sync runs; educational context only.`;
   return {
     title,
     description,
@@ -469,7 +470,7 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: `${stock.name} (${stock.symbol})`,
-    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningEditorialLabel(screening.status)}. Uses financial ratios; not a religious ruling.`,
+    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningUiLabel(screening.status)}. Uses financial ratios and methodology checks.`,
     url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
     brand: { "@type": "Brand", name: "BarakFi" },
     provider: {
@@ -480,8 +481,8 @@ export default async function StockDetailPage({
     additionalProperty: [
       {
         "@type": "PropertyValue",
-        name: "halalStatus",
-        value: screeningEditorialLabel(screening.status),
+        name: "complianceStatus",
+        value: screeningUiLabel(screening.status),
       },
       {
         "@type": "PropertyValue",
@@ -509,22 +510,22 @@ export default async function StockDetailPage({
   };
 
   const statusUiWord = screeningUiLabel(screening.status);
-  const statusEditorialWord = screeningEditorialLabel(screening.status);
+  const statusDiscoveryWord = screeningDiscoveryLabel(screening.status);
   const jsonLdFaq = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: [
       {
         "@type": "Question",
-        name: `Is ${stock.name} halal to invest in?`,
+        name: `What is ${stock.name}'s Shariah compliance status?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `BarakFi labels this listing as ${statusEditorialWord} under automated Shariah-style financial screening (${stock.exchange}). This is an educational tool, not a fatwa — consult a qualified scholar before investing.`,
+          text: `BarakFi classifies this listing as ${statusUiWord} under automated Shariah-style financial screening (${stock.exchange}). ${SCREENING_LEGAL_DISCLAIMER}`,
         },
       },
       {
         "@type": "Question",
-        name: `Why is ${stock.symbol} considered ${statusEditorialWord}?`,
+        name: `Why is ${stock.symbol} considered ${statusDiscoveryWord}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: `${reasons.join(" ")} See key ratios and methodology on this page.`,
@@ -558,8 +559,8 @@ export default async function StockDetailPage({
               AAOIFI-style balance-sheet tests, and related ratio work). Sector activity is also
               checked for obvious non-permissible business lines. This page shows the outcome for{" "}
               <strong>{stock.name}</strong> ({stock.symbol}) on <strong>{stock.exchange}</strong>{" "}
-              using numbers stored in our database — not a substitute for your own due diligence or
-              a scholar&apos;s guidance.
+              using numbers stored in our database — use this as a research input alongside
+              qualified guidance.
             </p>
             {stock.data_quality && (
               <p className={styles.seoProse}>
@@ -605,7 +606,7 @@ export default async function StockDetailPage({
               <strong>Financials</strong> tab for raw inputs, and the methodology comparison (where
               available) to see how {stock.name} performs across multiple reference styles. If you
               are new to these concepts, start with our{" "}
-              <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link> or{" "}
+              <Link href="/learn/what-is-halal-investing">guide to halal stock screening concepts</Link> or{" "}
               <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
             </p>
           </section>
@@ -618,8 +619,7 @@ export default async function StockDetailPage({
               For <strong>{stock.name}</strong>, the automated label is <strong>{statusUiWord}</strong>{" "}
               with a compliance-style score of <strong>{complianceScore}</strong> out of 100 on the
               primary profile shown on this page. Re-run your checks after major results or
-              restructuring events, and always align investments with your values, risk tolerance,
-              and qualified advice.
+              restructuring events, and align your research process with your values and qualified guidance.
             </p>
           </section>
 
@@ -654,11 +654,10 @@ export default async function StockDetailPage({
               Frequently asked questions
             </h2>
             <dl className={styles.seoFaq}>
-              <dt>Is {stock.name} halal to invest in?</dt>
+              <dt>What is {stock.name}&apos;s current compliance status?</dt>
               <dd>
                 Our engine shows <strong>{statusUiWord}</strong> based on financial ratios and sector
-                rules — educational only. Personal investability can depend on your madhhab,
-                portfolio mix, and scholar guidance.
+                rules. This page is for educational screening and research context.
               </dd>
               <dt>Why is it considered {statusUiWord}?</dt>
               <dd>{reasons.join(" ")}</dd>
@@ -969,7 +968,7 @@ export default async function StockDetailPage({
                 }`}>{formatRatio(b.debt_to_36m_avg_market_cap_ratio)}</span>
               </div>
               <div className={styles.keyMetricCard}>
-                <span className={styles.keyMetricLabel}>Non-Halal Income</span>
+                <span className={styles.keyMetricLabel}>Non-permissible Income</span>
                 <span className={`${styles.keyMetricValue} ${
                   b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.keyMetricGood
                   : b.non_permissible_income_ratio <= 0.05 ? styles.keyMetricWarn
@@ -1078,9 +1077,7 @@ export default async function StockDetailPage({
               color: "var(--text-tertiary)",
               lineHeight: 1.6,
             }}>
-              Screening results indicate whether this stock meets specific methodology criteria.
-              They do not constitute a fatwa or religious ruling.
-              Consult a qualified Shariah scholar for definitive guidance.{" "}
+              {SCREENING_LEGAL_DISCLAIMER}{" "}
               <Link href="/methodology" style={{ color: "var(--emerald)", fontWeight: 600 }}>
                 View methodology
               </Link>

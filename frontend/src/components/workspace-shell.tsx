@@ -50,7 +50,7 @@ function OnboardingRequiredState() {
           <Logo size={36} showText={false} />
           <h2 className="shellH2" style={{ marginTop: 16 }}>Welcome to Barakfi</h2>
           <p className="shellSub">
-            We&apos;ll set up your portfolio so you can track halal stocks.
+            We&apos;ll set up your portfolio so you can track screened stocks and compliance status.
           </p>
           <div className={styles.ctaRow}>
             <Link className={styles.primaryCta} href="/onboarding">Get started</Link>
@@ -169,7 +169,7 @@ export async function WorkspaceShell() {
               </span>
             </div>
             <div className={ws.metricChip}>
-              <span className={ws.metricChipLabel}>Halal</span>
+              <span className={ws.metricChipLabel}>Shariah Compliant</span>
               <span className={`${ws.metricChipValue} ${halalPct >= 80 ? ws.metricGood : halalPct >= 50 ? ws.metricWarn : ws.metricBad}`}>
                 {halalPct}%
               </span>

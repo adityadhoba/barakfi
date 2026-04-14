@@ -29,9 +29,9 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
+  HALAL: "Shariah Compliant",
+  CAUTIOUS: "Requires Review",
+  NON_COMPLIANT: "Not Compliant",
 };
 
 const STATUS_ORDER: Record<string, number> = {
@@ -176,7 +176,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--emerald)" }}>✓</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Halal</div>
+            <div className={styles.summaryLabel}>Shariah Compliant</div>
             <div className={styles.summaryValue}>{summary.halal}</div>
           </div>
         </div>
@@ -186,7 +186,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--gold)" }}>⚠</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Doubtful</div>
+            <div className={styles.summaryLabel}>Requires Review</div>
             <div className={styles.summaryValue}>{summary.review}</div>
           </div>
         </div>
@@ -196,7 +196,7 @@ export function WatchlistDashboard({ entries }: Props) {
             <span className={styles.summaryIcon} style={{ color: "var(--red)" }}>✕</span>
           </div>
           <div className={styles.summaryText}>
-            <div className={styles.summaryLabel}>Haram</div>
+            <div className={styles.summaryLabel}>Not Compliant</div>
             <div className={styles.summaryValue}>{summary.avoid}</div>
           </div>
         </div>
@@ -252,7 +252,7 @@ export function WatchlistDashboard({ entries }: Props) {
                   onClick={() => handleSort("status")}
                   type="button"
                 >
-                  Status{getSortIcon("status")}
+                  Compliance Status{getSortIcon("status")}
                 </button>
               </th>
               <th className={styles.th}>Notes</th>

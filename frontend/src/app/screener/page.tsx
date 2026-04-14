@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Shariah Stock Screener — Barakfi",
   description:
-    "Screen NSE-listed Indian equities for Shariah-style compliance: filter by sector and halal status, sort by market cap and financial ratios, and open any symbol for a full ratio breakdown. Free educational screener — pair with our learn guides and methodology pages before investing.",
+    "Screen NSE-listed Indian equities for Shariah-style compliance: filter by sector and compliance status, sort by market cap and financial ratios, and open any symbol for a full ratio breakdown. Free educational screener with transparent methodology and research context.",
   robots: { index: true, follow: true },
 };
 

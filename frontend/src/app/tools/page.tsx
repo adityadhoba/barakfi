@@ -5,12 +5,12 @@ import styles from "./tools.module.css";
 export const metadata: Metadata = {
   title: "Islamic Finance Tools — Purification & Zakat Calculator | Barakfi",
   description:
-    "Free purification calculator and zakat calculator for halal investors. Calculate how much to donate from dividends and zakat on your stock portfolio.",
+    "Free purification calculator and zakat calculator for halal stock screening users. Calculate purification amounts from dividends and zakat on your stocks.",
   keywords: [
     "purification calculator",
     "zakat calculator",
     "Islamic finance calculator",
-    "halal investment tools",
+    "halal stock screening tools",
     "dividend purification",
     "zakat on stocks",
     "Islamic finance tools India",
@@ -69,7 +69,7 @@ export default function ToolsPage() {
           <span className={styles.kicker}>Free Tools</span>
           <h1 className={styles.title}>Islamic Finance Tools</h1>
           <p className={styles.subtitle}>
-            Everything you need for compliant investing. No login required, always free.
+            Everything you need for compliant screening, research, and calculations. No login required, always free.
           </p>
         </header>
 
