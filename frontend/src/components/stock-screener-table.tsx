@@ -270,6 +270,32 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     else { setSortKey(key); setSortDir(key === "symbol" ? "asc" : "desc"); }
   }
 
+  const handleSeeWhy = useCallback(async (symbol: string) => {
+    setPendingSymbol(symbol);
+    const result = await unlockDetails(symbol);
+    setPendingSymbol(null);
+
+    if (result.kind === "granted") {
+      router.push(`/stocks/${encodeURIComponent(symbol)}`);
+      return;
+    }
+
+    if (result.kind === "redirect") {
+      router.push(result.url);
+      return;
+    }
+
+    if (result.kind === "limit_exhausted") {
+      toast(result.message, "error");
+      if (result.redirectUrl) {
+        router.push(result.redirectUrl);
+      }
+      return;
+    }
+
+    toast(result.message, "error");
+  }, [router, toast, unlockDetails]);
+
   const handleKeyNav = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
@@ -356,32 +382,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     }
     return pages;
   }
-
-  const handleSeeWhy = useCallback(async (symbol: string) => {
-    setPendingSymbol(symbol);
-    const result = await unlockDetails(symbol);
-    setPendingSymbol(null);
-
-    if (result.kind === "granted") {
-      router.push(`/stocks/${encodeURIComponent(symbol)}`);
-      return;
-    }
-
-    if (result.kind === "redirect") {
-      router.push(result.url);
-      return;
-    }
-
-    if (result.kind === "limit_exhausted") {
-      toast(result.message, "error");
-      if (result.redirectUrl) {
-        router.push(result.redirectUrl);
-      }
-      return;
-    }
-
-    toast(result.message, "error");
-  }, [router, toast, unlockDetails]);
 
   return (
     <div className={styles.screenerLayout}>
