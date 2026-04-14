@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LockedVerdict } from "@/components/locked-verdict";
 import styles from "@/app/screener.module.css";
+import { screeningUiLabel } from "@/lib/screening-status";
 
 type PeerComparisonItem = {
   symbol: string;
@@ -25,12 +26,6 @@ const STATUS_BADGE: Record<string, string> = {
   HALAL: "badgeHalal",
   CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
 };
 
 function formatRatio(value: number) {
@@ -145,14 +140,14 @@ export function StockResearchSection({
             {visiblePeers.map((peer) => (
               <tr key={peer.symbol}>
                 <td>
-                  <Link href={`/stocks/${encodeURIComponent(peer.symbol)}`} style={{ color: "var(--emerald)", textDecoration: "none" }}>
+                  <Link href={`/screening/${encodeURIComponent(peer.symbol)}`} style={{ color: "var(--emerald)", textDecoration: "none" }}>
                     <strong>{peer.symbol}</strong> {peer.name}
                   </Link>
                 </td>
                 <td style={{ textAlign: "center" }}>
                   <LockedVerdict symbol={peer.symbol} compact>
                     <span className={`${styles.badge} ${styles[STATUS_BADGE[peer.status] || "badgeReview"]}`}>
-                      {STATUS_LABELS[peer.status] || peer.status}
+                      {screeningUiLabel(peer.status)}
                     </span>
                   </LockedVerdict>
                 </td>

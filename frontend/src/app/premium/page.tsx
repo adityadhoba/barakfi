@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getPublicApiBaseUrl } from "@/lib/api-base";
 import styles from "./premium.module.css";
-
-const apiBaseUrl = getPublicApiBaseUrl();
 
 const FEATURES = [
   { icon: "🔓", label: "Unlimited stock screening" },
@@ -24,10 +21,11 @@ export default function PremiumPage() {
     if (!email.trim()) return;
     setStatus("loading");
     try {
-      const res = await fetch(`${apiBaseUrl}/early-access`, {
+      const res = await fetch("/api/early-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), name: name.trim(), source: "premium_page" }),
+        credentials: "same-origin",
       });
       if (!res.ok) throw new Error();
       setStatus("done");

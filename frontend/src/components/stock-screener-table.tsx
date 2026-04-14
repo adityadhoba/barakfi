@@ -14,6 +14,8 @@ import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
 import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { useScreening } from "@/contexts/screening-context";
+import { SCREENING_STATUS_TOOLTIP, screeningUiLabel } from "@/lib/screening-status";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -23,9 +25,9 @@ const STATUS_ORDER: Record<string, number> = { HALAL: 0, CAUTIOUS: 1, NON_COMPLI
 
 const STATUS_OPTIONS = [
   { key: "all", label: "All Stocks" },
-  { key: "HALAL", label: "Halal" },
-  { key: "CAUTIOUS", label: "Doubtful" },
-  { key: "NON_COMPLIANT", label: "Haram" },
+  { key: "HALAL", label: "Shariah Compliant" },
+  { key: "CAUTIOUS", label: "Requires Review" },
+  { key: "NON_COMPLIANT", label: "Not Compliant" },
 ] as const;
 
 const MCAP_OPTIONS = [
@@ -36,9 +38,9 @@ const MCAP_OPTIONS = [
 ] as const;
 
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
-  HALAL: { cls: "statusHalal", label: "Halal" },
-  CAUTIOUS: { cls: "statusReview", label: "Doubtful" },
-  NON_COMPLIANT: { cls: "statusFail", label: "Haram" },
+  HALAL: { cls: "statusHalal", label: "Shariah Compliant" },
+  CAUTIOUS: { cls: "statusReview", label: "Requires Review" },
+  NON_COMPLIANT: { cls: "statusFail", label: "Not Compliant" },
 };
 
 /** Shown under search — `value` is what we put in the query (symbol or substring). */
@@ -104,6 +106,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { unlockDetails } = useScreening();
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -142,6 +145,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState("");
   const [isSavingFilter, setIsSavingFilter] = useState(false);
+  const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
 
   const allSymbols = useMemo(() => screenedStocks.map((s) => s.symbol), [screenedStocks]);
   const exchangeBySymbol = useMemo(() => {
@@ -267,9 +271,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
     if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((p) => Math.min(p + 1, pageItems.length - 1)); }
     else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((p) => Math.max(p - 1, 0)); }
-    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < pageItems.length) { e.preventDefault(); router.push(`/stocks/${encodeURIComponent(pageItems[focusedIdx].symbol)}`); }
+    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < pageItems.length) {
+      e.preventDefault();
+      void handleSeeWhy(pageItems[focusedIdx].symbol);
+    }
     else if (e.key === "Escape") setFocusedIdx(-1);
-  }, [pageItems, focusedIdx, router]);
+  }, [focusedIdx, handleSeeWhy, pageItems]);
 
   useEffect(() => { document.addEventListener("keydown", handleKeyNav); return () => document.removeEventListener("keydown", handleKeyNav); }, [handleKeyNav]);
 
@@ -344,6 +351,32 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       pages.push(totalPages);
     }
     return pages;
+  }
+
+  async function handleSeeWhy(symbol: string) {
+    setPendingSymbol(symbol);
+    const result = await unlockDetails(symbol);
+    setPendingSymbol(null);
+
+    if (result.kind === "granted") {
+      router.push(`/stocks/${encodeURIComponent(symbol)}`);
+      return;
+    }
+
+    if (result.kind === "redirect") {
+      router.push(result.url);
+      return;
+    }
+
+    if (result.kind === "limit_exhausted") {
+      toast(result.message, "error");
+      if (result.redirectUrl) {
+        router.push(result.redirectUrl);
+      }
+      return;
+    }
+
+    toast(result.message, "error");
   }
 
   return (
@@ -573,6 +606,12 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <th className={styles.th}>Sector</th>
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
+                <th className={styles.th}>
+                  <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
+                    Status
+                    <span className={styles.statusHeaderInfo}>i</span>
+                  </span>
+                </th>
                 <th className={styles.th} style={{ width: 100 }}>Action</th>
               </tr>
             </thead>
@@ -584,7 +623,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                     key={s.symbol}
                     data-stock-idx={idx}
                     className={`${styles.row} ${focusedIdx === idx ? styles.rowFocused : ""}`}
-                    onClick={() => router.push(`/stocks/${encodeURIComponent(s.symbol)}`)}
                     tabIndex={0}
                   >
                     <td className={styles.tdNum}>{globalIdx}.</td>
@@ -615,12 +653,24 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       )}
                     </td>
                     <td>
+                      <span
+                        className={`${styles.statusBadge} ${styles[STATUS_CONFIG[s.screening.status]?.cls || "statusReview"]}`}
+                        title={SCREENING_STATUS_TOOLTIP}
+                      >
+                        {screeningUiLabel(s.screening.status)}
+                      </span>
+                    </td>
+                    <td>
                       <button
                         type="button"
                         className={styles.screenRowBtn}
-                        onClick={(e) => { e.stopPropagation(); router.push(`/screening/${encodeURIComponent(s.symbol)}`); }}
+                        disabled={pendingSymbol === s.symbol}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleSeeWhy(s.symbol);
+                        }}
                       >
-                        Screen
+                        {pendingSymbol === s.symbol ? "Opening..." : "See Why?"}
                       </button>
                     </td>
                   </tr>
@@ -628,7 +678,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} className={styles.emptyRow}>
+                  <td colSpan={7} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>

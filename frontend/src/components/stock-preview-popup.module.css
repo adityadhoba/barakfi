@@ -226,6 +226,11 @@
   opacity: 0.85;
 }
 
+.popupCta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 /* Responsive: hide popup on touch devices */
 @media (hover: none) {
   .popup { display: none; }

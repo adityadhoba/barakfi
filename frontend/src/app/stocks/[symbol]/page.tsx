@@ -48,6 +48,10 @@ import {
   formatFundamentalsAsOfLine,
   fundamentalsUnitNote,
 } from "@/lib/fundamentals-format";
+import {
+  screeningEditorialLabel,
+  screeningUiLabel,
+} from "@/lib/screening-status";
 
 export async function generateMetadata({
   params,
@@ -94,11 +98,6 @@ const STATUS_BADGE: Record<string, string> = {
   HALAL: "badgeHalal",
   CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
-};
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
 };
 
 const CONFIDENCE_ICONS: Record<string, string> = {
@@ -200,7 +199,7 @@ function buildTakeaway(status: string, reasons: string[], flags: string[]) {
   if (flags.length > 0) {
     return "We can't fully confirm this stock yet — it needs a manual check by a scholar or compliance expert.";
   }
-  return "This stock is cautious: we can't yet fully confirm if it's halal or not.";
+  return "This stock is cautious: we can't yet fully confirm whether it is compliant or not.";
 }
 
 function calculateComplianceScore(
@@ -470,7 +469,7 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: `${stock.name} (${stock.symbol})`,
-    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${STATUS_LABELS[screening.status] || "Doubtful"}. Uses financial ratios; not a religious ruling.`,
+    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningEditorialLabel(screening.status)}. Uses financial ratios; not a religious ruling.`,
     url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
     brand: { "@type": "Brand", name: "BarakFi" },
     provider: {
@@ -482,7 +481,7 @@ export default async function StockDetailPage({
       {
         "@type": "PropertyValue",
         name: "halalStatus",
-        value: STATUS_LABELS[screening.status] || screening.status,
+        value: screeningEditorialLabel(screening.status),
       },
       {
         "@type": "PropertyValue",
@@ -509,7 +508,8 @@ export default async function StockDetailPage({
     ],
   };
 
-  const statusWord = STATUS_LABELS[screening.status] || screening.status;
+  const statusUiWord = screeningUiLabel(screening.status);
+  const statusEditorialWord = screeningEditorialLabel(screening.status);
   const jsonLdFaq = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -519,12 +519,12 @@ export default async function StockDetailPage({
         name: `Is ${stock.name} halal to invest in?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `BarakFi labels this listing as ${statusWord} under automated Shariah-style financial screening (${stock.exchange}). This is an educational tool, not a fatwa — consult a qualified scholar before investing.`,
+          text: `BarakFi labels this listing as ${statusEditorialWord} under automated Shariah-style financial screening (${stock.exchange}). This is an educational tool, not a fatwa — consult a qualified scholar before investing.`,
         },
       },
       {
         "@type": "Question",
-        name: `Why is ${stock.symbol} considered ${statusWord}?`,
+        name: `Why is ${stock.symbol} considered ${statusEditorialWord}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: `${reasons.join(" ")} See key ratios and methodology on this page.`,
@@ -542,6 +542,138 @@ export default async function StockDetailPage({
       },
     ],
   };
+
+  const readMorePanel = (
+    <div className={styles.readMoreCard}>
+      <details className={styles.readMoreDetails}>
+        <summary className={styles.readMoreSummary}>Read more</summary>
+        <div className={styles.readMoreBody}>
+          <section className={styles.seoArticle} aria-labelledby="why-status-heading">
+            <h2 id="why-status-heading" className={styles.sectionTitle}>
+              Why is this stock {statusUiWord}?
+            </h2>
+            <p className={styles.seoProse}>
+              {takeaway} BarakFi applies transparent financial tests inspired by widely cited
+              Shariah equity standards (for example S&amp;P Shariah-style debt and income screens,
+              AAOIFI-style balance-sheet tests, and related ratio work). Sector activity is also
+              checked for obvious non-permissible business lines. This page shows the outcome for{" "}
+              <strong>{stock.name}</strong> ({stock.symbol}) on <strong>{stock.exchange}</strong>{" "}
+              using numbers stored in our database — not a substitute for your own due diligence or
+              a scholar&apos;s guidance.
+            </p>
+            {stock.data_quality && (
+              <p className={styles.seoProse}>
+                <strong>Data quality:</strong>{" "}
+                {stock.data_quality === "high"
+                  ? "High"
+                  : stock.data_quality === "medium"
+                    ? "Medium"
+                    : "Low"}
+                — indicates how complete the fundamentals are for ratio screening. Source:{" "}
+                {stock.data_source}.
+                {stock.fundamentals_fields_missing &&
+                stock.fundamentals_fields_missing.length > 0 ? (
+                  <>
+                    {" "}
+                    <strong>Missing or zero inputs:</strong>{" "}
+                    {stock.fundamentals_fields_missing.join(", ")} — treat nearby ratio thresholds
+                    as less certain until filings populate those lines.
+                  </>
+                ) : null}
+              </p>
+            )}
+          </section>
+
+          <section className={styles.seoArticle} aria-labelledby="key-ratios-heading">
+            <h2 id="key-ratios-heading" className={styles.sectionTitle}>
+              Key financial ratios
+            </h2>
+            <p className={styles.seoProse}>
+              The strip below summarizes debt versus market cap, non-permissible income,
+              interest-related income, cash and interest-bearing balances, and receivables — the
+              same families of ratios many Islamic index providers use in different forms. Expand
+              the detailed tables for exact numerators and denominators used on this listing.
+            </p>
+          </section>
+
+          <section className={styles.seoArticle} aria-labelledby="breakdown-heading">
+            <h2 id="breakdown-heading" className={styles.sectionTitle}>
+              Shariah screening breakdown
+            </h2>
+            <p className={styles.seoProse}>
+              Use the <strong>Compliance</strong> tab for per-ratio gauges, the{" "}
+              <strong>Financials</strong> tab for raw inputs, and the methodology comparison (where
+              available) to see how {stock.name} performs across multiple reference styles. If you
+              are new to these concepts, start with our{" "}
+              <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link> or{" "}
+              <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
+            </p>
+          </section>
+
+          <section className={styles.seoArticle} aria-labelledby="conclusion-heading">
+            <h2 id="conclusion-heading" className={styles.sectionTitle}>
+              Conclusion
+            </h2>
+            <p className={styles.seoProse}>
+              For <strong>{stock.name}</strong>, the automated label is <strong>{statusUiWord}</strong>{" "}
+              with a compliance-style score of <strong>{complianceScore}</strong> out of 100 on the
+              primary profile shown on this page. Re-run your checks after major results or
+              restructuring events, and always align investments with your values, risk tolerance,
+              and qualified advice.
+            </p>
+          </section>
+
+          <section className={styles.seoArticle} aria-labelledby="learn-more-stock">
+            <h2 id="learn-more-stock" className={styles.sectionTitle}>
+              Learn more
+            </h2>
+            <ul className={styles.seoLinkList}>
+              <li>
+                <Link href="/learn/halal-stocks-india">
+                  Halal stocks in India — how screening works on NSE &amp; BSE
+                </Link>
+              </li>
+              <li>
+                <Link href="/learn/top-halal-stocks-india">
+                  Examples of large Indian names investors often ask about
+                </Link>
+              </li>
+              {stock.symbol.toUpperCase() === "RELIANCE" && (
+                <li>
+                  <Link href="/learn/is-reliance-halal">Is Reliance halal? — context article</Link>
+                </li>
+              )}
+              <li>
+                <Link href="/methodology">Full methodology reference</Link>
+              </li>
+            </ul>
+          </section>
+
+          <section className={styles.seoArticle} aria-labelledby="faq-heading">
+            <h2 id="faq-heading" className={styles.sectionTitle}>
+              Frequently asked questions
+            </h2>
+            <dl className={styles.seoFaq}>
+              <dt>Is {stock.name} halal to invest in?</dt>
+              <dd>
+                Our engine shows <strong>{statusUiWord}</strong> based on financial ratios and sector
+                rules — educational only. Personal investability can depend on your madhhab,
+                portfolio mix, and scholar guidance.
+              </dd>
+              <dt>Why is it considered {statusUiWord}?</dt>
+              <dd>{reasons.join(" ")}</dd>
+              <dt>When was this last updated?</dt>
+              <dd>
+                {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ??
+                  "We do not yet show a fundamentals sync timestamp for this company in our database."}{" "}
+                Market prices may update more frequently than filing-based ratios.
+              </dd>
+            </dl>
+          </section>
+        </div>
+      </details>
+    </div>
+  );
 
   return (
     <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
@@ -578,9 +710,9 @@ export default async function StockDetailPage({
                 <p className={styles.stockMetaLine} style={{ margin: "6px 0 0", fontSize: "0.95rem", color: "var(--text-secondary)" }}>
                   {stock.symbol} · {stock.exchange} · {stock.sector}
                 </p>
-                <StockVerdictGate symbol={stock.symbol}>
+                <StockVerdictGate symbol={stock.symbol} mode="inline">
                   <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                    {STATUS_LABELS[screening.status] || screening.status}
+                    {statusUiWord}
                   </span>
                 </StockVerdictGate>
               </div>
@@ -625,11 +757,11 @@ export default async function StockDetailPage({
               <WatchlistActionButton symbol={stock.symbol} initialInWatchlist={isInWatchlist} />
               <ShareButton
                 title={`${stock.name} (${stock.symbol}) — Shariah Screening`}
-                text={`Check out ${stock.name} on Barakfi — ${STATUS_LABELS[screening.status] || "Doubtful"}`}
+                text={`Check out ${stock.name} on Barakfi — ${statusUiWord}`}
               />
             </div>
           </div>
-          <StockVerdictGate symbol={stock.symbol}>
+          <StockVerdictGate symbol={stock.symbol} mode="hidden">
           <div className={styles.complianceHeroRight}>
             <div className={styles.scorecardDonut}>
               <svg viewBox="0 0 120 120" className={styles.donutChart}>
@@ -687,88 +819,85 @@ export default async function StockDetailPage({
         {/* Soft upsell — non-blocking */}
         <StockUpsellCard />
 
-        {/* Compliance Verdict Banner */}
         <StockVerdictGate symbol={stock.symbol}>
-        <div className={`${styles.verdictBanner} ${
-          screening.status === "HALAL" ? styles.verdictHalal
-          : screening.status === "CAUTIOUS" ? styles.verdictReview
-          : styles.verdictFail
-        }`}>
-          <div className={styles.verdictTop}>
-            <div className={styles.verdictLeft}>
-              <span className={styles.verdictScore}>{complianceScore}</span>
-              <span className={styles.verdictScoreSuffix}>/100</span>
+          {/* Compliance Verdict Banner */}
+          <div className={`${styles.verdictBanner} ${
+            screening.status === "HALAL" ? styles.verdictHalal
+            : screening.status === "CAUTIOUS" ? styles.verdictReview
+            : styles.verdictFail
+          }`}>
+            <div className={styles.verdictTop}>
+              <div className={styles.verdictLeft}>
+                <span className={styles.verdictScore}>{complianceScore}</span>
+                <span className={styles.verdictScoreSuffix}>/100</span>
+              </div>
+              <div className={styles.verdictBody}>
+                <div className={styles.verdictStatus}>
+                  <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
+                    {statusUiWord}
+                  </span>
+                  {screening.purification_ratio_pct != null && screening.status === "HALAL" && (
+                    <span className={styles.verdictPurification}>
+                      Purification: {screening.purification_ratio_pct}%
+                    </span>
+                  )}
+                </div>
+                <p className={styles.verdictText}>{takeaway}</p>
+              </div>
             </div>
-            <div className={styles.verdictBody}>
-              <div className={styles.verdictStatus}>
-                <span className={`${styles.badge} ${styles[STATUS_BADGE[screening.status] || "badgeReview"]}`}>
-                  {STATUS_LABELS[screening.status] || screening.status}
+            {consensusSummary && (
+              <div className={styles.verdictConsensus} role="status">
+                <span>
+                  Consensus: {consensusSummary.halal_count} of {consensusSummary.total} standards passed
                 </span>
-                {screening.purification_ratio_pct != null && screening.status === "HALAL" && (
-                  <span className={styles.verdictPurification}>
-                    Purification: {screening.purification_ratio_pct}%
+                {methodologyIcons && methodologyIcons.length > 0 && (
+                  <span className={styles.verdictConsensusIcons} aria-hidden="true">
+                    {methodologyIcons.map(({ code, label, passed, status }) => (
+                      <span
+                        key={code}
+                        className={styles.verdictConsensusIcon}
+                        title={`${label}: ${status}`}
+                      >
+                        {passed ? "✔" : "✖"}
+                      </span>
+                    ))}
                   </span>
                 )}
               </div>
-              <p className={styles.verdictText}>{takeaway}</p>
-            </div>
-          </div>
-          {consensusSummary && (
-            <div className={styles.verdictConsensus} role="status">
-              <span>
-                Consensus: {consensusSummary.halal_count} of {consensusSummary.total} standards passed
-              </span>
-              {methodologyIcons && methodologyIcons.length > 0 && (
-                <span className={styles.verdictConsensusIcons} aria-hidden="true">
-                  {methodologyIcons.map(({ code, label, passed, status }) => (
-                    <span
-                      key={code}
-                      className={styles.verdictConsensusIcon}
-                      title={`${label}: ${status}`}
-                    >
-                      {passed ? "✔" : "✖"}
+            )}
+            {confidenceBullets.length > 0 && (
+              <ul className={styles.confidenceBullets} aria-label="Why this screening result">
+                {confidenceBullets.map((bullet, idx) => (
+                  <li key={idx} className={styles.confidenceBullet}>
+                    <span className={styles.confidenceIcon} aria-hidden>
+                      {CONFIDENCE_ICONS[bullet.tone] ?? "•"}
                     </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          )}
-          {confidenceBullets.length > 0 && (
-            <ul className={styles.confidenceBullets} aria-label="Why this screening result">
-              {confidenceBullets.map((bullet, idx) => (
-                <li key={idx} className={styles.confidenceBullet}>
-                  <span className={styles.confidenceIcon} aria-hidden>
-                    {CONFIDENCE_ICONS[bullet.tone] ?? "•"}
-                  </span>
-                  <span className={styles.confidenceText}>{bullet.text}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                    <span className={styles.confidenceText}>{bullet.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        </StockVerdictGate>
+          <p className={styles.retentionHint}>
+            Screening status may change based on financial updates. Check regularly.
+          </p>
 
-        <p className={styles.retentionHint}>
-          Halal status may change based on financial updates. Check regularly.
-        </p>
+          <div className={styles.resultNextSteps} role="navigation" aria-label="Next steps">
+            <Link
+              href="/screener#stock-search"
+              className={`${styles.resultNextStepBtn} ${styles.resultNextStepGhost}`}
+            >
+              Check another stock
+            </Link>
+            <Link
+              href="/screener?status=HALAL"
+              className={`${styles.resultNextStepBtn} ${styles.resultNextStepPrimary}`}
+            >
+              Explore compliant stocks
+            </Link>
+          </div>
 
-        <div className={styles.resultNextSteps} role="navigation" aria-label="Next steps">
-          <Link
-            href="/screener#stock-search"
-            className={`${styles.resultNextStepBtn} ${styles.resultNextStepGhost}`}
-          >
-            Check another stock
-          </Link>
-          <Link
-            href="/screener?status=HALAL"
-            className={`${styles.resultNextStepBtn} ${styles.resultNextStepPrimary}`}
-          >
-            Explore top halal stocks
-          </Link>
-        </div>
-
-        <div className={styles.stockDetailLayout}>
           <div className={styles.stockDetailMain}>
             <div style={{ marginBottom: 28 }}>
               <PriceChart
@@ -936,8 +1065,7 @@ export default async function StockDetailPage({
                   })}
                 </div>
               </article>
-
-
+              {readMorePanel}
             </div>
 
             <div style={{
@@ -1053,7 +1181,7 @@ export default async function StockDetailPage({
                   {peopleAlsoChecked.map((item) => (
                     <Link
                       key={item.symbol}
-                      href={`/stocks/${encodeURIComponent(item.symbol)}`}
+                      href={`/screening/${encodeURIComponent(item.symbol)}`}
                       className={styles.peopleAlsoCard}
                     >
                       <div className={styles.peopleAlsoCardTop}>
@@ -1072,7 +1200,7 @@ export default async function StockDetailPage({
                           <span
                             className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
                           >
-                            {STATUS_LABELS[item.status] || item.status}
+                            {screeningUiLabel(item.status)}
                           </span>
                         </LockedVerdict>
                       </div>
@@ -1082,143 +1210,7 @@ export default async function StockDetailPage({
               </section>
             )}
           </div>
-
-          <aside className={styles.stockDetailAside}>
-            <div className={styles.readMoreCard}>
-              <details className={styles.readMoreDetails}>
-                <summary className={styles.readMoreSummary}>Read more</summary>
-                <div className={styles.readMoreBody}>
-                  <section className={styles.seoArticle} aria-labelledby="why-status-heading">
-                    <h2 id="why-status-heading" className={styles.sectionTitle}>
-                      Why is this stock {STATUS_LABELS[screening.status] || screening.status}?
-                    </h2>
-                    <p className={styles.seoProse}>
-                      {takeaway} BarakFi applies transparent financial tests inspired by widely cited
-                      Shariah equity standards (for example S&amp;P Shariah-style debt and income
-                      screens, AAOIFI-style balance-sheet tests, and related ratio work). Sector
-                      activity is also checked for obvious non-permissible business lines. This page
-                      shows the outcome for <strong>{stock.name}</strong> ({stock.symbol}) on{" "}
-                      <strong>{stock.exchange}</strong> using numbers stored in our database — not a
-                      substitute for your own due diligence or a scholar&apos;s guidance.
-                    </p>
-                    {stock.data_quality && (
-                      <p className={styles.seoProse}>
-                        <strong>Data quality:</strong>{" "}
-                        {stock.data_quality === "high"
-                          ? "High"
-                          : stock.data_quality === "medium"
-                            ? "Medium"
-                            : "Low"}
-                        — indicates how complete the fundamentals are for ratio screening. Source:{" "}
-                        {stock.data_source}.
-                        {stock.fundamentals_fields_missing &&
-                        stock.fundamentals_fields_missing.length > 0 ? (
-                          <>
-                            {" "}
-                            <strong>Missing or zero inputs:</strong>{" "}
-                            {stock.fundamentals_fields_missing.join(", ")} — treat nearby ratio
-                            thresholds as less certain until filings populate those lines.
-                          </>
-                        ) : null}
-                      </p>
-                    )}
-                  </section>
-
-                  <section className={styles.seoArticle} aria-labelledby="key-ratios-heading">
-                    <h2 id="key-ratios-heading" className={styles.sectionTitle}>
-                      Key financial ratios
-                    </h2>
-                    <p className={styles.seoProse}>
-                      The strip below summarizes debt versus market cap, non-permissible income,
-                      interest-related income, cash and interest-bearing balances, and receivables —
-                      the same families of ratios many Islamic index providers use in different
-                      forms. Expand the detailed tables for exact numerators and denominators used
-                      on this listing.
-                    </p>
-                  </section>
-
-                  <section className={styles.seoArticle} aria-labelledby="breakdown-heading">
-                    <h2 id="breakdown-heading" className={styles.sectionTitle}>
-                      Shariah screening breakdown
-                    </h2>
-                    <p className={styles.seoProse}>
-                      Use the <strong>Compliance</strong> tab for per-ratio gauges, the{" "}
-                      <strong>Financials</strong> tab for raw inputs, and the methodology comparison
-                      (where available) to see how {stock.name} performs across multiple reference
-                      styles. If you are new to these concepts, start with our{" "}
-                      <Link href="/learn/what-is-halal-investing">introduction to halal investing</Link>{" "}
-                      or <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
-                    </p>
-                  </section>
-
-                  <section className={styles.seoArticle} aria-labelledby="conclusion-heading">
-                    <h2 id="conclusion-heading" className={styles.sectionTitle}>
-                      Conclusion
-                    </h2>
-                    <p className={styles.seoProse}>
-                      For <strong>{stock.name}</strong>, the automated label is{" "}
-                      <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> with a
-                      compliance-style score of <strong>{complianceScore}</strong> out of 100 on the
-                      primary profile shown on this page. Re-run your checks after major results or
-                      restructuring events, and always align investments with your values, risk
-                      tolerance, and qualified advice.
-                    </p>
-                  </section>
-
-                  <section className={styles.seoArticle} aria-labelledby="learn-more-stock">
-                    <h2 id="learn-more-stock" className={styles.sectionTitle}>
-                      Learn more
-                    </h2>
-                    <ul className={styles.seoLinkList}>
-                      <li>
-                        <Link href="/learn/halal-stocks-india">
-                          Halal stocks in India — how screening works on NSE &amp; BSE
-                        </Link>
-                      </li>
-                      <li>
-                        <Link href="/learn/top-halal-stocks-india">
-                          Examples of large Indian names investors often ask about
-                        </Link>
-                      </li>
-                      {stock.symbol.toUpperCase() === "RELIANCE" && (
-                        <li>
-                          <Link href="/learn/is-reliance-halal">Is Reliance halal? — context article</Link>
-                        </li>
-                      )}
-                      <li>
-                        <Link href="/methodology">Full methodology reference</Link>
-                      </li>
-                    </ul>
-                  </section>
-
-                  <section className={styles.seoArticle} aria-labelledby="faq-heading">
-                    <h2 id="faq-heading" className={styles.sectionTitle}>
-                      Frequently asked questions
-                    </h2>
-                    <dl className={styles.seoFaq}>
-                      <dt>Is {stock.name} halal to invest in?</dt>
-                      <dd>
-                        Our engine shows{" "}
-                        <strong>{STATUS_LABELS[screening.status] || screening.status}</strong> based
-                        on financial ratios and sector rules — educational only. Personal
-                        investability can depend on your madhhab, portfolio mix, and scholar
-                        guidance.
-                      </dd>
-                      <dt>Why is it considered {STATUS_LABELS[screening.status] || screening.status}?</dt>
-                      <dd>{reasons.join(" ")}</dd>
-                      <dt>When was this last updated?</dt>
-                      <dd>
-                        {formatFundamentalsAsOfLine(stock.fundamentals_updated_at) ??
-                          "We do not yet show a fundamentals sync timestamp for this company in our database."}{" "}
-                        Market prices may update more frequently than filing-based ratios.
-                      </dd>
-                    </dl>
-                  </section>
-                </div>
-              </details>
-            </div>
-          </aside>
-        </div>
+        </StockVerdictGate>
       </div>
     </main>
   );

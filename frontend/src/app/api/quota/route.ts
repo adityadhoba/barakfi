@@ -1,3 +1,4 @@
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
@@ -8,8 +9,11 @@ const apiBaseUrl = getPublicApiBaseUrl();
  */
 export async function GET(request: Request) {
   const out = new Headers();
-  const userId = request.headers.get("x-clerk-user-id");
-  const email = request.headers.get("x-actor-email");
+  const authState = await auth();
+  const clerkUser = await currentUser();
+  const userId = authState.userId || request.headers.get("x-clerk-user-id");
+  const email =
+    clerkUser?.primaryEmailAddress?.emailAddress || request.headers.get("x-actor-email");
   if (userId) out.set("x-clerk-user-id", userId);
   if (email) out.set("x-actor-email", email);
   const fwd = request.headers.get("x-forwarded-for");

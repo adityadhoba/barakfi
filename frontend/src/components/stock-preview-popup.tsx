@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import styles from "./stock-preview-popup.module.css";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { StockLogo } from "@/components/stock-logo";
+import { useScreening } from "@/contexts/screening-context";
 import {
   formatMoney,
   formatMcapShort,
   resolveDisplayCurrency,
   resolveMarketLabel,
 } from "@/lib/currency-format";
+import { SCREENING_STATUS_TOOLTIP, screeningUiLabel } from "@/lib/screening-status";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 
@@ -37,6 +39,7 @@ const POPUP_PADDING = 8;
 
 export function StockPreviewPopup({ stock, price, changePct, children }: Props) {
   const [visible, setVisible] = useState(false);
+  const [pending, setPending] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number; arrowSide: "top" | "bottom" }>({ top: 0, left: 0, arrowSide: "top" });
   const wrapRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -95,6 +98,26 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
   const cur = resolveCurrencyCode(stock);
   const market = resolveMarketLabel(stock.exchange, stock.currency);
   const routerRef = useRouter();
+  const { unlockDetails } = useScreening();
+
+  async function handleSeeWhy(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    setPending(true);
+    const result = await unlockDetails(stock.symbol);
+    setPending(false);
+
+    if (result.kind === "granted") {
+      routerRef.push(`/stocks/${encodeURIComponent(stock.symbol)}`);
+      return;
+    }
+    if (result.kind === "redirect") {
+      routerRef.push(result.url);
+      return;
+    }
+    if (result.kind === "limit_exhausted" && result.redirectUrl) {
+      routerRef.push(result.redirectUrl);
+    }
+  }
 
   const popupContent = visible ? createPortal(
     <div
@@ -116,6 +139,12 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
 
       <div className={styles.popupMeta}>
         <span className={styles.popupSector}>{stock.sector} · {market}</span>
+        <span
+          className={`${styles.popupStatus} ${styles[stock.screening.status === "HALAL" ? "statusHalal" : stock.screening.status === "CAUTIOUS" ? "statusReview" : "statusFail"]}`}
+          title={SCREENING_STATUS_TOOLTIP}
+        >
+          {screeningUiLabel(stock.screening.status)}
+        </span>
       </div>
 
       <div className={styles.popupPriceRow}>
@@ -139,10 +168,12 @@ export function StockPreviewPopup({ stock, price, changePct, children }: Props) 
       </div>
 
       <button
+        type="button"
         className={styles.popupCta}
-        onClick={(e) => { e.stopPropagation(); routerRef.push(`/screening/${encodeURIComponent(stock.symbol)}`); }}
+        onClick={handleSeeWhy}
+        disabled={pending}
       >
-        Screen this stock
+        {pending ? "Opening..." : "See Why?"}
       </button>
     </div>,
     document.body
