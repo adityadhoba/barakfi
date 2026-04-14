@@ -5,14 +5,14 @@ import { useState, useCallback, useEffect, useRef, useDeferredValue, useMemo, us
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { SearchMatchHighlight } from "@/components/search-match-highlight";
 import { fetchCheckStockPageDataBrowser } from "@/lib/check-stock-fetch-browser";
-import { useCheckStockSession } from "@/stores/check-stock-session";
+import { useCheckStockSession, type CheckStockSessionState } from "@/stores/check-stock-session";
 import styles from "./stock-check-hero.module.css";
 
 type StockHit = { symbol: string; name: string; sector: string };
 
 export function StockCheckHero() {
   const router = useRouter();
-  const setSessionPayload = useCheckStockSession((s: any) => s.setPayload);
+  const setSessionPayload = useCheckStockSession((s: CheckStockSessionState) => s.setPayload);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [stocks, setStocks] = useState<StockHit[]>([]);

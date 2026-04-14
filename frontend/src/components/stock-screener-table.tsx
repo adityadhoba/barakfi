@@ -357,7 +357,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     return pages;
   }
 
-  async function handleSeeWhy(symbol: string) {
+  const handleSeeWhy = useCallback(async (symbol: string) => {
     setPendingSymbol(symbol);
     const result = await unlockDetails(symbol);
     setPendingSymbol(null);
@@ -381,7 +381,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     }
 
     toast(result.message, "error");
-  }
+  }, [router, toast, unlockDetails]);
 
   return (
     <div className={styles.screenerLayout}>

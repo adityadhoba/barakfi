@@ -9,7 +9,7 @@ import { StockCheckResultActions } from "@/components/stock-check-result-actions
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
 import { buildCheckSummaryBullets } from "@/lib/stock-detail-screening-tables";
 import { SCREENING_LEGAL_DISCLAIMER, screeningUiLabel } from "@/lib/screening-status";
-import { useCheckStockSession } from "@/stores/check-stock-session";
+import { useCheckStockSession, type CheckStockSessionState } from "@/stores/check-stock-session";
 import styles from "@/app/check/[symbol]/page.module.css";
 
 function badgeClass(status: string): string {
@@ -41,7 +41,7 @@ type Props = {
 };
 
 export function CheckStockView({ symbol }: Props) {
-  const setSessionPayload = useCheckStockSession((s: any) => s.setPayload);
+  const setSessionPayload = useCheckStockSession((s: CheckStockSessionState) => s.setPayload);
   const symU = symbol.trim().toUpperCase();
   const [fullDetails, setFullDetails] = useState(false);
   const detailsAnchorRef = useRef<HTMLDivElement>(null);
