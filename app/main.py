@@ -3,6 +3,7 @@ import os
 from time import perf_counter
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger("barakfi")
 logging.basicConfig(
@@ -155,6 +156,122 @@ def _log_table_columns(table_name: str) -> None:
         logger.info("[schema] %s columns: %s", table_name, formatted)
     except Exception as exc:
         logger.info("[schema] Failed to inspect %s: %s", table_name, exc)
+
+
+def _describe_unique_indexes(table_name: str) -> list[dict[str, Any]]:
+    """Inspect and normalize unique indexes/constraints for logging and migrations."""
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        return []
+
+    unique_indexes: list[dict[str, Any]] = []
+    seen: set[tuple[str, tuple[str, ...]]] = set()
+
+    try:
+        for idx in inspector.get_indexes(table_name):
+            cols = tuple(idx.get("column_names") or [])
+            if not idx.get("unique"):
+                continue
+            name = str(idx.get("name") or "")
+            key = (name, cols)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_indexes.append(
+                {
+                    "name": name,
+                    "columns": list(cols),
+                    "source": "index",
+                }
+            )
+    except Exception as exc:
+        logger.warning("[quota-index-migrate] Failed to inspect indexes for %s: %s", table_name, exc)
+
+    try:
+        for uc in inspector.get_unique_constraints(table_name):
+            cols = tuple(uc.get("column_names") or [])
+            name = str(uc.get("name") or "")
+            if not name:
+                continue
+            key = (name, cols)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_indexes.append(
+                {
+                    "name": name,
+                    "columns": list(cols),
+                    "source": "constraint",
+                }
+            )
+    except Exception:
+        # Some dialects may not expose unique constraints separately.
+        pass
+
+    return unique_indexes
+
+
+def _migrate_screening_quota_unique_index():
+    """
+    Replace legacy unique index (actor_key, date) with
+    (actor_key, date, quota_type) on screening_quotas.
+    """
+    table_name = "screening_quotas"
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        logger.info("[quota-index-migrate] %s missing; skipping index migration", table_name)
+        return
+
+    desired_cols = ("actor_key", "date", "quota_type")
+    legacy_cols = ("actor_key", "date")
+
+    before = _describe_unique_indexes(table_name)
+    logger.info("[quota-index-migrate] %s unique indexes before: %s", table_name, before)
+
+    with engine.begin() as conn:
+        for idx in before:
+            cols = tuple(idx.get("columns") or [])
+            name = str(idx.get("name") or "")
+            source = str(idx.get("source") or "index")
+            if not name or cols != legacy_cols:
+                continue
+            try:
+                if source == "constraint" and engine.dialect.name.lower() in {"postgres", "postgresql"}:
+                    conn.execute(
+                        text(f'ALTER TABLE "{table_name}" DROP CONSTRAINT IF EXISTS "{name}"')
+                    )
+                else:
+                    conn.execute(text(f'DROP INDEX IF EXISTS "{name}"'))
+                logger.info(
+                    "[quota-index-migrate] Dropped legacy %s %s on %s(%s)",
+                    source,
+                    name,
+                    table_name,
+                    ", ".join(cols),
+                )
+            except Exception as exc:
+                logger.warning("[quota-index-migrate] Failed dropping %s: %s", name, exc)
+
+        after_drop = _describe_unique_indexes(table_name)
+        has_desired_unique = any(tuple(idx.get("columns") or []) == desired_cols for idx in after_drop)
+        if not has_desired_unique:
+            try:
+                conn.execute(
+                    text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_screening_quota_actor_date "
+                        "ON screening_quotas (actor_key, date, quota_type)"
+                    )
+                )
+                logger.info(
+                    "[quota-index-migrate] Ensured unique index on %s(%s)",
+                    table_name,
+                    ", ".join(desired_cols),
+                )
+            except Exception as exc:
+                logger.warning("[quota-index-migrate] Failed creating target unique index: %s", exc)
+
+    after = _describe_unique_indexes(table_name)
+    logger.info("[quota-index-migrate] %s unique indexes after: %s", table_name, after)
 
 
 def _acquire_seed_lock(conn) -> bool:
@@ -313,6 +430,8 @@ _sqlite_migrate_stocks_composite_unique()
 
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
+# 2b. Heal legacy screening_quotas unique index shape in older environments
+_migrate_screening_quota_unique_index()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
 

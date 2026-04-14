@@ -6,6 +6,7 @@ import hashlib
 import os
 from datetime import datetime, timezone, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -91,46 +92,71 @@ def _check_quota(
     if limit is None:
         limit = AUTH_SCREENS_PER_DAY if _is_authenticated(request) else ANON_SCREENS_PER_DAY
 
-    row = (
-        db.query(ScreeningQuota)
-        .filter(
-            ScreeningQuota.actor_key == actor,
-            ScreeningQuota.date == today,
-            ScreeningQuota.quota_type == quota_type,
-        )
-        .first()
-    )
-
     resets_at = _ist_midnight_utc()
 
-    used = row.count if row else 0
-    remaining_before = max(0, limit - used)
-
     if amount <= 0:
+        row = (
+            db.query(ScreeningQuota)
+            .filter(
+                ScreeningQuota.actor_key == actor,
+                ScreeningQuota.date == today,
+                ScreeningQuota.quota_type == quota_type,
+            )
+            .first()
+        )
+        used = row.count if row else 0
         return {
             "allowed": True,
-            "remaining": remaining_before,
+            "remaining": max(0, limit - used),
             "resets_at": resets_at,
         }
 
-    if used + amount > limit:
-        return {"allowed": False, "remaining": remaining_before, "resets_at": resets_at}
-
-    if row:
-        row.count += amount
-    else:
-        row = ScreeningQuota(
-            actor_key=actor, date=today, count=amount, quota_type=quota_type
+    # Retry once on insert races (unique key actor+date+quota_type).
+    last_error: IntegrityError | None = None
+    for _ in range(2):
+        row = (
+            db.query(ScreeningQuota)
+            .filter(
+                ScreeningQuota.actor_key == actor,
+                ScreeningQuota.date == today,
+                ScreeningQuota.quota_type == quota_type,
+            )
+            .first()
         )
-        db.add(row)
 
-    db.flush()
+        used = row.count if row else 0
+        remaining_before = max(0, limit - used)
+        if used + amount > limit:
+            return {"allowed": False, "remaining": remaining_before, "resets_at": resets_at}
 
-    return {
-        "allowed": True,
-        "remaining": max(0, limit - row.count),
-        "resets_at": resets_at,
-    }
+        target_row = row
+        if target_row:
+            target_row.count += amount
+        else:
+            target_row = ScreeningQuota(
+                actor_key=actor,
+                date=today,
+                count=amount,
+                quota_type=quota_type,
+            )
+            db.add(target_row)
+
+        try:
+            db.flush()
+            return {
+                "allowed": True,
+                "remaining": max(0, limit - target_row.count),
+                "resets_at": resets_at,
+            }
+        except IntegrityError as exc:
+            last_error = exc
+            db.rollback()
+            continue
+
+    # If we still cannot flush after retry, bubble the original DB error.
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Quota increment failed without a database error")
 
 
 def check_and_increment_quota(db: Session, request: Request) -> dict:
