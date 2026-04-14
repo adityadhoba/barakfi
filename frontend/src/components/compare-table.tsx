@@ -6,6 +6,7 @@ import Link from "next/link";
 import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
+import { screeningUiLabel } from "@/lib/screening-status";
 import {
   formatMoney,
   formatMcapShort,
@@ -16,17 +17,18 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
+type CompareLimitState = {
+  status: "limit_exhausted";
+  message: string;
+  actions: string[];
+  redirect_url: string;
+  resets_at?: string;
+};
 
 type Props = {
   allStocks: Stock[];
   initialSymbols?: string[];
   mode?: "select" | "results";
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -60,6 +62,41 @@ function getIstDateString() {
 
 function formatPct(value: number) {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function normalizeCompareLimitState(value: unknown): CompareLimitState | null {
+  if (
+    value &&
+    typeof value === "object" &&
+    "status" in value &&
+    (value as { status?: unknown }).status === "limit_exhausted"
+  ) {
+    const payload = value as Record<string, unknown>;
+    return {
+      status: "limit_exhausted",
+      message:
+        typeof payload.message === "string"
+          ? payload.message
+          : "You’ve reached today’s compare limit.",
+      actions: Array.isArray(payload.actions)
+        ? payload.actions.filter((item): item is string => typeof item === "string")
+        : ["Come back tomorrow", "Join Early Access"],
+      redirect_url:
+        typeof payload.redirect_url === "string" ? payload.redirect_url : "/premium",
+      resets_at: typeof payload.resets_at === "string" ? payload.resets_at : undefined,
+    };
+  }
+  return null;
+}
+
+function buildDefaultCompareLimitState(resetsAt?: string): CompareLimitState {
+  return {
+    status: "limit_exhausted",
+    message: "You’ve reached today’s compare limit.",
+    actions: ["Come back tomorrow", "Join Early Access"],
+    redirect_url: "/premium",
+    resets_at: resetsAt,
+  };
 }
 
 function ratioClass(value: number, threshold: number): string {
@@ -175,6 +212,63 @@ function CompareLoadingState() {
   );
 }
 
+function CompareLimitReachedState({
+  limitState,
+  onEditSelection,
+}: {
+  limitState: CompareLimitState;
+  onEditSelection?: () => void;
+}) {
+  const resetLabel = limitState.resets_at
+    ? new Date(limitState.resets_at).toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+      })
+    : null;
+
+  return (
+    <div className={styles.limitCard} role="alert">
+      <div className={styles.limitIconWrap}>
+        <svg
+          width="28"
+          height="28"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.75}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 8v4m0 4h.01M4.93 19h14.14c1.54 0 2.5-1.67 1.73-3L13.73 3c-.77-1.33-2.69-1.33-3.46 0L3.2 16c-.77 1.33.19 3 1.73 3z"
+          />
+        </svg>
+      </div>
+      <div className={styles.limitContent}>
+        <h3 className={styles.limitTitle}>{limitState.message}</h3>
+        <p className={styles.limitDesc}>
+          Compare sessions are limited each IST day.{" "}
+          {resetLabel ? `Your compare access resets after ${resetLabel}.` : "Please try again tomorrow."}
+        </p>
+        <div className={styles.limitActions}>
+          <button type="button" className={styles.secondaryBtn} disabled>
+            {limitState.actions[0] || "Come back tomorrow"}
+          </button>
+          <Link href={limitState.redirect_url} className={styles.compareBtn}>
+            {limitState.actions[1] || "Join Early Access"}
+          </Link>
+          {onEditSelection ? (
+            <button type="button" className={styles.secondaryBtn} onClick={onEditSelection}>
+              Edit selection
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function CompareTable({
   allStocks,
   initialSymbols = [],
@@ -193,7 +287,8 @@ export function CompareTable({
   const [showFullPageLoader, setShowFullPageLoader] = useState(
     mode === "results" && requestedSymbols.length > 0,
   );
-  const [compareLimitReached, setCompareLimitReached] = useState(false);
+  const [compareLimitState, setCompareLimitState] = useState<CompareLimitState | null>(null);
+  const [checkingQuota, setCheckingQuota] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const activeSymbols = mode === "results" ? requestedSymbols : selectedSymbols;
@@ -272,7 +367,7 @@ export function CompareTable({
     async function loadResults() {
       try {
         setLoading(true);
-        setCompareLimitReached(false);
+        setCompareLimitState(null);
         setError(null);
         const response = await fetch("/api/compare/bulk", {
           method: "POST",
@@ -288,8 +383,10 @@ export function CompareTable({
             ? (body as { data?: unknown }).data
             : body;
 
-        if (response.status === 429) {
-          setCompareLimitReached(true);
+        const limitPayload = normalizeCompareLimitState(payload);
+
+        if (response.status === 429 && limitPayload) {
+          setCompareLimitState(limitPayload);
           setCompareStocks([]);
           return;
         }
@@ -345,7 +442,44 @@ export function CompareTable({
   function runCompare() {
     if (selectedSymbols.length < 2) return;
     const queryString = selectedSymbols.join(",");
-    router.push(`/compare/results?symbols=${queryString}`);
+    setCheckingQuota(true);
+    setCompareLimitState(null);
+    setError(null);
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/quota", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          const body: unknown = await response.json().catch(() => ({}));
+          const payload =
+            body && typeof body === "object" && "data" in body
+              ? (body as { data?: Record<string, unknown> }).data
+              : body;
+          const compareRemaining =
+            payload && typeof payload === "object" && "compare_remaining" in payload
+              ? Number((payload as { compare_remaining?: unknown }).compare_remaining ?? 0)
+              : null;
+          const resetsAt =
+            payload && typeof payload === "object" && "resets_at" in payload
+              ? String((payload as { resets_at?: unknown }).resets_at ?? "")
+              : undefined;
+          if (compareRemaining != null && compareRemaining <= 0) {
+            setCompareLimitState(buildDefaultCompareLimitState(resetsAt));
+            return;
+          }
+        }
+
+        router.push(`/compare/results?symbols=${queryString}`);
+      } catch {
+        router.push(`/compare/results?symbols=${queryString}`);
+      } finally {
+        setCheckingQuota(false);
+      }
+    })();
   }
 
   function editSelection() {
@@ -361,7 +495,7 @@ export function CompareTable({
           <span
             className={`${styles.statusBadge} ${styles[STATUS_CLASS[stock.screening.status] || "statusReview"]}`}
           >
-            {STATUS_LABELS[stock.screening.status] || stock.screening.status}
+            {screeningUiLabel(stock.screening.status)}
           </span>
         ),
       },
@@ -588,13 +722,19 @@ export function CompareTable({
             <button
               type="button"
               className={styles.compareBtn}
-              disabled={selectedSymbols.length < 2}
+              disabled={selectedSymbols.length < 2 || checkingQuota}
               onClick={runCompare}
             >
-              Compare {selectedSymbols.length >= 2 ? `${selectedSymbols.length} Stocks` : "Stocks"}
+              {checkingQuota
+                ? "Checking limit..."
+                : `Compare ${selectedSymbols.length >= 2 ? `${selectedSymbols.length} Stocks` : "Stocks"}`}
             </button>
           </div>
         </div>
+
+        {compareLimitState ? (
+          <CompareLimitReachedState limitState={compareLimitState} />
+        ) : null}
       </div>
     );
   }
@@ -634,11 +774,8 @@ export function CompareTable({
         </div>
       </div>
 
-      {compareLimitReached ? (
-        <div className={styles.resultsAlert} role="alert">
-          Daily compare limit reached. Try again after midnight IST, or sign in if you are over the
-          anonymous limit.
-        </div>
+      {compareLimitState ? (
+        <CompareLimitReachedState limitState={compareLimitState} onEditSelection={editSelection} />
       ) : null}
 
       {error ? (
@@ -651,7 +788,7 @@ export function CompareTable({
 
       {loading && !showFullPageLoader ? <CompareTableSkeleton /> : null}
 
-      {!loading && compareStocks.length === 0 && !compareLimitReached && !error ? (
+      {!loading && compareStocks.length === 0 && !compareLimitState && !error ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyIconWrap}>
             <svg
@@ -679,7 +816,7 @@ export function CompareTable({
         </div>
       ) : null}
 
-      {!loading && compareStocks.length > 0 ? (
+      {!loading && compareStocks.length > 0 && !compareLimitState ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
@@ -689,7 +826,7 @@ export function CompareTable({
                   <th key={stock.symbol} className={styles.stockCol}>
                     <div className={styles.stockHeader}>
                       <Link
-                        href={`/stocks/${encodeURIComponent(stock.symbol)}`}
+                        href={`/screening/${encodeURIComponent(stock.symbol)}`}
                         className={styles.stockLink}
                       >
                         <StockLogo

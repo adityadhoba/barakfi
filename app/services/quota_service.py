@@ -13,7 +13,7 @@ from app.models import ScreeningQuota, ScreeningAccessLog
 
 ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "2"))
 AUTH_SCREENS_PER_DAY = int(os.getenv("AUTH_SCREENS_PER_DAY", "5"))
-COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "1"))
+COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "2"))
 PEER_COMPARISON_PER_DAY = int(os.getenv("PEER_COMPARISON_PER_DAY", "1"))
 
 IST = timezone(timedelta(hours=5, minutes=30))

@@ -610,16 +610,39 @@
 .down { color: var(--red); font-size: 0.72rem; font-weight: 600; }
 
 .statusBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 2px 8px;
   border-radius: var(--radius-full);
   font-size: 0.68rem;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.35;
 }
 .statusHalal { background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-border); }
 .statusReview { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-border); }
 .statusFail { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+
+.statusHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statusHeaderInfo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-style: normal;
+}
 
 .screenRowBtn {
   display: inline-block;
@@ -637,6 +660,11 @@
 .screenRowBtn:hover {
   background: var(--emerald);
   color: #fff;
+}
+
+.screenRowBtn:disabled {
+  opacity: 0.65;
+  cursor: progress;
 }
 
 .emptyRow {

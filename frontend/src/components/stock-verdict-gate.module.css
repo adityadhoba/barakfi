@@ -2,6 +2,45 @@
   margin: 20px 0;
 }
 
+.inlineGateWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inlineGateCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--accent, #10b981);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
+}
+
+.inlineGateCta:hover:not(:disabled) {
+  background: var(--accent, #10b981);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.inlineGateCta:disabled {
+  opacity: 0.6;
+  cursor: progress;
+  transform: none;
+}
+
+.inlineGateMessage {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #aaa);
+}
+
 .gateCard {
   display: flex;
   flex-direction: column;
@@ -54,4 +93,32 @@
 .gateCta:hover {
   background: var(--accent-hover, #059669);
   transform: translateY(-1px);
+}
+
+.gateCta:disabled {
+  opacity: 0.65;
+  cursor: progress;
+  transform: none;
+}
+
+.gateSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
+  background: transparent;
+  color: var(--text-primary, #fff);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gateNote {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-secondary, #aaa);
+  max-width: 360px;
 }

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -31,6 +31,7 @@ from app.services.rbac import (
 )
 from app.database import get_db
 from app.api import helpers
+from app.api.envelope import api_error
 from app.api.public_screen_guard import enforce_screening_budget
 from app.models import (
     ComplianceHistory,
@@ -654,10 +655,19 @@ def compare_bulk_screen(
 
     quota = check_compare_quota(db, request)
     if not quota["allowed"]:
-        raise HTTPException(
+        return JSONResponse(
             status_code=429,
-            detail="Daily compare limit reached",
             headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
+            content=api_error(
+                "You’ve reached today’s compare limit.",
+                code="limit_exhausted",
+                extra={
+                    "status": "limit_exhausted",
+                    "actions": ["Come back tomorrow", "Join Early Access"],
+                    "redirect_url": "/premium",
+                    "resets_at": quota.get("resets_at", ""),
+                },
+            ),
         )
 
     screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
