@@ -1,4 +1,5 @@
 import time
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -129,6 +130,7 @@ from app.services.stock_data_quality import fundamentals_completeness_payload
 from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
+logger = logging.getLogger("barakfi")
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -653,7 +655,18 @@ def compare_bulk_screen(
     if not symbols:
         return []
 
-    quota = check_compare_quota(db, request)
+    service_unavailable_message = "Compare is temporarily unavailable. Please try again shortly."
+
+    try:
+        quota = check_compare_quota(db, request)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] compare quota check failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
+        )
+
     if not quota["allowed"]:
         return JSONResponse(
             status_code=429,
@@ -670,7 +683,16 @@ def compare_bulk_screen(
             ),
         )
 
-    screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
+    try:
+        screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] screen quota reservation failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
+        )
+
     if not screen_quota["allowed"]:
         db.rollback()
         raise HTTPException(
@@ -682,8 +704,16 @@ def compare_bulk_screen(
             },
         )
 
-    log_screening_accesses(db, request, symbols)
-    db.commit()
+    try:
+        log_screening_accesses(db, request, symbols)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] failed to log compare screening access: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
+        )
 
     return _screen_stocks_bulk_impl(symbols, db)
 

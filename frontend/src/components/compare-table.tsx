@@ -398,7 +398,25 @@ export function CompareTable({
             payload && typeof payload === "object" && "detail" in payload
               ? (payload as { detail?: string }).detail
               : null;
-          setError(detail || "We couldn’t load the comparison right now.");
+          const message =
+            payload && typeof payload === "object" && "message" in payload
+              ? (payload as { message?: string }).message
+              : null;
+          const envelopeMessage =
+            body &&
+            typeof body === "object" &&
+            "error" in body &&
+            (body as { error?: unknown }).error &&
+            typeof (body as { error?: unknown }).error === "object" &&
+            "message" in ((body as { error?: unknown }).error as Record<string, unknown>)
+              ? (
+                  (body as { error?: { message?: unknown } }).error?.message as
+                    | string
+                    | undefined
+                )
+              : null;
+          const resolvedMessage = detail || message || envelopeMessage;
+          setError(resolvedMessage || "We couldn’t load the comparison right now.");
           setCompareStocks([]);
           return;
         }
