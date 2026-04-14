@@ -316,6 +316,8 @@
 .pickerWrap {
   position: relative;
   max-width: 480px;
+  isolation: isolate;
+  z-index: 6;
 }
 
 .pickerInput {
@@ -352,14 +354,16 @@
 
 .pickerDropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
-  z-index: 30;
+  z-index: 40;
   background: var(--bg-card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-xl);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
   max-height: 320px;
   overflow-y: auto;
   padding: 4px;
@@ -464,7 +468,9 @@
 /* ── Comparison Table ── */
 .tableWrap {
   overflow-x: auto;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  max-height: min(70vh, 760px);
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--bg-card);
@@ -664,6 +670,7 @@
   .ratioBarTrack { width: 40px; }
   .selectionPanel { padding: 16px; }
   .selectedGrid { grid-template-columns: 1fr; }
+  .tableWrap { max-height: 62vh; }
   .limitCard {
     flex-direction: column;
   }

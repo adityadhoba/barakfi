@@ -11,7 +11,7 @@ export default function CompareError({
   reset: () => void;
 }) {
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         <div style={{ textAlign: "center", padding: "64px 24px" }}>
           <div style={{ fontSize: "2.5rem", marginBottom: 16, opacity: 0.4 }}>⚠</div>
