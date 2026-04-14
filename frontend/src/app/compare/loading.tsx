@@ -3,7 +3,7 @@ import styles from "@/app/screener.module.css";
 
 export default function CompareLoading() {
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         {/* Header */}
         <header className={styles.screenerHeader}>

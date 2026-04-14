@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getStocks } from "@/lib/api";
 import { CompareTable } from "@/components/compare-table";
 import styles from "@/app/screener.module.css";
@@ -17,7 +19,6 @@ export default async function CompareResultsPage({
   searchParams: Promise<{ symbols?: string }>;
 }) {
   const { symbols: rawSymbols } = await searchParams;
-  const stocks = await getStocks();
 
   const requestedSymbols = rawSymbols
     ? rawSymbols
@@ -27,8 +28,17 @@ export default async function CompareResultsPage({
         .slice(0, 3)
     : [];
 
+  const authState = await auth();
+  if (requestedSymbols.length > 0 && !authState.userId) {
+    const requestedQuery = requestedSymbols.join(",");
+    const redirectPath = `/compare/results?symbols=${requestedQuery}`;
+    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+  }
+
+  const stocks = await getStocks();
+
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         <header className={styles.screenerHeader}>
           <div className={styles.headerRow}>

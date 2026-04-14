@@ -28,7 +28,7 @@ export default async function ComparePage({
     : [];
 
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
       <div className={styles.screenerContainer}>
         <header className={styles.screenerHeader}>
           <div className={styles.headerRow}>

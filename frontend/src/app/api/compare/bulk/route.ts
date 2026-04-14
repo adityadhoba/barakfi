@@ -45,10 +45,13 @@ export async function POST(request: Request) {
   }
 
   const authState = await auth();
+  const userId = authState.userId;
+  if (!userId) {
+    return NextResponse.json({ detail: "Sign in to compare stocks." }, { status: 401 });
+  }
   const clerkUser = await currentUser();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const userId = authState.userId;
-  if (userId) headers["x-clerk-user-id"] = userId;
+  headers["x-clerk-user-id"] = userId;
   const email = clerkUser?.primaryEmailAddress?.emailAddress;
   if (email) headers["x-actor-email"] = email;
   const forwardedFor = request.headers.get("x-forwarded-for");

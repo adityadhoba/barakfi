@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./compare-table.module.css";
@@ -275,6 +276,7 @@ export function CompareTable({
   mode = "select",
 }: Props) {
   const router = useRouter();
+  const { userId } = useAuth();
   const requestedSymbols = useMemo(() => normalizeSymbols(initialSymbols), [initialSymbols]);
 
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(requestedSymbols);
@@ -442,6 +444,13 @@ export function CompareTable({
   function runCompare() {
     if (selectedSymbols.length < 2) return;
     const queryString = selectedSymbols.join(",");
+
+    if (!userId) {
+      const redirectPath = `/compare/results?symbols=${queryString}`;
+      router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+      return;
+    }
+
     setCheckingQuota(true);
     setCompareLimitState(null);
     setError(null);
