@@ -15,7 +15,11 @@ import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 import { useScreening } from "@/contexts/screening-context";
-import { SCREENING_STATUS_TOOLTIP, screeningUiLabel } from "@/lib/screening-status";
+import {
+  SCREENING_LEGAL_DISCLAIMER,
+  SCREENING_STATUS_TOOLTIP,
+  screeningUiLabel,
+} from "@/lib/screening-status";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -727,9 +731,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         )}
 
         <div className={styles.screenerDisclaimer}>
-          Screening results are based on automated financial ratio analysis using publicly available data.
-          They do not constitute a fatwa or religious ruling.
-          Consult a qualified Shariah scholar for definitive investment guidance.
+          {SCREENING_LEGAL_DISCLAIMER}{" "}
           <Link href="/methodology" className={styles.screenerDisclaimerLink}>View methodology</Link>
         </div>
       </div>

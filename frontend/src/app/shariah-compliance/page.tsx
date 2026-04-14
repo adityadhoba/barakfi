@@ -5,7 +5,7 @@ import styles from "./shariah-compliance.module.css";
 export const metadata: Metadata = {
   title: "Shariah Screening Methodology — Barakfi",
   description:
-    "Understand our Shariah screening methodology, data sources, and how we classify stocks as Halal, Cautious, or Non-Compliant using S&P, AAOIFI, and FTSE/Maxis standards.",
+    "Understand our Shariah screening methodology, data sources, and how we classify stocks as Shariah Compliant, Requires Review, or Not Compliant using S&P, AAOIFI, and FTSE/Maxis standards.",
 };
 
 const SCREENING_CRITERIA = [
@@ -27,12 +27,12 @@ const SCREENING_CRITERIA = [
   {
     name: "Accounts Receivable to Market Cap",
     threshold: "< 33%",
-    desc: "Accounts receivable must be less than 33% of market capitalisation (S&P standard). This prevents investing in companies whose value is primarily tied up in receivables, which may represent interest-based transactions.",
+    desc: "Accounts receivable must be less than 33% of market capitalisation (S&P standard). This helps avoid companies whose value is primarily tied up in receivables, which may represent interest-based transactions.",
   },
   {
     name: "Cash & Interest-Bearing Securities",
     threshold: "< 33%",
-    desc: "Cash and interest-bearing securities (including short-term investments) must be less than 33% of total assets (AAOIFI standard). This limits exposure to companies heavily invested in interest-bearing instruments.",
+    desc: "Cash and interest-bearing securities (including short-term holdings) must be less than 33% of total assets (AAOIFI standard). This limits exposure to companies heavily exposed to interest-bearing instruments.",
   },
   {
     name: "Sector Permissibility",
@@ -124,30 +124,31 @@ export default function ShariahCompliancePage() {
           </p>
           <div className={styles.outcomeGrid}>
             <div className={`${styles.outcomeCard} ${styles.outcomeHalal}`}>
-              <span className={styles.outcomeBadge}>HALAL</span>
+              <span className={styles.outcomeBadge}>Shariah Compliant</span>
               <p>
                 The stock passes both the sector screen and all financial ratio thresholds.
-                Based on available data and our automated methodology, the stock appears
-                suitable for Shariah-compliant investment. This is <strong>not</strong> a
-                religious certification — users should verify with their scholar.
+                Based on available data and our automated methodology, the stock screens
+                within the required thresholds. This is <strong>not</strong> a religious
+                certification — users should verify with their scholar.
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeReview}`}>
-              <span className={styles.outcomeBadge}>CAUTIOUS</span>
+              <span className={styles.outcomeBadge}>Requires Review</span>
               <p>
                 The stock passes core screening rules but carries flags that need attention:
                 borderline ratios (within 5% of a threshold), mixed business activities,
                 data gaps in financial statements, or recent corporate actions that may
-                affect compliance. Users should review the specific flags before investing.
+                affect compliance. Users should review the specific flags before relying on
+                the classification.
               </p>
             </div>
             <div className={`${styles.outcomeCard} ${styles.outcomeFail}`}>
-              <span className={styles.outcomeBadge}>NON-COMPLIANT</span>
+              <span className={styles.outcomeBadge}>Not Compliant</span>
               <p>
                 The stock fails one or more screening criteria — either it operates in a
                 prohibited sector or one or more financial ratios exceed the permissible
-                threshold. This stock is not suitable for Shariah-compliant investment
-                based on our methodology.
+                threshold. Under this methodology, the stock does not meet the required
+                compliance thresholds.
               </p>
             </div>
           </div>

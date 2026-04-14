@@ -38,9 +38,9 @@ const PROFILE_LABELS: Record<string, { name: string; short: string; color: strin
 };
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  HALAL: { label: "Halal", className: "statusHalal" },
-  CAUTIOUS: { label: "Doubtful", className: "statusCautious" },
-  NON_COMPLIANT: { label: "Haram", className: "statusFail" },
+  HALAL: { label: "Shariah Compliant", className: "statusHalal" },
+  CAUTIOUS: { label: "Requires Review", className: "statusCautious" },
+  NON_COMPLIANT: { label: "Not Compliant", className: "statusFail" },
 };
 
 function formatPct(value: number) {
@@ -106,7 +106,7 @@ export function MethodologyComparison({ data }: { data: MultiResult }) {
                   />
                 </div>
                 <div className={styles.ratioRow}>
-                  <span className={styles.ratioLabel}>Non-Halal Income</span>
+                  <span className={styles.ratioLabel}>Non-permissible Income</span>
                   <span className={styles.ratioValue}>
                     {formatPct(result.breakdown.non_permissible_income_ratio)}
                   </span>

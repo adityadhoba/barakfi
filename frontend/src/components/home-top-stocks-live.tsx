@@ -7,6 +7,7 @@ import { StockLogo } from "@/components/stock-logo";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { exchangeMapFromRows, livePriceFromQuoteOrDb } from "@/lib/live-price";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { screeningUiLabel } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
 type Row = Stock & { screening?: ScreeningResult };
@@ -61,7 +62,7 @@ export function HomeTopStocksLive({ rows }: { rows: Row[] }) {
                         : styles.statusDotFail
                   }`}
                 />
-                {scr.status === "HALAL" ? "Halal" : scr.status === "CAUTIOUS" ? "Doubtful" : "Haram"}
+                {screeningUiLabel(scr.status)}
               </div>
             )}
           </Link>

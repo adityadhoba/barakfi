@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Halal stock screener for India — NSE & BSE Shariah compliance",
   description:
-    "Screen Indian stocks for Shariah-aligned investing: live halal, doubtful, and haram labels with financial ratios, watchlists, calculators, and long-form learn guides — focused on NSE and BSE listings with transparent methodology (not a fatwa or personalised advice).",
+    "Check halal stocks using standard Shariah criteria, transparent ratios, watchlists, calculators, and learn guides for NSE and BSE listings. See methodology-based compliance outcomes in a clear, educational format.",
   robots: { index: true, follow: true },
 };
 

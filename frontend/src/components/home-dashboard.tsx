@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { getStocks, getTrending } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { SCREENING_LEGAL_DISCLAIMER } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
 export async function HomeDashboard() {
@@ -21,9 +22,9 @@ export async function HomeDashboard() {
     <div className={styles.home}>
       {/* ── Hero: one action ── */}
       <section className={styles.heroClean}>
-        <span className={styles.heroKicker}>Instant Halal Status</span>
+        <span className={styles.heroKicker}>Check Halal Stocks</span>
         <h1 className={styles.heroHeadline}>
-          Check if a Stock is Halal in Seconds
+          Screen Indian stocks using standard Shariah criteria
         </h1>
         <p className={styles.heroSub}>
           Shariah-compliant screening for Indian stocks using real financial data
@@ -59,7 +60,7 @@ export async function HomeDashboard() {
           <div className={styles.howCard}>
             <span className={styles.howStep}>3</span>
             <h3 className={styles.howTitle}>Get your result</h3>
-            <p className={styles.howDesc}>See if the stock is Halal, Doubtful, or Haram — with full transparency.</p>
+            <p className={styles.howDesc}>See whether a stock screens as Shariah Compliant, Requires Review, or Not Compliant — with full transparency.</p>
           </div>
         </div>
       </section>
@@ -89,7 +90,7 @@ export async function HomeDashboard() {
             </div>
           </div>
           <p className={styles.authorityDisclaimer}>
-            This is an automated screening tool and not financial or religious advice.
+            {SCREENING_LEGAL_DISCLAIMER}
           </p>
         </div>
       </section>

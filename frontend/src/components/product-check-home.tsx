@@ -2,20 +2,19 @@ import Link from "next/link";
 import { StockCheckHero } from "@/components/stock-check-hero";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import type { ScreeningResult, Stock } from "@/lib/api";
+import { screeningUiLabel } from "@/lib/screening-status";
 import styles from "./product-check-home.module.css";
 
 type Screened = Stock & { screening: ScreeningResult };
 
 const STATUS_CLASS: Record<string, string> = {
-  Halal: styles.badgeHalal,
-  Doubtful: styles.badgeDoubt,
-  Haram: styles.badgeHaram,
+  HALAL: styles.badgeHalal,
+  CAUTIOUS: styles.badgeDoubt,
+  NON_COMPLIANT: styles.badgeHaram,
 };
 
-function productStatus(engine: string): "Halal" | "Doubtful" | "Haram" {
-  if (engine === "HALAL") return "Halal";
-  if (engine === "NON_COMPLIANT") return "Haram";
-  return "Doubtful";
+function productStatus(engine: string): string {
+  return screeningUiLabel(engine);
 }
 
 export async function ProductCheckHome() {
@@ -41,19 +40,19 @@ export async function ProductCheckHome() {
   return (
     <section className={styles.strip} aria-labelledby="product-check-heading">
       <div className={styles.inner}>
-        <p className={styles.kicker}>Instant Halal status</p>
+        <p className={styles.kicker}>Compliance status in seconds</p>
         <h1 id="product-check-heading" className={styles.title}>
-          Check if a stock is Halal
+          Check halal stock status
         </h1>
         <p className={styles.sub}>
-          Halal Stock Checker — quick result from trusted ratios (AAOIFI, S&amp;P Shariah, and more). Open full details when you want the numbers.
+          BarakFi gives a quick screening result from trusted ratios (AAOIFI, S&amp;P Shariah, and more). Open full details when you want the numbers.
         </p>
         <StockCheckHero />
       </div>
 
       {top.length > 0 && (
         <div className={`${styles.inner} ${styles.topSection}`}>
-          <h2 className={styles.topTitle}>Top halal scores today</h2>
+          <h2 className={styles.topTitle}>Top screening scores today</h2>
           <div className={styles.topGrid}>
             {top.map((s) => {
               const label = productStatus(s.screening.status);
@@ -64,7 +63,7 @@ export async function ProductCheckHome() {
                   <div className={styles.topName}>{s.name}</div>
                   <div className={styles.topMeta}>
                     <span className={styles.topScore}>{typeof score === "number" ? `${score}/100` : score}</span>
-                    <span className={`${styles.badge} ${STATUS_CLASS[label] ?? styles.badgeDoubt}`}>{label}</span>
+                    <span className={`${styles.badge} ${STATUS_CLASS[s.screening.status] ?? styles.badgeDoubt}`}>{label}</span>
                   </div>
                 </Link>
               );

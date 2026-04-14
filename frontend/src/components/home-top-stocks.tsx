@@ -7,9 +7,9 @@ type Props = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
+  HALAL: "Shariah Compliant",
+  CAUTIOUS: "Requires Review",
+  NON_COMPLIANT: "Not Compliant",
 };
 
 const STATUS_CLS: Record<string, string> = {
