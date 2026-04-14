@@ -5,32 +5,32 @@ import { adaptBackendJsonForProxy, getPublicApiBaseUrl } from "@/lib/api-base";
 const apiBaseUrl = getPublicApiBaseUrl();
 
 function extractCompareLimitPayload(body: unknown): Record<string, unknown> | null {
-  if (body && typeof body === "object") {
-    const envelope = body as { error?: unknown };
-    const candidate =
-      envelope.error && typeof envelope.error === "object"
-        ? (envelope.error as Record<string, unknown>)
-        : body;
-    if (
-      candidate &&
-      typeof candidate === "object" &&
-      candidate.status === "limit_exhausted"
-    ) {
-      return {
-        status: candidate.status,
-        message:
-          typeof candidate.message === "string"
-            ? candidate.message
-            : "You’ve reached today’s compare limit.",
-        actions: Array.isArray(candidate.actions) ? candidate.actions : [],
-        redirect_url:
-          typeof candidate.redirect_url === "string" ? candidate.redirect_url : "/premium",
-        resets_at:
-          typeof candidate.resets_at === "string" ? candidate.resets_at : undefined,
-      };
-    }
+  if (!body || typeof body !== "object") return null;
+
+  const envelope = body as { error?: unknown };
+  const candidate: unknown =
+    envelope.error && typeof envelope.error === "object" ? envelope.error : body;
+
+  if (
+    !candidate ||
+    typeof candidate !== "object" ||
+    !("status" in candidate) ||
+    (candidate as { status?: unknown }).status !== "limit_exhausted"
+  ) {
+    return null;
   }
-  return null;
+
+  const payload = candidate as Record<string, unknown>;
+  return {
+    status: "limit_exhausted",
+    message:
+      typeof payload.message === "string"
+        ? payload.message
+        : "You’ve reached today’s compare limit.",
+    actions: Array.isArray(payload.actions) ? payload.actions : [],
+    redirect_url: typeof payload.redirect_url === "string" ? payload.redirect_url : "/premium",
+    resets_at: typeof payload.resets_at === "string" ? payload.resets_at : undefined,
+  };
 }
 
 /**
