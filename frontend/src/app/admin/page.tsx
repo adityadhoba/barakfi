@@ -40,7 +40,7 @@ async function checkAdminAccess() {
     const body: unknown = await response.json().catch(() => null);
     const user = adaptBackendJsonForProxy(body, response.ok) as MePayload | null;
 
-    if (!response.ok || !user || user.role !== "admin") {
+    if (!response.ok || !user || !["admin", "owner"].includes(user.role ?? "")) {
       redirect("/admin/forbidden");
     }
 

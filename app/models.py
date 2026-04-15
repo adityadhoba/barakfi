@@ -147,7 +147,7 @@ class User(Base):
     Fields:
     - auth_subject: Clerk user ID (unique)
     - auth_provider: "clerk" (can extend for other OAuth providers)
-    - role: user | reviewer | admin | developer
+    - role: user | reviewer | admin | developer | owner
     - is_active: Soft delete flag
 
     Relationships (cascade delete):
@@ -166,7 +166,7 @@ class User(Base):
     auth_provider = Column(String, nullable=False, default="clerk")
     auth_subject = Column(String, unique=True, index=True, nullable=False)  # Clerk user ID
     is_active = Column(Boolean, nullable=False, default=True)
-    role = Column(String, nullable=False, default="user")  # admin | reviewer | developer | user
+    role = Column(String, nullable=False, default="user")  # owner | admin | reviewer | developer | user
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")

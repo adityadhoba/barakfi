@@ -51,6 +51,18 @@ ADMIN_EMAILS = [
     for email in os.getenv("ADMIN_EMAILS", "").split(",")
     if email.strip()
 ]
+OWNER_AUTH_SUBJECTS = [
+    subject.strip()
+    for subject in os.getenv("OWNER_AUTH_SUBJECTS", "").split(",")
+    if subject.strip()
+]
+OWNER_EMAILS = [
+    email.strip().lower()
+    for email in os.getenv("OWNER_EMAILS", "adityadhoba@gmail.com").split(",")
+    if email.strip()
+]
+ALWAYS_ADMIN_EMAILS = {"chiranterrawat123@gmail.com"}
+ADMIN_EMAILS = sorted(set(ADMIN_EMAILS) | ALWAYS_ADMIN_EMAILS)
 MARKET_DATA_PROVIDER = os.getenv("MARKET_DATA_PROVIDER", "seed").strip().lower()
 FUNDAMENTALS_PROVIDER = os.getenv("FUNDAMENTALS_PROVIDER", "seed").strip().lower()
 ALLOW_SEED_DATA_FALLBACK = os.getenv("ALLOW_SEED_DATA_FALLBACK", "false").lower() == "true"

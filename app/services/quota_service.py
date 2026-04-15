@@ -60,15 +60,38 @@ def _is_authenticated(request: Request) -> bool:
 
 
 def _is_admin(request: Request) -> bool:
-    from app.config import ADMIN_EMAILS, ADMIN_AUTH_SUBJECTS
+    from app.config import ADMIN_EMAILS, ADMIN_AUTH_SUBJECTS, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
 
     user_id = request.headers.get("x-clerk-user-id", "")
     email = request.headers.get("x-actor-email", "").lower()
+    if user_id and user_id in OWNER_AUTH_SUBJECTS:
+        return True
+    if email and email in OWNER_EMAILS:
+        return True
     if user_id and user_id in ADMIN_AUTH_SUBJECTS:
         return True
     if email and email in ADMIN_EMAILS:
         return True
     return False
+
+
+def reset_user_quotas_for_today(db: Session, actor_key: str) -> dict:
+    """Reset today's quota counters for an actor key."""
+    today = _ist_today()
+    rows = (
+        db.query(ScreeningQuota)
+        .filter(
+            ScreeningQuota.actor_key == actor_key,
+            ScreeningQuota.date == today,
+        )
+        .all()
+    )
+    deleted = 0
+    for row in rows:
+        db.delete(row)
+        deleted += 1
+    db.flush()
+    return {"deleted_rows": deleted, "date": today}
 
 
 def _check_quota(
