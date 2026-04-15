@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { HomeDashboard } from "@/components/home-dashboard";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Halal stock screener for India — NSE & BSE Shariah compliance",
