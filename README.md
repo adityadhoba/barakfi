@@ -70,44 +70,59 @@ This project should not claim final Shariah certification yet. Production use ne
 
 ## Data Automation
 
-### Daily Price Updates
+### Weekday Daily Refresh Jobs
 
-Stock prices are updated via `scripts/daily_update.py`. Options:
+Run two jobs in order (Mon–Fri, IST):
+
+1. **Job A — Fundamentals ingestion first**
+2. **Job B — Internal daily refresh (prices + screening warm-up)**
+
+### Job A: Fundamentals
 
 ```bash
-# Update all exchanges
-python scripts/daily_update.py
-
-# Update only NSE stocks  
-python scripts/daily_update.py --exchange NSE
-
-# Dry run (no changes)
-python scripts/daily_update.py --dry-run
+PYTHONPATH=. python3 fetch_real_data.py
 ```
 
-### Render Cron Job
+Schedule:
 
-The `render.yaml` Blueprint includes a cron job that runs at 23:00 UTC (4:30 AM IST) on weekdays. To activate:
+- **03:15 IST, Mon–Fri**
+- UTC cron: `45 21 * * 1-5`
+
+### Job B: Daily refresh pipeline
+
+```bash
+PYTHONPATH=. python3 scripts/run_daily_refresh.py
+```
+
+This calls backend `POST /api/internal/daily-refresh` with `X-Internal-Service-Token`.
+
+Schedule:
+
+- **04:30 IST, Mon–Fri**
+- UTC cron: `0 23 * * 1-5`
+
+### Render Cron Jobs
+
+The `render.yaml` Blueprint includes both jobs above. To activate:
 
 1. Go to Render Dashboard → Blueprints
 2. Connect the repository
-3. Render will create the cron job automatically
+3. Render will create both weekday cron jobs automatically
 
-### Manual Stock Data Refresh
+### Manual fundamentals refresh
 
-To fetch fresh financial data (balance sheets, income statements):
+To fetch fresh financial data:
 
 ```bash
-python fetch_real_data.py --dry-run    # Preview
-python fetch_real_data.py              # Fetch and write to DB
+PYTHONPATH=. python3 fetch_real_data.py --dry-run
+PYTHONPATH=. python3 fetch_real_data.py
 ```
 
-### External Cron (Alternative)
+### External scheduler (alternative)
 
-Use [cron-job.org](https://cron-job.org) (free) to call the keep-alive and price sync endpoints:
+If you use an external scheduler, keep the same two-job order and times.
 
-- **Keep-alive**: `GET https://barakfi.in/api/keep-alive` — every 14 minutes
-- **Price sync**: `POST https://your-backend.onrender.com/api/market-data/sync-prices` with `X-Internal-Service-Token` header — daily
+Keep-alive pings are optional and should be enabled only when your backend plan can sleep on idle.
 
 ## Lean build strategy
 

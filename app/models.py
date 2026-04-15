@@ -466,20 +466,6 @@ class SuperInvestorHolding(Base):
     stock = relationship("Stock")
 
 
-class NewsArticle(Base):
-    """Cached RSS news items for the public news section."""
-    __tablename__ = "news_articles"
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String, nullable=False)
-    summary = Column(Text, nullable=False, default="")
-    url = Column(String, nullable=False, unique=True, index=True)
-    image_url = Column(String, nullable=False, default="")
-    source = Column(String, nullable=False, default="RSS")
-    published_at = Column(DateTime, nullable=False, default=utc_now)
-    fetched_at = Column(DateTime, nullable=False, default=utc_now)
-
-
 class CoverageRequest(Base):
     __tablename__ = "coverage_requests"
 

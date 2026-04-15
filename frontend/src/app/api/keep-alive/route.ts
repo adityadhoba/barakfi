@@ -4,9 +4,8 @@ import { getPublicApiBaseUrl } from "@/lib/api-base";
 const BACKEND_URL = getPublicApiBaseUrl();
 
 /**
- * Cron endpoint to keep Render backend alive.
- * Render free tier sleeps after 15 minutes of inactivity.
- * Vercel cron hits this every 14 minutes to prevent cold starts.
+ * Optional cron endpoint to keep a sleeping backend awake.
+ * Enable a scheduler for this route only when your backend plan can sleep.
  */
 export async function GET() {
   try {

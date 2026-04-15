@@ -22,14 +22,14 @@ PYTHONPATH=. python3 scripts/fetch_nse_universe.py --index NIFTY500 --list-only
 
 New stocks are inserted with placeholder fundamentals and will show as **CAUTIOUS** until real data loads.
 
-### Step 2: Backfill fundamentals and prices
+### Step 2: Backfill fundamentals, then run daily refresh
 
 ```bash
-# Daily update (prices + fundamentals for all DB stocks)
-PYTHONPATH=. python3 scripts/daily_update.py
+# Fundamentals refresh (writes fundamentals_updated_at)
+PYTHONPATH=. python3 fetch_real_data.py
 
-# Prices only (faster, for intraday refresh)
-PYTHONPATH=. python3 scripts/update_prices.py
+# Daily refresh pipeline (prices + screening warm-up)
+PYTHONPATH=. python3 scripts/run_daily_refresh.py
 ```
 
 Both scripts are idempotent and safe to run repeatedly. Watch rate limits — Yahoo Finance throttles after ~1 000 requests in quick succession.
@@ -42,7 +42,7 @@ After bulk ingest, check data quality via the API:
 GET /api/stocks?limit=20&sort=data_quality
 ```
 
-Stocks with `data_quality: "low"` need fundamentals. Re-run `daily_update.py` or manually trigger Yahoo fetches.
+Stocks with `data_quality: "low"` need fundamentals. Re-run `fetch_real_data.py` and then `run_daily_refresh.py`.
 
 ### Step 4 (optional): DB purge of non-Indian stocks
 

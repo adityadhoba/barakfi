@@ -7,6 +7,7 @@ export const maxDuration = 300;
 /**
  * Vercel Cron: verifies `Authorization: Bearer ${CRON_SECRET}`, then calls the API
  * `POST /api/internal/daily-refresh` with `X-Internal-Service-Token`.
+ * Recommended schedule: UTC `0 23 * * 1-5` (04:30 IST Mon–Fri).
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;

@@ -1,60 +1,56 @@
-# Data freshness
+# Data Freshness
 
-This document describes how Barakfi refreshes **prices**, **fundamentals**, **news**, and **screening cache**, and how operators can run jobs manually.
+This document describes BarakFi's daily refresh flow for **fundamentals**, **prices**, and **screening cache**.
 
 ## What updates when
 
-| Layer | Typical source | Notes |
+| Layer | Source | Notes |
 | --- | --- | --- |
-| **Equity prices** | `POST /api/market-data/sync-prices` (internal token) | Batch job; throttled per provider. Uses `MARKET_DATA_PROVIDER` unless overridden by query param. |
-| **Fundamentals** | Separate ingestion / provider jobs (e.g. seed scripts, SignalX, Xaro) | Not run on every price sync. See `/api/fundamentals/status` and `/api/data-stack/status`. |
-| **News** | `POST /api/internal/news/sync` (internal token) | RSS + optional NewsData.io (`NEWSDATA_API_KEY`). |
-| **Screening cache** | `POST /api/screen/bulk` or `POST /api/bulk-screen` (public, budget-limited) or internal warm-up | Per-symbol in-memory cache TTL; bulk endpoints populate it. |
+| **Fundamentals** | `PYTHONPATH=. python3 fetch_real_data.py` | Writes latest fundamentals to DB and updates `fundamentals_updated_at`. |
+| **Equity prices** | `POST /api/internal/daily-refresh` | Daily pipeline triggers full quote sync using `MARKET_DATA_PROVIDER`. |
+| **Screening cache** | `POST /api/internal/daily-refresh` | Warmed in chunks after price sync so screening reads fresh data. |
 
-## Daily pipeline (recommended for production)
+## Production weekday schedule (IST)
 
-`POST /api/internal/daily-refresh` runs, in order:
+Run these two jobs in strict order:
 
-1. Full **price sync** (same behaviour as `POST /api/market-data/sync-prices`).
-2. **News** upsert (same as `POST /api/internal/news/sync`).
-3. **Screening warm-up** in chunks (default 150 symbols per chunk, max 500) via the same logic as bulk screen — no HTTP rate-limit path.
+1. **Job A — Fundamentals first**
+   - Command: `PYTHONPATH=. python3 fetch_real_data.py`
+   - Time: **03:15 IST, Mon–Fri**
+   - UTC cron: `45 21 * * 1-5`
+2. **Job B — Daily refresh pipeline**
+   - Command: `POST /api/internal/daily-refresh` with `X-Internal-Service-Token`
+   - Time: **04:30 IST, Mon–Fri**
+   - UTC cron: `0 23 * * 1-5`
 
-**Headers**
+This ordering ensures screening runs against freshly ingested fundamentals.
 
-- `X-Internal-Service-Token`: must match `INTERNAL_SERVICE_TOKEN` on the API host.
+## Internal daily refresh endpoint
 
-**Query**
+`POST /api/internal/daily-refresh` performs:
 
-- `screen_chunk_size` (optional, 50–500): symbols per bulk-screen chunk.
+1. full price sync
+2. screening cache warm-up in chunks (`screen_chunk_size`, default 150)
 
-### Invoking from Vercel Cron
+Required header:
 
-The Next.js route `GET /api/cron/daily-pipeline` is intended for Vercel Cron.
+- `X-Internal-Service-Token` (must equal backend `INTERNAL_SERVICE_TOKEN`)
 
-**Vercel (server-only) env**
+## Keep-alive policy
 
-- `CRON_SECRET`: Vercel injects `Authorization: Bearer <CRON_SECRET>` on cron invocations when this variable is set.
-- `INTERNAL_SERVICE_TOKEN`: must match the Render (or API) `INTERNAL_SERVICE_TOKEN` so the route can call the Python API.
-- `NEXT_PUBLIC_API_BASE_URL`: must point at the API origin including `/api` (e.g. `https://api.barakfi.in/api`).
+Use keep-alive pings **only** in environments where the backend can sleep (for example, free-tier deployments with idle shutdown). For always-on environments, keep-alive should remain disabled.
 
-**Limits**
+## Manual operator commands
 
-Vercel **Hobby** has strict execution time limits; a full-universe price sync plus bulk screen may **timeout**. For large universes, prefer **Render Cron** (or another worker) calling `POST /api/internal/daily-refresh` directly with a long timeout, and use the Vercel cron only for light keep-wake or omit it.
-
-## Manual news sync (operators)
-
-```bash
-curl -sS -X POST "https://<api-host>/api/internal/news/sync" \
-  -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"
-```
-
-Optional: `NEWS_RSS_URL`, `NEWSDATA_API_KEY` on the API service.
-
-## Manual price sync (operators)
+Fundamentals ingestion:
 
 ```bash
-curl -sS -X POST "https://<api-host>/api/market-data/sync-prices" \
-  -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"
+PYTHONPATH=. python3 fetch_real_data.py
 ```
 
-Optional query: `max_stocks`, `provider`.
+Daily refresh pipeline:
+
+```bash
+curl -sS -X POST "https://<api-host>/api/internal/daily-refresh" \
+  -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"
+```

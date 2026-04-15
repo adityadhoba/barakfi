@@ -683,3 +683,30 @@ def test_daily_refresh_forbidden_wrong_token():
         headers={"X-Internal-Service-Token": "not-the-token"},
     )
     assert r.status_code == 403
+
+
+def test_daily_refresh_payload_excludes_news(monkeypatch):
+    from app.api import routes as routes_mod
+
+    def _fake_price_sync(_db, provider: str, max_stocks):
+        return {
+            "ok": True,
+            "provider": provider,
+            "updated": 0,
+            "failed_symbols": [],
+            "total": 0,
+        }
+
+    monkeypatch.setattr(routes_mod, "sync_all_stock_prices", _fake_price_sync)
+    monkeypatch.setattr(routes_mod, "_screen_stocks_bulk_impl", lambda symbols, db: [])
+
+    r = client.post(
+        "/api/internal/daily-refresh",
+        headers={"X-Internal-Service-Token": INTERNAL_SERVICE_TOKEN},
+    )
+    assert r.status_code == 200
+    body = api_json(r)
+    assert body["ok"] is True
+    assert "prices" in body
+    assert "screening" in body
+    assert "news" not in body

@@ -12,4 +12,3 @@ cryptography
 psycopg2-binary
 yfinance>=0.2.36
 pandas>=2.0
-feedparser>=6.0.11
