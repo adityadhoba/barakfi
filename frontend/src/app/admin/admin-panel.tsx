@@ -37,6 +37,13 @@ type AdminUser = {
   created_at?: string | null;
 };
 
+type MePayload = {
+  id: number;
+  role?: string | null;
+};
+
+const ROLE_OPTIONS = ["owner", "admin", "reviewer", "developer", "user"] as const;
+
 export function AdminPanel() {
   const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
@@ -47,7 +54,9 @@ export function AdminPanel() {
   const [demandAggregates, setDemandAggregates] = useState<{ event_name: string; count: number }[]>([]);
   const [demandRecent, setDemandRecent] = useState<Record<string, unknown>[]>([]);
   const [earlyAccess, setEarlyAccess] = useState<Record<string, unknown>[]>([]);
+  const [me, setMe] = useState<MePayload | null>(null);
   const [loading, setLoading] = useState(false);
+  const [busyUserId, setBusyUserId] = useState<number | null>(null);
 
   const apiBase = "/api";
 
@@ -71,9 +80,11 @@ export function AdminPanel() {
         fetchWithAuth<{ aggregates: { event_name: string; count: number }[]; recent: Record<string, unknown>[] }>("/admin/product-events"),
         fetchWithAuth<Record<string, unknown>[]>("/admin/early-access"),
       ]);
+      const meData = await fetchWithAuth<MePayload>("/me");
       if (crData) setCoverageRequests(crData);
       if (fbData) setFeedbackItems(fbData);
       if (userData?.items) setUsers(userData.items);
+      if (meData) setMe(meData);
       if (evData) { setDemandAggregates(evData.aggregates || []); setDemandRecent(evData.recent || []); }
       if (eaData) setEarlyAccess(eaData);
       setStats({
@@ -121,6 +132,81 @@ export function AdminPanel() {
       body: JSON.stringify(body),
     });
     void loadData();
+  }
+
+  async function updateUserRole(userId: number, role: string) {
+    const token = await getToken();
+    if (!token) return;
+    setBusyUserId(userId);
+    try {
+      const response = await fetch(`${apiBase}/admin/users`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, action: "role", role }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(String(body?.detail || body?.error || "Failed to update role"));
+      }
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update role");
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  async function updateUserActive(userId: number, isActive: boolean) {
+    const token = await getToken();
+    if (!token) return;
+    setBusyUserId(userId);
+    try {
+      const response = await fetch(`${apiBase}/admin/users`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, action: "active", is_active: isActive }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(String(body?.detail || body?.error || "Failed to update status"));
+      }
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setBusyUserId(null);
+    }
+  }
+
+  async function resetUserQuota(userId: number) {
+    const token = await getToken();
+    if (!token) return;
+    setBusyUserId(userId);
+    try {
+      const response = await fetch(`${apiBase}/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId, action: "quota_reset" }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(String(body?.detail || body?.error || "Failed to reset limits"));
+      }
+      await loadData();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to reset limits");
+    } finally {
+      setBusyUserId(null);
+    }
   }
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
@@ -264,6 +350,7 @@ export function AdminPanel() {
                   <th>Role</th>
                   <th>Status</th>
                   <th>Joined</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,10 +361,40 @@ export function AdminPanel() {
                     <td><span className={styles.roleBadge}>{u.role}</span></td>
                     <td>{u.is_active ? "Active" : "Disabled"}</td>
                     <td className={styles.date}>{u.created_at?.split("T")[0]}</td>
+                    <td className={styles.actions}>
+                      <select
+                        className={styles.select}
+                        value={u.role || "user"}
+                        disabled={busyUserId === u.id || (u.role === "owner" && me?.id !== u.id)}
+                        onChange={(e) => void updateUserRole(u.id, e.target.value)}
+                      >
+                        {ROLE_OPTIONS.map((role) => {
+                          const isOwnerOnlyAction = (u.role === "admin" && role !== "admin") || role === "owner";
+                          const disabled = isOwnerOnlyAction && me?.role !== "owner";
+                          return <option key={role} value={role} disabled={disabled}>{role}</option>;
+                        })}
+                      </select>
+                      <label className={styles.switchLabel}>
+                        <input
+                          type="checkbox"
+                          checked={u.is_active}
+                          disabled={busyUserId === u.id || (u.role === "owner" && me?.id !== u.id)}
+                          onChange={(e) => void updateUserActive(u.id, e.target.checked)}
+                        />
+                        <span>{u.is_active ? "On" : "Off"}</span>
+                      </label>
+                      <button
+                        className={styles.btnApprove}
+                        disabled={busyUserId === u.id}
+                        onClick={() => void resetUserQuota(u.id)}
+                      >
+                        Reset Limit
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {users.length === 0 && (
-                  <tr><td colSpan={5} className={styles.empty}>No users yet</td></tr>
+                  <tr><td colSpan={6} className={styles.empty}>No users yet</td></tr>
                 )}
               </tbody>
             </table>

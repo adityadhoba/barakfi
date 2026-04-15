@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN
+from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
 from app.services.auth_service import get_current_auth_claims as verify_clerk_token  # noqa: F401
 from app.models import (
     ComplianceOverride,
@@ -66,13 +66,18 @@ def require_admin(db: Session, claims: dict) -> str:
     if not auth_subject:
         raise HTTPException(status_code=401, detail="Token subject missing")
 
+    if auth_subject in OWNER_AUTH_SUBJECTS:
+        return auth_subject
+
     if auth_subject in ADMIN_AUTH_SUBJECTS:
         return auth_subject
 
     current_user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
 
     if current_user:
-        if current_user.role == "admin":
+        if current_user.role in {"owner", "admin"}:
+            return auth_subject
+        if current_user.email.lower() in OWNER_EMAILS:
             return auth_subject
         if current_user.email.lower() in ADMIN_EMAILS:
             return auth_subject
@@ -616,4 +621,3 @@ def create_default_workspace(db: Session, user: User) -> None:
             notes="Starter screener focused on large Indian names that fit the strict profile.",
         )
     )
-

@@ -301,8 +301,8 @@ class AdminUserRead(BaseModel):
 class AdminUserRoleUpdateRequest(BaseModel):
     """Request body for updating user roles"""
     role: str = Field(
-        description="admin | reviewer | developer | user",
-        pattern="^(admin|reviewer|developer|user)$"
+        description="owner | admin | reviewer | developer | user",
+        pattern="^(owner|admin|reviewer|developer|user)$"
     )
 
 

@@ -29,6 +29,8 @@
 .categoryBadge { padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.68rem; font-weight: 600; background: var(--bg-soft); color: var(--text-secondary); }
 .roleBadge { padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.68rem; font-weight: 700; background: var(--emerald-bg); color: var(--emerald); border: 1px solid var(--emerald-border); }
 .actions { display: flex; gap: 6px; white-space: nowrap; }
+.select { padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--bg-soft); color: var(--text); font-size: 0.72rem; }
+.switchLabel { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-secondary); }
 .btnApprove { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--emerald-border); background: var(--emerald-bg); color: var(--emerald); font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 150ms; }
 .btnApprove:hover { background: var(--emerald); color: #fff; }
 .btnReject { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--red-border); background: var(--red-bg); color: var(--red); font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 150ms; }

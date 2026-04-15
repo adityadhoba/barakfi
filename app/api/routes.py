@@ -23,9 +23,12 @@ from app.config import (
     CORS_ORIGINS,
     INTERNAL_SERVICE_TOKEN,
     MARKET_DATA_PROVIDER,
+    OWNER_AUTH_SUBJECTS,
+    OWNER_EMAILS,
 )
 from app.services.rbac import (
     is_admin,
+    is_owner,
     get_user_by_claims,
     ROLE_DESCRIPTIONS,
     ROLE_HIERARCHY,
@@ -134,6 +137,11 @@ from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
 logger = logging.getLogger("barakfi")
+
+
+def _is_owner_user(user: User) -> bool:
+    email = (user.email or "").strip().lower()
+    return user.role == "owner" or email in OWNER_EMAILS or user.auth_subject in OWNER_AUTH_SUBJECTS
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -1541,23 +1549,33 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         except Exception:
             db.rollback()
 
-    # Auto-promote to admin if user's email is in ADMIN_EMAILS or auth_subject in ADMIN_AUTH_SUBJECTS.
-    # This ensures founders/admins always see admin UI even before the role column migration runs.
+    # Auto-promote to owner/admin based on configured identities.
     effective_role = getattr(user, "role", "user") or "user"
-    if effective_role != "admin":
-        db_email = (user.email or "").strip().lower()
-        if (
-            (db_email and db_email in ADMIN_EMAILS)
-            or (claim_email and claim_email in ADMIN_EMAILS)
-            or (auth_subject in ADMIN_AUTH_SUBJECTS)
-        ):
-            effective_role = "admin"
-            # Persist the promotion so future checks are fast
-            try:
-                user.role = "admin"
-                db.commit()
-            except Exception:
-                db.rollback()
+    db_email = (user.email or "").strip().lower()
+    owner_match = (
+        (db_email and db_email in OWNER_EMAILS)
+        or (claim_email and claim_email in OWNER_EMAILS)
+        or (auth_subject in OWNER_AUTH_SUBJECTS)
+    )
+    admin_match = (
+        (db_email and db_email in ADMIN_EMAILS)
+        or (claim_email and claim_email in ADMIN_EMAILS)
+        or (auth_subject in ADMIN_AUTH_SUBJECTS)
+    )
+    if owner_match and effective_role != "owner":
+        effective_role = "owner"
+        try:
+            user.role = "owner"
+            db.commit()
+        except Exception:
+            db.rollback()
+    elif admin_match and effective_role not in {"owner", "admin"}:
+        effective_role = "admin"
+        try:
+            user.role = "admin"
+            db.commit()
+        except Exception:
+            db.rollback()
 
     # Return user with effective role
     result = UserRead.model_validate(user)
@@ -2326,8 +2344,9 @@ def admin_update_user_role(
     Assign a role to a user.
     Cannot demote the current admin user.
     """
-    admin_subject = helpers.require_admin(db, claims)
+    helpers.require_admin(db, claims)
     admin_user = get_user_by_claims(db, claims)
+    caller_is_owner = is_owner(db, claims)
 
     # Get the target user
     target_user = db.query(User).filter(User.id == user_id).first()
@@ -2341,15 +2360,26 @@ def admin_update_user_role(
             detail=f"Invalid role. Must be one of: {', '.join(sorted(VALID_ROLES))}"
         )
 
-    # Prevent demoting current admin user
-    if admin_user.id == user_id and payload.role != "admin":
+    # Owner account protections
+    if _is_owner_user(target_user):
+        raise HTTPException(status_code=403, detail="Owner role cannot be modified")
+
+    # Only owner can promote to owner
+    if payload.role == "owner" and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can assign owner role")
+
+    # Prevent self-demotion
+    if admin_user.id == user_id and payload.role not in {"owner", "admin"}:
         raise HTTPException(
             status_code=400,
-            detail="Cannot demote your own admin role"
+            detail="Cannot demote your own privileged role"
         )
 
+    # Only owner can remove admin role from another admin
+    if target_user.role == "admin" and payload.role != "admin" and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can remove admin access")
+
     # Update the role
-    old_role = target_user.role
     target_user.role = payload.role
     db.commit()
     db.refresh(target_user)
@@ -2375,10 +2405,17 @@ def admin_update_user_active(
     Enable or disable a user account.
     """
     helpers.require_admin(db, claims)
+    caller_is_owner = is_owner(db, claims)
 
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if _is_owner_user(target_user):
+        raise HTTPException(status_code=403, detail="Owner account cannot be disabled")
+
+    if target_user.role == "admin" and not payload.is_active and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can disable admin accounts")
 
     target_user.is_active = payload.is_active
     db.commit()
@@ -2392,6 +2429,33 @@ def admin_update_user_active(
         is_active=target_user.is_active,
         created_at=target_user.created_at,
     )
+
+
+@router.post("/admin/users/{user_id}/quota/reset")
+def admin_reset_user_quota(
+    user_id: int,
+    claims: dict = Depends(get_current_auth_claims),
+    db: Session = Depends(get_db),
+):
+    """Reset today's quota counters for a user."""
+    helpers.require_admin(db, claims)
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    from app.services.quota_service import reset_user_quotas_for_today
+
+    actor_key = f"user:{target_user.auth_subject}"
+    summary = reset_user_quotas_for_today(db, actor_key)
+    db.commit()
+    return {
+        "ok": True,
+        "user_id": target_user.id,
+        "email": target_user.email,
+        "actor_key": actor_key,
+        **summary,
+    }
 
 
 # ═══════════════════════════════════════════════════════════════
