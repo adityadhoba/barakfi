@@ -67,7 +67,18 @@ export function formatFundamentalsAsOfLine(iso: string | null | undefined): stri
   if (!iso || typeof iso !== "string") return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return `Fundamentals as of ${d.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC`;
+  return `Fundamentals as of ${d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })} IST`;
+}
+
+export function formatFundamentalsLastUpdatedIst(iso: string | null | undefined): string | null {
+  if (!iso || typeof iso !== "string") return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${d.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Kolkata",
+  })} IST`;
 }
 
 export function fundamentalsUnitNote(currency: string = "INR"): string {

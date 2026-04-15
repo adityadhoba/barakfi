@@ -54,3 +54,20 @@ Daily refresh pipeline:
 curl -sS -X POST "https://<api-host>/api/internal/daily-refresh" \
   -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"
 ```
+
+## Production recovery checklist (ops)
+
+Run this sequence when freshness regresses or `fundamentals_updated_at` is missing in production:
+
+1. Validate cron job A (`barakfi-daily-fundamentals`) has `DATABASE_URL` set to production Postgres.
+2. Validate cron job B (`barakfi-daily-refresh`) has valid `API_BASE_URL` and `INTERNAL_SERVICE_TOKEN`.
+3. Manually run job A, wait for completion, then run job B.
+4. Verify:
+   - `GET /api/fundamentals/status` shows non-null `latest_fundamentals_updated_at`.
+   - `rows_missing_timestamp` trends down (ideally `0`).
+   - `stale` is `false` and `staleness_hours` is below threshold.
+5. Smoke-check live symbols:
+   - `GET /api/stocks/BHARTIARTL`
+   - `GET /api/stocks/RELIANCE`
+   - `GET /api/stocks/HDFCBANK`
+   Confirm `fundamentals_updated_at` is non-null and recent.
