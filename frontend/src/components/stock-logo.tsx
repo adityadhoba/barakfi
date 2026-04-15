@@ -144,7 +144,15 @@ function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
   const clean = normalizeSymbol(symbol);
   const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
   const ticker = `${clean}${suffix}`;
-  return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=128&format=png`;
+  return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=256&format=png`;
+}
+
+function getDomainLogoUrl(symbol: string): string | null {
+  if (!LOGO_DEV_TOKEN) return null;
+  const clean = normalizeSymbol(symbol);
+  const domain = SYMBOL_TO_DOMAIN[clean];
+  if (!domain) return null;
+  return `https://img.logo.dev/${domain}?token=${LOGO_DEV_TOKEN}&size=256&format=png`;
 }
 
 function getFaviconUrl(symbol: string): string | null {
@@ -173,10 +181,13 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   const [srcLevel, setSrcLevel] = useState(0);
 
   const tickerUrl = getTickerLogoUrl(symbol, exchange);
+  const domainLogoUrl = getDomainLogoUrl(symbol);
   const faviconUrl = getFaviconUrl(symbol);
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  const sources = [faviconUrl, tickerUrl].filter(Boolean) as string[];
+  const sources = LOGO_DEV_TOKEN
+    ? [tickerUrl, domainLogoUrl].filter(Boolean) as string[]
+    : [faviconUrl].filter(Boolean) as string[];
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
