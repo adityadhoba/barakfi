@@ -551,6 +551,55 @@ def _convert_value(value, exchange):
     return round(value / 1e6, 2)
 
 
+def _compute_average_market_cap_36m(
+    ticker,
+    *,
+    symbol: str,
+    exchange: str,
+    market_cap_raw: float,
+    price: float,
+    shares_outstanding_raw: float,
+) -> float:
+    """
+    Compute 36-month average market cap from historical closes × shares outstanding.
+
+    Falls back to current market cap (same unit conversion) only when historical
+    series or shares data is unavailable.
+    """
+    shares_outstanding = float(shares_outstanding_raw or 0.0)
+    if shares_outstanding <= 0 and market_cap_raw > 0 and price > 0:
+        shares_outstanding = market_cap_raw / price
+
+    if shares_outstanding <= 0:
+        return _convert_value(market_cap_raw, exchange)
+
+    try:
+        # Monthly snapshots across 3 years keeps API usage moderate while staying
+        # anchored to real market history.
+        hist = ticker.history(period="3y", interval="1mo", auto_adjust=False, actions=False)
+        if hist is None or hist.empty or "Close" not in hist:
+            return _convert_value(market_cap_raw, exchange)
+
+        closes = hist["Close"].dropna()
+        if closes.empty:
+            return _convert_value(market_cap_raw, exchange)
+
+        avg_close = float(closes.mean())
+        if avg_close <= 0:
+            return _convert_value(market_cap_raw, exchange)
+
+        avg_market_cap_raw = avg_close * shares_outstanding
+        return _convert_value(avg_market_cap_raw, exchange)
+    except Exception as exc:
+        log.warning(
+            "Average market-cap history unavailable for %s (%s): %s. Using current market cap fallback.",
+            symbol,
+            exchange,
+            exc,
+        )
+        return _convert_value(market_cap_raw, exchange)
+
+
 def _get_sector_map(exchange):
     """Return the sector fallback map for the given exchange."""
     if exchange == "US":
@@ -629,10 +678,18 @@ def fetch_stock_data(symbol, exchange="NSE"):
         # -- Price --
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
 
-        # -- Market Cap --
+        # -- Market Cap (spot + 36m historical average) --
         market_cap_raw = info.get("marketCap") or 0.0
         market_cap = _convert_value(market_cap_raw, exchange)
-        average_market_cap_36m = round(market_cap * 0.9, 2) if market_cap > 0 else 0.0
+        shares_out = info.get("sharesOutstanding") or 0.0
+        average_market_cap_36m = _compute_average_market_cap_36m(
+            ticker,
+            symbol=symbol,
+            exchange=exchange,
+            market_cap_raw=market_cap_raw,
+            price=price,
+            shares_outstanding_raw=shares_out,
+        )
 
         # -- Name and Sector --
         name = info.get("longName") or info.get("shortName") or name_map.get(symbol, symbol)
@@ -681,16 +738,14 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "Interest Income Non Operating",
             "Net Interest Income",
         ])
-        # Fallback: try from balance sheet or info
-        if interest_income_raw == 0.0:
-            interest_income_raw = _safe_val(income_stmt, [
-                "Interest Expense",  # Use as rough proxy if no income field
-            ]) * 0.1  # Very rough: assume interest income is ~10% of interest expense
-            if interest_income_raw < 0:
-                interest_income_raw = abs(interest_income_raw)
+        # Keep only statement-derived values; no synthetic fallback multipliers.
+        if interest_income_raw < 0:
+            interest_income_raw = abs(interest_income_raw)
         interest_income = _convert_value(interest_income_raw, exchange)
 
-        # -- Non-Permissible Income (use interest_income as proxy) --
+        # -- Non-Permissible Income proxy --
+        # We currently proxy this with reported interest income where explicit
+        # non-permissible disclosures are not machine-readable in a consistent way.
         non_permissible_income = interest_income
 
         # -- Accounts Receivable --

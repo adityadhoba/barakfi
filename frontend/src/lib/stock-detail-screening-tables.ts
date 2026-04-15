@@ -83,7 +83,7 @@ export function buildMethodologyTableRowsFromMulti(multi: MultiMethodologyResult
 export function methodologyTableCaption(multi: MultiMethodologyResult): string {
   const consensus = multi.consensus_status;
   const label = ENGINE_TO_PRODUCT[consensus] ?? consensus;
-  return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass.`;
+  return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass. Debt and receivables can differ by methodology because denominators differ (S&P uses 36m average market cap; others use total assets).`;
 }
 
 /** Three ratio lines for /check full details (values from API breakdown only). */

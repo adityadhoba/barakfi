@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
-from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_URL, DEBUG
+from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_URL, DEBUG, ALLOW_SEED_DATA_FALLBACK
 from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_PUBLISHABLE_KEY
 from app.database import Base, engine
 from app.api.routes import router
@@ -334,9 +334,17 @@ def _auto_seed_stocks():
             stock_data = REAL_STOCKS
             source = "real Yahoo Finance data"
         except (ImportError, Exception):
-            from fetch_data import SEED_STOCKS
-            stock_data = SEED_STOCKS
-            source = "seed data"
+            if ALLOW_SEED_DATA_FALLBACK:
+                from fetch_data import SEED_STOCKS
+                stock_data = SEED_STOCKS
+                source = "seed data (fallback enabled)"
+            else:
+                stock_data = []
+                source = "no source (real_stock_data unavailable, seed fallback disabled)"
+                logger.warning(
+                    "[auto-seed] real_stock_data import failed and ALLOW_SEED_DATA_FALLBACK=false. "
+                    "Skipping seed-stock fallback."
+                )
 
         existing_count = db.query(Stock).count()
         added = 0
