@@ -818,9 +818,6 @@ export default async function StockDetailPage({
           </StockVerdictGate>
         </div>
 
-        {/* Soft upsell — non-blocking */}
-        <StockUpsellCard />
-
         <StockVerdictGate symbol={stock.symbol}>
           {/* Compliance Verdict Banner */}
           <div className={`${styles.verdictBanner} ${
@@ -901,18 +898,6 @@ export default async function StockDetailPage({
           </div>
 
           <div className={styles.stockDetailMain}>
-            <div style={{ marginBottom: 28 }}>
-              <PriceChart
-                symbol={stock.symbol}
-                exchange={stock.exchange}
-                liveClose={liveQuote?.last_price ?? stock.price}
-                currentPrice={liveQuote?.last_price ?? stock.price}
-                currency={quoteCur}
-                week52Low={liveQuote?.week_52_low}
-                week52High={liveQuote?.week_52_high}
-              />
-            </div>
-
             {liveQuote &&
             (liveQuote.week_52_low != null ||
               liveQuote.week_52_high != null ||
@@ -948,6 +933,18 @@ export default async function StockDetailPage({
               </div>
             ) : null}
 
+            <div style={{ marginBottom: 28 }}>
+              <PriceChart
+                symbol={stock.symbol}
+                exchange={stock.exchange}
+                liveClose={liveQuote?.last_price ?? stock.price}
+                currentPrice={liveQuote?.last_price ?? stock.price}
+                currency={quoteCur}
+                week52Low={liveQuote?.week_52_low}
+                week52High={liveQuote?.week_52_high}
+              />
+            </div>
+
             <div className={styles.keyMetricsStrip}>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Market Cap</span>
@@ -971,7 +968,7 @@ export default async function StockDetailPage({
                 }`}>{formatRatio(b.debt_to_36m_avg_market_cap_ratio)}</span>
               </div>
               <div className={styles.keyMetricCard}>
-                <span className={styles.keyMetricLabel}>Non-permissible Income</span>
+                <span className={styles.keyMetricLabel}>Non-halal Income</span>
                 <span className={`${styles.keyMetricValue} ${
                   b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.keyMetricGood
                   : b.non_permissible_income_ratio <= 0.05 ? styles.keyMetricWarn
@@ -1067,7 +1064,6 @@ export default async function StockDetailPage({
                   })}
                 </div>
               </article>
-              {readMorePanel}
             </div>
 
             <div style={{
@@ -1213,6 +1209,9 @@ export default async function StockDetailPage({
                 </div>
               </section>
             )}
+
+            {/* Moved to end of detail flow, with Read more nested inside */}
+            <StockUpsellCard readMore={readMorePanel} />
           </div>
         </StockVerdictGate>
       </div>
