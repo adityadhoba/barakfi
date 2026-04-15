@@ -46,3 +46,7 @@
 .cta:hover {
   background: rgba(16, 185, 129, 0.2);
 }
+
+.readMoreSlot {
+  margin-top: 1rem;
+}
