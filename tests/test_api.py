@@ -73,6 +73,11 @@ def test_fundamentals_status():
     assert body["screening_readiness"] in {"production_ready", "limited_seed_readiness"}
     assert isinstance(body["capabilities"], list)
     assert isinstance(body["blockers"], list)
+    assert "latest_fundamentals_updated_at" in body
+    assert isinstance(body["rows_with_timestamp"], int)
+    assert isinstance(body["rows_missing_timestamp"], int)
+    assert isinstance(body["stale"], bool)
+    assert body["staleness_hours"] is None or isinstance(body["staleness_hours"], (int, float))
 
 
 def test_data_stack_status():
@@ -81,6 +86,10 @@ def test_data_stack_status():
     body = api_json(response)
     assert "market_data" in body
     assert "fundamentals" in body
+    assert "fundamentals_freshness" in body
+    assert "stale" in body["fundamentals_freshness"]
+    assert "rows_with_timestamp" in body["fundamentals_freshness"]
+    assert "rows_missing_timestamp" in body["fundamentals_freshness"]
     assert isinstance(body["readiness_gaps"], list)
     assert isinstance(body["ready_for_scaled_screening"], bool)
 
