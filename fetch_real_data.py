@@ -65,6 +65,7 @@ CRORE = 1e7  # 1 Crore = 10,000,000
 RATE_LIMIT_SECONDS = 0.5
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
+PRODUCTION_ENV_VALUES = {"production", "prod"}
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -908,16 +909,45 @@ def write_output_file(stocks):
 # ---------------------------------------------------------------------------
 
 
+def _is_production_runtime() -> bool:
+    return (os.getenv("APP_ENV") or "").strip().lower() in PRODUCTION_ENV_VALUES
+
+
+def _is_sqlite_url(url: str) -> bool:
+    return url.strip().lower().startswith("sqlite:")
+
+
+def _assert_production_database_url() -> str:
+    db_url = (os.getenv("DATABASE_URL") or "").strip()
+    if _is_production_runtime():
+        if not db_url:
+            raise RuntimeError(
+                "DATABASE_URL is required in APP_ENV=production for fundamentals ingestion."
+            )
+        if _is_sqlite_url(db_url):
+            raise RuntimeError(
+                "DATABASE_URL points to SQLite in APP_ENV=production. "
+                "Use production Postgres to avoid writing fundamentals to a local file DB."
+            )
+    return db_url
+
+
 def write_to_database(stocks):
     """
     Upsert stock records into the database.
     Uses the same import pattern as fetch_data.py (app.database, app.models).
     """
+    # Fail fast for production cron misconfiguration before opening any DB session.
+    db_url = _assert_production_database_url()
+    if db_url:
+        log.info("Database target: %s", db_url.split("@")[-1])
+
     # Add the project root to sys.path so app imports work
     project_root = str(Path(__file__).parent)
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
+    from sqlalchemy import func
     from app.database import SessionLocal
     from app.models import Stock
 
@@ -930,7 +960,16 @@ def write_to_database(stocks):
         now = datetime.now(UTC)
         for raw in stocks:
             payload = {**raw, "fundamentals_updated_at": now}
-            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+            existing = (
+                db.query(Stock)
+                .filter(
+                    Stock.symbol == payload["symbol"],
+                    Stock.exchange == payload.get("exchange", "NSE"),
+                )
+                .first()
+            )
+            if not existing:
+                existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
             if existing:
                 for key, value in payload.items():
                     setattr(existing, key, value)
@@ -955,7 +994,31 @@ def write_to_database(stocks):
             record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
 
         db.commit()
+        rows_with_timestamp = int(
+            db.query(func.count(Stock.id))
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.fundamentals_updated_at.isnot(None),
+            )
+            .scalar()
+            or 0
+        )
+        rows_missing_timestamp = int(
+            db.query(func.count(Stock.id))
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.fundamentals_updated_at.is_(None),
+            )
+            .scalar()
+            or 0
+        )
         log.info("Database updated: %d created, %d updated", created, updated)
+        return {
+            "created": created,
+            "updated": updated,
+            "rows_with_timestamp": rows_with_timestamp,
+            "rows_missing_timestamp": rows_missing_timestamp,
+        }
     except Exception as exc:
         db.rollback()
         log.error("Database write failed: %s", exc)
@@ -979,6 +1042,10 @@ def main():
         help="Fetch and display data without writing to the database.",
     )
     args = parser.parse_args()
+    run_started_at = datetime.now(UTC)
+
+    if not args.dry_run:
+        _assert_production_database_url()
 
     exchanges = [
         ("NSE", STOCK_SYMBOLS),
@@ -1049,6 +1116,7 @@ def main():
         log.info("  %-40s %3d stocks", sector, count)
 
     # ── Write output file ────────────────────────────────────────────────
+    db_summary = None
     if successful:
         write_output_file(successful)
 
@@ -1071,12 +1139,26 @@ def main():
                     log.info("    Revenue: %.0f %s | Total Assets: %.0f %s",
                              s["revenue"], unit, s["total_assets"], unit)
         else:
-            write_to_database(successful)
+            db_summary = write_to_database(successful)
             log.info("")
             log.info("Data written to database and %s.", OUTPUT_FILE)
     else:
         log.error("No stocks fetched successfully. Nothing to write.")
         sys.exit(1)
+
+    run_finished_at = datetime.now(UTC)
+    rows_updated = 0 if db_summary is None else db_summary["created"] + db_summary["updated"]
+    rows_with_timestamp = 0 if db_summary is None else db_summary["rows_with_timestamp"]
+    rows_missing_timestamp = 0 if db_summary is None else db_summary["rows_missing_timestamp"]
+    log.info(
+        "fundamentals_ingest_run started_at=%s finished_at=%s rows_updated=%d rows_failed=%d rows_with_timestamp=%d rows_missing_timestamp=%d",
+        run_started_at.isoformat(),
+        run_finished_at.isoformat(),
+        rows_updated,
+        len(failed),
+        rows_with_timestamp,
+        rows_missing_timestamp,
+    )
 
 
 if __name__ == "__main__":

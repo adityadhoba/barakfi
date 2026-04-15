@@ -46,6 +46,7 @@ import {
   capTierLabel,
   formatFundamentalAmount,
   formatFundamentalsAsOfLine,
+  formatFundamentalsLastUpdatedIst,
   fundamentalsUnitNote,
 } from "@/lib/fundamentals-format";
 import {
@@ -307,6 +308,8 @@ export default async function StockDetailPage({
 
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
+  const fundamentalsLastUpdated =
+    formatFundamentalsLastUpdatedIst(stock.fundamentals_updated_at) ?? "Not synced yet";
   const displayCountry = displayCountryForStock(stock.exchange, stock.country);
   const marketCapTier = capTierLabel(stock.market_cap, cur);
   const riskLabel =
@@ -1116,6 +1119,10 @@ export default async function StockDetailPage({
                   <tr>
                     <td>Data source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
+                  </tr>
+                  <tr>
+                    <td>Fundamentals last updated</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{fundamentalsLastUpdated}</td>
                   </tr>
                   <tr>
                     <td colSpan={2} style={{ fontSize: "0.78rem", color: "var(--text-tertiary)", lineHeight: 1.5 }}>
