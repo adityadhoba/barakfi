@@ -31,6 +31,15 @@ CLERK_JS_URL = os.getenv("CLERK_JS_URL", "")
 INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
 if not INTERNAL_SERVICE_TOKEN and APP_ENV.lower() != "production":
     INTERNAL_SERVICE_TOKEN = "dev-internal-token-change-me"
+OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
+OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
+OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
+OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "false").lower() == "true"
+OPS_ALERT_QUIET_WINDOW_ENABLED = os.getenv("OPS_ALERT_QUIET_WINDOW_ENABLED", "false").lower() == "true"
+try:
+    OPS_ALERT_QUIET_WINDOW_SECONDS = max(0, int(os.getenv("OPS_ALERT_QUIET_WINDOW_SECONDS", "1800")))
+except ValueError:
+    OPS_ALERT_QUIET_WINDOW_SECONDS = 1800
 
 ADMIN_AUTH_SUBJECTS = [
     subject.strip()

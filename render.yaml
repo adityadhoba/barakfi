@@ -21,6 +21,18 @@ services:
         value: auto_global
       - key: APP_ENV
         value: production
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_JOB_A_SUCCESSES_ENABLED
+        value: "false"
+      - key: OPS_ALERT_QUIET_WINDOW_ENABLED
+        value: "false"
+      - key: OPS_ALERT_QUIET_WINDOW_SECONDS
+        value: "1800"
 
   # Job A: fundamentals refresh (weekday)
   # 04:30 PM IST Mon–Fri => 11:00 UTC

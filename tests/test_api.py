@@ -78,6 +78,10 @@ def test_fundamentals_status():
     assert isinstance(body["rows_missing_timestamp"], int)
     assert isinstance(body["stale"], bool)
     assert body["staleness_hours"] is None or isinstance(body["staleness_hours"], (int, float))
+    assert "latest_daily_screening_completed_at" in body
+    assert isinstance(body["screening_symbols_expected"], int)
+    assert isinstance(body["screening_symbols_completed"], int)
+    assert isinstance(body["screening_complete"], bool)
 
 
 def test_data_stack_status():
@@ -90,6 +94,10 @@ def test_data_stack_status():
     assert "stale" in body["fundamentals_freshness"]
     assert "rows_with_timestamp" in body["fundamentals_freshness"]
     assert "rows_missing_timestamp" in body["fundamentals_freshness"]
+    assert "latest_daily_screening_completed_at" in body["fundamentals_freshness"]
+    assert "screening_symbols_expected" in body["fundamentals_freshness"]
+    assert "screening_symbols_completed" in body["fundamentals_freshness"]
+    assert "screening_complete" in body["fundamentals_freshness"]
     assert isinstance(body["readiness_gaps"], list)
     assert isinstance(body["ready_for_scaled_screening"], bool)
 
@@ -707,7 +715,26 @@ def test_daily_refresh_payload_excludes_news(monkeypatch):
         }
 
     monkeypatch.setattr(routes_mod, "sync_all_stock_prices", _fake_price_sync)
-    monkeypatch.setattr(routes_mod, "_screen_stocks_bulk_impl", lambda symbols, db: [])
+    monkeypatch.setattr(routes_mod, "_active_screenable_symbols", lambda db: ["RELIANCE", "TCS"])
+    monkeypatch.setattr(
+        routes_mod,
+        "_screen_stocks_bulk_impl",
+        lambda symbols, db: [{"symbol": s, "status": "HALAL"} for s in symbols],
+    )
+    monkeypatch.setattr(
+        routes_mod,
+        "send_ops_alert",
+        lambda **kwargs: None,
+    )
+    monkeypatch.setattr(
+        routes_mod,
+        "get_fundamentals_status",
+        lambda stock_count, db=None: {
+            "latest_fundamentals_updated_at": None,
+            "stale": False,
+            "staleness_hours": None,
+        },
+    )
 
     r = client.post(
         "/api/internal/daily-refresh",
@@ -716,6 +743,32 @@ def test_daily_refresh_payload_excludes_news(monkeypatch):
     assert r.status_code == 200
     body = api_json(r)
     assert body["ok"] is True
+    assert body["screening"]["screening_complete"] is True
+    assert body["screening"]["symbols_expected"] == body["screening"]["symbols_completed"]
     assert "prices" in body
     assert "screening" in body
     assert "news" not in body
+
+
+def test_daily_refresh_fails_on_incomplete_screening(monkeypatch):
+    from app.api import routes as routes_mod
+
+    def _fake_price_sync(_db, provider: str, max_stocks):
+        return {
+            "ok": True,
+            "provider": provider,
+            "updated": 0,
+            "failed_symbols": [],
+            "total": 0,
+        }
+
+    monkeypatch.setattr(routes_mod, "sync_all_stock_prices", _fake_price_sync)
+    monkeypatch.setattr(routes_mod, "_active_screenable_symbols", lambda db: ["RELIANCE", "TCS"])
+    monkeypatch.setattr(routes_mod, "_screen_stocks_bulk_impl", lambda symbols, db: [])
+    monkeypatch.setattr(routes_mod, "send_ops_alert", lambda **kwargs: None)
+
+    r = client.post(
+        "/api/internal/daily-refresh",
+        headers={"X-Internal-Service-Token": INTERNAL_SERVICE_TOKEN},
+    )
+    assert r.status_code == 503
