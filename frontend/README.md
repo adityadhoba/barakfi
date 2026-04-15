@@ -78,7 +78,7 @@ npm run build
 ## Daily refresh (frontend cron bridge)
 
 - `GET /api/cron/daily-pipeline` forwards to backend `POST /api/internal/daily-refresh` using `INTERNAL_SERVICE_TOKEN`.
-- Recommended weekday schedule is **04:30 IST (UTC `0 23 * * 1-5`)**.
+- Recommended weekday schedule is **05:45 PM IST (UTC `15 12 * * 1-5`)**.
 - Keep-alive (`/api/keep-alive`) should only be scheduled when the backend deployment can sleep on idle.
 
 ## Watchlist market / currency (US vs India)

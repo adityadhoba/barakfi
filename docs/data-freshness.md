@@ -16,12 +16,12 @@ Run these two jobs in strict order:
 
 1. **Job A — Fundamentals first**
    - Command: `PYTHONPATH=. python3 fetch_real_data.py`
-   - Time: **03:15 IST, Mon–Fri**
-   - UTC cron: `45 21 * * 1-5`
+   - Time: **04:30 PM IST, Mon–Fri**
+   - UTC cron: `0 11 * * 1-5`
 2. **Job B — Daily refresh pipeline**
    - Command: `POST /api/internal/daily-refresh` with `X-Internal-Service-Token`
-   - Time: **04:30 IST, Mon–Fri**
-   - UTC cron: `0 23 * * 1-5`
+   - Time: **05:45 PM IST, Mon–Fri**
+   - UTC cron: `15 12 * * 1-5`
 
 This ordering ensures screening runs against freshly ingested fundamentals.
 

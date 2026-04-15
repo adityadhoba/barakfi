@@ -85,8 +85,8 @@ PYTHONPATH=. python3 fetch_real_data.py
 
 Schedule:
 
-- **03:15 IST, Mon–Fri**
-- UTC cron: `45 21 * * 1-5`
+- **04:30 PM IST, Mon–Fri**
+- UTC cron: `0 11 * * 1-5`
 
 ### Job B: Daily refresh pipeline
 
@@ -98,8 +98,8 @@ This calls backend `POST /api/internal/daily-refresh` with `X-Internal-Service-T
 
 Schedule:
 
-- **04:30 IST, Mon–Fri**
-- UTC cron: `0 23 * * 1-5`
+- **05:45 PM IST, Mon–Fri**
+- UTC cron: `15 12 * * 1-5`
 
 ### Render Cron Jobs
 

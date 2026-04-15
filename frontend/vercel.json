@@ -25,7 +25,7 @@
   "crons": [
     {
       "path": "/api/cron/daily-pipeline",
-      "schedule": "0 23 * * 1-5"
+      "schedule": "15 12 * * 1-5"
     }
   ],
   "headers": [
