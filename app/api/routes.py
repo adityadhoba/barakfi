@@ -374,13 +374,13 @@ def sync_equity_prices_to_database(
 @router.get("/fundamentals/status", response_model=FundamentalsStatusResponse)
 def fundamentals_status(db: Session = Depends(get_db)):
     stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
-    return get_fundamentals_status(stock_count)
+    return get_fundamentals_status(stock_count, db=db)
 
 
 @router.get("/data-stack/status", response_model=DataStackStatusResponse)
 def data_stack_status(db: Session = Depends(get_db)):
     stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
-    return get_data_stack_status(stock_count)
+    return get_data_stack_status(stock_count, db=db)
 
 
 @router.get("/stocks", response_model=list[StockRead])

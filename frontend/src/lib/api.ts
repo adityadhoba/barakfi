@@ -319,11 +319,25 @@ export type FundamentalsStatus = {
   capabilities: string[];
   blockers: string[];
   notes: string[];
+  latest_fundamentals_updated_at: string | null;
+  rows_with_timestamp: number;
+  rows_missing_timestamp: number;
+  stale: boolean;
+  staleness_hours: number | null;
+};
+
+export type FundamentalsFreshnessSummary = {
+  latest_fundamentals_updated_at: string | null;
+  rows_with_timestamp: number;
+  rows_missing_timestamp: number;
+  stale: boolean;
+  staleness_hours: number | null;
 };
 
 export type DataStackStatus = {
   market_data: MarketDataStatus;
   fundamentals: FundamentalsStatus;
+  fundamentals_freshness: FundamentalsFreshnessSummary;
   ready_for_scaled_screening: boolean;
   readiness_gaps: string[];
 };
@@ -905,6 +919,18 @@ export function getDataStackStatus() {
       capabilities: ["demo balance-sheet fields", "demo income fields"],
       blockers: [],
       notes: [],
+      latest_fundamentals_updated_at: null,
+      rows_with_timestamp: 0,
+      rows_missing_timestamp: 0,
+      stale: false,
+      staleness_hours: null,
+    },
+    fundamentals_freshness: {
+      latest_fundamentals_updated_at: null,
+      rows_with_timestamp: 0,
+      rows_missing_timestamp: 0,
+      stale: false,
+      staleness_hours: null,
     },
     ready_for_scaled_screening: false,
     readiness_gaps: [],

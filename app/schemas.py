@@ -197,11 +197,25 @@ class FundamentalsStatusResponse(BaseModel):
     capabilities: list[str]
     blockers: list[str]
     notes: list[str]
+    latest_fundamentals_updated_at: datetime | None = None
+    rows_with_timestamp: int = 0
+    rows_missing_timestamp: int = 0
+    stale: bool = False
+    staleness_hours: float | None = None
+
+
+class FundamentalsFreshnessSummaryResponse(BaseModel):
+    latest_fundamentals_updated_at: datetime | None = None
+    rows_with_timestamp: int = 0
+    rows_missing_timestamp: int = 0
+    stale: bool = False
+    staleness_hours: float | None = None
 
 
 class DataStackStatusResponse(BaseModel):
     market_data: MarketDataStatusResponse
     fundamentals: FundamentalsStatusResponse
+    fundamentals_freshness: FundamentalsFreshnessSummaryResponse
     ready_for_scaled_screening: bool
     readiness_gaps: list[str]
 
