@@ -44,6 +44,7 @@ ADMIN_EMAILS = [
 ]
 MARKET_DATA_PROVIDER = os.getenv("MARKET_DATA_PROVIDER", "seed").strip().lower()
 FUNDAMENTALS_PROVIDER = os.getenv("FUNDAMENTALS_PROVIDER", "seed").strip().lower()
+ALLOW_SEED_DATA_FALLBACK = os.getenv("ALLOW_SEED_DATA_FALLBACK", "false").lower() == "true"
 GROWW_API_KEY = os.getenv("GROWW_API_KEY", "")
 GROWW_ACCESS_TOKEN = os.getenv("GROWW_ACCESS_TOKEN", "")
 KITE_API_KEY = os.getenv("KITE_API_KEY", "")
