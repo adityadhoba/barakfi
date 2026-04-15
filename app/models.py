@@ -370,6 +370,28 @@ class ScreeningLog(Base):
     stock = relationship("Stock")
 
 
+class DailyRefreshRun(Base):
+    __tablename__ = "daily_refresh_runs"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(String, nullable=False, unique=True, index=True)
+    status = Column(String, nullable=False, default="started")  # started | success | failed
+    provider = Column(String, nullable=False, default="")
+    screen_chunk_size = Column(Integer, nullable=False, default=150)
+    screening_chunks = Column(Integer, nullable=False, default=0)
+    screening_retries = Column(Integer, nullable=False, default=0)
+    screening_symbols_expected = Column(Integer, nullable=False, default=0)
+    screening_symbols_completed = Column(Integer, nullable=False, default=0)
+    prices_total = Column(Integer, nullable=False, default=0)
+    prices_updated = Column(Integer, nullable=False, default=0)
+    stale_at_finish = Column(Boolean, nullable=False, default=False)
+    latest_fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
+    error_detail = Column(Text, nullable=False, default="")
+    started_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+
 # ============================================================================
 # COMPLIANCE HISTORY, COLLECTIONS, SUPER INVESTORS, COVERAGE REQUESTS
 # ============================================================================

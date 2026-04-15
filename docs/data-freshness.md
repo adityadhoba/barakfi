@@ -24,6 +24,7 @@ Run these two jobs in strict order:
    - UTC cron: `15 12 * * 1-5`
 
 This ordering ensures screening runs against freshly ingested fundamentals.
+The daily refresh is now a **hard-guarantee** step: it returns failure when full screening coverage is not achieved.
 
 ## Internal daily refresh endpoint
 
@@ -31,6 +32,20 @@ This ordering ensures screening runs against freshly ingested fundamentals.
 
 1. full price sync
 2. screening cache warm-up in chunks (`screen_chunk_size`, default 150)
+3. retry per failed chunk (up to 3 attempts with backoff)
+4. stale guard check (fails if fundamentals remain stale)
+
+Success and failure notifications:
+- Sends Slack failure alerts immediately for price sync failures, incomplete screening, and stale guard failures.
+- Sends one final Slack success heartbeat after a fully successful run (`screening_complete=true` and not stale).
+- Job A success alerts are optional and disabled by default to avoid noise.
+- Controlled by env vars:
+  - `OPS_SLACK_WEBHOOK_URL`
+  - `OPS_ALERT_FAILURES_ENABLED`
+  - `OPS_ALERT_SUCCESSES_ENABLED`
+  - `OPS_ALERT_JOB_A_SUCCESSES_ENABLED`
+  - `OPS_ALERT_QUIET_WINDOW_ENABLED`
+  - `OPS_ALERT_QUIET_WINDOW_SECONDS`
 
 Required header:
 
@@ -64,6 +79,7 @@ Run this sequence when freshness regresses or `fundamentals_updated_at` is missi
 3. Manually run job A, wait for completion, then run job B.
 4. Verify:
    - `GET /api/fundamentals/status` shows non-null `latest_fundamentals_updated_at`.
+   - `GET /api/fundamentals/status` shows `screening_complete=true`.
    - `rows_missing_timestamp` trends down (ideally `0`).
    - `stale` is `false` and `staleness_hours` is below threshold.
 5. Smoke-check live symbols:

@@ -202,6 +202,10 @@ class FundamentalsStatusResponse(BaseModel):
     rows_missing_timestamp: int = 0
     stale: bool = False
     staleness_hours: float | None = None
+    latest_daily_screening_completed_at: datetime | None = None
+    screening_symbols_expected: int = 0
+    screening_symbols_completed: int = 0
+    screening_complete: bool = False
 
 
 class FundamentalsFreshnessSummaryResponse(BaseModel):
@@ -210,6 +214,10 @@ class FundamentalsFreshnessSummaryResponse(BaseModel):
     rows_missing_timestamp: int = 0
     stale: bool = False
     staleness_hours: float | None = None
+    latest_daily_screening_completed_at: datetime | None = None
+    screening_symbols_expected: int = 0
+    screening_symbols_completed: int = 0
+    screening_complete: bool = False
 
 
 class DataStackStatusResponse(BaseModel):

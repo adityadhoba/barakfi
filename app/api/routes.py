@@ -3,6 +3,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -52,6 +53,7 @@ from app.models import (
     UserSettings,
     WatchlistEntry,
     BrokerConnection,
+    DailyRefreshRun,
 )
 from app.schemas import (
     ActionResponse,
@@ -123,6 +125,7 @@ from app.services.screening_presenter import (
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
+from app.services.ops_notification_service import send_ops_alert
 from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
@@ -602,6 +605,54 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
         results.append(out)
         time.sleep(0.015)
     return results
+
+
+def _active_screenable_symbols(db: Session) -> list[str]:
+    rows = (
+        db.query(Stock.symbol, Stock.exchange)
+        .filter(Stock.is_active.is_(True))
+        .order_by(Stock.symbol.asc(), Stock.exchange.asc())
+        .all()
+    )
+    picked: dict[str, str] = {}
+    for symbol, exchange in rows:
+        ex = (exchange or "").upper()
+        sym = (symbol or "").upper()
+        if not sym or not is_indian_exchange(ex):
+            continue
+        existing = picked.get(sym)
+        if existing is None or (ex == "NSE" and existing != "NSE"):
+            picked[sym] = ex
+    return sorted(picked.keys())
+
+
+def _daily_refresh_alert_details(
+    *,
+    run_id: str,
+    phase: str,
+    provider: str,
+    expected: int,
+    completed: int,
+    chunks: int,
+    retries: int,
+    stale: bool,
+    fundamentals_latest: datetime | None,
+    duration_seconds: float | None,
+    failure_reason: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "phase": phase,
+        "provider": provider,
+        "screening_completed": f"{completed}/{expected}",
+        "chunks": chunks,
+        "retries": retries,
+        "fundamentals_latest_utc": fundamentals_latest.isoformat() if fundamentals_latest else "null",
+        "stale": stale,
+        "duration_seconds": round(duration_seconds or 0.0, 2),
+        "failure_reason": failure_reason,
+        "recovery_hint": "Run Job A (fetch_real_data.py) then Job B (run_daily_refresh.py)",
+    }
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])
@@ -2678,32 +2729,220 @@ def daily_refresh(
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
     """
     helpers.require_internal_token(x_internal_service_token)
+    run_id = str(uuid4())
+    started_at = datetime.now(timezone.utc)
+    t0 = time.perf_counter()
     eff = MARKET_DATA_PROVIDER.strip().lower()
+
+    run = DailyRefreshRun(
+        run_id=run_id,
+        status="started",
+        provider=eff,
+        screen_chunk_size=screen_chunk_size,
+        started_at=started_at,
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
+        run.status = "failed"
+        run.error_detail = price_result.get("detail", "price sync failed")
+        run.prices_total = int(price_result.get("total") or 0)
+        run.prices_updated = int(price_result.get("updated") or 0)
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        send_ops_alert(
+            level="error",
+            title="Daily refresh failed (price sync)",
+            alert_key="daily-refresh:failure:price-sync",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="price_sync",
+                provider=eff,
+                expected=0,
+                completed=0,
+                chunks=0,
+                retries=0,
+                stale=True,
+                fundamentals_latest=None,
+                duration_seconds=time.perf_counter() - t0,
+                failure_reason=run.error_detail,
+            ),
+        )
         raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
 
-    symbols = [
-        row[0]
-        for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
-    ]
+    symbols = _active_screenable_symbols(db)
+    expected = len(symbols)
     screen_chunks = 0
     screen_rows = 0
-    for i in range(0, len(symbols), screen_chunk_size):
+    retries = 0
+    failed_chunks: list[dict[str, Any]] = []
+
+    for i in range(0, expected, screen_chunk_size):
         chunk = symbols[i : i + screen_chunk_size]
-        rows = _screen_stocks_bulk_impl(chunk, db)
         screen_chunks += 1
-        screen_rows += len(rows)
+        attempts = 0
+        chunk_success = False
+        last_error: str | None = None
+        while attempts < 3 and not chunk_success:
+            attempts += 1
+            if attempts > 1:
+                retries += 1
+                time.sleep(2 ** (attempts - 2))
+            try:
+                rows = _screen_stocks_bulk_impl(chunk, db)
+                if len(rows) != len(chunk):
+                    missing = sorted(set(chunk) - {str(r.get("symbol", "")).upper() for r in rows})
+                    last_error = (
+                        f"incomplete chunk coverage: expected {len(chunk)} got {len(rows)}; missing={missing[:10]}"
+                    )
+                    continue
+                screen_rows += len(rows)
+                chunk_success = True
+            except Exception as exc:
+                last_error = str(exc)
+        if not chunk_success:
+            failed_chunks.append(
+                {
+                    "chunk_start": i,
+                    "chunk_size": len(chunk),
+                    "error": last_error or "screening chunk failed",
+                }
+            )
+
+    stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
+    fundamentals = get_fundamentals_status(stock_count, db=db)
+    stale = bool(fundamentals.get("stale"))
+    fundamentals_latest = fundamentals.get("latest_fundamentals_updated_at")
+    screening_complete = (screen_rows == expected and expected > 0 and not failed_chunks)
+
+    run.prices_total = int(price_result.get("total") or 0)
+    run.prices_updated = int(price_result.get("updated") or 0)
+    run.screening_chunks = screen_chunks
+    run.screening_retries = retries
+    run.screening_symbols_expected = expected
+    run.screening_symbols_completed = screen_rows
+    run.stale_at_finish = stale
+    run.latest_fundamentals_updated_at = fundamentals_latest
+    run.finished_at = datetime.now(timezone.utc)
+
+    if not screening_complete:
+        run.status = "failed"
+        run.error_detail = f"incomplete screening coverage; expected={expected}, completed={screen_rows}"
+        db.commit()
+        send_ops_alert(
+            level="error",
+            title="Daily refresh failed (partial screening)",
+            alert_key="daily-refresh:failure:partial-screening",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="screening",
+                provider=eff,
+                expected=expected,
+                completed=screen_rows,
+                chunks=screen_chunks,
+                retries=retries,
+                stale=stale,
+                fundamentals_latest=fundamentals_latest,
+                duration_seconds=time.perf_counter() - t0,
+                failure_reason=run.error_detail,
+            ),
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Daily screening refresh did not complete full symbol coverage.",
+                "run_id": run_id,
+                "symbols_expected": expected,
+                "symbols_completed": screen_rows,
+                "failed_chunks": failed_chunks,
+            },
+        )
+
+    if stale:
+        run.status = "failed"
+        run.error_detail = "Fundamentals dataset is stale after refresh."
+        db.commit()
+        send_ops_alert(
+            level="warning",
+            title="Daily refresh failed stale guard",
+            alert_key="daily-refresh:failure:stale",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="stale_guard",
+                provider=eff,
+                expected=expected,
+                completed=screen_rows,
+                chunks=screen_chunks,
+                retries=retries,
+                stale=stale,
+                fundamentals_latest=fundamentals_latest,
+                duration_seconds=time.perf_counter() - t0,
+                failure_reason=run.error_detail,
+            ),
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Fundamentals are stale after refresh; run fundamentals sync and retry daily refresh.",
+                "run_id": run_id,
+                "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
+            },
+        )
+
+    run.status = "success"
+    run.error_detail = ""
+    db.commit()
+
+    duration_seconds = time.perf_counter() - t0
+    send_ops_alert(
+        level="success",
+        title="Daily pipeline heartbeat: Job A + Job B complete",
+        alert_key="daily-refresh:success",
+        details=_daily_refresh_alert_details(
+            run_id=run_id,
+            phase="completed",
+            provider=eff,
+            expected=expected,
+            completed=screen_rows,
+            chunks=screen_chunks,
+            retries=retries,
+            stale=stale,
+            fundamentals_latest=fundamentals_latest,
+            duration_seconds=duration_seconds,
+        )
+        | {
+            "job_a_rows_with_timestamp": fundamentals.get("rows_with_timestamp"),
+            "job_a_rows_missing_timestamp": fundamentals.get("rows_missing_timestamp"),
+        },
+    )
 
     return {
         "ok": True,
+        "run_id": run_id,
         "prices": {
             "provider": price_result["provider"],
             "updated": price_result["updated"],
             "failed_symbols": price_result["failed_symbols"],
             "total": price_result["total"],
         },
-        "screening": {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows},
+        "screening": {
+            "symbols_total": expected,
+            "symbols_expected": expected,
+            "symbols_completed": screen_rows,
+            "chunks": screen_chunks,
+            "retries": retries,
+            "rows_cached": screen_rows,
+            "screening_complete": True,
+        },
+        "fundamentals": {
+            "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
+            "stale": stale,
+            "staleness_hours": fundamentals.get("staleness_hours"),
+        },
+        "duration_seconds": round(duration_seconds, 2),
     }
 
 # ═══════════════════════════════════════════════════════════════

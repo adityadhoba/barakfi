@@ -18,7 +18,7 @@ from app.config import (
     UPSTOX_ACCESS_TOKEN,
     XARO_API_KEY,
 )
-from app.models import Stock
+from app.models import DailyRefreshRun, Stock
 
 
 logger = logging.getLogger("barakfi.market-data-status")
@@ -285,6 +285,39 @@ def _collect_fundamentals_freshness(db: Session | None, stock_count: int) -> dic
     return freshness
 
 
+def _collect_latest_screening_refresh(db: Session | None) -> dict[str, Any]:
+    defaults = {
+        "latest_daily_screening_completed_at": None,
+        "screening_symbols_expected": 0,
+        "screening_symbols_completed": 0,
+        "screening_complete": False,
+    }
+    if db is None:
+        return defaults
+    try:
+        latest = (
+            db.query(DailyRefreshRun)
+            .order_by(DailyRefreshRun.started_at.desc(), DailyRefreshRun.id.desc())
+            .first()
+        )
+        if not latest:
+            return defaults
+        return {
+            "latest_daily_screening_completed_at": latest.finished_at,
+            "screening_symbols_expected": int(latest.screening_symbols_expected or 0),
+            "screening_symbols_completed": int(latest.screening_symbols_completed or 0),
+            "screening_complete": (
+                latest.status == "success"
+                and int(latest.screening_symbols_completed or 0)
+                >= int(latest.screening_symbols_expected or 0)
+                and int(latest.screening_symbols_expected or 0) > 0
+            ),
+        }
+    except Exception as exc:
+        logger.warning("[fundamentals-status] failed to read daily_refresh_runs: %s", exc)
+        return defaults
+
+
 def get_market_data_status(stock_count: int) -> dict:
     definition = _resolve_provider(MARKET_DATA_PROVIDER, MARKET_DATA_PROVIDERS)
     configured = _provider_configured(definition)
@@ -312,6 +345,7 @@ def get_fundamentals_status(stock_count: int, db: Session | None = None) -> dict
     is_live = definition.is_live_provider and configured
     notes, blockers = _build_fundamentals_notes(definition, configured)
     freshness = _collect_fundamentals_freshness(db, stock_count)
+    screening_refresh = _collect_latest_screening_refresh(db)
 
     if freshness["rows_missing_timestamp"] > 0:
         notes.append(
@@ -339,6 +373,10 @@ def get_fundamentals_status(stock_count: int, db: Session | None = None) -> dict
         "rows_missing_timestamp": freshness["rows_missing_timestamp"],
         "stale": freshness["stale"],
         "staleness_hours": freshness["staleness_hours"],
+        "latest_daily_screening_completed_at": screening_refresh["latest_daily_screening_completed_at"],
+        "screening_symbols_expected": screening_refresh["screening_symbols_expected"],
+        "screening_symbols_completed": screening_refresh["screening_symbols_completed"],
+        "screening_complete": screening_refresh["screening_complete"],
     }
 
 
@@ -353,6 +391,8 @@ def get_data_stack_status(stock_count: int, db: Session | None = None) -> dict:
         readiness_gaps.append("Financial statements are still seeded, so screening scale is limited.")
     if fundamentals["stale"]:
         readiness_gaps.append("Fundamentals dataset is stale or missing timestamps.")
+    if not fundamentals.get("screening_complete"):
+        readiness_gaps.append("Daily screening refresh is incomplete or has not run yet.")
 
     fundamentals_freshness = {
         "latest_fundamentals_updated_at": fundamentals["latest_fundamentals_updated_at"],
@@ -360,6 +400,10 @@ def get_data_stack_status(stock_count: int, db: Session | None = None) -> dict:
         "rows_missing_timestamp": fundamentals["rows_missing_timestamp"],
         "stale": fundamentals["stale"],
         "staleness_hours": fundamentals["staleness_hours"],
+        "latest_daily_screening_completed_at": fundamentals["latest_daily_screening_completed_at"],
+        "screening_symbols_expected": fundamentals["screening_symbols_expected"],
+        "screening_symbols_completed": fundamentals["screening_symbols_completed"],
+        "screening_complete": fundamentals["screening_complete"],
     }
 
     return {

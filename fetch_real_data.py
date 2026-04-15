@@ -49,6 +49,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, UTC
 from pathlib import Path
+import requests
 
 try:
     import yfinance as yf
@@ -66,6 +67,10 @@ RATE_LIMIT_SECONDS = 0.5
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
 PRODUCTION_ENV_VALUES = {"production", "prod"}
+OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
+OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
+OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
+OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "false").lower() == "true"
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -465,6 +470,31 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 log = logging.getLogger("fetch_real_data")
+
+
+def _send_job_a_alert(level: str, title: str, details: dict[str, object]) -> None:
+    level_normalized = (level or "").strip().lower()
+    if level_normalized == "success" and (not OPS_ALERT_SUCCESSES_ENABLED or not OPS_ALERT_JOB_A_SUCCESSES_ENABLED):
+        return
+    if level_normalized in {"warning", "error"} and not OPS_ALERT_FAILURES_ENABLED:
+        return
+    if not OPS_SLACK_WEBHOOK_URL:
+        return
+    lines = [f"*[{os.getenv('APP_ENV', 'unknown').upper()}]* {title}"]
+    for key, value in details.items():
+        if value is None:
+            continue
+        lines.append(f"• {key}: {value}")
+    try:
+        response = requests.post(
+            OPS_SLACK_WEBHOOK_URL,
+            json={"text": "\n".join(lines)},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            log.warning("Job A alert rejected by Slack (%s): %s", response.status_code, response.text[:400])
+    except Exception as exc:
+        log.warning("Job A alert send failed: %s", exc)
 
 # ---------------------------------------------------------------------------
 # Helper: safe numeric extraction from yfinance data
@@ -1032,7 +1062,7 @@ def write_to_database(stocks):
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Fetch real financial data for global stocks from Yahoo Finance."
     )
@@ -1144,7 +1174,20 @@ def main():
             log.info("Data written to database and %s.", OUTPUT_FILE)
     else:
         log.error("No stocks fetched successfully. Nothing to write.")
-        sys.exit(1)
+        _send_job_a_alert(
+            "error",
+            "Job A failed (no successful fundamentals fetch)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": datetime.now(UTC).isoformat(),
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+                "failure_reason": "No stocks fetched successfully",
+                "recovery_hint": "Re-run fetch_real_data.py, then run scripts/run_daily_refresh.py",
+            },
+        )
+        return 1
 
     run_finished_at = datetime.now(UTC)
     rows_updated = 0 if db_summary is None else db_summary["created"] + db_summary["updated"]
@@ -1159,7 +1202,34 @@ def main():
         rows_with_timestamp,
         rows_missing_timestamp,
     )
+    if not args.dry_run:
+        _send_job_a_alert(
+            "success",
+            "Job A complete (fundamentals refreshed)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "rows_updated": rows_updated,
+                "rows_failed": len(failed),
+                "rows_with_timestamp": rows_with_timestamp,
+                "rows_missing_timestamp": rows_missing_timestamp,
+                "next_step": "Job B: scripts/run_daily_refresh.py",
+            },
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        _send_job_a_alert(
+            "error",
+            "Job A failed (exception)",
+            {
+                "finished_at_utc": datetime.now(UTC).isoformat(),
+                "failure_reason": str(exc),
+                "recovery_hint": "Check fundamentals provider connectivity and re-run Job A",
+            },
+        )
+        raise
