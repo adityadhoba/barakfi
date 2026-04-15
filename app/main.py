@@ -32,7 +32,6 @@ from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all 
     SuperInvestorHolding,
     CoverageRequest,
     Feedback,
-    NewsArticle,
     BrokerConnection,
 )
 
@@ -274,6 +273,26 @@ def _migrate_screening_quota_unique_index():
     logger.info("[quota-index-migrate] %s unique indexes after: %s", table_name, after)
 
 
+def _drop_news_articles_table_if_exists():
+    """Drop legacy news_articles table during startup after news decommission."""
+    table_name = "news_articles"
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        logger.info("[news-decommission] %s table missing; skipping drop", table_name)
+        return
+
+    logger.info("[news-decommission] Dropping legacy table: %s", table_name)
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+            else:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}"'))
+        logger.info("[news-decommission] Dropped %s successfully", table_name)
+    except Exception as exc:
+        logger.warning("[news-decommission] Failed dropping %s: %s", table_name, exc)
+
+
 def _acquire_seed_lock(conn) -> bool:
     """
     Acquire a best-effort cross-process seed lock.
@@ -430,6 +449,8 @@ _sqlite_migrate_stocks_composite_unique()
 
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
+# 2a. Remove legacy news table if it still exists in older deployments
+_drop_news_articles_table_if_exists()
 # 2b. Heal legacy screening_quotas unique index shape in older environments
 _migrate_screening_quota_unique_index()
 # 3. Auto-seed stocks if the database is empty

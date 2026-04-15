@@ -2664,7 +2664,7 @@ def daily_refresh(
     screen_chunk_size: int = Query(default=150, ge=50, le=500, description="Symbols per bulk-screen chunk (max 500)."),
 ):
     """
-    One-shot pipeline for cron: sync all equity prices, upsert news, warm screening cache in chunks.
+    One-shot pipeline for cron: sync all equity prices and warm screening cache in chunks.
 
     Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
@@ -2674,11 +2674,6 @@ def daily_refresh(
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
         raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
-
-    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
-
-    n_rss = fetch_and_upsert_news(db)
-    n_nd = fetch_and_upsert_newsdata(db)
 
     symbols = [
         row[0]
@@ -2700,7 +2695,6 @@ def daily_refresh(
             "failed_symbols": price_result["failed_symbols"],
             "total": price_result["total"],
         },
-        "news": {"upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd},
         "screening": {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows},
     }
 
