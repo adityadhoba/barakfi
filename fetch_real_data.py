@@ -47,7 +47,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 import requests
 
@@ -70,7 +70,7 @@ PRODUCTION_ENV_VALUES = {"production", "prod"}
 OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
 OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
 OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
-OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "false").lower() == "true"
+OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "true").lower() == "true"
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -545,7 +545,24 @@ TICKER_ALTERNATES = {
     "TATAMOTORS": ["TATAMOTORS.NS", "TATAMOTORS.BO"],
     "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS", "MCDOWELL-N.BO"],
     "PEL": ["PEL.NS", "PEL.BO"],
-    "ZOMATO": ["ZOMATO.NS", "ZOMATO.BO"],
+    "ZOMATO": ["ETERNAL.NS", "ZOMATO.NS", "ZOMATO.BO"],
+    "ADANITRANS": ["ADANIENSOL.NS", "ADANITRANS.NS"],
+    "INDIANHOTELS": ["INDHOTEL.NS", "INDIANHOTELS.NS"],
+    "MAZAGON": ["MAZDOCK.NS", "MAZAGON.NS"],
+    "GARDENREACH": ["GRSE.NS", "GARDENREACH.NS"],
+    "ZENSAR": ["ZENSARTECH.NS", "ZENSAR.NS"],
+    "TV18BRDCST": ["TV18BRDCST.NS", "TVTODAY.NS"],
+    "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
+}
+
+# Canonical symbol mapping for renamed or legacy NSE symbols.
+CANONICAL_NSE_SYMBOLS = {
+    "ZOMATO": "ETERNAL",
+    "ADANITRANS": "ADANIENSOL",
+    "INDIANHOTELS": "INDHOTEL",
+    "MAZAGON": "MAZDOCK",
+    "GARDENREACH": "GRSE",
+    "ZENSAR": "ZENSARTECH",
 }
 
 
@@ -554,7 +571,8 @@ def _nse_ticker(symbol):
     Convert an NSE symbol to a yfinance ticker string.
     Handles the M&M edge case and other special characters.
     """
-    return f"{symbol}.NS"
+    canonical = CANONICAL_NSE_SYMBOLS.get(symbol, symbol)
+    return f"{canonical}.NS"
 
 
 # ---------------------------------------------------------------------------
@@ -670,6 +688,7 @@ def fetch_stock_data(symbol, exchange="NSE"):
     Returns a dict matching the Stock model fields, or None on failure.
     """
     ticker_str = _build_ticker_str(symbol, exchange)
+    canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
     log.info("Fetching %s (%s, %s) ...", symbol, ticker_str, exchange)
 
     sector_map = _get_sector_map(exchange)
@@ -684,10 +703,12 @@ def fetch_stock_data(symbol, exchange="NSE"):
         if not info or (info.get("regularMarketPrice") is None and info.get("currentPrice") is None):
             log.warning("No price data for %s, attempting alternate tickers", symbol)
             found = False
+            attempted_tickers: list[str] = [ticker_str]
             if exchange == "NSE":
                 # Try M&M URL-encoded version
                 if "&" in symbol:
                     alt_ticker = symbol.replace("&", "%26") + ".NS"
+                    attempted_tickers.append(alt_ticker)
                     ticker = yf.Ticker(alt_ticker)
                     info = ticker.info or {}
                     if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
@@ -696,6 +717,7 @@ def fetch_stock_data(symbol, exchange="NSE"):
                 if not found and symbol in TICKER_ALTERNATES:
                     for alt in TICKER_ALTERNATES[symbol]:
                         time.sleep(RATE_LIMIT_SECONDS)
+                        attempted_tickers.append(alt)
                         ticker = yf.Ticker(alt)
                         info = ticker.info or {}
                         if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
@@ -703,7 +725,12 @@ def fetch_stock_data(symbol, exchange="NSE"):
                             found = True
                             break
             if not found:
-                log.error("FAILED: %s - no data from Yahoo Finance (tried all alternates)", symbol)
+                log.error(
+                    "FAILED: %s - no data from Yahoo Finance (canonical=%s, tried=%s)",
+                    symbol,
+                    canonical_symbol,
+                    ", ".join(dict.fromkeys(attempted_tickers)),
+                )
                 return None
 
         # -- Price --
@@ -909,7 +936,7 @@ def write_output_file(stocks):
     lines = [
         '"""',
         "Auto-generated real stock data fetched from Yahoo Finance.",
-        f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
         f"Total stocks: {len(stocks)}",
         '"""',
         "",
@@ -987,26 +1014,28 @@ def write_to_database(stocks):
     touched_ids: set[int] = set()
 
     try:
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
+        db_columns = {column.name for column in Stock.__table__.columns}
         for raw in stocks:
             payload = {**raw, "fundamentals_updated_at": now}
+            filtered_payload = _filter_stock_payload_for_model(payload, db_columns)
             existing = (
                 db.query(Stock)
                 .filter(
-                    Stock.symbol == payload["symbol"],
-                    Stock.exchange == payload.get("exchange", "NSE"),
+                    Stock.symbol == filtered_payload["symbol"],
+                    Stock.exchange == filtered_payload.get("exchange", "NSE"),
                 )
                 .first()
             )
             if not existing:
-                existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+                existing = db.query(Stock).filter(Stock.symbol == filtered_payload["symbol"]).first()
             if existing:
-                for key, value in payload.items():
+                for key, value in filtered_payload.items():
                     setattr(existing, key, value)
                 updated += 1
                 touched_ids.add(existing.id)
             else:
-                row = Stock(**payload)
+                row = Stock(**filtered_payload)
                 db.add(row)
                 db.flush()
                 touched_ids.add(row.id)
@@ -1057,6 +1086,11 @@ def write_to_database(stocks):
         db.close()
 
 
+def _filter_stock_payload_for_model(payload: dict, allowed_columns: set[str]) -> dict:
+    """Drop keys that are not present on the Stock ORM model."""
+    return {k: v for k, v in payload.items() if k in allowed_columns}
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1072,23 +1106,18 @@ def main() -> int:
         help="Fetch and display data without writing to the database.",
     )
     args = parser.parse_args()
-    run_started_at = datetime.now(UTC)
+    run_started_at = datetime.now(timezone.utc)
 
     if not args.dry_run:
         _assert_production_database_url()
 
-    exchanges = [
-        ("NSE", STOCK_SYMBOLS),
-        ("US", US_STOCK_SYMBOLS),
-        ("LSE", UK_STOCK_SYMBOLS),
-    ]
+    exchanges = [("NSE", STOCK_SYMBOLS)]
 
     total_symbols = sum(len(syms) for _, syms in exchanges)
 
     log.info("=" * 70)
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
-    log.info("  NSE: %d stocks | US: %d stocks | LSE: %d stocks",
-             len(STOCK_SYMBOLS), len(US_STOCK_SYMBOLS), len(UK_STOCK_SYMBOLS))
+    log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -1179,7 +1208,7 @@ def main() -> int:
             "Job A failed (no successful fundamentals fetch)",
             {
                 "started_at_utc": run_started_at.isoformat(),
-                "finished_at_utc": datetime.now(UTC).isoformat(),
+                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
                 "total_attempted": total_symbols,
                 "successful": len(successful),
                 "failed": len(failed),
@@ -1189,7 +1218,7 @@ def main() -> int:
         )
         return 1
 
-    run_finished_at = datetime.now(UTC)
+    run_finished_at = datetime.now(timezone.utc)
     rows_updated = 0 if db_summary is None else db_summary["created"] + db_summary["updated"]
     rows_with_timestamp = 0 if db_summary is None else db_summary["rows_with_timestamp"]
     rows_missing_timestamp = 0 if db_summary is None else db_summary["rows_missing_timestamp"]
@@ -1202,6 +1231,26 @@ def main() -> int:
         rows_with_timestamp,
         rows_missing_timestamp,
     )
+    partial_failure = len(failed) > 0
+    if partial_failure:
+        _send_job_a_alert(
+            "warning",
+            "Job A partial completion (fundamentals fetch incomplete)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "DRY RUN" if args.dry_run else "LIVE",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+                "failed_symbols_preview": ", ".join(failed[:10]),
+                "rows_updated": rows_updated,
+                "rows_with_timestamp": rows_with_timestamp,
+                "rows_missing_timestamp": rows_missing_timestamp,
+            },
+        )
+        return 1
+
     if not args.dry_run:
         _send_job_a_alert(
             "success",
@@ -1209,11 +1258,28 @@ def main() -> int:
             {
                 "started_at_utc": run_started_at.isoformat(),
                 "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "LIVE",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
                 "rows_updated": rows_updated,
                 "rows_failed": len(failed),
                 "rows_with_timestamp": rows_with_timestamp,
                 "rows_missing_timestamp": rows_missing_timestamp,
                 "next_step": "Job B: scripts/run_daily_refresh.py",
+            },
+        )
+    else:
+        _send_job_a_alert(
+            "success",
+            "Job A complete (dry-run fundamentals fetch)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "DRY RUN",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
             },
         )
     return 0
@@ -1227,7 +1293,7 @@ if __name__ == "__main__":
             "error",
             "Job A failed (exception)",
             {
-                "finished_at_utc": datetime.now(UTC).isoformat(),
+                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
                 "failure_reason": str(exc),
                 "recovery_hint": "Check fundamentals provider connectivity and re-run Job A",
             },
