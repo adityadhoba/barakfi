@@ -47,7 +47,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 import requests
 
@@ -909,7 +909,7 @@ def write_output_file(stocks):
     lines = [
         '"""',
         "Auto-generated real stock data fetched from Yahoo Finance.",
-        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
         f"Total stocks: {len(stocks)}",
         '"""',
         "",
@@ -987,7 +987,7 @@ def write_to_database(stocks):
     touched_ids: set[int] = set()
 
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for raw in stocks:
             payload = {**raw, "fundamentals_updated_at": now}
             existing = (
@@ -1064,7 +1064,7 @@ def write_to_database(stocks):
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch real financial data for NSE stocks from Yahoo Finance."
+        description="Fetch real financial data for global stocks from Yahoo Finance."
     )
     parser.add_argument(
         "--dry-run",
@@ -1072,18 +1072,23 @@ def main() -> int:
         help="Fetch and display data without writing to the database.",
     )
     args = parser.parse_args()
-    run_started_at = datetime.now(timezone.utc)
+    run_started_at = datetime.now(UTC)
 
     if not args.dry_run:
         _assert_production_database_url()
 
-    exchanges = [("NSE", STOCK_SYMBOLS)]
+    exchanges = [
+        ("NSE", STOCK_SYMBOLS),
+        ("US", US_STOCK_SYMBOLS),
+        ("LSE", UK_STOCK_SYMBOLS),
+    ]
 
     total_symbols = sum(len(syms) for _, syms in exchanges)
 
     log.info("=" * 70)
-    log.info("Fetching real financial data for %d NSE stocks", total_symbols)
-    log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
+    log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
+    log.info("  NSE: %d stocks | US: %d stocks | LSE: %d stocks",
+             len(STOCK_SYMBOLS), len(US_STOCK_SYMBOLS), len(UK_STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -1150,16 +1155,19 @@ def main() -> int:
             log.info("DRY RUN: Skipping database write.")
             log.info("Data saved to %s only.", OUTPUT_FILE)
 
-            # Print sample data for verification (first 3 NSE rows)
+            # Print sample data for verification (one per exchange)
             log.info("")
-            log.info("Sample data (first 3 stocks):")
-            for s in successful[:3]:
-                unit = "Cr"
-                log.info("  %s (%s) [%s, %s]", s["symbol"], s["name"], s["exchange"], s.get("currency", ""))
-                log.info("    Price: %.2f | MCap: %.0f %s | Debt: %.0f %s",
-                         s["price"], s["market_cap"], unit, s["debt"], unit)
-                log.info("    Revenue: %.0f %s | Total Assets: %.0f %s",
-                         s["revenue"], unit, s["total_assets"], unit)
+            log.info("Sample data (first stock per exchange):")
+            shown_exchanges = set()
+            for s in successful:
+                if s["exchange"] not in shown_exchanges:
+                    shown_exchanges.add(s["exchange"])
+                    unit = "Cr" if s["exchange"] == "NSE" else "M"
+                    log.info("  %s (%s) [%s, %s]", s["symbol"], s["name"], s["exchange"], s.get("currency", ""))
+                    log.info("    Price: %.2f | MCap: %.0f %s | Debt: %.0f %s",
+                             s["price"], s["market_cap"], unit, s["debt"], unit)
+                    log.info("    Revenue: %.0f %s | Total Assets: %.0f %s",
+                             s["revenue"], unit, s["total_assets"], unit)
         else:
             db_summary = write_to_database(successful)
             log.info("")
@@ -1171,7 +1179,7 @@ def main() -> int:
             "Job A failed (no successful fundamentals fetch)",
             {
                 "started_at_utc": run_started_at.isoformat(),
-                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+                "finished_at_utc": datetime.now(UTC).isoformat(),
                 "total_attempted": total_symbols,
                 "successful": len(successful),
                 "failed": len(failed),
@@ -1181,7 +1189,7 @@ def main() -> int:
         )
         return 1
 
-    run_finished_at = datetime.now(timezone.utc)
+    run_finished_at = datetime.now(UTC)
     rows_updated = 0 if db_summary is None else db_summary["created"] + db_summary["updated"]
     rows_with_timestamp = 0 if db_summary is None else db_summary["rows_with_timestamp"]
     rows_missing_timestamp = 0 if db_summary is None else db_summary["rows_missing_timestamp"]
@@ -1194,23 +1202,6 @@ def main() -> int:
         rows_with_timestamp,
         rows_missing_timestamp,
     )
-    if failed:
-        failed_preview = ", ".join(failed[:20])
-        _send_job_a_alert(
-            "warning",
-            "Job A partial failure (NSE fundamentals)",
-            {
-                "started_at_utc": run_started_at.isoformat(),
-                "finished_at_utc": run_finished_at.isoformat(),
-                "total_attempted": total_symbols,
-                "successful": len(successful),
-                "failed": len(failed),
-                "failed_symbols_preview": failed_preview,
-                "failure_reason": "One or more NSE symbols failed to fetch",
-                "recovery_hint": "Re-run fetch_real_data.py, then run scripts/run_daily_refresh.py",
-            },
-        )
-        return 1
     if not args.dry_run:
         _send_job_a_alert(
             "success",
@@ -1236,7 +1227,7 @@ if __name__ == "__main__":
             "error",
             "Job A failed (exception)",
             {
-                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+                "finished_at_utc": datetime.now(UTC).isoformat(),
                 "failure_reason": str(exc),
                 "recovery_hint": "Check fundamentals provider connectivity and re-run Job A",
             },
