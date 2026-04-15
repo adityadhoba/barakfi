@@ -1,22 +1,18 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { getStocks, getTrending } from "@/lib/api";
+import { getStocks } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
 import { SCREENING_LEGAL_DISCLAIMER } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
 export async function HomeDashboard() {
-  const [stocks, trendingStocks] = await Promise.all([
-    getStocks(),
-    getTrending("popular", undefined, 8),
-  ]);
-
-  const popular = [...stocks]
-    .sort((a, b) => b.market_cap - a.market_cap)
-    .slice(0, 8);
-
-  const trendingChips = (trendingStocks.length > 0 ? trendingStocks : popular).slice(0, 3);
+  const popular = await getStocks({
+    limit: 12,
+    orderBy: "market_cap_desc",
+    revalidateSeconds: 300,
+  });
+  const trendingChips = popular.slice(0, 3);
 
   return (
     <div className={styles.home}>

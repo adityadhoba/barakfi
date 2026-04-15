@@ -5,8 +5,8 @@ import { useState } from "react";
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
 const EXCHANGE_SUFFIX: Record<string, string> = {
-  NSE: ".IN",
-  BSE: ".IN",
+  NSE: ".NS",
+  BSE: ".BO",
   US: "",
   NYSE: "",
   NASDAQ: "",
@@ -38,6 +38,50 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   ADANIPORTS: "adaniports.com",
   TATAMOTORS: "tatamotors.com",
   ONGC: "ongcindia.com",
+  BAJAJFINSV: "bajajfinserv.in",
+  BAJAJAUTO: "bajajauto.com",
+  BEL: "bel-india.in",
+  VEDL: "vedantalimited.com",
+  HAL: "hal-india.co.in",
+  TATASTEEL: "tatasteel.com",
+  HINDALCO: "hindalco.com",
+  EICHERMOT: "eicher.in",
+  SBILIFE: "sbilife.co.in",
+  GRASIM: "grasim.com",
+  SHRIRAMFIN: "shriramfinance.in",
+  TVSMOTOR: "tvsmotor.com",
+  DIVISLAB: "divislabs.com",
+  JIOFIN: "jio.com",
+  ADANIGREEN: "adani.com",
+  VBL: "varunbeverages.com",
+  TORNTPHARM: "torrentpharma.com",
+  LTIM: "ltimindtree.com",
+  PFC: "pfcindia.com",
+  ABB: "abb.com",
+  PIDILITIND: "pidilite.com",
+  DLF: "dlf.in",
+  BANKBARODA: "bankofbaroda.in",
+  CUMMINSIND: "cummins.com",
+  TECHM: "techmahindra.com",
+  MUTHOOTFIN: "muthootfinance.com",
+  TRENT: "trentlimited.com",
+  TATAPOWER: "tatapower.com",
+  HDFCLIFE: "hdfclife.com",
+  PNB: "pnbindia.in",
+  IRFC: "irfc.co.in",
+  SOLARINDS: "solarindustriesindia.com",
+  BSE: "bseindia.com",
+  CANBK: "canarabank.com",
+  MOTHERSON: "motherson.com",
+  INDUSTOWER: "industowers.com",
+  SIEMENS: "siemens.com",
+  LICI: "licindia.in",
+  LUPIN: "lupin.com",
+  POLYCAB: "polycab.com",
+  AMBUJACEM: "ambujacement.com",
+  TATACONSUM: "tataconsumer.com",
+  "M&M": "mahindra.com",
+  ADANIPOWER: "adani.com",
   JSWSTEEL: "jsw.in",
   CIPLA: "cipla.com",
   DRREDDY: "drreddys.com",
@@ -95,21 +139,12 @@ function normalizeSymbol(symbol: string): string {
     .toUpperCase();
 }
 
-function getTickerLogoUrl(symbol: string, exchange?: string): string {
+function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
+  if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
-  const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".IN";
+  const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
   const ticker = `${clean}${suffix}`;
-  if (LOGO_DEV_TOKEN) {
-    return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=128&format=png`;
-  }
-  return `https://img.logo.dev/ticker/${ticker}?size=128&format=png`;
-}
-
-function getBrandfetchUrl(symbol: string): string | null {
-  const clean = normalizeSymbol(symbol);
-  const domain = SYMBOL_TO_DOMAIN[clean];
-  if (!domain) return null;
-  return `https://cdn.brandfetch.io/${domain}/w/256/h/256`;
+  return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=128&format=png`;
 }
 
 function getFaviconUrl(symbol: string): string | null {
@@ -138,11 +173,10 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   const [srcLevel, setSrcLevel] = useState(0);
 
   const tickerUrl = getTickerLogoUrl(symbol, exchange);
-  const brandfetchUrl = getBrandfetchUrl(symbol);
   const faviconUrl = getFaviconUrl(symbol);
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  const sources = [tickerUrl, brandfetchUrl, faviconUrl].filter(Boolean) as string[];
+  const sources = [faviconUrl, tickerUrl].filter(Boolean) as string[];
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
@@ -178,6 +212,7 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
       width={size}
       height={size}
       className={className}
+      decoding="async"
       loading="lazy"
       onError={() => setSrcLevel((prev) => prev + 1)}
       style={{

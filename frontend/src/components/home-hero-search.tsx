@@ -22,18 +22,20 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const fetchedRef = useRef(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/stocks", { credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const list = Array.isArray(data) ? data : data?.data ?? [];
-        setStocks(list);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
+  const loadStocks = useCallback(async () => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    try {
+      const response = await fetch("/api/stocks", { credentials: "same-origin" });
+      if (!response.ok) return;
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setStocks(list);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const filteredSuggestions = useMemo(() => {
@@ -96,8 +98,15 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
           type="text"
           placeholder="Search TCS, Reliance, Infosys..."
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            void loadStocks();
+          }}
+          onFocus={() => {
+            setOpen(true);
+            void loadStocks();
+          }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
         />

@@ -503,16 +503,25 @@ export type WorkspaceBundle = {
  *
  * @internal
  */
-async function apiFetch<T>(path: string, fallback: T): Promise<T> {
+type ApiFetchOptions = {
+  revalidateSeconds?: number;
+};
+
+async function apiFetch<T>(path: string, fallback: T, options: ApiFetchOptions = {}): Promise<T> {
   // Render free tier cold starts can take 30-50s — use AbortController with generous timeout
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55_000);
 
   try {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      cache: "no-store",
+    const fetchInit: RequestInit & { next?: { revalidate: number } } = {
       signal: controller.signal,
-    });
+    };
+    if (typeof options.revalidateSeconds === "number") {
+      fetchInit.next = { revalidate: options.revalidateSeconds };
+    } else {
+      fetchInit.cache = "no-store";
+    }
+    const response = await fetch(`${apiBaseUrl}${path}`, fetchInit);
 
     if (!response.ok) {
       const detail = await parseErrorDetail(response);
@@ -538,8 +547,25 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
  * const stocks = await getStocks();
  * stocks.forEach(s => console.log(s.symbol, s.sector));
  */
-export function getStocks() {
-  return apiFetch<Stock[]>("/stocks", []);
+export type GetStocksOptions = {
+  limit?: number;
+  orderBy?: "symbol" | "market_cap_desc";
+  revalidateSeconds?: number;
+};
+
+export function getStocks(options: GetStocksOptions = {}) {
+  const params = new URLSearchParams();
+  if (typeof options.limit === "number") {
+    params.set("limit", String(options.limit));
+  }
+  if (options.orderBy) {
+    params.set("order_by", options.orderBy);
+  }
+  const query = params.toString();
+  const path = query ? `/stocks?${query}` : "/stocks";
+  return apiFetch<Stock[]>(path, [], {
+    revalidateSeconds: options.revalidateSeconds,
+  });
 }
 
 /**

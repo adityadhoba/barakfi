@@ -387,6 +387,8 @@ def data_stack_status(db: Session = Depends(get_db)):
 def list_stocks(
     halal_only: bool = Query(default=False),
     search: str | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    order_by: str = Query(default="symbol", pattern="^(symbol|market_cap_desc)$"),
     db: Session = Depends(get_db),
 ):
     """
@@ -414,7 +416,13 @@ def list_stocks(
         search_term = f"%{search.upper()}%"
         query = query.filter((Stock.symbol.ilike(search_term)) | (Stock.name.ilike(search_term)))
 
-    stocks = query.order_by(Stock.symbol.asc()).all()
+    if order_by == "market_cap_desc":
+        query = query.order_by(Stock.market_cap.desc(), Stock.symbol.asc())
+    else:
+        query = query.order_by(Stock.symbol.asc())
+    if limit is not None:
+        query = query.limit(limit)
+    stocks = query.all()
 
     if not halal_only:
         return _stocks_read_enriched(db, stocks)
