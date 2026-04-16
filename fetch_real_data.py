@@ -571,6 +571,7 @@ CANONICAL_NSE_SYMBOLS = {
     "MAZAGON": "MAZDOCK",
     "GARDENREACH": "GRSE",
     "ZENSAR": "ZENSARTECH",
+    "TV18BRDCST": "NETWORK18",
 }
 
 # Alternates that require strict ISIN match proof before accepting.
@@ -584,6 +585,7 @@ ISIN_VERIFIED_ALTERNATE_REQUIRED = {
 PREFERRED_ALIAS_CANDIDATES = {
     "MCDOWELL-N": "UNITDSPR",
     "CENTURYTEX": "ABREL",
+    "TV18BRDCST": "NETWORK18",
 }
 
 _NSE_ISIN_CACHE: dict[str, str | None] = {}
