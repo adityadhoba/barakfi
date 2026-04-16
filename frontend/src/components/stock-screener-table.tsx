@@ -65,6 +65,13 @@ function formatPrice(value: number, currency?: string) {
   }).format(value);
 }
 
+function formatEventDate(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 function getSortValue(
   s: ScreenedStock,
   key: SortKey,
@@ -610,15 +617,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <th className={styles.th}>Sector</th>
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
-                <th className={styles.th}>
-                  <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
-                    Status
-                    <span className={styles.statusHeaderInfo}>i</span>
-                  </span>
-                </th>
-                <th className={styles.th} style={{ width: 100 }}>Action</th>
-              </tr>
-            </thead>
+              <th className={styles.th}>
+                <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
+                  Status
+                  <span className={styles.statusHeaderInfo}>i</span>
+                </span>
+              </th>
+              <th className={styles.th}>Recent Event</th>
+              <th className={styles.th} style={{ width: 100 }}>Action</th>
+            </tr>
+          </thead>
             <tbody>
               {pageItems.map((s, idx) => {
                 const globalIdx = pageStart + idx + 1;
@@ -664,6 +672,18 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                         {screeningUiLabel(s.screening.status)}
                       </span>
                     </td>
+                    <td className={styles.tdSector}>
+                      {s.latest_corporate_event ? (
+                        <span
+                          className={styles.statusBadge}
+                          title={`${s.latest_corporate_event.label}${s.latest_corporate_event.effective_date ? ` · ${formatEventDate(s.latest_corporate_event.effective_date)}` : ""}${s.latest_corporate_event.successor_symbol ? ` · ${s.latest_corporate_event.successor_symbol}` : ""}`}
+                        >
+                          {s.latest_corporate_event.label}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      )}
+                    </td>
                     <td>
                       <button
                         type="button"
@@ -682,7 +702,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={7} className={styles.emptyRow}>
+                  <td colSpan={8} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>

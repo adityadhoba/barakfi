@@ -3,7 +3,7 @@ import json
 from fastapi.testclient import TestClient
 from app.config import INTERNAL_SERVICE_TOKEN
 from app.database import SessionLocal
-from app.models import ComplianceOverride, ComplianceReviewCase, ComplianceReviewEvent, Stock
+from app.models import ComplianceOverride, ComplianceReviewCase, ComplianceReviewEvent, Stock, StockCorporateEvent
 
 from app.main import app
 
@@ -124,6 +124,128 @@ def test_list_stocks_includes_fundamentals_completeness_fields():
     assert row["data_quality"] in ("high", "medium", "low", None)
     assert "fundamentals_fields_missing" in row
     assert isinstance(row["fundamentals_fields_missing"], list)
+    assert "latest_corporate_event" in row
+
+
+def test_get_stock_resolves_legacy_symbol_to_canonical():
+    old_symbol = "LEGACYTEST1"
+    new_symbol = "CANONTEST1"
+    db = SessionLocal()
+    try:
+        db.query(StockCorporateEvent).filter(
+            StockCorporateEvent.symbol.in_([old_symbol, new_symbol])
+        ).delete(synchronize_session=False)
+        db.query(Stock).filter(Stock.symbol.in_([old_symbol, new_symbol])).delete(synchronize_session=False)
+        db.flush()
+
+        canonical = Stock(
+            symbol=new_symbol,
+            name="Canonical Test Co",
+            sector="Technology",
+            exchange="NSE",
+            market_cap=1000,
+            average_market_cap_36m=900,
+            debt=100,
+            revenue=500,
+            total_business_income=500,
+            interest_income=5,
+            non_permissible_income=2,
+            accounts_receivable=50,
+            cash_and_equivalents=80,
+            short_term_investments=0,
+            fixed_assets=100,
+            total_assets=900,
+            price=100,
+            currency="INR",
+            country="India",
+            data_source="test",
+            is_active=True,
+            symbol_status="active",
+            canonical_symbol=new_symbol,
+        )
+        legacy = Stock(
+            symbol=old_symbol,
+            name="Legacy Test Co",
+            sector="Technology",
+            exchange="NSE",
+            market_cap=900,
+            average_market_cap_36m=850,
+            debt=110,
+            revenue=450,
+            total_business_income=450,
+            interest_income=5,
+            non_permissible_income=2,
+            accounts_receivable=45,
+            cash_and_equivalents=70,
+            short_term_investments=0,
+            fixed_assets=95,
+            total_assets=880,
+            price=90,
+            currency="INR",
+            country="India",
+            data_source="test",
+            is_active=False,
+            symbol_status="merged",
+            canonical_symbol=new_symbol,
+            successor_symbol=new_symbol,
+            screening_blocked_reason="corporate_action_merge",
+        )
+        db.add_all([canonical, legacy])
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"/api/stocks/{old_symbol}")
+    assert response.status_code == 200
+    body = api_json(response)
+    assert body["symbol"] == new_symbol
+
+
+def test_screen_legacy_symbol_without_successor_returns_409():
+    symbol = "DELISTTEST1"
+    db = SessionLocal()
+    try:
+        db.query(StockCorporateEvent).filter(StockCorporateEvent.symbol == symbol).delete(synchronize_session=False)
+        db.query(Stock).filter(Stock.symbol == symbol).delete(synchronize_session=False)
+        db.flush()
+        db.add(
+            Stock(
+                symbol=symbol,
+                name="Delisted Co",
+                sector="Technology",
+                exchange="NSE",
+                market_cap=100,
+                average_market_cap_36m=100,
+                debt=10,
+                revenue=20,
+                total_business_income=20,
+                interest_income=0,
+                non_permissible_income=0,
+                accounts_receivable=2,
+                cash_and_equivalents=5,
+                short_term_investments=0,
+                fixed_assets=10,
+                total_assets=40,
+                price=10,
+                currency="INR",
+                country="India",
+                data_source="test",
+                is_active=False,
+                symbol_status="delisted",
+                screening_blocked_reason="corporate_action_delisted",
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(f"/api/screen/{symbol}")
+    assert response.status_code == 409
+    payload = api_json(response)
+    detail = ""
+    if isinstance(payload, dict):
+        detail = str(payload.get("detail") or payload.get("error", {}).get("message", ""))
+    assert "not active for screening" in detail.lower() or "screening blocked" in detail.lower()
 
 
 def test_screen_stock():

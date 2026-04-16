@@ -58,6 +58,7 @@ from app.models import (
     BrokerConnection,
     DailyRefreshRun,
     SymbolResolutionIssue,
+    StockCorporateEvent,
 )
 from app.schemas import (
     ActionResponse,
@@ -82,6 +83,8 @@ from app.schemas import (
     GovernanceOverviewResponse,
     DataStackStatusResponse,
     FundamentalsStatusResponse,
+    StockCorporateEventCreate,
+    StockCorporateEventRead,
     SymbolResolutionHealthResponse,
     SymbolResolutionIssueRead,
     UniversePreviewResponse,
@@ -138,6 +141,10 @@ from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_st
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 from app.services.stock_data_quality import fundamentals_completeness_payload
+from app.services.corporate_action_service import (
+    apply_corporate_action_events,
+    summarize_latest_events_by_symbols,
+)
 from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
@@ -161,11 +168,13 @@ def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, lis
 def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
     dq, missing = fundamentals_completeness_payload(stock)
+    latest_event = summarize_latest_events_by_symbols(db, [stock.symbol]).get(stock.symbol.upper())
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
             "data_quality": dq,
             "fundamentals_fields_missing": missing,
+            "latest_corporate_event": latest_event,
         }
     )
 
@@ -173,6 +182,7 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
 def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     ids = [s.id for s in stocks]
     code_map = _index_codes_by_stock_id(db, ids)
+    event_map = summarize_latest_events_by_symbols(db, [s.symbol for s in stocks])
     out: list[StockRead] = []
     for s in stocks:
         dq, missing = fundamentals_completeness_payload(s)
@@ -182,6 +192,7 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
                     "index_memberships": code_map.get(s.id, []),
                     "data_quality": dq,
                     "fundamentals_fields_missing": missing,
+                    "latest_corporate_event": event_map.get(s.symbol.upper()),
                 }
             )
         )
@@ -200,6 +211,22 @@ def _check_cache_key(symbol: str, exchange: str) -> str:
 
 def _multi_cache_key(symbol: str, exchange: str | None) -> str:
     return f"multi:{symbol.strip().upper()}:{(exchange or '_').strip().upper()}"
+
+
+def _validate_screenable_stock_or_raise(stock: Stock) -> None:
+    if not stock.is_active:
+        successor = (stock.canonical_symbol or stock.successor_symbol or "").strip().upper() or None
+        if successor:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Symbol moved to {successor}; use the canonical listing instead.",
+            )
+        raise HTTPException(
+            status_code=409,
+            detail=f"{stock.symbol} is not active for screening (status: {stock.symbol_status or 'inactive'}).",
+        )
+    if stock.screening_blocked_reason:
+        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
 
 
 def _tracked_rows_for_user(db: Session, user: User) -> list[dict[str, Any]]:
@@ -504,8 +531,7 @@ def check_stock(
     stock = resolve_stock(db, clean, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
-    if stock.screening_blocked_reason:
-        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
+    _validate_screenable_stock_or_raise(stock)
 
     ck = _check_cache_key(stock.symbol, stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -558,8 +584,7 @@ def screen_stock(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
-    if stock.screening_blocked_reason:
-        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
+    _validate_screenable_stock_or_raise(stock)
 
     ex_for_key = exchange or stock.exchange
     ckey = screening_cache_key(stock.symbol, ex_for_key)
@@ -821,8 +846,7 @@ def screen_stock_multi(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
-    if stock.screening_blocked_reason:
-        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
+    _validate_screenable_stock_or_raise(stock)
 
     mk = _multi_cache_key(stock.symbol, exchange or stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -2831,6 +2855,22 @@ def daily_refresh(
     db.commit()
     db.refresh(run)
 
+    symbol_master = {
+        "events_processed": 0,
+        "rows_updated": 0,
+        "rows_disabled": 0,
+        "rows_created": 0,
+        "rows_remapped": 0,
+        "unresolved_actions": 0,
+        "run_at": None,
+    }
+    try:
+        symbol_master = apply_corporate_action_events(db, create_missing_parents=True)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] symbol master sync failed: %s", exc)
+
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
         run.status = "failed"
@@ -3074,6 +3114,15 @@ def daily_refresh(
             "blocked_from_screening": symbol_integrity.get("blocked_from_screening_count", 0),
             "last_run_at": symbol_integrity.get("last_run_at").isoformat() if symbol_integrity.get("last_run_at") else None,
         },
+        "symbol_master": {
+            "events_processed": symbol_master.get("events_processed", 0),
+            "rows_updated": symbol_master.get("rows_updated", 0),
+            "rows_disabled": symbol_master.get("rows_disabled", 0),
+            "rows_created": symbol_master.get("rows_created", 0),
+            "rows_remapped": symbol_master.get("rows_remapped", 0),
+            "unresolved_actions": symbol_master.get("unresolved_actions", 0),
+            "run_at": symbol_master.get("run_at").isoformat() if symbol_master.get("run_at") else None,
+        },
         "fundamentals": {
             "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
             "stale": stale,
@@ -3107,6 +3156,91 @@ def admin_symbol_resolution_issues(
     if unresolved_only:
         q = q.filter(SymbolResolutionIssue.resolved.is_(False))
     return q.limit(limit).all()
+
+
+@router.get("/admin/symbol-resolution/corporate-actions", response_model=list[StockCorporateEventRead])
+def admin_corporate_actions(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+    status: str | None = Query(default="active"),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    helpers.require_admin(db, claims)
+    q = db.query(StockCorporateEvent).order_by(
+        StockCorporateEvent.effective_date.desc(),
+        StockCorporateEvent.id.desc(),
+    )
+    if status:
+        q = q.filter(StockCorporateEvent.status == status)
+    return q.limit(limit).all()
+
+
+@router.post("/admin/symbol-resolution/corporate-actions", response_model=StockCorporateEventRead)
+def admin_upsert_corporate_action(
+    payload: StockCorporateEventCreate,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    helpers.require_admin(db, claims)
+    symbol = payload.symbol.strip().upper()
+    successor = payload.successor_symbol.strip().upper() if payload.successor_symbol else None
+    canonical = payload.canonical_symbol.strip().upper() if payload.canonical_symbol else None
+    existing = (
+        db.query(StockCorporateEvent)
+        .filter(
+            StockCorporateEvent.symbol == symbol,
+            StockCorporateEvent.event_type == payload.event_type,
+            StockCorporateEvent.effective_date == payload.effective_date,
+        )
+        .first()
+    )
+    if existing:
+        existing.successor_symbol = successor
+        existing.canonical_symbol = canonical
+        existing.source = payload.source
+        existing.status = payload.status
+        existing.notes = payload.notes
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    row = StockCorporateEvent(
+        symbol=symbol,
+        event_type=payload.event_type,
+        effective_date=payload.effective_date,
+        successor_symbol=successor,
+        canonical_symbol=canonical,
+        source=payload.source,
+        status=payload.status,
+        notes=payload.notes,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.post("/internal/symbol-master/sync")
+def internal_symbol_master_sync(
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+    db: Session = Depends(get_db),
+):
+    helpers.require_internal_token(x_internal_service_token)
+    summary = apply_corporate_action_events(db, create_missing_parents=True)
+    db.commit()
+    return {
+        "ok": True,
+        "symbol_master": {
+            "events_processed": summary.get("events_processed", 0),
+            "rows_updated": summary.get("rows_updated", 0),
+            "rows_disabled": summary.get("rows_disabled", 0),
+            "rows_created": summary.get("rows_created", 0),
+            "rows_remapped": summary.get("rows_remapped", 0),
+            "unresolved_actions": summary.get("unresolved_actions", 0),
+            "run_at": summary.get("run_at").isoformat() if summary.get("run_at") else None,
+        },
+    }
 
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth

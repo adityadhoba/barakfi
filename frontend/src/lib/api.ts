@@ -108,6 +108,18 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  symbol_status?: string;
+  canonical_symbol?: string | null;
+  successor_symbol?: string | null;
+  screening_blocked_reason?: string | null;
+  latest_corporate_event?: {
+    event_type: "merge" | "demerge" | "delisted" | "renamed" | "acquired";
+    label: string;
+    effective_date?: string | null;
+    symbol: string;
+    successor_symbol?: string | null;
+    source?: string | null;
+  } | null;
   /** When balance-sheet / income fundamentals were last written (ISO 8601), if known */
   fundamentals_updated_at?: string | null;
   beta?: number | null;
