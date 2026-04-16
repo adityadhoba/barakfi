@@ -1284,12 +1284,29 @@ def main() -> int:
         description="Fetch real financial data for global stocks from Yahoo Finance."
     )
     parser.add_argument(
+        "--test-slack",
+        action="store_true",
+        help="Send a Slack test alert and exit (no data fetch, no DB writes).",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Fetch and display data without writing to the database.",
     )
     args = parser.parse_args()
     run_started_at = datetime.now(timezone.utc)
+
+    if args.test_slack:
+        _send_job_a_alert(
+            "warning",
+            "Job A Slack test",
+            {
+                "mode": "TEST",
+                "started_at_utc": run_started_at.isoformat(),
+                "note": "If you see this message in Slack, cron/job alert wiring works.",
+            },
+        )
+        return 0
 
     if not args.dry_run:
         _assert_production_database_url()

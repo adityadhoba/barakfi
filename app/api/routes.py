@@ -2,6 +2,8 @@ import time
 import logging
 from collections import defaultdict
 from datetime import datetime, timezone
+import os
+import subprocess
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -2939,7 +2941,46 @@ def admin_update_coverage_request(
     return {"id": cr.id, "status": cr.status}
 
 
+@router.post("/admin/ops/run-job-a")
+def admin_run_job_a(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    """Admin only — trigger Job A (fundamentals refresh) in a detached subprocess."""
+    helpers.require_admin(db, claims)
+    env = os.environ.copy()
+    # Scripts expect repo root on PYTHONPATH.
+    env["PYTHONPATH"] = env.get("PYTHONPATH") or "."
+    proc = subprocess.Popen(
+        ["python3", "fetch_real_data.py"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return {"ok": True, "job": "job_a", "pid": proc.pid}
 
+
+@router.post("/admin/ops/run-job-b")
+def admin_run_job_b(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    """Admin only — trigger Job B (daily refresh pipeline) in a detached subprocess."""
+    helpers.require_admin(db, claims)
+    env = os.environ.copy()
+    env["PYTHONPATH"] = env.get("PYTHONPATH") or "."
+    # scripts/run_daily_refresh.py normalizes API_BASE_URL by appending `/api`.
+    port = env.get("PORT") or "10000"
+    env["API_BASE_URL"] = env.get("API_BASE_URL") or f"http://127.0.0.1:{port}"
+    proc = subprocess.Popen(
+        ["python3", "scripts/run_daily_refresh.py"],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    return {"ok": True, "job": "job_b", "pid": proc.pid}
 
 
 @router.post("/internal/daily-refresh")

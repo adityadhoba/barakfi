@@ -122,6 +122,11 @@ def main() -> int:
         action="store_true",
         help="Print request details without making network calls",
     )
+    parser.add_argument(
+        "--test-slack",
+        action="store_true",
+        help="Send a Slack test alert and exit (no API call).",
+    )
     args = parser.parse_args()
 
     api_base = _normalize_api_base(os.getenv("API_BASE_URL", "http://localhost:8001/api"))
@@ -135,6 +140,16 @@ def main() -> int:
 
     log.info("Daily refresh URL: %s", url)
     log.info("screen_chunk_size=%d", args.screen_chunk_size)
+
+    if args.test_slack:
+        _send_cron_alert(
+            level="warning",
+            title="Job B Slack test",
+            alert_key="daily-refresh:cron:test",
+            details={"mode": "TEST"},
+        )
+        return 0
+
     if args.dry_run:
         log.info("DRY RUN: no request sent")
         return 0
