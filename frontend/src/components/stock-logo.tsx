@@ -4,6 +4,9 @@ import { useState } from "react";
 
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
+/** Bump when forcing clients to bypass stale/wrong img.logo.dev CDN responses (e.g. bad ticker→brand match). */
+const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-17";
+
 const EXCHANGE_SUFFIX: Record<string, string> = {
   NSE: ".NS",
   BSE: ".BO",
@@ -144,7 +147,7 @@ function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
   const clean = normalizeSymbol(symbol);
   const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
   const ticker = `${clean}${suffix}`;
-  return `https://img.logo.dev/ticker/${ticker}?token=${LOGO_DEV_TOKEN}&size=256&format=png`;
+  return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
 function getDomainLogoUrl(symbol: string): string | null {
@@ -152,7 +155,7 @@ function getDomainLogoUrl(symbol: string): string | null {
   const clean = normalizeSymbol(symbol);
   const domain = SYMBOL_TO_DOMAIN[clean];
   if (!domain) return null;
-  return `https://img.logo.dev/${domain}?token=${LOGO_DEV_TOKEN}&size=256&format=png`;
+  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
 function getFaviconUrl(symbol: string): string | null {
@@ -180,14 +183,20 @@ type Props = {
 export function StockLogo({ symbol, size = 32, status, exchange, className }: Props) {
   const [srcLevel, setSrcLevel] = useState(0);
 
+  const cleanSym = normalizeSymbol(symbol);
+  const hasCuratedDomain = Boolean(SYMBOL_TO_DOMAIN[cleanSym]);
+
   const tickerUrl = getTickerLogoUrl(symbol, exchange);
   const domainLogoUrl = getDomainLogoUrl(symbol);
   const faviconUrl = getFaviconUrl(symbol);
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
+  // Prefer domain for symbols in SYMBOL_TO_DOMAIN: logo.dev ticker slugs (e.g. AXISBANK.NS) can map to the wrong brand.
   const sources = LOGO_DEV_TOKEN
-    ? [tickerUrl, domainLogoUrl].filter(Boolean) as string[]
-    : [faviconUrl].filter(Boolean) as string[];
+    ? hasCuratedDomain && domainLogoUrl && tickerUrl
+      ? [domainLogoUrl, tickerUrl]
+      : ([tickerUrl, domainLogoUrl].filter(Boolean) as string[])
+    : ([faviconUrl].filter(Boolean) as string[]);
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {

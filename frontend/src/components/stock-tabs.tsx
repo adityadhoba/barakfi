@@ -40,7 +40,7 @@ export function StockTabs({ children }: Props) {
           </button>
         ))}
       </div>
-      <div className={styles.tabPanel} role="tabpanel" key={active}>
+      <div role="tabpanel">
         {children[TABS.findIndex((t) => t.id === active)] || children[0]}
       </div>
     </div>
