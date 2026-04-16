@@ -19,43 +19,55 @@ export default function SignInPage() {
             <Logo size={28} showText variant="light" />
           </Link>
           <div style={{ display: "inline-block", padding: "4px 12px", borderRadius: "9999px", background: "rgba(255,255,255,0.12)", fontSize: "0.72rem", fontWeight: 600, color: "rgba(255,255,255,0.9)", letterSpacing: "0.02em", marginBottom: "16px" }}>
-            Shariah Stock Screening
+            Built for Indian Equity Screening
           </div>
-          <h2 className="authSidebarTitle">Assalamu Alaikum — welcome to Barakfi</h2>
+          <h2 className="authSidebarTitle">Sign in to your BarakFi screening workspace</h2>
           <p className="authSidebarDesc">
-            Sign in to access your screened stocks dashboard, watchlist, and screening results for NSE and BSE-listed Indian equities.
+            Track compliance updates, continue saved comparisons, and keep your research notes in one secure place.
           </p>
           <div className="authFeatures">
             <div className="authFeature">
-              <span className="authFeatureIcon">&#x2713;</span>
-              <span>Screen Indian stocks with transparent Shariah-style ratios</span>
+              <span className="authFeatureIcon" aria-hidden>DF</span>
+              <span>Data-backed checks from published financial statements</span>
             </div>
             <div className="authFeature">
-              <span className="authFeatureIcon">&#x2606;</span>
-              <span>Track Shariah compliance across your watchlist</span>
+              <span className="authFeatureIcon" aria-hidden>MS</span>
+              <span>Multi-standard screening with transparent ratio evidence</span>
             </div>
             <div className="authFeature">
-              <span className="authFeatureIcon">&#x25A6;</span>
-              <span>Free purification and zakat calculators</span>
+              <span className="authFeatureIcon" aria-hidden>PR</span>
+              <span>Portfolio watchlist, purification, and zakat tools</span>
             </div>
           </div>
 
           {/* Testimonial */}
           <div className="authTestimonial">
             <p className="authTestimonialQuote">
-              &ldquo;Finally, a screening tool that shows me exactly why a stock is classified this way — with real financial data, not just opinions.&rdquo;
+              &ldquo;The ratio-level explanation helps me decide faster and with more confidence.&rdquo;
             </p>
-            <span className="authTestimonialAttr">— Early beta user, Mumbai</span>
+            <span className="authTestimonialAttr">— Early user, Mumbai</span>
           </div>
 
           <p className="authSidebarFooter">
-            370+ stocks screened across 3 global exchanges
+            370+ Indian listings covered across NSE and BSE
           </p>
         </div>
       </div>
       <div className="authMain">
+        <div className="authMobileIntro">
+          <Link href="/" style={{ textDecoration: "none", marginBottom: "10px", display: "inline-flex" }}>
+            <Logo size={32} showText />
+          </Link>
+          <p className="authMobileIntroText">
+            Secure sign-in to continue your screening workflow and synced watchlist.
+          </p>
+        </div>
         <SignIn
           appearance={{
+            layout: {
+              logoImageUrl: "/brand/barakfi-logo-mark.svg",
+              logoPlacement: "inside",
+            },
             elements: {
               rootBox: { width: "100%", maxWidth: "440px" },
               card: {
@@ -72,6 +84,10 @@ export default function SignInPage() {
               headerSubtitle: {
                 color: "var(--text-secondary)",
               },
+              logoImage: {
+                width: "52px",
+                height: "52px",
+              },
               formFieldInput: {
                 borderRadius: "10px",
                 background: "var(--bg-soft)",
@@ -87,6 +103,9 @@ export default function SignInPage() {
               },
               footerActionLink: {
                 color: "var(--emerald)",
+              },
+              footerActionText: {
+                color: "var(--text-tertiary)",
               },
               footer: {
                 "& > *:last-child": { display: "none" },

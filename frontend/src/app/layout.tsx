@@ -21,9 +21,10 @@ import "./globals.css";
 import "./shell.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://barakfi.in"),
   title: {
-    default: "Halal Stock Checker — Check Halal Stocks with Shariah Screening",
-    template: "%s | Halal Stock Checker",
+    default: "BarakFi — Check Halal Stocks with Shariah Screening",
+    template: "%s | BarakFi",
   },
   description:
     "BarakFi (Halal Stock Checker) helps you check halal stocks on NSE and BSE using standard Shariah screening criteria — debt, non-permissible income, interest income, receivables, and cash tests with transparent methodology. Free educational tools; not a religious ruling or certification.",
@@ -76,9 +77,6 @@ export const metadata: Metadata = {
     description: "Check halal stocks using standard Shariah screening criteria.",
     images: ["https://barakfi.in/og-image.png"],
   },
-  alternates: {
-    canonical: "https://barakfi.in",
-  },
   // Explicit default so Google never infers noindex for public pages (GSC may cache older crawls).
   robots: {
     index: true,
@@ -106,9 +104,10 @@ export const viewport: Viewport = {
 const webAppSchema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Halal Stock Checker",
+  name: "BarakFi",
   url: "https://barakfi.in",
-  description: "Check halal stocks using standard Shariah screening criteria (S&P Shariah, AAOIFI, FTSE-style ratios).",
+  description:
+    "BarakFi helps you check halal stocks using standard Shariah screening criteria with transparent ratio-level context (S&P Shariah, AAOIFI, FTSE-style ratios).",
   applicationCategory: "FinanceApplication",
   operatingSystem: "All",
   browserRequirements: "Requires JavaScript",
@@ -167,8 +166,8 @@ const orgSchema = {
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Halal Stock Checker",
-  alternateName: ["Barakfi", "Barakfi Halal Checker"],
+  name: "BarakFi",
+  alternateName: ["BarakFi Halal Stock Screener", "BarakFi India"],
   url: "https://barakfi.in",
   description: "Check halal stocks and view methodology-based compliance status",
   potentialAction: {

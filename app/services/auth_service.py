@@ -122,9 +122,14 @@ def get_current_auth_claims_or_internal(
     x_actor_auth_subject: str | None = Header(default=None),
     x_actor_email: str | None = Header(default=None),
 ) -> dict:
-    if x_internal_service_token == INTERNAL_SERVICE_TOKEN and (x_actor_auth_subject or x_actor_email):
+    # Internal actor forwarding is only allowed when a non-empty service token is configured.
+    if (
+        INTERNAL_SERVICE_TOKEN
+        and x_internal_service_token == INTERNAL_SERVICE_TOKEN
+        and x_actor_auth_subject
+    ):
         claims = {
-            "sub": x_actor_auth_subject or f"email:{x_actor_email.lower()}",
+            "sub": x_actor_auth_subject,
             "auth_mode": "internal",
         }
         if x_actor_email:

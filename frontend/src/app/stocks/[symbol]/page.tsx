@@ -30,12 +30,12 @@ import { PriceChart } from "@/components/price-chart";
 import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
-import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
+import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import {
   buildMethodologyTableRowsFromMulti,
   buildPrimaryRatioTableRows,
@@ -927,19 +927,25 @@ export default async function StockDetailPage({
                 {liveQuote.week_52_low != null && (
                   <div className={styles.financialCard}>
                     <span className={styles.financialCardLabel}>52-Week Low</span>
-                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
+                    <span className={styles.financialCardValue}>
+                      {formatCurrency(liveQuote.week_52_low, quoteCur)}
+                    </span>
                   </div>
                 )}
                 {liveQuote.week_52_high != null && (
                   <div className={styles.financialCard}>
                     <span className={styles.financialCardLabel}>52-Week High</span>
-                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
+                    <span className={styles.financialCardValue}>
+                      {formatCurrency(liveQuote.week_52_high, quoteCur)}
+                    </span>
                   </div>
                 )}
                 {liveQuote.previous_close != null && (
                   <div className={styles.financialCard}>
                     <span className={styles.financialCardLabel}>Prev Close</span>
-                    <span className={styles.financialCardValue}>{formatCurrency(liveQuote.previous_close, quoteCur)}</span>
+                    <span className={styles.financialCardValue}>
+                      {formatCurrency(liveQuote.previous_close, quoteCur)}
+                    </span>
                   </div>
                 )}
                 {liveQuote.volume != null && (
@@ -950,6 +956,62 @@ export default async function StockDetailPage({
                     </span>
                   </div>
                 )}
+                {liveQuote.week_52_low != null &&
+                liveQuote.week_52_high != null &&
+                liveQuote.week_52_high > liveQuote.week_52_low ? (
+                  <div className={styles.rangeBarSection}>
+                    <div className={styles.rangeBarHeader}>
+                      <span className={styles.rangeBarLabel}>52-Week Range</span>
+                      <span className={styles.rangeBarLabel}>
+                        {(() => {
+                          const curPrice = liveQuote.last_price ?? stock.price;
+                          const pctFromLow =
+                            ((curPrice - liveQuote.week_52_low) /
+                              (liveQuote.week_52_high - liveQuote.week_52_low)) *
+                            100;
+                          return `${Math.round(Math.max(0, Math.min(100, pctFromLow)))}% from low`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className={styles.rangeBarTrack}>
+                      <div
+                        className={styles.rangeBarFill}
+                        style={{
+                          width: `${Math.max(
+                            2,
+                            Math.min(
+                              100,
+                              ((liveQuote.last_price ?? stock.price) - liveQuote.week_52_low) /
+                                (liveQuote.week_52_high - liveQuote.week_52_low) *
+                                100,
+                            ),
+                          )}%`,
+                        }}
+                      />
+                      <div
+                        className={styles.rangeBarThumb}
+                        style={{
+                          left: `${Math.max(
+                            1,
+                            Math.min(
+                              99,
+                              ((liveQuote.last_price ?? stock.price) - liveQuote.week_52_low) /
+                                (liveQuote.week_52_high - liveQuote.week_52_low) *
+                                100,
+                            ),
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <div className={styles.rangeBarFooter}>
+                      <span>{formatCurrency(liveQuote.week_52_low, quoteCur)}</span>
+                      <span className={styles.rangeBarCurrent}>
+                        {formatCurrency(liveQuote.last_price ?? stock.price, quoteCur)}
+                      </span>
+                      <span>{formatCurrency(liveQuote.week_52_high, quoteCur)}</span>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -1001,8 +1063,6 @@ export default async function StockDetailPage({
               </div>
             </div>
 
-            <AdUnit format="rectangle" />
-
             <StockDetailTablesCollapsible
               ratioRows={ratioRowsForCollapsible}
               methodologyCaption={methodologyCaptionForCollapsible}
@@ -1035,7 +1095,12 @@ export default async function StockDetailPage({
                       <div className={styles.financialCardThreshold} style={{ left: `${thresholdPct}%` }} />
                     </div>
                     <div className={styles.financialCardFooter}>
-                      <span>{r.desc.split(".")[0]}</span>
+                      <RatioReadMoreDrawer
+                        label={r.label}
+                        shortText={`${r.desc.split(".")[0].trim()}.`}
+                        fullText={`${r.desc} This ratio is evaluated against the threshold shown here to determine whether the stock remains within the screening range.`}
+                        thresholdText={formatRatio(r.threshold)}
+                      />
                       <span>Limit: {formatRatio(r.threshold)}</span>
                     </div>
                   </div>
@@ -1059,31 +1124,6 @@ export default async function StockDetailPage({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Screening Reasons */}
-            <div className={pageStyles.featureGrid} style={{ marginBottom: 28 }}>
-              <article className={pageStyles.featurePanel}>
-                <div className={pageStyles.sectionHeader}>
-                  <div>
-                    <p className={pageStyles.kicker}>Screening rules</p>
-                    <h3>Why it screened this way</h3>
-                  </div>
-                </div>
-                <div className={pageStyles.reasonList}>
-                  {reasons.map((reason) => {
-                    const isPass = reason.toLowerCase().includes("passed all");
-                    return (
-                      <div className={pageStyles.reasonItem} key={reason}>
-                        <span className={isPass ? pageStyles.reasonDotPass : pageStyles.reasonDot}>
-                          {isPass ? "\u2713" : "\u2717"}
-                        </span>
-                        <p>{reason}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
             </div>
 
             <div style={{

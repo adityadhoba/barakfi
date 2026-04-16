@@ -735,9 +735,9 @@ export function CompareTable({
                 Search above to add between 2 and 3 stocks. We’ll only use your compare quota
                 after you click Compare.
               </p>
-              <Link href="/screener" className={styles.emptyBtn}>
-                Browse screener &rarr;
-              </Link>
+              <p className={styles.emptyAssist}>
+                Tip: type a symbol like <code>RELIANCE</code> or <code>TCS</code> to begin.
+              </p>
             </div>
           )}
 
@@ -836,6 +836,10 @@ export function CompareTable({
           <h3 className={styles.emptyTitle}>We couldn’t build this comparison</h3>
           <p className={styles.emptyDesc}>
             One or more symbols didn’t return screening data. Adjust the selection and try again.
+          </p>
+          <p className={styles.emptyAssist}>
+            Tip: try a high-liquidity name like <code>RELIANCE</code>, <code>TCS</code>, or{" "}
+            <code>INFY</code>.
           </p>
           <button type="button" className={styles.compareBtn} onClick={editSelection}>
             Edit selection

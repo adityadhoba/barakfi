@@ -1,0 +1,28 @@
+<svg width="2400" height="720" viewBox="0 0 2400 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="60" y="120" width="480" height="480" rx="120" fill="url(#bg)" />
+  <rect x="60" y="120" width="480" height="240" rx="120" fill="url(#gloss)" />
+  <path
+    d="M225 240h145c52 0 88 21 109 58 15 27 15 63-3 90-10 15-25 25-42 32v4c24 7 44 22 59 40 16 22 21 48 15 73-7 35-28 58-59 73-20 11-46 15-73 15H225V240zm84 154h65c32 0 52-17 52-41s-20-41-52-41h-65v82zm0 168h76c35 0 58-19 58-46 0-29-23-48-58-48h-76v94z"
+    fill="rgba(255,255,255,0.96)"
+  />
+  <circle cx="432" cy="215" r="66" fill="url(#gold)" />
+  <circle cx="456" cy="201" r="50" fill="url(#bg)" />
+  <circle cx="394" cy="176" r="10" fill="rgba(251,191,36,0.6)" />
+  <text x="620" y="448" font-family="Inter, system-ui, sans-serif" font-size="264" font-weight="800" letter-spacing="-12" fill="#0f172a">BarakFi</text>
+  <defs>
+    <linearGradient id="bg" x1="60" y1="120" x2="540" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#047857" />
+      <stop offset="50%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="gloss" x1="300" y1="120" x2="300" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.18)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+    <linearGradient id="gold" x1="366" y1="149" x2="495" y2="278" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+</svg>

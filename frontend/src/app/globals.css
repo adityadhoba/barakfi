@@ -1274,14 +1274,16 @@ textarea:focus::placeholder {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--emerald);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 /* Testimonial card on auth sidebar */
@@ -1319,12 +1321,42 @@ textarea:focus::placeholder {
   padding: 24px;
 }
 
+.authMobileIntro {
+  display: none;
+}
+
+.authMobileIntroText {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 860px) {
+  .authMain {
+    align-content: start;
+    gap: 14px;
+    padding-top: 18px;
+  }
+  .authMobileIntro {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 14px;
+  }
+}
+
 /* Hide Clerk development-mode banner and "Secured by Clerk" branding */
 .cl-internal-b3fm6y,
 .cl-internal-1hp0wcp,
 [data-clerk-development-mode-badge],
 .cl-footerAction__usePasskey + div,
-.cl-internal-1dauvpw {
+.cl-internal-1dauvpw,
+a[href*="clerk.com"] {
   display: none !important;
 }
 

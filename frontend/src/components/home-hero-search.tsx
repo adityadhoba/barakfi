@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./home-hero-search.module.css";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
+import { trackEvent } from "@/lib/track-event";
 
 interface StockItem {
   symbol: string;
@@ -22,13 +24,24 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  const deferredQuery = useDeferredValue(query);
+  const inputStartedAtRef = useRef<number | null>(null);
+  const lastTrackedQueryRef = useRef("");
   const fetchedRef = useRef(false);
+  const fetchControllerRef = useRef<AbortController | null>(null);
 
   const loadStocks = useCallback(async () => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
+    fetchControllerRef.current?.abort();
+    const controller = new AbortController();
+    fetchControllerRef.current = controller;
     try {
-      const response = await fetch("/api/stocks", { credentials: "same-origin" });
+      const response = await fetch("/api/stocks", {
+        credentials: "same-origin",
+        signal: controller.signal,
+      });
       if (!response.ok) return;
       const data = await response.json();
       const list = Array.isArray(data) ? data : data?.data ?? [];
@@ -38,17 +51,32 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
     }
   }, []);
 
+  useEffect(() => {
+    return () => {
+      fetchControllerRef.current?.abort();
+    };
+  }, []);
+
   const filteredSuggestions = useMemo(() => {
-    if (!query.trim()) return [];
-    const q = query.toLowerCase();
-    return stocks
-      .filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q)
-      )
-      .slice(0, 6);
-  }, [query, stocks]);
+    return rankStocksForQuery(stocks, deferredQuery, 6);
+  }, [deferredQuery, stocks]);
+
+  useEffect(() => {
+    const normalized = deferredQuery.trim().toUpperCase();
+    if (!normalized || normalized.length < 2) return;
+    if (lastTrackedQueryRef.current === normalized) return;
+    if (inputStartedAtRef.current == null) return;
+
+    lastTrackedQueryRef.current = normalized;
+    const elapsed = Math.max(0, Math.round(performance.now() - inputStartedAtRef.current));
+    trackEvent("home_search_latency", {
+      metadata: {
+        input_to_results_ms: elapsed,
+        result_count: filteredSuggestions.length,
+        query_length: normalized.length,
+      },
+    });
+  }, [deferredQuery, filteredSuggestions.length]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -99,8 +127,10 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
           placeholder="Search TCS, Reliance, Infosys..."
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const next = e.target.value;
+            setQuery(next);
             setOpen(true);
+            if (next.trim().length >= 2) inputStartedAtRef.current = performance.now();
             void loadStocks();
           }}
           onFocus={() => {

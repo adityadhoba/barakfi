@@ -86,6 +86,8 @@ def require_admin(db: Session, claims: dict) -> str:
 
 
 def require_internal_token(token: str | None) -> None:
+    if not INTERNAL_SERVICE_TOKEN:
+        raise HTTPException(status_code=503, detail="Internal service token is not configured")
     if token != INTERNAL_SERVICE_TOKEN:
         raise HTTPException(status_code=403, detail="Invalid internal service token")
 
