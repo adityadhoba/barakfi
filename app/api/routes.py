@@ -356,6 +356,8 @@ def sync_equity_prices_to_database(
     """
     helpers.require_internal_token(x_internal_service_token)
     eff = (provider or MARKET_DATA_PROVIDER).strip().lower()
+    if eff not in PUBLIC_MARKET_PROVIDERS:
+        eff = "auto_india"
     result = sync_all_stock_prices(db, provider=eff, max_stocks=max_stocks)
     if not result["ok"]:
         raise HTTPException(status_code=400, detail=result.get("detail", "sync failed"))
@@ -2611,6 +2613,8 @@ def daily_refresh(
     """
     helpers.require_internal_token(x_internal_service_token)
     eff = MARKET_DATA_PROVIDER.strip().lower()
+    if eff not in PUBLIC_MARKET_PROVIDERS:
+        eff = "auto_india"
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
         raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))

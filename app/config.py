@@ -29,7 +29,7 @@ CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
 CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "https://api.clerk.com/v1/jwks")
 CLERK_JS_URL = os.getenv("CLERK_JS_URL", "")
 INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
-if not INTERNAL_SERVICE_TOKEN and APP_ENV.lower() != "production":
+if not INTERNAL_SERVICE_TOKEN and APP_ENV.lower() == "development" and DEBUG:
     INTERNAL_SERVICE_TOKEN = "dev-internal-token-change-me"
 
 ADMIN_AUTH_SUBJECTS = [

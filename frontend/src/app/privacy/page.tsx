@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy — Barakfi",
   description:
     "How Barakfi collects, uses, stores, and protects your personal data. Compliant with India's Digital Personal Data Protection Act 2023.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPolicyPage() {

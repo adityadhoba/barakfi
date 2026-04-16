@@ -1,5 +1,5 @@
 /**
- * Barakfi Logo Component
+ * BarakFi Logo Component
  *
  * SVG logo with geometric "B" mark featuring a crescent accent
  * and golden glossy highlight. Supports light/dark variants.
@@ -83,7 +83,7 @@ export function Logo({ size = 32, showText = true, variant = "auto", className }
             lineHeight: 1,
           }}
         >
-          Halal Stock Checker
+          BarakFi
         </span>
       )}
     </span>

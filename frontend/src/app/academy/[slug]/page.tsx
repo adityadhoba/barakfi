@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,18 @@ const ARTICLES: Record<string, { title: string; content: string }> = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const article = ARTICLES[slug];
-  if (!article) return { title: "Article Not Found" };
-  return { title: `${article.title} — Barakfi Academy`, description: article.content.slice(0, 160) };
+  if (!article) {
+    return {
+      title: "Article Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
+  return {
+    title: `${article.title} — Barakfi Academy`,
+    description: article.content.slice(0, 160),
+    alternates: { canonical: `/academy/${slug}` },
+    robots: { index: true, follow: true },
+  };
 }
 
 export default async function AcademyArticlePage({ params }: Props) {
@@ -44,15 +55,7 @@ export default async function AcademyArticlePage({ params }: Props) {
   const article = ARTICLES[slug];
 
   if (!article) {
-    return (
-      <main className="shellPage">
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "48px 24px", textAlign: "center" }}>
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.5rem", fontWeight: 800, marginBottom: 12 }}>Coming Soon</h1>
-          <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>This article is being written. Check back soon.</p>
-          <Link href="/academy" style={{ color: "var(--emerald)", fontWeight: 600 }}>← Back to Academy</Link>
-        </div>
-      </main>
-    );
+    notFound();
   }
 
   return (

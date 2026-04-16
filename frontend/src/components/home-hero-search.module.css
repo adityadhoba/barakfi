@@ -8,11 +8,12 @@
 .form {
   display: flex;
   align-items: center;
-  background: var(--panel, #111827);
-  border: 1.5px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: var(--panel);
+  border: 1.5px solid var(--line);
   border-radius: 14px;
   overflow: hidden;
   transition: border-color 0.2s;
+  box-shadow: var(--shadow-xs);
 }
 
 .form:focus-within {
@@ -24,13 +25,13 @@
   padding: 14px 18px;
   background: transparent;
   border: none;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   font-size: 1rem;
   outline: none;
 }
 
 .input::placeholder {
-  color: var(--text-tertiary, #555);
+  color: var(--text-tertiary);
 }
 
 .cta {
@@ -57,8 +58,8 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--panel, #111827);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
   list-style: none;
   margin: 0;
@@ -75,7 +76,7 @@
   padding: 10px 16px;
   background: transparent;
   border: none;
-  color: var(--text-primary, #fff);
+  color: var(--text);
   font-size: 0.9rem;
   cursor: pointer;
   text-align: left;
@@ -84,7 +85,7 @@
 
 .dropItem:hover,
 .dropItemActive {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-soft);
 }
 
 .dropSymbol {
@@ -93,7 +94,7 @@
 }
 
 .dropName {
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
   font-size: 0.85rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -111,16 +112,16 @@
 
 .trendingLabel {
   font-size: 0.8rem;
-  color: var(--text-tertiary, #666);
+  color: var(--text-tertiary);
   font-weight: 500;
 }
 
 .trendingChip {
   padding: 4px 12px;
   border-radius: 999px;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;

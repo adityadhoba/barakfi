@@ -30,12 +30,12 @@ import { PriceChart } from "@/components/price-chart";
 import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
-import { AdUnit } from "@/components/ad-unit";
 import { StockLogo } from "@/components/stock-logo";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
+import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import {
   buildMethodologyTableRowsFromMulti,
   buildPrimaryRatioTableRows,
@@ -964,9 +964,6 @@ export default async function StockDetailPage({
           </div>
         </div>
 
-        {/* Ad: below chart area */}
-        <AdUnit format="rectangle" />
-
         {/* Price Chart */}
         <div style={{ marginBottom: 28 }}>
           <PriceChart
@@ -1077,7 +1074,12 @@ export default async function StockDetailPage({
                       <div className={styles.financialCardThreshold} style={{ left: `${thresholdPct}%` }} />
                     </div>
                     <div className={styles.financialCardFooter}>
-                      <span>{r.desc.split(".")[0]}</span>
+                      <RatioReadMoreDrawer
+                        label={r.label}
+                        shortText={`${r.desc.split(".")[0].trim()}.`}
+                        fullText={`${r.desc} This ratio is evaluated against the threshold shown here to determine whether the stock remains within the screening range.`}
+                        thresholdText={formatRatio(r.threshold)}
+                      />
                       <span>Limit: {formatRatio(r.threshold)}</span>
                     </div>
                   </div>
@@ -1101,33 +1103,6 @@ export default async function StockDetailPage({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Screening Reasons */}
-            <div className={pageStyles.featureGrid} style={{ marginBottom: 28 }}>
-              <article className={pageStyles.featurePanel}>
-                <div className={pageStyles.sectionHeader}>
-                  <div>
-                    <p className={pageStyles.kicker}>Screening rules</p>
-                    <h3>Why it screened this way</h3>
-                  </div>
-                </div>
-                <div className={pageStyles.reasonList}>
-                  {reasons.map((reason) => {
-                    const isPass = reason.toLowerCase().includes("passed all");
-                    return (
-                      <div className={pageStyles.reasonItem} key={reason}>
-                        <span className={isPass ? pageStyles.reasonDotPass : pageStyles.reasonDot}>
-                          {isPass ? "\u2713" : "\u2717"}
-                        </span>
-                        <p>{reason}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-
-
             </div>
 
             <div style={{

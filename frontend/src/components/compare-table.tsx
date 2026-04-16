@@ -238,9 +238,7 @@ export function CompareTable({ compareStocks, allStocks }: Props) {
           <p className={styles.emptyDesc}>
             Search above to add up to 3 stocks. Compare their Shariah compliance, financials, and key ratios at a glance.
           </p>
-          <Link href="/screener" className={styles.emptyBtn}>
-            Browse screener &rarr;
-          </Link>
+          <p className={styles.emptyAssist}>Tip: type a symbol like `RELIANCE` or `TCS` to begin.</p>
         </div>
       )}
 

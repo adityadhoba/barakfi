@@ -1,10 +1,18 @@
 import type { MetadataRoute } from "next";
-import { getStocks } from "@/lib/api";
+import { getCollections, getStocks, getSuperInvestors } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
 const CANONICAL_DOMAIN = "https://barakfi.in";
+const ACADEMY_SLUGS = [
+  "what-is-halal-investing",
+  "shariah-screening-explained",
+  "understanding-financial-ratios",
+  "dividend-purification",
+  "zakat-on-investments",
+  "building-halal-portfolio",
+];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
@@ -33,7 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const stocks = await getStocks();
+    const [stocks, collections, investors] = await Promise.all([
+      getStocks(),
+      getCollections().catch(() => []),
+      getSuperInvestors().catch(() => []),
+    ]);
     const indian = stocks.filter(
       (s) => s.exchange?.toUpperCase() === "NSE" || s.exchange?.toUpperCase() === "BSE",
     );
@@ -44,7 +56,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     }));
 
-    return [...staticPages, ...stockPages];
+    const collectionPages: MetadataRoute.Sitemap = collections.map((coll) => ({
+      url: `${CANONICAL_DOMAIN}/collections/${encodeURIComponent(coll.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.72,
+    }));
+
+    const investorPages: MetadataRoute.Sitemap = investors.map((inv) => ({
+      url: `${CANONICAL_DOMAIN}/super-investors/${encodeURIComponent(inv.slug)}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.68,
+    }));
+
+    const academyPages: MetadataRoute.Sitemap = ACADEMY_SLUGS.map((slug) => ({
+      url: `${CANONICAL_DOMAIN}/academy/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.66,
+    }));
+
+    return [...staticPages, ...stockPages, ...collectionPages, ...investorPages, ...academyPages];
   } catch {
     return staticPages;
   }

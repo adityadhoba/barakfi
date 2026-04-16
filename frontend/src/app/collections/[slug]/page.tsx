@@ -11,10 +11,17 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const coll = await getCollection(slug);
-  if (!coll) return { title: "Collection Not Found" };
+  if (!coll) {
+    return {
+      title: "Collection Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
   return {
     title: `${coll.name} — Halal Stock Collection`,
     description: coll.description,
+    alternates: { canonical: `/collections/${slug}` },
+    robots: { index: true, follow: true },
   };
 }
 

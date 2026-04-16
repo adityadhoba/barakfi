@@ -21,9 +21,10 @@ import "./globals.css";
 import "./shell.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://barakfi.in"),
   title: {
-    default: "Halal Stock Checker — Check if a stock is Halal | Instant Halal status",
-    template: "%s | Halal Stock Checker",
+    default: "BarakFi — Shariah Stock Screening for India",
+    template: "%s | BarakFi",
   },
   description:
     "BarakFi (Halal Stock Checker) helps you screen NSE and BSE-listed Indian equities for Shariah-style compliance in seconds — debt, non-permissible income, interest income, receivables, and cash tests with transparent methodology. Free educational tools; not a fatwa or personalised investment advice.",
@@ -76,9 +77,6 @@ export const metadata: Metadata = {
     description: "Check if a stock is Halal. Trusted ratios; simple result in seconds.",
     images: ["https://barakfi.in/og-image.png"],
   },
-  alternates: {
-    canonical: "https://barakfi.in",
-  },
   // Explicit default so Google never infers noindex for public pages (GSC may cache older crawls).
   robots: {
     index: true,
@@ -106,9 +104,9 @@ export const viewport: Viewport = {
 const webAppSchema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "Halal Stock Checker",
+  name: "BarakFi",
   url: "https://barakfi.in",
-  description: "Check if a stock is Halal — instant Halal status using trusted financial screening (S&P Shariah, AAOIFI, FTSE).",
+  description: "BarakFi helps you screen Indian stocks for Shariah-style compliance with transparent ratio-level checks.",
   applicationCategory: "FinanceApplication",
   operatingSystem: "All",
   browserRequirements: "Requires JavaScript",
@@ -167,8 +165,8 @@ const orgSchema = {
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "Halal Stock Checker",
-  alternateName: ["Barakfi", "Barakfi Halal Checker"],
+  name: "BarakFi",
+  alternateName: ["BarakFi Halal Stock Screener", "BarakFi India"],
   url: "https://barakfi.in",
   description: "Check if a stock is Halal — instant Halal status",
   potentialAction: {

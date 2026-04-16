@@ -10,7 +10,7 @@ const API_BASE = getPublicApiBaseUrl();
 export async function GET() {
   try {
     const res = await fetch(`${API_BASE}/stocks`, {
-      next: { revalidate: 60 },
+      next: { revalidate: 300 },
     });
 
     if (!res.ok) {
@@ -20,7 +20,7 @@ export async function GET() {
     const data = await res.json();
     return NextResponse.json(adaptBackendJsonForProxy(data, res.ok), {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
       },
     });
   } catch {

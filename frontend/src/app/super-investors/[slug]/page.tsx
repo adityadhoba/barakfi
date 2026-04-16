@@ -12,10 +12,17 @@ type Props = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const inv = await getSuperInvestor(slug);
-  if (!inv) return { title: "Investor Not Found" };
+  if (!inv) {
+    return {
+      title: "Investor Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
   return {
     title: `${inv.name} Portfolio — ${inv.title}`,
-    description: `${inv.bio.slice(0, 160)}...`,
+    description: inv.bio.slice(0, 160),
+    alternates: { canonical: `/super-investors/${slug}` },
+    robots: { index: true, follow: true },
   };
 }
 

@@ -7,6 +7,7 @@ import { useMobileNav } from "@/components/mobile-nav-context";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { rankStocksForQuery } from "@/lib/stock-search-rank";
 
 type StockHit = {
   symbol: string;
@@ -77,14 +78,7 @@ export function TopbarSearch() {
   const q = deferredValue.trim().toLowerCase();
   const filtered = useMemo(() => {
     if (q.length === 0) return [];
-    return stocks
-      .filter(
-        (s) =>
-          s.symbol.toLowerCase().includes(q) ||
-          s.name.toLowerCase().includes(q) ||
-          s.sector.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
+    return rankStocksForQuery(stocks, q, 8);
   }, [q, stocks]);
 
   const recentSymbols = useMemo(() => getRecentSearches(), [open, searchOpen]); // eslint-disable-line react-hooks/exhaustive-deps

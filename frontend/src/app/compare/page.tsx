@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: "Compare Stocks — Barakfi",
   description:
     "Compare Shariah compliance ratios, financials, and screening status side by side for Indian stocks.",
+  alternates: { canonical: "/compare" },
+  robots: { index: true, follow: true },
 };
 
 export default async function ComparePage({

@@ -21,12 +21,13 @@ export async function HomeDashboard() {
     <div className={styles.home}>
       {/* ── Hero: one action ── */}
       <section className={styles.heroClean}>
-        <span className={styles.heroKicker}>Instant Halal Status</span>
+        <span className={styles.heroKicker}>Financially Grounded Screening</span>
         <h1 className={styles.heroHeadline}>
-          Check if a Stock is Halal in Seconds
+          Screen Indian stocks with transparent Shariah compliance checks
         </h1>
         <p className={styles.heroSub}>
-          Shariah-compliant screening for Indian stocks using real financial data
+          Built for NSE and BSE investors who want evidence-first outcomes across debt, income purity,
+          interest exposure, receivables, and balance-sheet quality.
         </p>
         <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
       </section>
@@ -54,7 +55,7 @@ export async function HomeDashboard() {
           <div className={styles.howCard}>
             <span className={styles.howStep}>2</span>
             <h3 className={styles.howTitle}>Screening runs</h3>
-            <p className={styles.howDesc}>Our engine tests 5 financial ratios against Shariah standards in seconds.</p>
+            <p className={styles.howDesc}>Our engine runs 6 core financial checks against widely used Shariah thresholds.</p>
           </div>
           <div className={styles.howCard}>
             <span className={styles.howStep}>3</span>
@@ -72,20 +73,42 @@ export async function HomeDashboard() {
           </h2>
           <div className={styles.trustGrid}>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon}>📄</span>
-              <span className={styles.trustLabel}>Based on BSE &amp; NSE official filings</span>
+              <span className={styles.trustIcon} aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 13h6M9 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className={styles.trustLabel}>Grounded in published company financial disclosures</span>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon}>📐</span>
-              <span className={styles.trustLabel}>Uses 4 global Shariah standards</span>
+              <span className={styles.trustIcon} aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="m4 18 7-12 9 12H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <path d="M11 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className={styles.trustLabel}>Benchmarked against multiple global screening methodologies</span>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon}>🔄</span>
-              <span className={styles.trustLabel}>Updated with latest financial data</span>
+              <span className={styles.trustIcon} aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M6.4 9A7 7 0 0 1 18.2 7M17.6 15A7 7 0 0 1 5.8 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className={styles.trustLabel}>Continuously refreshed with latest fundamentals and pricing snapshots</span>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon}>🔓</span>
-              <span className={styles.trustLabel}>Transparent methodology — see every ratio</span>
+              <span className={styles.trustIcon} aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3a6 6 0 0 0-6 6v3h12V9a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <rect x="4" y="12" width="16" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M12 15v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className={styles.trustLabel}>Transparent ratios, thresholds, and result reasoning on every stock</span>
             </div>
           </div>
           <p className={styles.authorityDisclaimer}>

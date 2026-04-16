@@ -127,6 +127,13 @@
   margin-right: auto;
 }
 
+.emptyAssist {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
 .emptyBtn {
   display: inline-flex;
   padding: 10px 24px;
