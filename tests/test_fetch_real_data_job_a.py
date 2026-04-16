@@ -20,6 +20,7 @@ def test_nse_ticker_uses_canonical_symbol_alias():
     mod = _reload_module()
     assert mod._nse_ticker("ZOMATO") == "ETERNAL.NS"
     assert mod._nse_ticker("ADANITRANS") == "ADANIENSOL.NS"
+    assert mod._nse_ticker("TV18BRDCST") == "NETWORK18.NS"
     assert mod._nse_ticker("TCS") == "TCS.NS"
 
 

@@ -443,6 +443,14 @@ def _seed_symbol_aliases():
                 "status": "active",
                 "evidence_note": "Requires runtime ISIN match before remap acceptance.",
             },
+            {
+                "old_symbol": "TV18BRDCST",
+                "new_symbol": "NETWORK18",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
         ]
         for payload in seeds:
             exists = (
