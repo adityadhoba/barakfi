@@ -57,6 +57,7 @@ from app.models import (
     WatchlistEntry,
     BrokerConnection,
     DailyRefreshRun,
+    SymbolResolutionIssue,
 )
 from app.schemas import (
     ActionResponse,
@@ -81,6 +82,8 @@ from app.schemas import (
     GovernanceOverviewResponse,
     DataStackStatusResponse,
     FundamentalsStatusResponse,
+    SymbolResolutionHealthResponse,
+    SymbolResolutionIssueRead,
     UniversePreviewResponse,
     SupportNoteCreateRequest,
     SupportNoteRead,
@@ -126,6 +129,8 @@ from app.services.screening_presenter import (
     simple_row_from_cache_entry,
 )
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
+from app.services.index_sync_service import get_cached_market_indices, sync_market_indices
+from app.services.symbol_integrity_service import run_nse_symbol_integrity_checks, symbol_health_summary
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
 from app.services.ops_notification_service import send_ops_alert
@@ -241,7 +246,7 @@ def auth_strategy():
 
 
 @router.get("/market-data/indices")
-def market_indices():
+def market_indices(db: Session = Depends(get_db)):
     """
     Get live NSE indices (NIFTY 50, BANK NIFTY, SENSEX, NIFTY MIDCAP 150).
 
@@ -252,19 +257,25 @@ def market_indices():
         List of IndexQuote with name, current value, change amount, change %, source, timestamp.
     """
     indices = fetch_nse_indices()
-    if not indices:
-        return []
-    return [
-        {
-            "name": idx.name,
-            "value": idx.value,
-            "change": idx.change,
-            "change_percent": idx.change_percent,
-            "source": idx.source,
-            "as_of": idx.as_of,
-        }
-        for idx in indices
-    ]
+    if indices:
+        try:
+            sync_market_indices(db, indices)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("[market-data/indices] failed to persist live index snapshot")
+        return [
+            {
+                "name": idx.name,
+                "value": idx.value,
+                "change": idx.change,
+                "change_percent": idx.change_percent,
+                "source": idx.source,
+                "as_of": idx.as_of,
+            }
+            for idx in indices
+        ]
+    return get_cached_market_indices(db)
 
 
 @router.get("/market-data/status", response_model=MarketDataStatusResponse)
@@ -493,6 +504,8 @@ def check_stock(
     stock = resolve_stock(db, clean, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    if stock.screening_blocked_reason:
+        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
 
     ck = _check_cache_key(stock.symbol, stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -545,6 +558,8 @@ def screen_stock(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    if stock.screening_blocked_reason:
+        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
 
     ex_for_key = exchange or stock.exchange
     ckey = screening_cache_key(stock.symbol, ex_for_key)
@@ -577,7 +592,11 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
     upper_symbols = [s.upper() for s in symbols[:500]]
     stocks = (
         db.query(Stock)
-        .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
+        .filter(
+            Stock.symbol.in_(upper_symbols),
+            Stock.is_active.is_(True),
+            Stock.screening_blocked_reason.is_(None),
+        )
         .all()
     )
     by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
@@ -619,6 +638,7 @@ def _active_screenable_symbols(db: Session) -> list[str]:
     rows = (
         db.query(Stock.symbol, Stock.exchange)
         .filter(Stock.is_active.is_(True))
+        .filter(Stock.screening_blocked_reason.is_(None))
         .order_by(Stock.symbol.asc(), Stock.exchange.asc())
         .all()
     )
@@ -801,6 +821,8 @@ def screen_stock_multi(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    if stock.screening_blocked_reason:
+        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
 
     mk = _multi_cache_key(stock.symbol, exchange or stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -2837,6 +2859,46 @@ def daily_refresh(
         )
         raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
 
+    index_sync_result = {"updated": 0}
+    try:
+        index_sync_result = sync_market_indices(db)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] index sync failed: %s", exc)
+
+    symbol_integrity = {
+        "symbol_isin_conflicts": 0,
+        "isin_multi_symbol_conflicts": 0,
+        "missing_isin_overdue": 0,
+        "auto_disabled_count": 0,
+        "blocked_from_screening_count": 0,
+        "impacted_symbols": [],
+        "last_run_at": None,
+    }
+    try:
+        integrity_summary = run_nse_symbol_integrity_checks(db)
+        db.commit()
+        symbol_integrity = integrity_summary.to_dict()
+        has_critical = symbol_integrity.get("symbol_isin_conflicts", 0) > 0
+        if has_critical:
+            send_ops_alert(
+                level="warning",
+                title="Daily refresh symbol-integrity warning",
+                alert_key=f"daily-refresh:symbol-integrity:{run_id}",
+                details={
+                    "run_id": run_id,
+                    "symbol_isin_conflicts": symbol_integrity.get("symbol_isin_conflicts", 0),
+                    "isin_multi_symbol_conflicts": symbol_integrity.get("isin_multi_symbol_conflicts", 0),
+                    "missing_isin_overdue": symbol_integrity.get("missing_isin_overdue", 0),
+                    "blocked_from_screening_count": symbol_integrity.get("blocked_from_screening_count", 0),
+                    "impacted_symbols_preview": ", ".join((symbol_integrity.get("impacted_symbols") or [])[:10]),
+                },
+            )
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] symbol integrity checks failed: %s", exc)
+
     symbols = _active_screenable_symbols(db)
     expected = len(symbols)
     screen_chunks = 0
@@ -3001,6 +3063,17 @@ def daily_refresh(
             "rows_cached": screen_rows,
             "screening_complete": True,
         },
+        "indices": {
+            "updated": index_sync_result.get("updated", 0),
+        },
+        "symbol_integrity": {
+            "symbol_isin_conflicts": symbol_integrity.get("symbol_isin_conflicts", 0),
+            "isin_multi_symbol_conflicts": symbol_integrity.get("isin_multi_symbol_conflicts", 0),
+            "missing_isin_overdue": symbol_integrity.get("missing_isin_overdue", 0),
+            "auto_disabled": symbol_integrity.get("auto_disabled_count", 0),
+            "blocked_from_screening": symbol_integrity.get("blocked_from_screening_count", 0),
+            "last_run_at": symbol_integrity.get("last_run_at").isoformat() if symbol_integrity.get("last_run_at") else None,
+        },
         "fundamentals": {
             "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
             "stale": stale,
@@ -3008,6 +3081,32 @@ def daily_refresh(
         },
         "duration_seconds": round(duration_seconds, 2),
     }
+
+
+@router.get("/admin/symbol-resolution/health", response_model=SymbolResolutionHealthResponse)
+def admin_symbol_resolution_health(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    helpers.require_admin(db, claims)
+    return symbol_health_summary(db)
+
+
+@router.get("/admin/symbol-resolution/issues", response_model=list[SymbolResolutionIssueRead])
+def admin_symbol_resolution_issues(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+    unresolved_only: bool = Query(default=True),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    helpers.require_admin(db, claims)
+    q = db.query(SymbolResolutionIssue).order_by(
+        SymbolResolutionIssue.detected_at.desc(),
+        SymbolResolutionIssue.id.desc(),
+    )
+    if unresolved_only:
+        q = q.filter(SymbolResolutionIssue.resolved.is_(False))
+    return q.limit(limit).all()
 
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth

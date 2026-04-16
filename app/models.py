@@ -71,6 +71,9 @@ class Stock(Base):
     data_source = Column(String, nullable=False, default="internal_seed")
     is_active = Column(Boolean, nullable=False, default=True)
     is_etf = Column(Boolean, nullable=False, default=False)
+    isin = Column(String, nullable=True, index=True)
+    screening_blocked_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     stock_index_links = relationship(
@@ -111,6 +114,61 @@ class StockIndexMembership(Base):
     index_code = Column(String, nullable=False, index=True)
 
     stock = relationship("Stock", back_populates="stock_index_links")
+
+
+class MarketIndexSnapshot(Base):
+    """Latest cached snapshot for a market index shown in the ticker ribbon."""
+
+    __tablename__ = "market_index_snapshots"
+    __table_args__ = (UniqueConstraint("name", name="uq_market_index_snapshots_name"),)
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, index=True)
+    value = Column(Float, nullable=False, default=0.0)
+    change = Column(Float, nullable=False, default=0.0)
+    change_percent = Column(Float, nullable=False, default=0.0)
+    source = Column(String, nullable=False, default="nse_india_public")
+    as_of = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class StockSymbolAlias(Base):
+    """Audited symbol remaps where ISIN proof is required before use."""
+
+    __tablename__ = "stock_symbol_aliases"
+
+    id = Column(Integer, primary_key=True)
+    old_symbol = Column(String, nullable=False, index=True)
+    new_symbol = Column(String, nullable=False, index=True)
+    isin = Column(String, nullable=True, index=True)
+    source = Column(String, nullable=False, default="manual")
+    status = Column(String, nullable=False, default="active")
+    evidence_note = Column(Text, nullable=False, default="")
+    effective_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class SymbolResolutionIssue(Base):
+    """Tracks unresolved or mismatched symbol identity problems."""
+
+    __tablename__ = "symbol_resolution_issues"
+    __table_args__ = (
+        Index("ix_symbol_resolution_issues_symbol_detected", "symbol", "detected_at"),
+        Index("ix_symbol_resolution_issues_resolved", "resolved", "detected_at"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False, index=True)
+    candidate_symbol = Column(String, nullable=True)
+    isin = Column(String, nullable=True, index=True)
+    candidate_isin = Column(String, nullable=True)
+    reason = Column(String, nullable=False)
+    attempted_tickers = Column(Text, nullable=False, default="")
+    severity = Column(String, nullable=False, default="warning")
+    resolved = Column(Boolean, nullable=False, default=False)
+    resolution_note = Column(Text, nullable=False, default="")
+    detected_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
 
 class ComplianceRuleVersion(Base):
