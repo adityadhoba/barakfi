@@ -16,6 +16,7 @@ type StockHit = {
   market_cap?: number;
   exchange?: string;
   currency?: string;
+  search_aliases?: string[];
 };
 
 const RECENT_KEY = "barakfi_recent_searches";
@@ -68,6 +69,7 @@ export function TopbarSearch() {
             market_cap: s.market_cap,
             exchange: s.exchange,
             currency: s.currency,
+            search_aliases: s.search_aliases || [],
           }))
         );
       }
@@ -82,7 +84,8 @@ export function TopbarSearch() {
         (s) =>
           s.symbol.toLowerCase().includes(q) ||
           s.name.toLowerCase().includes(q) ||
-          s.sector.toLowerCase().includes(q)
+          s.sector.toLowerCase().includes(q) ||
+          (s.search_aliases || []).some((alias) => alias.toLowerCase().includes(q))
       )
       .slice(0, 8);
   }, [q, stocks]);
