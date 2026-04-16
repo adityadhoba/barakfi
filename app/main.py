@@ -347,10 +347,16 @@ def _auto_seed_stocks():
                     "Skipping seed-stock fallback."
                 )
 
+        stock_columns = {col.key for col in Stock.__table__.columns}
+
         existing_count = db.query(Stock).count()
         added = 0
         updated = 0
         for payload in stock_data:
+            payload = {k: v for k, v in payload.items() if k in stock_columns}
+            if "symbol" not in payload:
+                continue
+
             # Some tickers collide across exchanges (e.g. "BA" is Boeing on US exchanges
             # and BAE Systems on LSE as "BA.L"). Disambiguate LSE tickers with Yahoo-style suffix.
             try:
