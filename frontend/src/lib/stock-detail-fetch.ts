@@ -11,6 +11,8 @@ const FETCH_MS = 28_000;
 
 export type StockDetailFetchResult =
   | { kind: "ok"; stock: Stock; screening: ScreeningResult }
+  | { kind: "redirect"; targetSymbol: string }
+  | { kind: "legacy_blocked"; stock: Stock; message: string }
   | { kind: "not_found" }
   | { kind: "error"; message: string };
 
@@ -24,7 +26,11 @@ async function parseDetail(response: Response): Promise<string> {
  */
 export async function fetchStockAndScreenForPage(symbol: string): Promise<StockDetailFetchResult> {
   const base = getPublicApiBaseUrl();
-  const enc = encodeURIComponent(symbol);
+  const normalized = decodeURIComponent(symbol).trim().toUpperCase();
+  if (!normalized || normalized === "COMPANY" || normalized === "SYMBOL") {
+    return { kind: "not_found" };
+  }
+  const enc = encodeURIComponent(normalized);
   const pathStock = `${base}/stocks/${enc}`;
   const pathScreen = `${base}/screen/${enc}`;
 
@@ -39,33 +45,58 @@ export async function fetchStockAndScreenForPage(symbol: string): Promise<StockD
 
     const s404 = resStock.status === 404;
     const c404 = resScreen.status === 404;
+    const c409 = resScreen.status === 409;
 
     if (s404 && c404) {
       return { kind: "not_found" };
     }
 
-    if (s404 || c404) {
+    if (s404) {
       return {
-        kind: "error",
-        message:
-          "Stock data is inconsistent. Try again in a moment or return to the screener.",
+        kind: "not_found",
       };
     }
 
-    if (!resStock.ok || !resScreen.ok) {
-      const d1 = !resStock.ok ? await parseDetail(resStock) : "";
-      const d2 = !resScreen.ok ? await parseDetail(resScreen) : "";
-      const detail = [d1, d2].filter(Boolean).join(" — ") || "Request failed";
+    if (!resStock.ok) {
       return {
         kind: "error",
-        message:
-          resStock.status >= 500 || resScreen.status >= 500
-            ? `The service is temporarily unavailable. (${detail})`
-            : `Could not load this stock. (${detail})`,
+        message: `Could not load this stock. (${await parseDetail(resStock) || "Stock request failed"})`,
       };
     }
 
     const stock = unwrapBackendEnvelope<Stock>(await resStock.json());
+    if (stock?.symbol && stock.symbol.toUpperCase() !== normalized) {
+      return { kind: "redirect", targetSymbol: stock.symbol.toUpperCase() };
+    }
+
+    if (c409) {
+      return {
+        kind: "legacy_blocked",
+        stock,
+        message: await parseDetail(resScreen),
+      };
+    }
+
+    if (c404) {
+      return {
+        kind: "legacy_blocked",
+        stock,
+        message: "Detailed screening is unavailable for this symbol.",
+      };
+    }
+
+    if (!resScreen.ok) {
+      const d1 = "";
+      const d2 = await parseDetail(resScreen);
+      const detail = [d1, d2].filter(Boolean).join(" — ") || "Request failed";
+      return {
+        kind: "error",
+        message: resScreen.status >= 500
+          ? `The service is temporarily unavailable. (${detail})`
+          : `Could not load this stock. (${detail})`,
+      };
+    }
+
     const screening = unwrapBackendEnvelope<ScreeningResult>(await resScreen.json());
     return { kind: "ok", stock, screening };
   } catch (err) {
@@ -108,7 +139,11 @@ export async function fetchStockMetadataBundle(
   symbol: string,
 ): Promise<{ stock: Stock; statusLabel: string } | null> {
   const base = getPublicApiBaseUrl();
-  const enc = encodeURIComponent(symbol);
+  const normalized = decodeURIComponent(symbol).trim().toUpperCase();
+  if (!normalized || normalized === "COMPANY" || normalized === "SYMBOL") {
+    return null;
+  }
+  const enc = encodeURIComponent(normalized);
   const pathStock = `${base}/stocks/${enc}`;
   const pathScreen = `${base}/screen/${enc}`;
   try {
@@ -122,9 +157,9 @@ export async function fetchStockMetadataBundle(
     if (resScreen.ok) {
       const scr = unwrapBackendEnvelope<{ status?: string }>(await resScreen.json());
       const s = (scr.status || "").toUpperCase();
-      if (s === "HALAL") statusLabel = "Halal";
-      else if (s === "NON_COMPLIANT") statusLabel = "Haram";
-      else if (s === "CAUTIOUS" || s === "REVIEW") statusLabel = "Doubtful";
+      if (s === "HALAL") statusLabel = "Shariah Compliant";
+      else if (s === "NON_COMPLIANT") statusLabel = "Not Compliant";
+      else if (s === "CAUTIOUS" || s === "REVIEW") statusLabel = "Requires Review";
     }
     return { stock, statusLabel };
   } catch {

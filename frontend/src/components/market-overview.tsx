@@ -20,9 +20,9 @@ export function MarketOverview({ screenedStocks, activeStatus, onStatusChange }:
 
   const stats = [
     { key: "all", label: "All Stocks", value: total, sub: `${compliancePct}% compliant`, className: "" },
-    { key: "HALAL", label: "Halal", value: halal, sub: "safe to invest", className: styles.statsChipHalal },
-    { key: "CAUTIOUS", label: "Doubtful", value: review, sub: "needs checking", className: styles.statsChipReview },
-    { key: "NON_COMPLIANT", label: "Haram", value: fail, sub: "non-compliant", className: styles.statsChipFail },
+    { key: "HALAL", label: "Shariah Compliant", value: halal, sub: "within thresholds", className: styles.statsChipHalal },
+    { key: "CAUTIOUS", label: "Requires Review", value: review, sub: "needs checking", className: styles.statsChipReview },
+    { key: "NON_COMPLIANT", label: "Not Compliant", value: fail, sub: "outside thresholds", className: styles.statsChipFail },
   ];
 
   return (

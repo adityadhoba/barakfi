@@ -57,7 +57,7 @@ Backend bridge:
 
 ## Mobile UX
 
-- **Bottom nav**: Home, Screener, Watchlist, and **More** (opens the slide-out menu for News, Compare, Admin, etc.). This avoids duplicating **Watchlist** next to **News** on small screens.
+- **Bottom nav**: Home, Screener, Watchlist, and **More** (opens the slide-out menu for Compare, Admin, etc.). This avoids duplicating **Watchlist** in the header on small screens.
 - **Top bar**: On viewports under 768px the **Watchlist** link is hidden in the header (still in bottom nav + drawer).
 - **Screener**: Filter sidebar starts **collapsed** on narrow screens; tap **Filters** to open; tap the dimmed overlay to close.
 - **Rate limits**: If you see “Too many requests” from the API on mobile, the backend rate limit was raised; ensure the latest API is deployed.
@@ -69,21 +69,17 @@ npm run lint
 npm run build
 ```
 
-Both commands are currently passing.
-
 ## Production (Vercel + Clerk)
 
 - **Root directory**: In Vercel → Project → Settings → General, set **Root Directory** to `frontend` (the folder that contains `src/middleware.ts`). If this is wrong, `clerkMiddleware()` may not run and routes that use `auth()` can fail.
 - **Clerk env (Production and Preview)**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. For preview deployments (`*.vercel.app`), add the host under **Clerk Dashboard → Domains** if sign-in fails on previews.
 - **API URL**: `NEXT_PUBLIC_API_BASE_URL` must be the FastAPI base URL **including `/api`**, e.g. `https://api.barakfi.in/api`. **Do not** set this to `https://barakfi.in` (that is the Vercel frontend). If you do, the app now falls back to `https://api.barakfi.in/api` in production when it detects the marketing hostname.
 
-## News feed (why the home/news pages can be empty)
+## Daily refresh (frontend cron bridge)
 
-- The site reads **`GET {NEXT_PUBLIC_API_BASE_URL}/news`** (public). An empty array means no rows in `news_articles` yet, or the request failed (see on-page hints after deploy).
-- **Ingestion**: On the API (Render), call **`POST /api/internal/news/sync`** with header **`X-Internal-Service-Token`** set to the same value as **`INTERNAL_SERVICE_TOKEN`** in the API environment. That runs RSS (`NEWS_RSS_URL`) and NewsData.io when configured.
-- **NewsData.io**: Set **`NEWSDATA_API_KEY`** and optionally **`NEWSDATA_Q`** on the **API service** (not on Vercel — ingestion runs server-side). Legacy names **`NEWS_NEWSAPI_KEY`** / **`NEWS_NEWSAPI_QUERY`** are still read as fallbacks.
-- **`NEWS_RSS_URL`**: Optional. If unset, the API uses a built-in default Islamic-finance RSS URL in config. Override only when you want a different feed.
-- **Automation**: Add a Render **Cron Job** (or external scheduler) that runs periodically, e.g. `curl -X POST "https://YOUR_API_HOST/api/internal/news/sync" -H "X-Internal-Service-Token: $INTERNAL_SERVICE_TOKEN"` (use the same secret as in the API env; do not commit it). Without a scheduled sync, headlines stay empty until you trigger ingestion manually.
+- `GET /api/cron/daily-pipeline` forwards to backend `POST /api/internal/daily-refresh` using `INTERNAL_SERVICE_TOKEN`.
+- Recommended weekday schedule is **05:45 PM IST (UTC `15 12 * * 1-5`)**.
+- Keep-alive (`/api/keep-alive`) should only be scheduled when the backend deployment can sleep on idle.
 
 ## Watchlist market / currency (US vs India)
 

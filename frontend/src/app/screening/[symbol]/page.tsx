@@ -1,136 +1,87 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useScreening } from "@/contexts/screening-context";
 import styles from "./screening.module.css";
 
-const STEPS = [
-  { label: "Resolving listing", icon: "🔍", delay: 600 },
-  { label: "Loading fundamentals", icon: "📊", delay: 900 },
-  { label: "Applying Shariah rules", icon: "📐", delay: 1000 },
-  { label: "Computing verdict", icon: "⚖️", delay: 700 },
-] as const;
+type ScreenRedirectState =
+  | { kind: "loading" }
+  | { kind: "limit_exhausted"; message: string; redirectUrl?: string }
+  | { kind: "error"; message: string };
 
-const MIN_DISPLAY_MS = 2800;
-
-export default function ScreeningAnimationPage() {
+export default function ScreeningRedirectPage() {
   const { symbol } = useParams<{ symbol: string }>();
   const router = useRouter();
-  const { recordScreen, refreshQuota } = useScreening();
-  const [activeStep, setActiveStep] = useState(0);
-  const [verdict, setVerdict] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const prefersReduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const displayStep = prefersReduced ? STEPS.length : activeStep;
-  const startTime = useRef(0);
+  const { unlockDetails } = useScreening();
+  const [state, setState] = useState<ScreenRedirectState>({ kind: "loading" });
 
   useEffect(() => {
-    startTime.current = Date.now();
-  }, []);
+    if (!symbol) return;
+    let active = true;
+    const decoded = decodeURIComponent(symbol);
 
-  const screenedRef = useRef(false);
+    async function openDetails() {
+      const result = await unlockDetails(decoded);
+      if (!active) return;
 
-  useEffect(() => {
-    if (!symbol || screenedRef.current) return;
-
-    const decoded = decodeURIComponent(symbol as string);
-    const controller = new AbortController();
-
-    const runScreen = async () => {
-      try {
-        const res = await fetch("/api/screen/manual", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ symbol: decoded }),
-          signal: controller.signal,
-          credentials: "same-origin",
-        });
-        if (!res.ok) {
-          const d: unknown = await res.json().catch(() => null);
-          if (res.status === 429) {
-            setError("limit");
-            return;
-          }
-          let msg = "Screening failed";
-          if (d !== null && typeof d === "object") {
-            const o = d as Record<string, unknown>;
-            if (typeof o.detail === "string") msg = o.detail;
-            else if (o.error && typeof o.error === "object" && o.error !== null) {
-              const m = (o.error as { message?: string }).message;
-              if (typeof m === "string") msg = m;
-            }
-          }
-          setError(msg);
-          return;
-        }
-        const raw: unknown = await res.json();
-        const data =
-          raw !== null &&
-          typeof raw === "object" &&
-          "success" in raw &&
-          (raw as { success: unknown }).success === true &&
-          "data" in raw
-            ? (raw as { data: { screening?: { status?: string } } }).data
-            : (raw as { screening?: { status?: string } });
-        screenedRef.current = true;
-        setVerdict(data.screening?.status || "UNKNOWN");
-        recordScreen(decoded);
-        void refreshQuota();
-      } catch {
-        if (!controller.signal.aborted) setError("Network error");
+      if (result.kind === "granted") {
+        router.replace(`/stocks/${encodeURIComponent(decoded)}`);
+        return;
       }
-    };
 
-    void runScreen();
-    return () => controller.abort();
-  }, [symbol, recordScreen, refreshQuota]);
+      if (result.kind === "redirect") {
+        router.replace(result.url);
+        return;
+      }
 
-  useEffect(() => {
-    if (prefersReduced) return;
-    if (activeStep >= STEPS.length) return;
-    const timer = setTimeout(() => setActiveStep((s) => s + 1), STEPS[activeStep].delay);
-    return () => clearTimeout(timer);
-  }, [activeStep, prefersReduced]);
+      if (result.kind === "limit_exhausted") {
+        setState({
+          kind: "limit_exhausted",
+          message: result.message,
+          redirectUrl: result.redirectUrl,
+        });
+        return;
+      }
 
-  useEffect(() => {
-    const motionComplete = prefersReduced || activeStep >= STEPS.length;
-    if (verdict && motionComplete) {
-      const elapsed = Date.now() - startTime.current;
-      const remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
-      const timer = setTimeout(() => {
-        router.push(`/stocks/${encodeURIComponent(symbol as string)}`);
-      }, prefersReduced ? 0 : remaining);
-      return () => clearTimeout(timer);
+      setState({ kind: "error", message: result.message });
     }
-  }, [verdict, activeStep, symbol, router, prefersReduced]);
 
-  if (error === "limit") {
+    void openDetails();
+    return () => {
+      active = false;
+    };
+  }, [router, symbol, unlockDetails]);
+
+  if (state.kind === "limit_exhausted") {
     return (
       <main className={styles.container}>
         <div className={styles.card}>
           <h1 className={styles.title}>Daily limit reached</h1>
-          <p className={styles.subtitle}>
-            You&apos;ve used your free screenings for today.
-          </p>
-          <a href="/premium" className={styles.ctaBtn}>
-            Join Early Access
-          </a>
-          <p className={styles.hint}>Come back tomorrow for more free screens.</p>
+          <p className={styles.subtitle}>{state.message}</p>
+          <div className={styles.actions}>
+            {state.redirectUrl ? (
+              <Link href={state.redirectUrl} className={styles.ctaBtn}>
+                Join Early Access
+              </Link>
+            ) : null}
+            <Link href="/screener" className={styles.secondaryBtn}>
+              Back to screener
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
-  if (error) {
+  if (state.kind === "error") {
     return (
       <main className={styles.container}>
         <div className={styles.card}>
-          <h1 className={styles.title}>Screening failed</h1>
-          <p className={styles.subtitle}>{error}</p>
-          <button className={styles.ctaBtn} onClick={() => router.back()}>
+          <h1 className={styles.title}>Couldn&apos;t open details</h1>
+          <p className={styles.subtitle}>{state.message}</p>
+          <button type="button" className={styles.ctaBtn} onClick={() => router.back()}>
             Go back
           </button>
         </div>
@@ -142,37 +93,18 @@ export default function ScreeningAnimationPage() {
     <main className={styles.container}>
       <div className={styles.card}>
         <h1 className={styles.title}>
-          Screening <span className={styles.symbol}>{decodeURIComponent(symbol as string)}</span>
+          Opening <span className={styles.symbol}>{decodeURIComponent(symbol as string)}</span>
         </h1>
+        <p className={styles.subtitle}>
+          We&apos;re taking you to the detailed compliance breakdown.
+        </p>
         <div className={styles.steps}>
-          {STEPS.map((step, i) => {
-            const done = i < displayStep;
-            const active = i === displayStep && displayStep < STEPS.length;
-            return (
-              <div
-                key={step.label}
-                className={`${styles.step} ${done ? styles.stepDone : ""} ${active ? styles.stepActive : ""}`}
-              >
-                <span className={styles.stepIcon}>{step.icon}</span>
-                <span className={styles.stepLabel}>{step.label}</span>
-                {done && <span className={styles.stepCheck}>✓</span>}
-                {active && <span className={styles.stepSpinner} />}
-              </div>
-            );
-          })}
-        </div>
-        {verdict && (
-          <div className={styles.verdictRow}>
-            <span
-              className={`${styles.verdictBadge} ${
-                verdict === "HALAL" ? styles.verdictHalal : verdict === "CAUTIOUS" ? styles.verdictCautious : styles.verdictFail
-              }`}
-            >
-              {verdict === "HALAL" ? "Halal" : verdict === "CAUTIOUS" ? "Doubtful" : "Haram"}
-            </span>
-            <span className={styles.redirectHint}>Redirecting to details…</span>
+          <div className={`${styles.step} ${styles.stepActive}`}>
+            <span className={styles.stepIcon}>↗</span>
+            <span className={styles.stepLabel}>Preparing stock details</span>
+            <span className={styles.stepSpinner} />
           </div>
-        )}
+        </div>
       </div>
     </main>
   );

@@ -7,6 +7,7 @@ import { LockedVerdict } from "@/components/locked-verdict";
 import type { Stock } from "@/lib/api";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { screeningUiLabel } from "@/lib/screening-status";
 import styles from "@/app/screener.module.css";
 
 type PeerRow = {
@@ -22,12 +23,6 @@ const STATUS_BADGE: Record<string, string> = {
   HALAL: "badgeHalal",
   CAUTIOUS: "badgeReview",
   NON_COMPLIANT: "badgeFail",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
 };
 
 type Props = {
@@ -56,7 +51,11 @@ export function SimilarStocksQuotes({ peers, peerComparison }: Props) {
         const cur = resolveDisplayCurrency(s.exchange, s.currency);
         const chPct = parseChangePercent(q?.change_percent);
         return (
-          <Link className={styles.similarCard} href={`/stocks/${s.symbol}`} key={s.symbol}>
+          <Link
+            className={styles.similarCard}
+            href={`/screening/${encodeURIComponent(s.symbol)}`}
+            key={s.symbol}
+          >
             <div className={styles.similarCardTop}>
               <StockLogo symbol={s.symbol} size={34} exchange={s.exchange} />
               <div className={styles.similarIdentity}>
@@ -66,7 +65,7 @@ export function SimilarStocksQuotes({ peers, peerComparison }: Props) {
               {peerData && (
                 <LockedVerdict symbol={s.symbol} compact>
                   <span className={`${styles.badge} ${styles[STATUS_BADGE[peerData.status] || "badgeReview"]} ${styles.similarBadge}`}>
-                    {STATUS_LABELS[peerData.status] || peerData.status}
+                    {screeningUiLabel(peerData.status)}
                   </span>
                 </LockedVerdict>
               )}

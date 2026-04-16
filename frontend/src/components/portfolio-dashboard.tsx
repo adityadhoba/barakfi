@@ -181,9 +181,9 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
         <div className={pd.summaryCard}>
           <span className={pd.summaryLabel}>Compliance</span>
           <div className={pd.complianceMini}>
-            <span className={pd.compGreen}>{halalCount} Halal</span>
+            <span className={pd.compGreen}>{halalCount} Shariah Compliant</span>
             {nonCompliantCount > 0 && <span className={pd.compRed}>{nonCompliantCount} Flagged</span>}
-            {reviewCount > 0 && <span className={pd.compYellow}>{reviewCount} Review</span>}
+            {reviewCount > 0 && <span className={pd.compYellow}>{reviewCount} Requires Review</span>}
           </div>
         </div>
       </div>
@@ -265,10 +265,10 @@ export function PortfolioDashboard({ holdings, screeningStatuses, portfolioName 
                         }
                       >
                         {h.complianceStatus === "COMPLIANT"
-                          ? "Halal"
+                          ? "Shariah Compliant"
                           : h.complianceStatus === "NON_COMPLIANT"
-                            ? "Haram"
-                            : "Doubtful"}
+                            ? "Not Compliant"
+                            : "Requires Review"}
                       </span>
                     </td>
                   </tr>

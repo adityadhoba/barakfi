@@ -5,7 +5,7 @@ export type CheckDiscoveryPick = {
   symbol: string;
   name: string;
   score: number;
-  status: "Halal" | "Doubtful" | "Haram";
+  status: "Shariah Compliant" | "Requires Review" | "Not Compliant";
 };
 
 const CACHE_KEY = "barakfi_check_discovery_pool_v1";
@@ -14,18 +14,18 @@ const BULK_SYMBOL_CAP = 80;
 
 /** Shown when API is unavailable or returns sparse halal rows */
 export const MOCK_CHECK_DISCOVERY: CheckDiscoveryPick[] = [
-  { symbol: "INFY", name: "Infosys Ltd", score: 92, status: "Halal" },
-  { symbol: "TCS", name: "Tata Consultancy Services", score: 91, status: "Halal" },
-  { symbol: "RELIANCE", name: "Reliance Industries", score: 88, status: "Halal" },
-  { symbol: "HDFCBANK", name: "HDFC Bank", score: 87, status: "Halal" },
-  { symbol: "WIPRO", name: "Wipro Ltd", score: 90, status: "Halal" },
-  { symbol: "HINDUNILVR", name: "Hindustan Unilever", score: 89, status: "Halal" },
+  { symbol: "INFY", name: "Infosys Ltd", score: 92, status: "Shariah Compliant" },
+  { symbol: "TCS", name: "Tata Consultancy Services", score: 91, status: "Shariah Compliant" },
+  { symbol: "RELIANCE", name: "Reliance Industries", score: 88, status: "Shariah Compliant" },
+  { symbol: "HDFCBANK", name: "HDFC Bank", score: 87, status: "Shariah Compliant" },
+  { symbol: "WIPRO", name: "Wipro Ltd", score: 90, status: "Shariah Compliant" },
+  { symbol: "HINDUNILVR", name: "Hindustan Unilever", score: 89, status: "Shariah Compliant" },
 ];
 
 function productStatus(engine: string): CheckDiscoveryPick["status"] {
-  if (engine === "HALAL") return "Halal";
-  if (engine === "NON_COMPLIANT") return "Haram";
-  return "Doubtful";
+  if (engine === "HALAL") return "Shariah Compliant";
+  if (engine === "NON_COMPLIANT") return "Not Compliant";
+  return "Requires Review";
 }
 
 type CacheShape = { t: number; picks: CheckDiscoveryPick[] };

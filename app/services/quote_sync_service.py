@@ -1,4 +1,4 @@
-"""Batch-update `Stock.price` from public market quote providers (India, US, LSE)."""
+"""Batch-update `Stock.price` from public market quote providers (NSE-only runtime)."""
 
 from __future__ import annotations
 
@@ -41,7 +41,12 @@ def sync_all_stock_prices(
             "total": 0,
         }
 
-    stocks = db.query(Stock).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
+    stocks = (
+        db.query(Stock)
+        .filter(Stock.is_active.is_(True), Stock.exchange == "NSE")
+        .order_by(Stock.symbol.asc())
+        .all()
+    )
     if max_stocks is not None:
         stocks = stocks[: max(0, max_stocks)]
 

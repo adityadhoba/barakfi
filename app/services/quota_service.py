@@ -6,6 +6,7 @@ import hashlib
 import os
 from datetime import datetime, timezone, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -13,7 +14,7 @@ from app.models import ScreeningQuota, ScreeningAccessLog
 
 ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "2"))
 AUTH_SCREENS_PER_DAY = int(os.getenv("AUTH_SCREENS_PER_DAY", "5"))
-COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "1"))
+COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "2"))
 PEER_COMPARISON_PER_DAY = int(os.getenv("PEER_COMPARISON_PER_DAY", "1"))
 
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -22,6 +23,13 @@ IST = timezone(timedelta(hours=5, minutes=30))
 def _ist_today() -> str:
     """Current date string in IST (YYYY-MM-DD)."""
     return datetime.now(IST).strftime("%Y-%m-%d")
+
+
+def _ist_day_start_utc() -> datetime:
+    """Current IST day start expressed as a UTC datetime."""
+    now_ist = datetime.now(IST)
+    day_start_ist = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+    return day_start_ist.astimezone(timezone.utc)
 
 
 def _ist_midnight_utc() -> str:
@@ -52,10 +60,14 @@ def _is_authenticated(request: Request) -> bool:
 
 
 def _is_admin(request: Request) -> bool:
-    from app.config import ADMIN_EMAILS, ADMIN_AUTH_SUBJECTS
+    from app.config import ADMIN_EMAILS, ADMIN_AUTH_SUBJECTS, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
 
     user_id = request.headers.get("x-clerk-user-id", "")
     email = request.headers.get("x-actor-email", "").lower()
+    if user_id and user_id in OWNER_AUTH_SUBJECTS:
+        return True
+    if email and email in OWNER_EMAILS:
+        return True
     if user_id and user_id in ADMIN_AUTH_SUBJECTS:
         return True
     if email and email in ADMIN_EMAILS:
@@ -63,11 +75,31 @@ def _is_admin(request: Request) -> bool:
     return False
 
 
+def reset_user_quotas_for_today(db: Session, actor_key: str) -> dict:
+    """Reset today's quota counters for an actor key."""
+    today = _ist_today()
+    rows = (
+        db.query(ScreeningQuota)
+        .filter(
+            ScreeningQuota.actor_key == actor_key,
+            ScreeningQuota.date == today,
+        )
+        .all()
+    )
+    deleted = 0
+    for row in rows:
+        db.delete(row)
+        deleted += 1
+    db.flush()
+    return {"deleted_rows": deleted, "date": today}
+
+
 def _check_quota(
     db: Session,
     request: Request,
     quota_type: str,
     limit: int | None = None,
+    amount: int = 1,
 ) -> dict:
     """Generic quota check+increment for a given quota_type."""
     if _is_admin(request):
@@ -83,36 +115,71 @@ def _check_quota(
     if limit is None:
         limit = AUTH_SCREENS_PER_DAY if _is_authenticated(request) else ANON_SCREENS_PER_DAY
 
-    row = (
-        db.query(ScreeningQuota)
-        .filter(
-            ScreeningQuota.actor_key == actor,
-            ScreeningQuota.date == today,
-            ScreeningQuota.quota_type == quota_type,
-        )
-        .first()
-    )
-
     resets_at = _ist_midnight_utc()
 
-    if row and row.count >= limit:
-        return {"allowed": False, "remaining": 0, "resets_at": resets_at}
-
-    if row:
-        row.count += 1
-    else:
-        row = ScreeningQuota(
-            actor_key=actor, date=today, count=1, quota_type=quota_type
+    if amount <= 0:
+        row = (
+            db.query(ScreeningQuota)
+            .filter(
+                ScreeningQuota.actor_key == actor,
+                ScreeningQuota.date == today,
+                ScreeningQuota.quota_type == quota_type,
+            )
+            .first()
         )
-        db.add(row)
+        used = row.count if row else 0
+        return {
+            "allowed": True,
+            "remaining": max(0, limit - used),
+            "resets_at": resets_at,
+        }
 
-    db.flush()
+    # Retry once on insert races (unique key actor+date+quota_type).
+    last_error: IntegrityError | None = None
+    for _ in range(2):
+        row = (
+            db.query(ScreeningQuota)
+            .filter(
+                ScreeningQuota.actor_key == actor,
+                ScreeningQuota.date == today,
+                ScreeningQuota.quota_type == quota_type,
+            )
+            .first()
+        )
 
-    return {
-        "allowed": True,
-        "remaining": max(0, limit - row.count),
-        "resets_at": resets_at,
-    }
+        used = row.count if row else 0
+        remaining_before = max(0, limit - used)
+        if used + amount > limit:
+            return {"allowed": False, "remaining": remaining_before, "resets_at": resets_at}
+
+        target_row = row
+        if target_row:
+            target_row.count += amount
+        else:
+            target_row = ScreeningQuota(
+                actor_key=actor,
+                date=today,
+                count=amount,
+                quota_type=quota_type,
+            )
+            db.add(target_row)
+
+        try:
+            db.flush()
+            return {
+                "allowed": True,
+                "remaining": max(0, limit - target_row.count),
+                "resets_at": resets_at,
+            }
+        except IntegrityError as exc:
+            last_error = exc
+            db.rollback()
+            continue
+
+    # If we still cannot flush after retry, bubble the original DB error.
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Quota increment failed without a database error")
 
 
 def check_and_increment_quota(db: Session, request: Request) -> dict:
@@ -126,6 +193,68 @@ def check_compare_quota(db: Session, request: Request) -> dict:
 
 def check_peer_quota(db: Session, request: Request) -> dict:
     return _check_quota(db, request, "peer", PEER_COMPARISON_PER_DAY)
+
+
+def _clean_unique_symbols(symbols: list[str]) -> list[str]:
+    seen: set[str] = set()
+    cleaned: list[str] = []
+    for symbol in symbols:
+        clean = str(symbol).strip().upper()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        cleaned.append(clean)
+    return cleaned
+
+
+def _screened_symbols_since_ist_day_start(
+    db: Session,
+    request: Request,
+    symbols: list[str],
+) -> set[str]:
+    clean_symbols = _clean_unique_symbols(symbols)
+    if not clean_symbols or _is_admin(request):
+        return set()
+
+    actor = _actor_key(request)
+    cutoff = _ist_day_start_utc()
+    rows = (
+        db.query(ScreeningAccessLog.symbol)
+        .filter(
+            ScreeningAccessLog.actor_key == actor,
+            ScreeningAccessLog.symbol.in_(clean_symbols),
+            ScreeningAccessLog.screened_at >= cutoff,
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def check_and_increment_unique_screen_quota(
+    db: Session,
+    request: Request,
+    symbols: list[str],
+) -> dict:
+    """
+    Reserve daily screen quota only for symbols not already screened today (IST).
+
+    Returns the usual quota payload plus `new_symbols`, which are the symbols that
+    consumed quota during this call.
+    """
+    clean_symbols = _clean_unique_symbols(symbols)
+    if _is_admin(request):
+        return {
+            "allowed": True,
+            "remaining": 999,
+            "resets_at": _ist_midnight_utc(),
+            "new_symbols": clean_symbols,
+        }
+
+    screened_today = _screened_symbols_since_ist_day_start(db, request, clean_symbols)
+    new_symbols = [symbol for symbol in clean_symbols if symbol not in screened_today]
+    quota = _check_quota(db, request, "screen", amount=len(new_symbols))
+    quota["new_symbols"] = new_symbols
+    return quota
 
 
 def _quota_used_today(
@@ -201,6 +330,12 @@ def log_screening_access(db: Session, request: Request, symbol: str) -> None:
             )
         )
     db.flush()
+
+
+def log_screening_accesses(db: Session, request: Request, symbols: list[str]) -> None:
+    """Record access for multiple symbols, deduped and normalized."""
+    for symbol in _clean_unique_symbols(symbols):
+        log_screening_access(db, request, symbol)
 
 
 def get_accessible_symbols(db: Session, request: Request) -> list[str]:

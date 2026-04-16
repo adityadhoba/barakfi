@@ -14,6 +14,12 @@ import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
 import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { useScreening } from "@/contexts/screening-context";
+import {
+  SCREENING_LEGAL_DISCLAIMER,
+  SCREENING_STATUS_TOOLTIP,
+  screeningUiLabel,
+} from "@/lib/screening-status";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -23,9 +29,9 @@ const STATUS_ORDER: Record<string, number> = { HALAL: 0, CAUTIOUS: 1, NON_COMPLI
 
 const STATUS_OPTIONS = [
   { key: "all", label: "All Stocks" },
-  { key: "HALAL", label: "Halal" },
-  { key: "CAUTIOUS", label: "Doubtful" },
-  { key: "NON_COMPLIANT", label: "Haram" },
+  { key: "HALAL", label: "Shariah Compliant" },
+  { key: "CAUTIOUS", label: "Requires Review" },
+  { key: "NON_COMPLIANT", label: "Not Compliant" },
 ] as const;
 
 const MCAP_OPTIONS = [
@@ -35,16 +41,10 @@ const MCAP_OPTIONS = [
   { key: "small", label: "Small Cap", min: 0, max: 20000 },
 ] as const;
 
-const EXCHANGE_OPTIONS = [
-  { key: "all", label: "All Exchanges" },
-  { key: "NSE", label: "NSE" },
-  { key: "BSE", label: "BSE" },
-] as const;
-
 const STATUS_CONFIG: Record<string, { cls: string; label: string }> = {
-  HALAL: { cls: "statusHalal", label: "Halal" },
-  CAUTIOUS: { cls: "statusReview", label: "Doubtful" },
-  NON_COMPLIANT: { cls: "statusFail", label: "Haram" },
+  HALAL: { cls: "statusHalal", label: "Shariah Compliant" },
+  CAUTIOUS: { cls: "statusReview", label: "Requires Review" },
+  NON_COMPLIANT: { cls: "statusFail", label: "Not Compliant" },
 };
 
 /** Shown under search — `value` is what we put in the query (symbol or substring). */
@@ -57,7 +57,19 @@ const EXAMPLE_STOCK_CHIPS = [
 
 function formatPrice(value: number, currency?: string) {
   const locale = currency === "GBP" ? "en-GB" : currency === "USD" ? "en-US" : "en-IN";
-  return new Intl.NumberFormat(locale, { style: "currency", currency: currency || "INR", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: currency || "INR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatEventDate(value?: string | null): string {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function getSortValue(
@@ -105,13 +117,13 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { unlockDetails } = useScreening();
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sectorFilter, setSectorFilter] = useState("All");
   const [mcapFilter, setMcapFilter] = useState("all");
   const [indexFilter, setIndexFilter] = useState("all");
-  const [exchangeFilter, setExchangeFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("market_cap");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -144,6 +156,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveFilterName, setSaveFilterName] = useState("");
   const [isSavingFilter, setIsSavingFilter] = useState(false);
+  const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
 
   const allSymbols = useMemo(() => screenedStocks.map((s) => s.symbol), [screenedStocks]);
   const exchangeBySymbol = useMemo(() => {
@@ -175,8 +188,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (mcap && MCAP_OPTIONS.some((o) => o.key === mcap)) setMcapFilter(mcap);
     const idx = searchParams.get("index");
     if (idx && INDEX_OPTIONS.some((o) => o.key === idx)) setIndexFilter(idx);
-    const exc = searchParams.get("exchange");
-    if (exc && EXCHANGE_OPTIONS.some((o) => o.key === exc)) setExchangeFilter(exc);
     setInitialized(true);
   }, [searchParams, screenedStocks]);
 
@@ -190,7 +201,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     if (sortDir !== "desc") params.set("dir", sortDir);
     if (mcapFilter !== "all") params.set("mcap", mcapFilter);
     if (indexFilter !== "all") params.set("index", indexFilter);
-    if (exchangeFilter !== "all") params.set("exchange", exchangeFilter);
     const qs = params.toString();
     const base = qs ? `/screener?${qs}` : "/screener";
     const hash =
@@ -198,7 +208,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         ? "#stock-search"
         : "";
     router.replace(`${base}${hash}`, { scroll: false });
-  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, exchangeFilter, router]);
+  }, [initialized, statusFilter, sectorFilter, query, sortKey, sortDir, mcapFilter, indexFilter, router]);
 
   const sectorCounts = useMemo(() => {
     const counts: Record<string, number> = { All: screenedStocks.length };
@@ -213,15 +223,24 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
     return screenedStocks.filter((s) => {
-      if (q && !s.symbol.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q) && !s.sector.toLowerCase().includes(q)) return false;
+      if (q) {
+        const aliasHit = (s.search_aliases || []).some((a) => a.toLowerCase().includes(q));
+        if (
+          !s.symbol.toLowerCase().includes(q) &&
+          !s.name.toLowerCase().includes(q) &&
+          !s.sector.toLowerCase().includes(q) &&
+          !aliasHit
+        ) {
+          return false;
+        }
+      }
       if (statusFilter !== "all" && s.screening.status !== statusFilter) return false;
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
       if (indexFilter !== "all" && !matchesIndex(s.symbol, indexFilter, s.index_memberships)) return false;
-      if (exchangeFilter !== "all" && s.exchange !== exchangeFilter) return false;
       return true;
     });
-  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter, exchangeFilter]);
+  }, [screenedStocks, deferredQuery, statusFilter, sectorFilter, mcapFilter, mcapOpt, indexFilter]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -268,14 +287,43 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     else { setSortKey(key); setSortDir(key === "symbol" ? "asc" : "desc"); }
   }
 
+  const handleSeeWhy = useCallback(async (symbol: string) => {
+    setPendingSymbol(symbol);
+    const result = await unlockDetails(symbol);
+    setPendingSymbol(null);
+
+    if (result.kind === "granted") {
+      router.push(`/stocks/${encodeURIComponent(symbol)}`);
+      return;
+    }
+
+    if (result.kind === "redirect") {
+      router.push(result.url);
+      return;
+    }
+
+    if (result.kind === "limit_exhausted") {
+      toast(result.message, "error");
+      if (result.redirectUrl) {
+        router.push(result.redirectUrl);
+      }
+      return;
+    }
+
+    toast(result.message, "error");
+  }, [router, toast, unlockDetails]);
+
   const handleKeyNav = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
     if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((p) => Math.min(p + 1, pageItems.length - 1)); }
     else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((p) => Math.max(p - 1, 0)); }
-    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < pageItems.length) { e.preventDefault(); router.push(`/stocks/${encodeURIComponent(pageItems[focusedIdx].symbol)}`); }
+    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < pageItems.length) {
+      e.preventDefault();
+      void handleSeeWhy(pageItems[focusedIdx].symbol);
+    }
     else if (e.key === "Escape") setFocusedIdx(-1);
-  }, [pageItems, focusedIdx, router]);
+  }, [focusedIdx, handleSeeWhy, pageItems]);
 
   useEffect(() => { document.addEventListener("keydown", handleKeyNav); return () => document.removeEventListener("keydown", handleKeyNav); }, [handleKeyNav]);
 
@@ -285,14 +333,14 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [focusedIdx]);
 
-  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || exchangeFilter !== "all" || query.trim() !== "";
+  const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || query.trim() !== "";
 
   function resetAllFilters() {
-    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all"); setExchangeFilter("all");
+    setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
     setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
   }
 
-  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", exchangeFilter !== "all", query.trim() !== ""].filter(Boolean).length;
+  const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", query.trim() !== ""].filter(Boolean).length;
 
   async function handleSaveFilter() {
     if (!saveFilterName.trim()) return;
@@ -441,23 +489,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
-        {/* Exchange */}
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>Exchange</h4>
-          <div className={styles.filterPills}>
-            {EXCHANGE_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`${styles.filterPill} ${exchangeFilter === opt.key ? styles.filterPillActive : ""}`}
-                onClick={() => setExchangeFilter(opt.key)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Locked premium filters */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>
@@ -576,12 +607,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button type="button" onClick={() => setIndexFilter("all")}>&times;</button>
               </span>
             )}
-            {exchangeFilter !== "all" && (
-              <span className={styles.chip}>
-                {EXCHANGE_OPTIONS.find((o) => o.key === exchangeFilter)?.label}
-                <button type="button" onClick={() => setExchangeFilter("all")}>&times;</button>
-              </span>
-            )}
             {query.trim() && (
               <span className={styles.chip}>
                 &ldquo;{query.trim()}&rdquo;
@@ -602,9 +627,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <th className={styles.th}>Sector</th>
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
-                <th className={styles.th} style={{ width: 100 }}>Action</th>
-              </tr>
-            </thead>
+              <th className={styles.th}>
+                <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
+                  Status
+                  <span className={styles.statusHeaderInfo}>i</span>
+                </span>
+              </th>
+              <th className={styles.th}>Recent Event</th>
+              <th className={styles.th} style={{ width: 100 }}>Action</th>
+            </tr>
+          </thead>
             <tbody>
               {pageItems.map((s, idx) => {
                 const globalIdx = pageStart + idx + 1;
@@ -613,7 +645,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                     key={s.symbol}
                     data-stock-idx={idx}
                     className={`${styles.row} ${focusedIdx === idx ? styles.rowFocused : ""}`}
-                    onClick={() => router.push(`/stocks/${encodeURIComponent(s.symbol)}`)}
                     tabIndex={0}
                   >
                     <td className={styles.tdNum}>{globalIdx}.</td>
@@ -644,12 +675,36 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       )}
                     </td>
                     <td>
+                      <span
+                        className={`${styles.statusBadge} ${styles[STATUS_CONFIG[s.screening.status]?.cls || "statusReview"]}`}
+                        title={SCREENING_STATUS_TOOLTIP}
+                      >
+                        {screeningUiLabel(s.screening.status)}
+                      </span>
+                    </td>
+                    <td className={styles.tdSector}>
+                      {s.latest_corporate_event ? (
+                        <span
+                          className={styles.statusBadge}
+                          title={`${s.latest_corporate_event.label}${s.latest_corporate_event.effective_date ? ` · ${formatEventDate(s.latest_corporate_event.effective_date)}` : ""}${s.latest_corporate_event.successor_symbol ? ` · ${s.latest_corporate_event.successor_symbol}` : ""}`}
+                        >
+                          {s.latest_corporate_event.label}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                      )}
+                    </td>
+                    <td>
                       <button
                         type="button"
                         className={styles.screenRowBtn}
-                        onClick={(e) => { e.stopPropagation(); router.push(`/screening/${encodeURIComponent(s.symbol)}`); }}
+                        disabled={pendingSymbol === s.symbol}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleSeeWhy(s.symbol);
+                        }}
                       >
-                        Screen
+                        {pendingSymbol === s.symbol ? "Opening..." : "See Why?"}
                       </button>
                     </td>
                   </tr>
@@ -657,7 +712,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               })}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} className={styles.emptyRow}>
+                  <td colSpan={8} className={styles.emptyRow}>
                     No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
                   </td>
                 </tr>
@@ -706,9 +761,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         )}
 
         <div className={styles.screenerDisclaimer}>
-          Screening results are based on automated financial ratio analysis using publicly available data.
-          They do not constitute a fatwa or religious ruling.
-          Consult a qualified Shariah scholar for definitive investment guidance.
+          {SCREENING_LEGAL_DISCLAIMER}{" "}
           <Link href="/methodology" className={styles.screenerDisclaimerLink}>View methodology</Link>
         </div>
       </div>

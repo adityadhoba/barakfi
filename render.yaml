@@ -21,15 +21,42 @@ services:
         value: auto_global
       - key: APP_ENV
         value: production
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_JOB_A_SUCCESSES_ENABLED
+        value: "false"
+      - key: OPS_ALERT_QUIET_WINDOW_ENABLED
+        value: "false"
+      - key: OPS_ALERT_QUIET_WINDOW_SECONDS
+        value: "1800"
 
-  # Daily price update cron job
-  # Runs at 4:30 AM IST (23:00 UTC previous day) — after Indian market close
+  # Job A: fundamentals refresh (weekday)
+  # 04:30 PM IST Mon–Fri => 11:00 UTC
   - type: cron
-    name: barakfi-daily-update
+    name: barakfi-daily-fundamentals
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 fetch_real_data.py
+    schedule: "0 11 * * 1-5"
+    region: singapore
+    branch: main
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+
+  # Job B: run internal daily refresh pipeline after fundamentals update
+  # 05:45 PM IST Mon–Fri => 12:15 UTC
+  - type: cron
+    name: barakfi-daily-refresh
     runtime: python
     buildCommand: pip install httpx
-    startCommand: python scripts/daily_update.py --provider auto_global
-    schedule: "0 23 * * 1-5"
+    startCommand: PYTHONPATH=. python3 scripts/run_daily_refresh.py
+    schedule: "15 12 * * 1-5"
     region: singapore
     branch: main
     plan: free

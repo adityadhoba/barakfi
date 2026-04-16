@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LockedVerdict } from "@/components/locked-verdict";
 import styles from "@/app/screener.module.css";
+import { screeningUiLabel } from "@/lib/screening-status";
 
 type PeerComparisonItem = {
   symbol: string;
@@ -27,14 +28,28 @@ const STATUS_BADGE: Record<string, string> = {
   NON_COMPLIANT: "badgeFail",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
-};
-
 function formatRatio(value: number) {
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function LockedMetricCell() {
+  return (
+    <span className={styles.peerLockPill}>
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <rect x="3" y="11" width="18" height="10" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      Locked
+    </span>
+  );
 }
 
 export function StockResearchSection({
@@ -44,6 +59,9 @@ export function StockResearchSection({
   failCount,
   peerComparison,
 }: Props) {
+  const visiblePeers = peerComparison.slice(0, 2);
+  const lockedPeers = peerComparison.slice(2);
+
   return (
     <>
       <div className={styles.sectionHeading}>
@@ -115,21 +133,21 @@ export function StockResearchSection({
               <th style={{ textAlign: "center" }}>Status</th>
               <th style={{ textAlign: "right" }}>Score</th>
               <th style={{ textAlign: "right" }}>Debt/MCap</th>
-              <th style={{ textAlign: "right" }}>Non-Halal</th>
+              <th style={{ textAlign: "right" }}>Non-permissible Income</th>
             </tr>
           </thead>
           <tbody>
-            {peerComparison.map((peer) => (
+            {visiblePeers.map((peer) => (
               <tr key={peer.symbol}>
                 <td>
-                  <Link href={`/stocks/${encodeURIComponent(peer.symbol)}`} style={{ color: "var(--emerald)", textDecoration: "none" }}>
+                  <Link href={`/screening/${encodeURIComponent(peer.symbol)}`} style={{ color: "var(--emerald)", textDecoration: "none" }}>
                     <strong>{peer.symbol}</strong> {peer.name}
                   </Link>
                 </td>
                 <td style={{ textAlign: "center" }}>
                   <LockedVerdict symbol={peer.symbol} compact>
                     <span className={`${styles.badge} ${styles[STATUS_BADGE[peer.status] || "badgeReview"]}`}>
-                      {STATUS_LABELS[peer.status] || peer.status}
+                      {screeningUiLabel(peer.status)}
                     </span>
                   </LockedVerdict>
                 </td>
@@ -144,9 +162,41 @@ export function StockResearchSection({
                 </td>
               </tr>
             ))}
+            {lockedPeers.map((peer) => (
+              <tr key={peer.symbol} className={styles.peerRowLocked}>
+                <td>
+                  <div className={styles.peerRowLinkLocked}>
+                    <strong>{peer.symbol}</strong> {peer.name}
+                  </div>
+                </td>
+                <td style={{ textAlign: "center" }}>
+                  <LockedMetricCell />
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <LockedMetricCell />
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <LockedMetricCell />
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <LockedMetricCell />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+
+      {lockedPeers.length > 0 && (
+        <div className={styles.peerPremiumCard}>
+          <p className={styles.peerPremiumText}>
+            Unlock the full peer comparison to reveal the remaining stocks and premium analysis.
+          </p>
+          <Link href="/premium" className={styles.peerPremiumCta}>
+            Subscribe to Premium Membership
+          </Link>
+        </div>
+      )}
     </>
   );
 }

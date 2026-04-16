@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const API_BASE = getPublicApiBaseUrl();
@@ -7,9 +7,11 @@ const API_BASE = getPublicApiBaseUrl();
  * Proxy GET /api/stocks to the backend.
  * Used by the client-side search autocomplete.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const res = await fetch(`${API_BASE}/stocks`, {
+    const params = request.nextUrl.searchParams.toString();
+    const url = `${API_BASE}/stocks${params ? `?${params}` : ""}`;
+    const res = await fetch(url, {
       next: { revalidate: 300 },
     });
 

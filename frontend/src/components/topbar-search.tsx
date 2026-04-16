@@ -17,6 +17,7 @@ type StockHit = {
   market_cap?: number;
   exchange?: string;
   currency?: string;
+  search_aliases?: string[];
 };
 
 const RECENT_KEY = "barakfi_recent_searches";
@@ -69,6 +70,7 @@ export function TopbarSearch() {
             market_cap: s.market_cap,
             exchange: s.exchange,
             currency: s.currency,
+            search_aliases: s.search_aliases || [],
           }))
         );
       }

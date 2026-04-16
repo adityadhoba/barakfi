@@ -17,9 +17,9 @@ const METHODOLOGY_NAMES: Record<string, string> = {
 
 /** Product language for methodology table rows */
 const ENGINE_TO_PRODUCT: Record<string, string> = {
-  HALAL: "Halal",
-  CAUTIOUS: "Doubtful",
-  NON_COMPLIANT: "Haram",
+  HALAL: "Shariah Compliant",
+  CAUTIOUS: "Requires Review",
+  NON_COMPLIANT: "Not Compliant",
 };
 
 function formatRatio(value: number): string {
@@ -83,7 +83,7 @@ export function buildMethodologyTableRowsFromMulti(multi: MultiMethodologyResult
 export function methodologyTableCaption(multi: MultiMethodologyResult): string {
   const consensus = multi.consensus_status;
   const label = ENGINE_TO_PRODUCT[consensus] ?? consensus;
-  return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass.`;
+  return `Consensus: ${label} — ${multi.summary.halal_count} of ${multi.summary.total} methodologies pass. Debt and receivables can differ by methodology because denominators differ (S&P uses 36m average market cap; others use total assets).`;
 }
 
 /** Three ratio lines for /check full details (values from API breakdown only). */
@@ -94,7 +94,7 @@ export function buildCheckSimpleRatioRows(screening: ScreeningResult): { label: 
       label: "Debt ratio",
       value: `${formatRatio(b.debt_to_36m_avg_market_cap_ratio)} (36-month avg mcap) · ${formatRatio(b.debt_to_market_cap_ratio)} (current mcap)`,
     },
-    { label: "Non-halal income", value: formatRatio(b.non_permissible_income_ratio) },
+    { label: "Non-permissible income", value: formatRatio(b.non_permissible_income_ratio) },
     { label: "Receivables", value: formatRatio(b.receivables_to_market_cap_ratio) },
   ];
 }
@@ -152,7 +152,7 @@ function pickPositiveBullets(b: ScreeningResult["breakdown"], max: number): stri
   const debtOk =
     b.debt_to_36m_avg_market_cap_ratio < 0.33 && b.debt_to_market_cap_ratio < 0.33;
   if (debtOk) out.push("Low debt");
-  if (b.non_permissible_income_ratio < 0.05) out.push("Minimal non-halal income");
+  if (b.non_permissible_income_ratio < 0.05) out.push("Minimal non-permissible income");
   if (out.length >= max) return out.slice(0, max);
   if (b.sector_allowed) out.push("Permitted business sector");
   if (out.length >= max) return out.slice(0, max);
@@ -160,16 +160,16 @@ function pickPositiveBullets(b: ScreeningResult["breakdown"], max: number): stri
   if (out.length >= max) return out.slice(0, max);
   if (b.receivables_to_market_cap_ratio < 0.33) out.push("Receivables within limits");
   if (out.length >= max) return out.slice(0, max);
-  if (b.cash_and_interest_bearing_to_assets_ratio < 0.33) out.push("Cash & investments within limits");
+  if (b.cash_and_interest_bearing_to_assets_ratio < 0.33) out.push("Cash & interest-bearing assets within limits");
   return out.slice(0, max);
 }
 
 function shortenHardReason(r: string): string {
   const lower = r.toLowerCase();
-  if (lower.includes("debt")) return "Debt above recommended limit";
-  if (lower.includes("non-permissible")) return "Non-halal income too high";
+  if (lower.includes("debt")) return "Debt above screening limit";
+  if (lower.includes("non-permissible")) return "Non-permissible income too high";
   if (lower.includes("interest income")) return "Interest income too high";
-  if (lower.includes("receivables")) return "Receivables above recommended limit";
+  if (lower.includes("receivables")) return "Receivables above screening limit";
   if (lower.includes("cash & interest") || lower.includes("cash and interest"))
     return "Cash & interest-bearing assets too high";
   if (lower.includes("sector") || lower.includes("prohibited activities")) return "Sector not permissible";

@@ -3,6 +3,7 @@ import os
 from time import perf_counter
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger("barakfi")
 logging.basicConfig(
@@ -17,7 +18,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect, text
 
-from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_URL, DEBUG
+from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_URL, DEBUG, ALLOW_SEED_DATA_FALLBACK
 from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_PUBLISHABLE_KEY
 from app.database import Base, engine
 from app.api.routes import router
@@ -31,8 +32,8 @@ from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all 
     SuperInvestorHolding,
     CoverageRequest,
     Feedback,
-    NewsArticle,
     BrokerConnection,
+    StockSymbolAlias,
 )
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)
@@ -157,6 +158,142 @@ def _log_table_columns(table_name: str) -> None:
         logger.info("[schema] Failed to inspect %s: %s", table_name, exc)
 
 
+def _describe_unique_indexes(table_name: str) -> list[dict[str, Any]]:
+    """Inspect and normalize unique indexes/constraints for logging and migrations."""
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        return []
+
+    unique_indexes: list[dict[str, Any]] = []
+    seen: set[tuple[str, tuple[str, ...]]] = set()
+
+    try:
+        for idx in inspector.get_indexes(table_name):
+            cols = tuple(idx.get("column_names") or [])
+            if not idx.get("unique"):
+                continue
+            name = str(idx.get("name") or "")
+            key = (name, cols)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_indexes.append(
+                {
+                    "name": name,
+                    "columns": list(cols),
+                    "source": "index",
+                }
+            )
+    except Exception as exc:
+        logger.warning("[quota-index-migrate] Failed to inspect indexes for %s: %s", table_name, exc)
+
+    try:
+        for uc in inspector.get_unique_constraints(table_name):
+            cols = tuple(uc.get("column_names") or [])
+            name = str(uc.get("name") or "")
+            if not name:
+                continue
+            key = (name, cols)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_indexes.append(
+                {
+                    "name": name,
+                    "columns": list(cols),
+                    "source": "constraint",
+                }
+            )
+    except Exception:
+        # Some dialects may not expose unique constraints separately.
+        pass
+
+    return unique_indexes
+
+
+def _migrate_screening_quota_unique_index():
+    """
+    Replace legacy unique index (actor_key, date) with
+    (actor_key, date, quota_type) on screening_quotas.
+    """
+    table_name = "screening_quotas"
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        logger.info("[quota-index-migrate] %s missing; skipping index migration", table_name)
+        return
+
+    desired_cols = ("actor_key", "date", "quota_type")
+    legacy_cols = ("actor_key", "date")
+
+    before = _describe_unique_indexes(table_name)
+    logger.info("[quota-index-migrate] %s unique indexes before: %s", table_name, before)
+
+    with engine.begin() as conn:
+        for idx in before:
+            cols = tuple(idx.get("columns") or [])
+            name = str(idx.get("name") or "")
+            source = str(idx.get("source") or "index")
+            if not name or cols != legacy_cols:
+                continue
+            try:
+                if source == "constraint" and engine.dialect.name.lower() in {"postgres", "postgresql"}:
+                    conn.execute(
+                        text(f'ALTER TABLE "{table_name}" DROP CONSTRAINT IF EXISTS "{name}"')
+                    )
+                else:
+                    conn.execute(text(f'DROP INDEX IF EXISTS "{name}"'))
+                logger.info(
+                    "[quota-index-migrate] Dropped legacy %s %s on %s(%s)",
+                    source,
+                    name,
+                    table_name,
+                    ", ".join(cols),
+                )
+            except Exception as exc:
+                logger.warning("[quota-index-migrate] Failed dropping %s: %s", name, exc)
+
+        after_drop = _describe_unique_indexes(table_name)
+        has_desired_unique = any(tuple(idx.get("columns") or []) == desired_cols for idx in after_drop)
+        if not has_desired_unique:
+            try:
+                conn.execute(
+                    text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_screening_quota_actor_date "
+                        "ON screening_quotas (actor_key, date, quota_type)"
+                    )
+                )
+                logger.info(
+                    "[quota-index-migrate] Ensured unique index on %s(%s)",
+                    table_name,
+                    ", ".join(desired_cols),
+                )
+            except Exception as exc:
+                logger.warning("[quota-index-migrate] Failed creating target unique index: %s", exc)
+
+    after = _describe_unique_indexes(table_name)
+    logger.info("[quota-index-migrate] %s unique indexes after: %s", table_name, after)
+
+
+def _drop_news_articles_table_if_exists():
+    """Drop legacy news_articles table during startup after news decommission."""
+    table_name = "news_articles"
+    inspector = inspect(engine)
+    if not inspector.has_table(table_name):
+        logger.info("[news-decommission] %s table missing; skipping drop", table_name)
+        return
+
+    logger.info("[news-decommission] Dropping legacy table: %s", table_name)
+    try:
+        with engine.begin() as conn:
+            if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+            else:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{table_name}"'))
+        logger.info("[news-decommission] Dropped %s successfully", table_name)
+    except Exception as exc:
+        logger.warning("[news-decommission] Failed dropping %s: %s", table_name, exc)
+
+
 def _acquire_seed_lock(conn) -> bool:
     """
     Acquire a best-effort cross-process seed lock.
@@ -198,14 +335,28 @@ def _auto_seed_stocks():
             stock_data = REAL_STOCKS
             source = "real Yahoo Finance data"
         except (ImportError, Exception):
-            from fetch_data import SEED_STOCKS
-            stock_data = SEED_STOCKS
-            source = "seed data"
+            if ALLOW_SEED_DATA_FALLBACK:
+                from fetch_data import SEED_STOCKS
+                stock_data = SEED_STOCKS
+                source = "seed data (fallback enabled)"
+            else:
+                stock_data = []
+                source = "no source (real_stock_data unavailable, seed fallback disabled)"
+                logger.warning(
+                    "[auto-seed] real_stock_data import failed and ALLOW_SEED_DATA_FALLBACK=false. "
+                    "Skipping seed-stock fallback."
+                )
+
+        stock_columns = {col.key for col in Stock.__table__.columns}
 
         existing_count = db.query(Stock).count()
         added = 0
         updated = 0
         for payload in stock_data:
+            payload = {k: v for k, v in payload.items() if k in stock_columns}
+            if "symbol" not in payload:
+                continue
+
             # Some tickers collide across exchanges (e.g. "BA" is Boeing on US exchanges
             # and BAE Systems on LSE as "BA.L"). Disambiguate LSE tickers with Yahoo-style suffix.
             try:
@@ -269,6 +420,58 @@ def _auto_seed_stocks():
         db.close()
 
 
+def _seed_symbol_aliases():
+    """Seed verified NSE symbol aliases used by Job A resolution."""
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        seeds = [
+            {
+                "old_symbol": "MCDOWELL-N",
+                "new_symbol": "UNITDSPR",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
+            {
+                "old_symbol": "CENTURYTEX",
+                "new_symbol": "ABREL",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
+            {
+                "old_symbol": "TV18BRDCST",
+                "new_symbol": "NETWORK18",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
+        ]
+        for payload in seeds:
+            exists = (
+                db.query(StockSymbolAlias)
+                .filter(
+                    StockSymbolAlias.old_symbol == payload["old_symbol"],
+                    StockSymbolAlias.new_symbol == payload["new_symbol"],
+                )
+                .first()
+            )
+            if exists:
+                continue
+            db.add(StockSymbolAlias(**payload))
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("[symbol-alias-seed] Failed to seed symbol aliases: %s", exc)
+    finally:
+        db.close()
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="utf-8")
 
@@ -313,8 +516,13 @@ _sqlite_migrate_stocks_composite_unique()
 
 # 2. Add any missing columns to existing tables
 _auto_migrate_columns()
+# 2a. Remove legacy news table if it still exists in older deployments
+_drop_news_articles_table_if_exists()
+# 2b. Heal legacy screening_quotas unique index shape in older environments
+_migrate_screening_quota_unique_index()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
+_seed_symbol_aliases()
 
 # 4. Seed collections and super investors (single-worker safe)
 log = logging.getLogger("barakfi")

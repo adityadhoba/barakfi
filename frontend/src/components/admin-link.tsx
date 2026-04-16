@@ -6,13 +6,13 @@ import { TopbarLink } from "@/components/topbar-link";
 
 export function AdminLink() {
   const { userId } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [canViewAdmin, setCanViewAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAdmin = async () => {
       if (!userId) {
-        setIsAdmin(false);
+        setCanViewAdmin(false);
         setLoading(false);
         return;
       }
@@ -22,16 +22,16 @@ export function AdminLink() {
         const response = await fetch("/api/me", { cache: "no-store" });
 
         if (!response.ok) {
-          setIsAdmin(false);
+          setCanViewAdmin(false);
           setLoading(false);
           return;
         }
 
         const user = await response.json();
-        setIsAdmin(user.role === "admin");
+        setCanViewAdmin(user.role === "admin" || user.role === "owner");
       } catch (error) {
         console.error("Failed to check admin status:", error);
-        setIsAdmin(false);
+        setCanViewAdmin(false);
       } finally {
         setLoading(false);
       }
@@ -40,7 +40,7 @@ export function AdminLink() {
     checkAdmin();
   }, [userId]);
 
-  if (loading || !isAdmin) {
+  if (loading || !canViewAdmin) {
     return null;
   }
 

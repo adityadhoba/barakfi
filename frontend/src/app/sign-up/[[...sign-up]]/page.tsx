@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
   description:
-    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use calculators built for Indian Muslim investors screening NSE and BSE equities — private sign-up flow, not for search indexing.",
+    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use stock screening tools for NSE and BSE equities — private sign-up flow, not for search indexing.",
   robots: { index: false, follow: true },
 };
 

@@ -31,6 +31,15 @@ CLERK_JS_URL = os.getenv("CLERK_JS_URL", "")
 INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
 if not INTERNAL_SERVICE_TOKEN and APP_ENV.lower() == "development" and DEBUG:
     INTERNAL_SERVICE_TOKEN = "dev-internal-token-change-me"
+OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
+OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
+OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
+OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "false").lower() == "true"
+OPS_ALERT_QUIET_WINDOW_ENABLED = os.getenv("OPS_ALERT_QUIET_WINDOW_ENABLED", "false").lower() == "true"
+try:
+    OPS_ALERT_QUIET_WINDOW_SECONDS = max(0, int(os.getenv("OPS_ALERT_QUIET_WINDOW_SECONDS", "1800")))
+except ValueError:
+    OPS_ALERT_QUIET_WINDOW_SECONDS = 1800
 
 ADMIN_AUTH_SUBJECTS = [
     subject.strip()
@@ -42,8 +51,25 @@ ADMIN_EMAILS = [
     for email in os.getenv("ADMIN_EMAILS", "").split(",")
     if email.strip()
 ]
+OWNER_AUTH_SUBJECTS = [
+    subject.strip()
+    for subject in os.getenv("OWNER_AUTH_SUBJECTS", "").split(",")
+    if subject.strip()
+]
+OWNER_EMAILS = [
+    email.strip().lower()
+    for email in os.getenv("OWNER_EMAILS", "adityadhoba@gmail.com").split(",")
+    if email.strip()
+]
+ALWAYS_ADMIN_EMAILS = {"chiranterrawat123@gmail.com"}
+ADMIN_EMAILS = sorted(set(ADMIN_EMAILS) | ALWAYS_ADMIN_EMAILS)
 MARKET_DATA_PROVIDER = os.getenv("MARKET_DATA_PROVIDER", "seed").strip().lower()
 FUNDAMENTALS_PROVIDER = os.getenv("FUNDAMENTALS_PROVIDER", "seed").strip().lower()
+ALLOW_SEED_DATA_FALLBACK = os.getenv("ALLOW_SEED_DATA_FALLBACK", "false").lower() == "true"
+try:
+    FUNDAMENTALS_STALE_THRESHOLD_HOURS = max(1, int(os.getenv("FUNDAMENTALS_STALE_THRESHOLD_HOURS", "36")))
+except ValueError:
+    FUNDAMENTALS_STALE_THRESHOLD_HOURS = 36
 GROWW_API_KEY = os.getenv("GROWW_API_KEY", "")
 GROWW_ACCESS_TOKEN = os.getenv("GROWW_ACCESS_TOKEN", "")
 KITE_API_KEY = os.getenv("KITE_API_KEY", "")
@@ -59,12 +85,6 @@ FMP_API_BASE = os.getenv("FMP_API_BASE", "https://financialmodelingprep.com/api/
 
 def is_production() -> bool:
     return APP_ENV.lower() == "production"
-
-# RSS feed for Islamic finance news (Google News topic query — configurable)
-NEWS_RSS_URL = os.getenv(
-    "NEWS_RSS_URL",
-    "https://news.google.com/rss/search?q=Islamic+finance+OR+Shariah+investing&hl=en-US&gl=US&ceid=US:en",
-)
 # Upstox OAuth (optional — for broker connect)
 UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY", "")
 UPSTOX_API_SECRET = os.getenv("UPSTOX_API_SECRET", "")
@@ -73,14 +93,3 @@ UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
 
 # OAuth redirects (broker callbacks) — set in production to your Vercel URL
 FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", "").strip() or (CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000")
-
-# NewsData.io (optional — set NEWSDATA_API_KEY for /internal/news/sync)
-# Falls back to NEWS_NEWSAPI_* env names for migration from NewsAPI.org.
-NEWSDATA_API_KEY = (
-    os.getenv("NEWSDATA_API_KEY") or os.getenv("NEWS_NEWSAPI_KEY") or ""
-).strip()
-NEWSDATA_Q = (
-    os.getenv("NEWSDATA_Q")
-    or os.getenv("NEWS_NEWSAPI_QUERY")
-    or "islamic finance OR sukuk OR shariah finance"
-).strip()

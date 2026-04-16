@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { StockLogo } from "@/components/stock-logo";
-import type { ScreeningResult, Stock } from "@/lib/api";
+import type { ScreeningResult } from "@/lib/api";
+import type { LivePriceRow } from "@/lib/live-price";
 import { exchangeMapFromRows, livePriceFromQuoteOrDb } from "@/lib/live-price";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { screeningUiLabel } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
-type Row = Stock & { screening?: ScreeningResult };
+type Row = LivePriceRow & {
+  name: string;
+  market_cap: number;
+  screening?: ScreeningResult;
+};
 
 function formatPrice(value: number, currency: string = "INR") {
   const cur = currency || "INR";
@@ -39,7 +45,7 @@ export function HomeTopStocksLive({ rows }: { rows: Row[] }) {
                 symbol={row.symbol}
                 size={36}
                 status={scr?.status}
-                exchange={row.exchange}
+                exchange={row.exchange ?? undefined}
               />
               <div className={styles.stockIdentity}>
                 <span className={styles.stockSymbol}>{row.symbol}</span>
@@ -61,7 +67,7 @@ export function HomeTopStocksLive({ rows }: { rows: Row[] }) {
                         : styles.statusDotFail
                   }`}
                 />
-                {scr.status === "HALAL" ? "Halal" : scr.status === "CAUTIOUS" ? "Doubtful" : "Haram"}
+                {screeningUiLabel(scr.status)}
               </div>
             )}
           </Link>

@@ -3,19 +3,20 @@ import { Logo } from "@/components/logo";
 import { getStocks, getTrending } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { SCREENING_LEGAL_DISCLAIMER } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
 export async function HomeDashboard() {
-  const [stocks, trendingStocks] = await Promise.all([
-    getStocks(),
-    getTrending("popular", undefined, 8),
-  ]);
-
-  const popular = [...stocks]
-    .sort((a, b) => b.market_cap - a.market_cap)
-    .slice(0, 8);
-
-  const trendingChips = (trendingStocks.length > 0 ? trendingStocks : popular).slice(0, 3);
+  const popularFromStocks = await getStocks({
+    limit: 12,
+    orderBy: "market_cap_desc",
+    revalidateSeconds: 300,
+  });
+  const popular =
+    popularFromStocks.length > 0
+      ? popularFromStocks
+      : await getTrending("popular", "NSE", 12);
+  const trendingChips = popular.slice(0, 3);
 
   return (
     <div className={styles.home}>
@@ -60,7 +61,7 @@ export async function HomeDashboard() {
           <div className={styles.howCard}>
             <span className={styles.howStep}>3</span>
             <h3 className={styles.howTitle}>Get your result</h3>
-            <p className={styles.howDesc}>See if the stock is Halal, Doubtful, or Haram — with full transparency.</p>
+            <p className={styles.howDesc}>See whether a stock screens as Shariah Compliant, Requires Review, or Not Compliant — with full transparency.</p>
           </div>
         </div>
       </section>
@@ -112,7 +113,7 @@ export async function HomeDashboard() {
             </div>
           </div>
           <p className={styles.authorityDisclaimer}>
-            This is an automated screening tool and not financial or religious advice.
+            {SCREENING_LEGAL_DISCLAIMER}
           </p>
         </div>
       </section>

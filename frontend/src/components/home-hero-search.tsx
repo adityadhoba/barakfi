@@ -24,24 +24,36 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
   const deferredQuery = useDeferredValue(query);
   const inputStartedAtRef = useRef<number | null>(null);
   const lastTrackedQueryRef = useRef("");
+  const fetchedRef = useRef(false);
+  const fetchControllerRef = useRef<AbortController | null>(null);
+
+  const loadStocks = useCallback(async () => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetchControllerRef.current?.abort();
+    const controller = new AbortController();
+    fetchControllerRef.current = controller;
+    try {
+      const response = await fetch("/api/stocks", {
+        credentials: "same-origin",
+        signal: controller.signal,
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setStocks(list);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
-    let cancelled = false;
-    fetch("/api/stocks", { credentials: "same-origin", signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const list = Array.isArray(data) ? data : data?.data ?? [];
-        setStocks(list);
-      })
-      .catch(() => {});
     return () => {
-      cancelled = true;
-      controller.abort();
+      fetchControllerRef.current?.abort();
     };
   }, []);
 
@@ -119,8 +131,12 @@ export function HomeHeroSearch({ trendingSymbols }: Props) {
             setQuery(next);
             setOpen(true);
             if (next.trim().length >= 2) inputStartedAtRef.current = performance.now();
+            void loadStocks();
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            void loadStocks();
+          }}
           onKeyDown={handleKeyDown}
           autoComplete="off"
         />

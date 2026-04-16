@@ -1,10 +1,13 @@
 import time
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Any, Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -21,9 +24,12 @@ from app.config import (
     CORS_ORIGINS,
     INTERNAL_SERVICE_TOKEN,
     MARKET_DATA_PROVIDER,
+    OWNER_AUTH_SUBJECTS,
+    OWNER_EMAILS,
 )
 from app.services.rbac import (
     is_admin,
+    is_owner,
     get_user_by_claims,
     ROLE_DESCRIPTIONS,
     ROLE_HIERARCHY,
@@ -31,6 +37,7 @@ from app.services.rbac import (
 )
 from app.database import get_db
 from app.api import helpers
+from app.api.envelope import api_error
 from app.api.public_screen_guard import enforce_screening_budget
 from app.models import (
     ComplianceHistory,
@@ -45,11 +52,15 @@ from app.models import (
     ScreeningLog,
     SupportNote,
     Stock,
+    StockSymbolAlias,
     StockIndexMembership,
     User,
     UserSettings,
     WatchlistEntry,
     BrokerConnection,
+    DailyRefreshRun,
+    SymbolResolutionIssue,
+    StockCorporateEvent,
 )
 from app.schemas import (
     ActionResponse,
@@ -74,6 +85,10 @@ from app.schemas import (
     GovernanceOverviewResponse,
     DataStackStatusResponse,
     FundamentalsStatusResponse,
+    StockCorporateEventCreate,
+    StockCorporateEventRead,
+    SymbolResolutionHealthResponse,
+    SymbolResolutionIssueRead,
     UniversePreviewResponse,
     SupportNoteCreateRequest,
     SupportNoteRead,
@@ -119,15 +134,28 @@ from app.services.screening_presenter import (
     simple_row_from_cache_entry,
 )
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
+from app.services.index_sync_service import get_cached_market_indices, sync_market_indices
+from app.services.symbol_integrity_service import run_nse_symbol_integrity_checks, symbol_health_summary
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
+from app.services.ops_notification_service import send_ops_alert
 from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_stock_prices
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 from app.services.stock_data_quality import fundamentals_completeness_payload
+from app.services.corporate_action_service import (
+    apply_corporate_action_events,
+    summarize_latest_events_by_symbols,
+)
 from app.services.stock_lookup import is_indian_exchange, resolve_stock
 
 router = APIRouter(prefix="/api")
+logger = logging.getLogger("barakfi")
+
+
+def _is_owner_user(user: User) -> bool:
+    email = (user.email or "").strip().lower()
+    return user.role == "owner" or email in OWNER_EMAILS or user.auth_subject in OWNER_AUTH_SUBJECTS
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -139,14 +167,54 @@ def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, lis
     return {k: sorted(set(v)) for k, v in m.items()}
 
 
+def _search_aliases_by_symbol(db: Session, symbols: list[str]) -> dict[str, list[str]]:
+    lookup = {s.strip().upper() for s in symbols if s and s.strip()}
+    if not lookup:
+        return {}
+
+    out: dict[str, set[str]] = {sym: set() for sym in lookup}
+
+    alias_rows = (
+        db.query(StockSymbolAlias.old_symbol, StockSymbolAlias.new_symbol)
+        .filter(StockSymbolAlias.status == "active")
+        .filter(StockSymbolAlias.new_symbol.in_(lookup))
+        .all()
+    )
+    for old_symbol, new_symbol in alias_rows:
+        old = (old_symbol or "").strip().upper()
+        new = (new_symbol or "").strip().upper()
+        if old and new in out and old != new:
+            out[new].add(old)
+
+    corporate_rows = (
+        db.query(StockCorporateEvent.symbol, StockCorporateEvent.canonical_symbol, StockCorporateEvent.successor_symbol)
+        .filter(StockCorporateEvent.status == "active")
+        .filter(
+            (StockCorporateEvent.canonical_symbol.in_(lookup)) | (StockCorporateEvent.successor_symbol.in_(lookup))
+        )
+        .all()
+    )
+    for legacy_symbol, canonical_symbol, successor_symbol in corporate_rows:
+        legacy = (legacy_symbol or "").strip().upper()
+        target = (canonical_symbol or successor_symbol or "").strip().upper()
+        if legacy and target in out and legacy != target:
+            out[target].add(legacy)
+
+    return {k: sorted(v) for k, v in out.items() if v}
+
+
 def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
     dq, missing = fundamentals_completeness_payload(stock)
+    latest_event = summarize_latest_events_by_symbols(db, [stock.symbol]).get(stock.symbol.upper())
+    alias_map = _search_aliases_by_symbol(db, [stock.symbol])
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
             "data_quality": dq,
             "fundamentals_fields_missing": missing,
+            "latest_corporate_event": latest_event,
+            "search_aliases": alias_map.get(stock.symbol.upper(), []),
         }
     )
 
@@ -154,6 +222,8 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
 def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     ids = [s.id for s in stocks]
     code_map = _index_codes_by_stock_id(db, ids)
+    event_map = summarize_latest_events_by_symbols(db, [s.symbol for s in stocks])
+    alias_map = _search_aliases_by_symbol(db, [s.symbol for s in stocks])
     out: list[StockRead] = []
     for s in stocks:
         dq, missing = fundamentals_completeness_payload(s)
@@ -163,6 +233,8 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
                     "index_memberships": code_map.get(s.id, []),
                     "data_quality": dq,
                     "fundamentals_fields_missing": missing,
+                    "latest_corporate_event": event_map.get(s.symbol.upper()),
+                    "search_aliases": alias_map.get(s.symbol.upper(), []),
                 }
             )
         )
@@ -181,6 +253,22 @@ def _check_cache_key(symbol: str, exchange: str) -> str:
 
 def _multi_cache_key(symbol: str, exchange: str | None) -> str:
     return f"multi:{symbol.strip().upper()}:{(exchange or '_').strip().upper()}"
+
+
+def _validate_screenable_stock_or_raise(stock: Stock) -> None:
+    if not stock.is_active:
+        successor = (stock.canonical_symbol or stock.successor_symbol or "").strip().upper() or None
+        if successor:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Symbol moved to {successor}; use the canonical listing instead.",
+            )
+        raise HTTPException(
+            status_code=409,
+            detail=f"{stock.symbol} is not active for screening (status: {stock.symbol_status or 'inactive'}).",
+        )
+    if stock.screening_blocked_reason:
+        raise HTTPException(status_code=409, detail=f"Screening blocked: {stock.screening_blocked_reason}")
 
 
 def _tracked_rows_for_user(db: Session, user: User) -> list[dict[str, Any]]:
@@ -227,7 +315,7 @@ def auth_strategy():
 
 
 @router.get("/market-data/indices")
-def market_indices():
+def market_indices(db: Session = Depends(get_db)):
     """
     Get live NSE indices (NIFTY 50, BANK NIFTY, SENSEX, NIFTY MIDCAP 150).
 
@@ -238,19 +326,25 @@ def market_indices():
         List of IndexQuote with name, current value, change amount, change %, source, timestamp.
     """
     indices = fetch_nse_indices()
-    if not indices:
-        return []
-    return [
-        {
-            "name": idx.name,
-            "value": idx.value,
-            "change": idx.change,
-            "change_percent": idx.change_percent,
-            "source": idx.source,
-            "as_of": idx.as_of,
-        }
-        for idx in indices
-    ]
+    if indices:
+        try:
+            sync_market_indices(db, indices)
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("[market-data/indices] failed to persist live index snapshot")
+        return [
+            {
+                "name": idx.name,
+                "value": idx.value,
+                "change": idx.change,
+                "change_percent": idx.change_percent,
+                "source": idx.source,
+                "as_of": idx.as_of,
+            }
+            for idx in indices
+        ]
+    return get_cached_market_indices(db)
 
 
 @router.get("/market-data/status", response_model=MarketDataStatusResponse)
@@ -297,13 +391,59 @@ def equity_quote_snapshot(
             status_code=400,
             detail=f"provider must be one of: {', '.join(sorted(PUBLIC_MARKET_PROVIDERS))}",
         )
-    row = resolve_stock(db, sym, None, active_only=True, require_indian_listing=True)
-    ex = (exchange or (row.exchange if row else "NSE")).upper()
-    quote = fetch_quote_by_provider(sym, ex, effective)
+    t0 = time.perf_counter()
+    requested_exchange = (exchange or "").strip().upper()
+    ex = requested_exchange or "NSE"
+    try:
+        # Hot path: when caller provides exchange, avoid DB lookup to reduce pool pressure.
+        if not requested_exchange:
+            row = resolve_stock(db, sym, None, active_only=True, require_indian_listing=True)
+            ex = (row.exchange if row else "NSE").upper()
+        quote = fetch_quote_by_provider(sym, ex, effective)
+    except SQLAlchemyError as exc:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.exception(
+            "[quote] db_failure symbol=%s exchange=%s provider=%s error=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            exc.__class__.__name__,
+            latency_ms,
+        )
+        raise HTTPException(status_code=503, detail="Quote service temporarily unavailable. Please retry.")
+    except Exception as exc:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.exception(
+            "[quote] unhandled_failure symbol=%s exchange=%s provider=%s error=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            exc.__class__.__name__,
+            latency_ms,
+        )
+        raise HTTPException(status_code=503, detail="Quote service temporarily unavailable. Please retry.")
     if not quote or quote.last_price is None:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning(
+            "[quote] unavailable symbol=%s exchange=%s provider=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            latency_ms,
+        )
         raise HTTPException(
             status_code=404,
             detail="Quote unavailable for this symbol or provider.",
+        )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    if latency_ms >= 1500:
+        logger.warning(
+            "[quote] slow_response symbol=%s exchange=%s provider=%s source=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            quote.source,
+            latency_ms,
         )
     payload = quote_to_dict(quote)
     return EquityQuoteResponse(
@@ -373,19 +513,21 @@ def sync_equity_prices_to_database(
 @router.get("/fundamentals/status", response_model=FundamentalsStatusResponse)
 def fundamentals_status(db: Session = Depends(get_db)):
     stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
-    return get_fundamentals_status(stock_count)
+    return get_fundamentals_status(stock_count, db=db)
 
 
 @router.get("/data-stack/status", response_model=DataStackStatusResponse)
 def data_stack_status(db: Session = Depends(get_db)):
     stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
-    return get_data_stack_status(stock_count)
+    return get_data_stack_status(stock_count, db=db)
 
 
 @router.get("/stocks", response_model=list[StockRead])
 def list_stocks(
     halal_only: bool = Query(default=False),
     search: str | None = Query(default=None),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+    order_by: str = Query(default="symbol", pattern="^(symbol|market_cap_desc)$"),
     db: Session = Depends(get_db),
 ):
     """
@@ -406,14 +548,20 @@ def list_stocks(
     """
     query = db.query(Stock).filter(
         Stock.is_active.is_(True),
-        Stock.exchange.in_(("NSE", "BSE")),
+        Stock.exchange == "NSE",
     )
 
     if search:
         search_term = f"%{search.upper()}%"
         query = query.filter((Stock.symbol.ilike(search_term)) | (Stock.name.ilike(search_term)))
 
-    stocks = query.order_by(Stock.symbol.asc()).all()
+    if order_by == "market_cap_desc":
+        query = query.order_by(Stock.market_cap.desc(), Stock.symbol.asc())
+    else:
+        query = query.order_by(Stock.symbol.asc())
+    if limit is not None:
+        query = query.limit(limit)
+    stocks = query.all()
 
     if not halal_only:
         return _stocks_read_enriched(db, stocks)
@@ -473,6 +621,7 @@ def check_stock(
     stock = resolve_stock(db, clean, None, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    _validate_screenable_stock_or_raise(stock)
 
     ck = _check_cache_key(stock.symbol, stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -525,6 +674,7 @@ def screen_stock(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    _validate_screenable_stock_or_raise(stock)
 
     ex_for_key = exchange or stock.exchange
     ckey = screening_cache_key(stock.symbol, ex_for_key)
@@ -557,7 +707,11 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
     upper_symbols = [s.upper() for s in symbols[:500]]
     stocks = (
         db.query(Stock)
-        .filter(Stock.symbol.in_(upper_symbols), Stock.is_active.is_(True))
+        .filter(
+            Stock.symbol.in_(upper_symbols),
+            Stock.is_active.is_(True),
+            Stock.screening_blocked_reason.is_(None),
+        )
         .all()
     )
     by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
@@ -593,6 +747,81 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
         results.append(out)
         time.sleep(0.015)
     return results
+
+
+def _active_screenable_symbols(db: Session) -> list[str]:
+    rows = (
+        db.query(Stock.symbol, Stock.exchange)
+        .filter(Stock.is_active.is_(True))
+        .filter(Stock.screening_blocked_reason.is_(None))
+        .order_by(Stock.symbol.asc(), Stock.exchange.asc())
+        .all()
+    )
+    picked: dict[str, str] = {}
+    for symbol, exchange in rows:
+        ex = (exchange or "").upper()
+        sym = (symbol or "").upper()
+        if not sym or ex != "NSE":
+            continue
+        existing = picked.get(sym)
+        if existing is None or (ex == "NSE" and existing != "NSE"):
+            picked[sym] = ex
+    return sorted(picked.keys())
+
+
+def _daily_refresh_alert_details(
+    *,
+    run_id: str,
+    phase: str,
+    provider: str,
+    expected: int,
+    completed: int,
+    chunks: int,
+    retries: int,
+    stale: bool,
+    fundamentals_latest: datetime | None,
+    duration_seconds: float | None,
+    fundamentals_rows_with_timestamp: int | None = None,
+    fundamentals_rows_missing_timestamp: int | None = None,
+    fundamentals_staleness_hours: float | None = None,
+    prices_updated: int | None = None,
+    prices_total: int | None = None,
+    prices_failed_count: int | None = None,
+    indices_updated: int | None = None,
+    symbol_master_events_processed: int | None = None,
+    symbol_master_rows_updated: int | None = None,
+    symbol_master_rows_disabled: int | None = None,
+    symbol_master_rows_created: int | None = None,
+    symbol_master_rows_remapped: int | None = None,
+    symbol_master_unresolved_actions: int | None = None,
+    failure_reason: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "phase": phase,
+        "provider": provider,
+        "screening_completed": f"{completed}/{expected}",
+        "chunks": chunks,
+        "retries": retries,
+        "fundamentals_latest_utc": fundamentals_latest.isoformat() if fundamentals_latest else "null",
+        "fundamentals_rows_with_timestamp": fundamentals_rows_with_timestamp,
+        "fundamentals_rows_missing_timestamp": fundamentals_rows_missing_timestamp,
+        "fundamentals_staleness_hours": fundamentals_staleness_hours,
+        "stale": stale,
+        "prices_updated": prices_updated,
+        "prices_total": prices_total,
+        "prices_failed_count": prices_failed_count,
+        "indices_updated": indices_updated,
+        "symbol_master_events_processed": symbol_master_events_processed,
+        "symbol_master_rows_updated": symbol_master_rows_updated,
+        "symbol_master_rows_disabled": symbol_master_rows_disabled,
+        "symbol_master_rows_created": symbol_master_rows_created,
+        "symbol_master_rows_remapped": symbol_master_rows_remapped,
+        "symbol_master_unresolved_actions": symbol_master_unresolved_actions,
+        "duration_seconds": round(duration_seconds or 0.0, 2),
+        "failure_reason": failure_reason,
+        "recovery_hint": "Run Job A (fetch_real_data.py) then Job B (run_daily_refresh.py)",
+    }
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])
@@ -641,20 +870,77 @@ def compare_bulk_screen(
 ):
     """
     Batch screening for the Compare Stocks tool only.
-    Counts against the actor's daily compare quota (see GET /quota compare_* fields).
+    Counts against the actor's daily compare quota and consumes screen quota only
+    for symbols the actor has not already screened today (IST).
     """
-    from app.services.quota_service import check_compare_quota
+    from app.services.quota_service import (
+        check_and_increment_unique_screen_quota,
+        check_compare_quota,
+        log_screening_accesses,
+    )
 
     symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:3]
     if not symbols:
         return []
 
-    quota = check_compare_quota(db, request)
+    service_unavailable_message = "Compare is temporarily unavailable. Please try again shortly."
+
+    try:
+        quota = check_compare_quota(db, request)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] compare quota check failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
+        )
+
     if not quota["allowed"]:
+        return JSONResponse(
+            status_code=429,
+            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
+            content=api_error(
+                "You’ve reached today’s compare limit.",
+                code="limit_exhausted",
+                extra={
+                    "status": "limit_exhausted",
+                    "actions": ["Come back tomorrow", "Join Early Access"],
+                    "redirect_url": "/premium",
+                    "resets_at": quota.get("resets_at", ""),
+                },
+            ),
+        )
+
+    try:
+        screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] screen quota reservation failed: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
+        )
+
+    if not screen_quota["allowed"]:
+        db.rollback()
         raise HTTPException(
             status_code=429,
-            detail="Daily compare limit reached",
-            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
+            detail="Daily screening limit reached",
+            headers={
+                "X-Remaining": str(screen_quota.get("remaining", 0)),
+                "X-Resets-At": screen_quota.get("resets_at", ""),
+            },
+        )
+
+    try:
+        log_screening_accesses(db, request, symbols)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[compare/bulk] failed to log compare screening access: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
         )
 
     return _screen_stocks_bulk_impl(symbols, db)
@@ -676,6 +962,7 @@ def screen_stock_multi(
     stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
+    _validate_screenable_stock_or_raise(stock)
 
     mk = _multi_cache_key(stock.symbol, exchange or stock.exchange)
     if not _stock_has_compliance_override(db, stock.id):
@@ -914,14 +1201,14 @@ def screen_stock_manual(
     """
     from app.services.manual_screen_service import fetch_and_screen
     from app.services.quota_service import (
-        check_and_increment_quota,
-        log_screening_access,
+        check_and_increment_unique_screen_quota,
         get_accessible_symbols,
+        log_screening_accesses,
     )
 
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
-    quota = check_and_increment_quota(db, request)
+    quota = check_and_increment_unique_screen_quota(db, request, [clean_symbol])
     if not quota["allowed"]:
         raise HTTPException(
             status_code=429,
@@ -935,7 +1222,7 @@ def screen_stock_manual(
         stock_data = helpers.stock_to_dict(existing)
         multi_result = evaluate_stock_multi(stock_data)
         primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
-        log_screening_access(db, request, clean_symbol)
+        log_screening_accesses(db, request, [clean_symbol])
         db.commit()
         return {
             "symbol": existing.symbol,
@@ -953,7 +1240,7 @@ def screen_stock_manual(
 
     multi_result = evaluate_stock_multi(stock_data)
     primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
-    log_screening_access(db, request, clean_symbol)
+    log_screening_accesses(db, request, [clean_symbol])
     db.commit()
 
     return {
@@ -1424,23 +1711,33 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         except Exception:
             db.rollback()
 
-    # Auto-promote to admin if user's email is in ADMIN_EMAILS or auth_subject in ADMIN_AUTH_SUBJECTS.
-    # This ensures founders/admins always see admin UI even before the role column migration runs.
+    # Auto-promote to owner/admin based on configured identities.
     effective_role = getattr(user, "role", "user") or "user"
-    if effective_role != "admin":
-        db_email = (user.email or "").strip().lower()
-        if (
-            (db_email and db_email in ADMIN_EMAILS)
-            or (claim_email and claim_email in ADMIN_EMAILS)
-            or (auth_subject in ADMIN_AUTH_SUBJECTS)
-        ):
-            effective_role = "admin"
-            # Persist the promotion so future checks are fast
-            try:
-                user.role = "admin"
-                db.commit()
-            except Exception:
-                db.rollback()
+    db_email = (user.email or "").strip().lower()
+    owner_match = (
+        (db_email and db_email in OWNER_EMAILS)
+        or (claim_email and claim_email in OWNER_EMAILS)
+        or (auth_subject in OWNER_AUTH_SUBJECTS)
+    )
+    admin_match = (
+        (db_email and db_email in ADMIN_EMAILS)
+        or (claim_email and claim_email in ADMIN_EMAILS)
+        or (auth_subject in ADMIN_AUTH_SUBJECTS)
+    )
+    if owner_match and effective_role != "owner":
+        effective_role = "owner"
+        try:
+            user.role = "owner"
+            db.commit()
+        except Exception:
+            db.rollback()
+    elif admin_match and effective_role not in {"owner", "admin"}:
+        effective_role = "admin"
+        try:
+            user.role = "admin"
+            db.commit()
+        except Exception:
+            db.rollback()
 
     # Return user with effective role
     result = UserRead.model_validate(user)
@@ -2209,8 +2506,9 @@ def admin_update_user_role(
     Assign a role to a user.
     Cannot demote the current admin user.
     """
-    admin_subject = helpers.require_admin(db, claims)
+    helpers.require_admin(db, claims)
     admin_user = get_user_by_claims(db, claims)
+    caller_is_owner = is_owner(db, claims)
 
     # Get the target user
     target_user = db.query(User).filter(User.id == user_id).first()
@@ -2224,15 +2522,26 @@ def admin_update_user_role(
             detail=f"Invalid role. Must be one of: {', '.join(sorted(VALID_ROLES))}"
         )
 
-    # Prevent demoting current admin user
-    if admin_user.id == user_id and payload.role != "admin":
+    # Owner account protections
+    if _is_owner_user(target_user):
+        raise HTTPException(status_code=403, detail="Owner role cannot be modified")
+
+    # Only owner can promote to owner
+    if payload.role == "owner" and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can assign owner role")
+
+    # Prevent self-demotion
+    if admin_user.id == user_id and payload.role not in {"owner", "admin"}:
         raise HTTPException(
             status_code=400,
-            detail="Cannot demote your own admin role"
+            detail="Cannot demote your own privileged role"
         )
 
+    # Only owner can remove admin role from another admin
+    if target_user.role == "admin" and payload.role != "admin" and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can remove admin access")
+
     # Update the role
-    old_role = target_user.role
     target_user.role = payload.role
     db.commit()
     db.refresh(target_user)
@@ -2258,10 +2567,17 @@ def admin_update_user_active(
     Enable or disable a user account.
     """
     helpers.require_admin(db, claims)
+    caller_is_owner = is_owner(db, claims)
 
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    if _is_owner_user(target_user):
+        raise HTTPException(status_code=403, detail="Owner account cannot be disabled")
+
+    if target_user.role == "admin" and not payload.is_active and not caller_is_owner:
+        raise HTTPException(status_code=403, detail="Only owner can disable admin accounts")
 
     target_user.is_active = payload.is_active
     db.commit()
@@ -2275,6 +2591,33 @@ def admin_update_user_active(
         is_active=target_user.is_active,
         created_at=target_user.created_at,
     )
+
+
+@router.post("/admin/users/{user_id}/quota/reset")
+def admin_reset_user_quota(
+    user_id: int,
+    claims: dict = Depends(get_current_auth_claims),
+    db: Session = Depends(get_db),
+):
+    """Reset today's quota counters for a user."""
+    helpers.require_admin(db, claims)
+
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    from app.services.quota_service import reset_user_quotas_for_today
+
+    actor_key = f"user:{target_user.auth_subject}"
+    summary = reset_user_quotas_for_today(db, actor_key)
+    db.commit()
+    return {
+        "ok": True,
+        "user_id": target_user.id,
+        "email": target_user.email,
+        "actor_key": actor_key,
+        **summary,
+    }
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -2606,46 +2949,460 @@ def daily_refresh(
     screen_chunk_size: int = Query(default=150, ge=50, le=500, description="Symbols per bulk-screen chunk (max 500)."),
 ):
     """
-    One-shot pipeline for cron: sync all equity prices, upsert news, warm screening cache in chunks.
+    One-shot pipeline for cron: sync all equity prices and warm screening cache in chunks.
 
     Requires ``X-Internal-Service-Token`` (same as ``POST /api/market-data/sync-prices``).
     Prefer invoking from Render Cron or a long-timeout worker; full universe can exceed Vercel limits.
     """
     helpers.require_internal_token(x_internal_service_token)
+    run_id = str(uuid4())
+    started_at = datetime.now(timezone.utc)
+    t0 = time.perf_counter()
     eff = MARKET_DATA_PROVIDER.strip().lower()
     if eff not in PUBLIC_MARKET_PROVIDERS:
         eff = "auto_india"
+    run = DailyRefreshRun(
+        run_id=run_id,
+        status="started",
+        provider=eff,
+        screen_chunk_size=screen_chunk_size,
+        started_at=started_at,
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+
+    symbol_master = {
+        "events_processed": 0,
+        "rows_updated": 0,
+        "rows_disabled": 0,
+        "rows_created": 0,
+        "rows_remapped": 0,
+        "unresolved_actions": 0,
+        "run_at": None,
+    }
+    try:
+        symbol_master = apply_corporate_action_events(db, create_missing_parents=True)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] symbol master sync failed: %s", exc)
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
+        run.status = "failed"
+        run.error_detail = price_result.get("detail", "price sync failed")
+        run.prices_total = int(price_result.get("total") or 0)
+        run.prices_updated = int(price_result.get("updated") or 0)
+        run.finished_at = datetime.now(timezone.utc)
+        db.commit()
+        send_ops_alert(
+            level="error",
+            title="Daily refresh failed (price sync)",
+            alert_key="daily-refresh:failure:price-sync",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="price_sync",
+                provider=eff,
+                expected=0,
+                completed=0,
+                chunks=0,
+                retries=0,
+                stale=True,
+                fundamentals_latest=None,
+                duration_seconds=time.perf_counter() - t0,
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
+                failure_reason=run.error_detail,
+            ),
+        )
         raise HTTPException(status_code=400, detail=price_result.get("detail", "price sync failed"))
 
-    from app.services.news_service import fetch_and_upsert_news, fetch_and_upsert_newsdata
+    index_sync_result = {"updated": 0}
+    try:
+        index_sync_result = sync_market_indices(db)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] index sync failed: %s", exc)
 
-    n_rss = fetch_and_upsert_news(db)
-    n_nd = fetch_and_upsert_newsdata(db)
+    symbol_integrity = {
+        "symbol_isin_conflicts": 0,
+        "isin_multi_symbol_conflicts": 0,
+        "missing_isin_overdue": 0,
+        "auto_disabled_count": 0,
+        "blocked_from_screening_count": 0,
+        "impacted_symbols": [],
+        "last_run_at": None,
+    }
+    try:
+        integrity_summary = run_nse_symbol_integrity_checks(db)
+        db.commit()
+        symbol_integrity = integrity_summary.to_dict()
+        has_critical = symbol_integrity.get("symbol_isin_conflicts", 0) > 0
+        if has_critical:
+            send_ops_alert(
+                level="warning",
+                title="Daily refresh symbol-integrity warning",
+                alert_key=f"daily-refresh:symbol-integrity:{run_id}",
+                details={
+                    "run_id": run_id,
+                    "symbol_isin_conflicts": symbol_integrity.get("symbol_isin_conflicts", 0),
+                    "isin_multi_symbol_conflicts": symbol_integrity.get("isin_multi_symbol_conflicts", 0),
+                    "missing_isin_overdue": symbol_integrity.get("missing_isin_overdue", 0),
+                    "blocked_from_screening_count": symbol_integrity.get("blocked_from_screening_count", 0),
+                    "impacted_symbols_preview": ", ".join((symbol_integrity.get("impacted_symbols") or [])[:10]),
+                },
+            )
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] symbol integrity checks failed: %s", exc)
 
-    symbols = [
-        row[0]
-        for row in db.query(Stock.symbol).filter(Stock.is_active.is_(True)).order_by(Stock.symbol.asc()).all()
-    ]
+    symbols = _active_screenable_symbols(db)
+    expected = len(symbols)
     screen_chunks = 0
     screen_rows = 0
-    for i in range(0, len(symbols), screen_chunk_size):
+    retries = 0
+    failed_chunks: list[dict[str, Any]] = []
+
+    for i in range(0, expected, screen_chunk_size):
         chunk = symbols[i : i + screen_chunk_size]
-        rows = _screen_stocks_bulk_impl(chunk, db)
         screen_chunks += 1
-        screen_rows += len(rows)
+        attempts = 0
+        chunk_success = False
+        last_error: str | None = None
+        while attempts < 3 and not chunk_success:
+            attempts += 1
+            if attempts > 1:
+                retries += 1
+                time.sleep(2 ** (attempts - 2))
+            try:
+                rows = _screen_stocks_bulk_impl(chunk, db)
+                if len(rows) != len(chunk):
+                    missing = sorted(set(chunk) - {str(r.get("symbol", "")).upper() for r in rows})
+                    last_error = (
+                        f"incomplete chunk coverage: expected {len(chunk)} got {len(rows)}; missing={missing[:10]}"
+                    )
+                    continue
+                screen_rows += len(rows)
+                chunk_success = True
+            except Exception as exc:
+                last_error = str(exc)
+        if not chunk_success:
+            failed_chunks.append(
+                {
+                    "chunk_start": i,
+                    "chunk_size": len(chunk),
+                    "error": last_error or "screening chunk failed",
+                }
+            )
+
+    stock_count = db.query(Stock).filter(Stock.is_active.is_(True)).count()
+    fundamentals = get_fundamentals_status(stock_count, db=db)
+    stale = bool(fundamentals.get("stale"))
+    fundamentals_latest = fundamentals.get("latest_fundamentals_updated_at")
+    screening_complete = (screen_rows == expected and expected > 0 and not failed_chunks)
+
+    run.prices_total = int(price_result.get("total") or 0)
+    run.prices_updated = int(price_result.get("updated") or 0)
+    run.screening_chunks = screen_chunks
+    run.screening_retries = retries
+    run.screening_symbols_expected = expected
+    run.screening_symbols_completed = screen_rows
+    run.stale_at_finish = stale
+    run.latest_fundamentals_updated_at = fundamentals_latest
+    run.finished_at = datetime.now(timezone.utc)
+
+    if not screening_complete:
+        run.status = "failed"
+        run.error_detail = f"incomplete screening coverage; expected={expected}, completed={screen_rows}"
+        db.commit()
+        send_ops_alert(
+            level="error",
+            title="Daily refresh failed (partial screening)",
+            alert_key="daily-refresh:failure:partial-screening",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="screening",
+                provider=eff,
+                expected=expected,
+                completed=screen_rows,
+                chunks=screen_chunks,
+                retries=retries,
+                stale=stale,
+                fundamentals_latest=fundamentals_latest,
+                duration_seconds=time.perf_counter() - t0,
+                fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+                fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+                fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                indices_updated=int(index_sync_result.get("updated") or 0),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
+                failure_reason=run.error_detail,
+            ),
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Daily screening refresh did not complete full symbol coverage.",
+                "run_id": run_id,
+                "symbols_expected": expected,
+                "symbols_completed": screen_rows,
+                "failed_chunks": failed_chunks,
+            },
+        )
+
+    if stale:
+        run.status = "failed"
+        run.error_detail = "Fundamentals dataset is stale after refresh."
+        db.commit()
+        send_ops_alert(
+            level="warning",
+            title="Daily refresh failed stale guard",
+            alert_key="daily-refresh:failure:stale",
+            details=_daily_refresh_alert_details(
+                run_id=run_id,
+                phase="stale_guard",
+                provider=eff,
+                expected=expected,
+                completed=screen_rows,
+                chunks=screen_chunks,
+                retries=retries,
+                stale=stale,
+                fundamentals_latest=fundamentals_latest,
+                duration_seconds=time.perf_counter() - t0,
+                fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+                fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+                fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                indices_updated=int(index_sync_result.get("updated") or 0),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
+                failure_reason=run.error_detail,
+            ),
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Fundamentals are stale after refresh; run fundamentals sync and retry daily refresh.",
+                "run_id": run_id,
+                "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
+            },
+        )
+
+    run.status = "success"
+    run.error_detail = ""
+    db.commit()
+
+    duration_seconds = time.perf_counter() - t0
+    send_ops_alert(
+        level="success",
+        title="Daily pipeline heartbeat: Job A + Job B complete",
+        alert_key="daily-refresh:success",
+        details=_daily_refresh_alert_details(
+            run_id=run_id,
+            phase="completed",
+            provider=eff,
+            expected=expected,
+            completed=screen_rows,
+            chunks=screen_chunks,
+            retries=retries,
+            stale=stale,
+            fundamentals_latest=fundamentals_latest,
+            duration_seconds=duration_seconds,
+            fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+            fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+            fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+            prices_updated=int(price_result.get("updated") or 0),
+            prices_total=int(price_result.get("total") or 0),
+            prices_failed_count=len(price_result.get("failed_symbols") or []),
+            indices_updated=int(index_sync_result.get("updated") or 0),
+            symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+            symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+            symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+            symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+            symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+            symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
+        )
+        | {
+            "failed_symbols_preview": ", ".join((price_result.get("failed_symbols") or [])[:10]) or "none",
+        },
+    )
 
     return {
         "ok": True,
+        "run_id": run_id,
         "prices": {
             "provider": price_result["provider"],
             "updated": price_result["updated"],
             "failed_symbols": price_result["failed_symbols"],
             "total": price_result["total"],
         },
-        "news": {"upserted_rss": n_rss, "upserted_newsdata": n_nd, "upserted": n_rss + n_nd},
-        "screening": {"symbols_total": len(symbols), "chunks": screen_chunks, "rows_cached": screen_rows},
+        "screening": {
+            "symbols_total": expected,
+            "symbols_expected": expected,
+            "symbols_completed": screen_rows,
+            "chunks": screen_chunks,
+            "retries": retries,
+            "rows_cached": screen_rows,
+            "screening_complete": True,
+        },
+        "indices": {
+            "updated": index_sync_result.get("updated", 0),
+        },
+        "symbol_integrity": {
+            "symbol_isin_conflicts": symbol_integrity.get("symbol_isin_conflicts", 0),
+            "isin_multi_symbol_conflicts": symbol_integrity.get("isin_multi_symbol_conflicts", 0),
+            "missing_isin_overdue": symbol_integrity.get("missing_isin_overdue", 0),
+            "auto_disabled": symbol_integrity.get("auto_disabled_count", 0),
+            "blocked_from_screening": symbol_integrity.get("blocked_from_screening_count", 0),
+            "last_run_at": symbol_integrity.get("last_run_at").isoformat() if symbol_integrity.get("last_run_at") else None,
+        },
+        "symbol_master": {
+            "events_processed": symbol_master.get("events_processed", 0),
+            "rows_updated": symbol_master.get("rows_updated", 0),
+            "rows_disabled": symbol_master.get("rows_disabled", 0),
+            "rows_created": symbol_master.get("rows_created", 0),
+            "rows_remapped": symbol_master.get("rows_remapped", 0),
+            "unresolved_actions": symbol_master.get("unresolved_actions", 0),
+            "run_at": symbol_master.get("run_at").isoformat() if symbol_master.get("run_at") else None,
+        },
+        "fundamentals": {
+            "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
+            "stale": stale,
+            "staleness_hours": fundamentals.get("staleness_hours"),
+        },
+        "duration_seconds": round(duration_seconds, 2),
+    }
+
+
+@router.get("/admin/symbol-resolution/health", response_model=SymbolResolutionHealthResponse)
+def admin_symbol_resolution_health(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    helpers.require_admin(db, claims)
+    return symbol_health_summary(db)
+
+
+@router.get("/admin/symbol-resolution/issues", response_model=list[SymbolResolutionIssueRead])
+def admin_symbol_resolution_issues(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+    unresolved_only: bool = Query(default=True),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    helpers.require_admin(db, claims)
+    q = db.query(SymbolResolutionIssue).order_by(
+        SymbolResolutionIssue.detected_at.desc(),
+        SymbolResolutionIssue.id.desc(),
+    )
+    if unresolved_only:
+        q = q.filter(SymbolResolutionIssue.resolved.is_(False))
+    return q.limit(limit).all()
+
+
+@router.get("/admin/symbol-resolution/corporate-actions", response_model=list[StockCorporateEventRead])
+def admin_corporate_actions(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+    status: str | None = Query(default="active"),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    helpers.require_admin(db, claims)
+    q = db.query(StockCorporateEvent).order_by(
+        StockCorporateEvent.effective_date.desc(),
+        StockCorporateEvent.id.desc(),
+    )
+    if status:
+        q = q.filter(StockCorporateEvent.status == status)
+    return q.limit(limit).all()
+
+
+@router.post("/admin/symbol-resolution/corporate-actions", response_model=StockCorporateEventRead)
+def admin_upsert_corporate_action(
+    payload: StockCorporateEventCreate,
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    helpers.require_admin(db, claims)
+    symbol = payload.symbol.strip().upper()
+    successor = payload.successor_symbol.strip().upper() if payload.successor_symbol else None
+    canonical = payload.canonical_symbol.strip().upper() if payload.canonical_symbol else None
+    existing = (
+        db.query(StockCorporateEvent)
+        .filter(
+            StockCorporateEvent.symbol == symbol,
+            StockCorporateEvent.event_type == payload.event_type,
+            StockCorporateEvent.effective_date == payload.effective_date,
+        )
+        .first()
+    )
+    if existing:
+        existing.successor_symbol = successor
+        existing.canonical_symbol = canonical
+        existing.source = payload.source
+        existing.status = payload.status
+        existing.notes = payload.notes
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    row = StockCorporateEvent(
+        symbol=symbol,
+        event_type=payload.event_type,
+        effective_date=payload.effective_date,
+        successor_symbol=successor,
+        canonical_symbol=canonical,
+        source=payload.source,
+        status=payload.status,
+        notes=payload.notes,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.post("/internal/symbol-master/sync")
+def internal_symbol_master_sync(
+    x_internal_service_token: str | None = Header(default=None, alias="X-Internal-Service-Token"),
+    db: Session = Depends(get_db),
+):
+    helpers.require_internal_token(x_internal_service_token)
+    summary = apply_corporate_action_events(db, create_missing_parents=True)
+    db.commit()
+    return {
+        "ok": True,
+        "symbol_master": {
+            "events_processed": summary.get("events_processed", 0),
+            "rows_updated": summary.get("rows_updated", 0),
+            "rows_disabled": summary.get("rows_disabled", 0),
+            "rows_created": summary.get("rows_created", 0),
+            "rows_remapped": summary.get("rows_remapped", 0),
+            "unresolved_actions": summary.get("unresolved_actions", 0),
+            "run_at": summary.get("run_at").isoformat() if summary.get("run_at") else None,
+        },
     }
 
 # ═══════════════════════════════════════════════════════════════
@@ -2837,4 +3594,3 @@ def admin_early_access(db: Session = Depends(get_db)):
         {"id": r.id, "email": r.email, "name": r.name, "source": r.source, "created_at": r.created_at.isoformat() if r.created_at else None}
         for r in rows
     ]
-

@@ -10,13 +10,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Shariah Stock Screener — Barakfi",
   description:
-    "Screen NSE and BSE-listed Indian equities for Shariah-style compliance: filter by sector and halal status, sort by market cap and financial ratios, and open any symbol for a full ratio breakdown. Free educational screener — pair with our learn guides and methodology pages before investing.",
+    "Screen NSE-listed Indian equities for Shariah-style compliance: filter by sector and compliance status, sort by market cap and financial ratios, and open any symbol for a full ratio breakdown. Free educational screener with transparent methodology and research context.",
   alternates: { canonical: "/screener" },
   robots: { index: true, follow: true },
 };
 
 export default async function ScreenerPage() {
-  const stocks = await getStocks();
+  const stocks = (await getStocks()).filter((stock) => stock.exchange === "NSE");
   const symbols = stocks.map((s) => s.symbol);
   const screeningResults = await getBulkScreeningResults(symbols);
   const screeningMap = new Map(screeningResults.map((r) => [r.symbol, r]));

@@ -108,6 +108,19 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  search_aliases?: string[];
+  symbol_status?: string;
+  canonical_symbol?: string | null;
+  successor_symbol?: string | null;
+  screening_blocked_reason?: string | null;
+  latest_corporate_event?: {
+    event_type: "merge" | "demerge" | "delisted" | "renamed" | "acquired";
+    label: string;
+    effective_date?: string | null;
+    symbol: string;
+    successor_symbol?: string | null;
+    source?: string | null;
+  } | null;
   /** When balance-sheet / income fundamentals were last written (ISO 8601), if known */
   fundamentals_updated_at?: string | null;
   beta?: number | null;
@@ -319,11 +332,25 @@ export type FundamentalsStatus = {
   capabilities: string[];
   blockers: string[];
   notes: string[];
+  latest_fundamentals_updated_at: string | null;
+  rows_with_timestamp: number;
+  rows_missing_timestamp: number;
+  stale: boolean;
+  staleness_hours: number | null;
+};
+
+export type FundamentalsFreshnessSummary = {
+  latest_fundamentals_updated_at: string | null;
+  rows_with_timestamp: number;
+  rows_missing_timestamp: number;
+  stale: boolean;
+  staleness_hours: number | null;
 };
 
 export type DataStackStatus = {
   market_data: MarketDataStatus;
   fundamentals: FundamentalsStatus;
+  fundamentals_freshness: FundamentalsFreshnessSummary;
   ready_for_scaled_screening: boolean;
   readiness_gaps: string[];
 };
@@ -503,16 +530,25 @@ export type WorkspaceBundle = {
  *
  * @internal
  */
-async function apiFetch<T>(path: string, fallback: T): Promise<T> {
+type ApiFetchOptions = {
+  revalidateSeconds?: number;
+};
+
+async function apiFetch<T>(path: string, fallback: T, options: ApiFetchOptions = {}): Promise<T> {
   // Render free tier cold starts can take 30-50s — use AbortController with generous timeout
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55_000);
 
   try {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      cache: "no-store",
+    const fetchInit: RequestInit & { next?: { revalidate: number } } = {
       signal: controller.signal,
-    });
+    };
+    if (typeof options.revalidateSeconds === "number") {
+      fetchInit.next = { revalidate: options.revalidateSeconds };
+    } else {
+      fetchInit.cache = "no-store";
+    }
+    const response = await fetch(`${apiBaseUrl}${path}`, fetchInit);
 
     if (!response.ok) {
       const detail = await parseErrorDetail(response);
@@ -538,8 +574,25 @@ async function apiFetch<T>(path: string, fallback: T): Promise<T> {
  * const stocks = await getStocks();
  * stocks.forEach(s => console.log(s.symbol, s.sector));
  */
-export function getStocks() {
-  return apiFetch<Stock[]>("/stocks", []);
+export type GetStocksOptions = {
+  limit?: number;
+  orderBy?: "symbol" | "market_cap_desc";
+  revalidateSeconds?: number;
+};
+
+export function getStocks(options: GetStocksOptions = {}) {
+  const params = new URLSearchParams();
+  if (typeof options.limit === "number") {
+    params.set("limit", String(options.limit));
+  }
+  if (options.orderBy) {
+    params.set("order_by", options.orderBy);
+  }
+  const query = params.toString();
+  const path = query ? `/stocks?${query}` : "/stocks";
+  return apiFetch<Stock[]>(path, [], {
+    revalidateSeconds: options.revalidateSeconds,
+  });
 }
 
 /**
@@ -879,6 +932,18 @@ export function getDataStackStatus() {
       capabilities: ["demo balance-sheet fields", "demo income fields"],
       blockers: [],
       notes: [],
+      latest_fundamentals_updated_at: null,
+      rows_with_timestamp: 0,
+      rows_missing_timestamp: 0,
+      stale: false,
+      staleness_hours: null,
+    },
+    fundamentals_freshness: {
+      latest_fundamentals_updated_at: null,
+      rows_with_timestamp: 0,
+      rows_missing_timestamp: 0,
+      stale: false,
+      staleness_hours: null,
     },
     ready_for_scaled_screening: false,
     readiness_gaps: [],
@@ -1283,25 +1348,6 @@ export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetai
   return apiFetch(`/super-investors/${slug}`, null);
 }
 
-export type NewsItem = {
-  id: number;
-  title: string;
-  summary: string;
-  url: string;
-  image_url: string;
-  source: string;
-  published_at: string | null;
-};
-
-export type NewsLoadStatus = "ok" | "error" | "empty";
-
-export type NewsFeedResult = {
-  items: NewsItem[];
-  loadStatus: NewsLoadStatus;
-  /** Present when loadStatus is "error" (wrong API URL, 5xx, timeout, etc.) */
-  errorHint?: string;
-};
-
 export type ETFListItem = {
   symbol: string;
   name: string;
@@ -1344,50 +1390,6 @@ export type ETFDetail = {
   holdings_source?: string;
   data_note?: string;
 };
-
-/**
- * Fetches public news from the FastAPI `/news` endpoint and reports whether the list is empty vs failed.
- */
-export async function getNewsFeed(limit: number = 24): Promise<NewsFeedResult> {
-  const path = `/news?limit=${limit}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55_000);
-  try {
-    const response = await fetch(`${apiBaseUrl}${path}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      const detail = await parseErrorDetail(response);
-      console.error(`[api] ${response.status} on GET ${path}: ${detail}`);
-      return {
-        items: [],
-        loadStatus: "error",
-        errorHint: `News API returned ${response.status}. Check NEXT_PUBLIC_API_BASE_URL points to your FastAPI base (e.g. https://api.example.com/api).`,
-      };
-    }
-    const data = unwrapBackendEnvelope<NewsItem[]>(await response.json());
-    if (!Array.isArray(data) || data.length === 0) {
-      return { items: [], loadStatus: "empty" };
-    }
-    return { items: data, loadStatus: "ok" };
-  } catch (err) {
-    console.error(`[api] Network error on GET ${path}:`, err);
-    return {
-      items: [],
-      loadStatus: "error",
-      errorHint:
-        "Could not reach the news API (timeout or network). Confirm the API is up and NEXT_PUBLIC_API_BASE_URL is set on Vercel.",
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function getNews(limit: number = 24): Promise<NewsItem[]> {
-  const r = await getNewsFeed(limit);
-  return r.items;
-}
 
 export async function getETFs(exchange?: string): Promise<ETFListItem[]> {
   const params = exchange ? `?exchange=${encodeURIComponent(exchange)}` : "";

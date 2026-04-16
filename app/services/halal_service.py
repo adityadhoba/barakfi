@@ -75,7 +75,7 @@ PROFILES = {
         "short": "S&P",
         "description": (
             "S&P Dow Jones Shariah Indices methodology (DJIMI). Uses trailing "
-            "twelve-month average market capitalisation as the denominator for "
+            "36-month average market capitalisation as the denominator for "
             "debt and receivables ratios. Threshold of 33% for debt, receivables, "
             "and cash ratios; 5% for income screens."
         ),
@@ -747,6 +747,8 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
 
     # --- Soft rules ---
     critical_fields = ["market_cap", "debt", "total_business_income", "total_assets"]
+    if d["debt"] == "market_cap_36m":
+        critical_fields.append("average_market_cap_36m")
     missing_fields = [f for f in critical_fields if stock.get(f, 0) <= 0]
     if missing_fields:
         manual_review_flags.append(

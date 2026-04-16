@@ -7,21 +7,23 @@ from typing import Callable, Tuple
 from fastapi import Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS
+from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
 from app.database import get_db
 from app.models import User
 from app.services.auth_service import get_current_auth_claims
 
 
 # Role hierarchy and definitions
-VALID_ROLES = {"admin", "reviewer", "developer", "user"}
+VALID_ROLES = {"owner", "admin", "reviewer", "developer", "user"}
 ROLE_HIERARCHY = {
+    "owner": 5,
     "admin": 4,
     "reviewer": 3,
     "developer": 2,
     "user": 1,
 }
 ROLE_DESCRIPTIONS = {
+    "owner": "Full system ownership. Can do everything admins can, including admin role removals.",
     "admin": "Full system access. Can manage users, roles, and all content.",
     "reviewer": "Can review and approve compliance cases and overrides.",
     "developer": "Can manage data sources and technical integrations.",
@@ -61,6 +63,12 @@ def is_admin(db: Session, claims: dict) -> bool:
     email = claims.get("email", "").lower()
 
     # Check legacy auth subject and email lists
+    if auth_subject in OWNER_AUTH_SUBJECTS:
+        return True
+
+    if email in OWNER_EMAILS:
+        return True
+
     if auth_subject in ADMIN_AUTH_SUBJECTS:
         return True
 
@@ -70,7 +78,23 @@ def is_admin(db: Session, claims: dict) -> bool:
     # Check database role
     try:
         user = get_user_by_claims(db, claims)
-        return user.role == "admin"
+        return user.role in {"owner", "admin"}
+    except HTTPException:
+        return False
+
+
+def is_owner(db: Session, claims: dict) -> bool:
+    auth_subject = claims.get("sub")
+    email = claims.get("email", "").lower()
+
+    if auth_subject in OWNER_AUTH_SUBJECTS:
+        return True
+    if email in OWNER_EMAILS:
+        return True
+
+    try:
+        user = get_user_by_claims(db, claims)
+        return user.role == "owner"
     except HTTPException:
         return False
 

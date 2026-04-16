@@ -8,18 +8,19 @@ import { StockCheckFullDetails } from "@/components/stock-check-full-details";
 import { StockCheckResultActions } from "@/components/stock-check-result-actions";
 import { fetchCheckStockPageDataBrowser, type CheckStockPageResult } from "@/lib/check-stock-fetch-browser";
 import { buildCheckSummaryBullets } from "@/lib/stock-detail-screening-tables";
-import { useCheckStockSession } from "@/stores/check-stock-session";
+import { SCREENING_LEGAL_DISCLAIMER, screeningUiLabel } from "@/lib/screening-status";
+import { useCheckStockSession, type CheckStockSessionState } from "@/stores/check-stock-session";
 import styles from "@/app/check/[symbol]/page.module.css";
 
 function badgeClass(status: string): string {
-  if (status === "Halal") return styles.badgeHalal;
-  if (status === "Haram") return styles.badgeHaram;
+  if (status === "Shariah Compliant") return styles.badgeHalal;
+  if (status === "Not Compliant") return styles.badgeHaram;
   return styles.badgeDoubt;
 }
 
 function statusIcon(status: string): string {
-  if (status === "Halal") return "✅";
-  if (status === "Haram") return "❌";
+  if (status === "Shariah Compliant") return "✅";
+  if (status === "Not Compliant") return "❌";
   return "⚠️";
 }
 
@@ -40,7 +41,7 @@ type Props = {
 };
 
 export function CheckStockView({ symbol }: Props) {
-  const setSessionPayload = useCheckStockSession((s) => s.setPayload);
+  const setSessionPayload = useCheckStockSession((s: CheckStockSessionState) => s.setPayload);
   const symU = symbol.trim().toUpperCase();
   const [fullDetails, setFullDetails] = useState(false);
   const detailsAnchorRef = useRef<HTMLDivElement>(null);
@@ -141,6 +142,7 @@ export function CheckStockView({ symbol }: Props) {
   }
 
   const okData = !loading && data?.kind === "ok" ? data : null;
+  const okStatus = okData ? screeningUiLabel(okData.screening.status) : "";
 
   return (
     <div className={styles.page}>
@@ -152,7 +154,7 @@ export function CheckStockView({ symbol }: Props) {
         <div className={styles.skeletonCard} aria-busy="true" aria-live="polite">
           <div className={styles.spinnerRow}>
             <span className={styles.spinner} aria-hidden />
-            <span className={styles.spinnerLabel}>Getting instant Halal status…</span>
+            <span className={styles.spinnerLabel}>Getting compliance status…</span>
           </div>
           <div className={`${styles.skelPulse} ${styles.skelTitle}`} />
           <div className={`${styles.skelPulse} ${styles.skelLineShort}`} />
@@ -174,11 +176,11 @@ export function CheckStockView({ symbol }: Props) {
           <div className={styles.card}>
             <h1 className={styles.name}>{okData.check.name}</h1>
             <div className={styles.symbolMuted}>{okData.stock.symbol}</div>
-            <div className={`${styles.statusLine} ${badgeClass(okData.check.status)}`}>
+            <div className={`${styles.statusLine} ${badgeClass(okStatus)}`}>
               <span className={styles.statusEmoji} aria-hidden>
-                {statusIcon(okData.check.status)}
+                {statusIcon(okStatus)}
               </span>
-              <span className={styles.statusLabel}>{okData.check.status}</span>
+              <span className={styles.statusLabel}>{okStatus}</span>
             </div>
             <div className={styles.scoreBlock}>
               <span className={styles.score}>{okData.check.score}</span>
@@ -200,7 +202,7 @@ export function CheckStockView({ symbol }: Props) {
               symbol={okData.stock.symbol}
               name={okData.check.name}
               score={okData.check.score}
-              status={okData.check.status}
+              status={okStatus}
               detailsOpen={fullDetails}
               onToggleDetails={() => setFullDetails((o) => !o)}
             />
@@ -208,7 +210,7 @@ export function CheckStockView({ symbol }: Props) {
 
           <section className={styles.trustCard} aria-labelledby="check-trust-heading">
             <h2 id="check-trust-heading" className={styles.trustTitle}>
-              How we determine Halal status
+              How we determine compliance status
             </h2>
             <ul className={styles.trustList}>
               <li className={styles.trustItem}>
@@ -231,7 +233,7 @@ export function CheckStockView({ symbol }: Props) {
               </li>
             </ul>
             <p className={styles.trustDisclaimer}>
-              This is an automated screening tool and not financial or religious advice
+              {SCREENING_LEGAL_DISCLAIMER}
             </p>
           </section>
 

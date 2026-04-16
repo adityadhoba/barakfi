@@ -3,6 +3,17 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+CorporateEventType = Literal["merge", "demerge", "delisted", "renamed", "acquired"]
+
+
+class StockCorporateEventSummaryRead(BaseModel):
+    event_type: CorporateEventType
+    label: str
+    effective_date: datetime | None = None
+    symbol: str
+    successor_symbol: str | None = None
+    source: str | None = None
+
 
 class StockBase(BaseModel):
     symbol: str
@@ -26,6 +37,9 @@ class StockBase(BaseModel):
     country: str = "India"
     data_source: str = "internal_seed"
     is_active: bool = True
+    symbol_status: str = "active"
+    canonical_symbol: str | None = None
+    successor_symbol: str | None = None
     fundamentals_updated_at: datetime | None = None
 
 
@@ -35,6 +49,10 @@ class StockCreate(StockBase):
 
 class StockRead(StockBase):
     id: int
+    search_aliases: list[str] = Field(
+        default_factory=list,
+        description="Legacy symbols / aliases mapped to this canonical symbol for search discoverability.",
+    )
     data_quality: Literal["high", "medium", "low"] | None = Field(
         default=None,
         description="Heuristic completeness of fundamentals for screening (high/medium/low).",
@@ -45,6 +63,7 @@ class StockRead(StockBase):
     )
     exchange_code: str | None = None
     isin: str | None = None
+    screening_blocked_reason: str | None = None
     beta: float | None = None
     dividend_yield: float | None = None
     pe_ratio: float | None = None
@@ -56,7 +75,34 @@ class StockRead(StockBase):
     price_change_pct: float | None = None
     compliance_rating: int | None = None
     is_etf: bool = False
+    latest_corporate_event: StockCorporateEventSummaryRead | None = None
     index_memberships: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StockCorporateEventCreate(BaseModel):
+    symbol: str
+    event_type: CorporateEventType
+    effective_date: datetime | None = None
+    successor_symbol: str | None = None
+    canonical_symbol: str | None = None
+    source: str = "admin_override"
+    status: Literal["active", "superseded", "ignored"] = "active"
+    notes: str = ""
+
+
+class StockCorporateEventRead(BaseModel):
+    id: int
+    symbol: str
+    event_type: CorporateEventType
+    effective_date: datetime | None = None
+    successor_symbol: str | None = None
+    canonical_symbol: str | None = None
+    source: str
+    status: str
+    notes: str
+    created_at: datetime
+    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -197,13 +243,60 @@ class FundamentalsStatusResponse(BaseModel):
     capabilities: list[str]
     blockers: list[str]
     notes: list[str]
+    latest_fundamentals_updated_at: datetime | None = None
+    rows_with_timestamp: int = 0
+    rows_missing_timestamp: int = 0
+    stale: bool = False
+    staleness_hours: float | None = None
+    latest_daily_screening_completed_at: datetime | None = None
+    screening_symbols_expected: int = 0
+    screening_symbols_completed: int = 0
+    screening_complete: bool = False
+
+
+class FundamentalsFreshnessSummaryResponse(BaseModel):
+    latest_fundamentals_updated_at: datetime | None = None
+    rows_with_timestamp: int = 0
+    rows_missing_timestamp: int = 0
+    stale: bool = False
+    staleness_hours: float | None = None
+    latest_daily_screening_completed_at: datetime | None = None
+    screening_symbols_expected: int = 0
+    screening_symbols_completed: int = 0
+    screening_complete: bool = False
 
 
 class DataStackStatusResponse(BaseModel):
     market_data: MarketDataStatusResponse
     fundamentals: FundamentalsStatusResponse
+    fundamentals_freshness: FundamentalsFreshnessSummaryResponse
     ready_for_scaled_screening: bool
     readiness_gaps: list[str]
+
+
+class SymbolResolutionIssueRead(BaseModel):
+    id: int
+    symbol: str
+    candidate_symbol: str | None = None
+    isin: str | None = None
+    candidate_isin: str | None = None
+    reason: str
+    attempted_tickers: str
+    severity: str
+    resolved: bool
+    resolution_note: str
+    detected_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SymbolResolutionHealthResponse(BaseModel):
+    last_run_at: datetime | None = None
+    symbol_isin_conflicts: int = 0
+    isin_multi_symbol_conflicts: int = 0
+    missing_isin_overdue: int = 0
+    auto_disabled_count: int = 0
+    blocked_from_screening_count: int = 0
+    impacted_symbols: list[str] = Field(default_factory=list)
 
 
 class NormalizedInstrumentRead(BaseModel):
@@ -279,8 +372,8 @@ class AdminUserRead(BaseModel):
 class AdminUserRoleUpdateRequest(BaseModel):
     """Request body for updating user roles"""
     role: str = Field(
-        description="admin | reviewer | developer | user",
-        pattern="^(admin|reviewer|developer|user)$"
+        description="owner | admin | reviewer | developer | user",
+        pattern="^(owner|admin|reviewer|developer|user)$"
     )
 
 

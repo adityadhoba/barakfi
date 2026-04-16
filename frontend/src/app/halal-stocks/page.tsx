@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   keywords: [
     "halal stocks India",
     "shariah compliant stocks India",
-    "halal investment India",
+    "halal stock screening India",
     "Islamic stocks India",
     "shariah stock screener",
     "halal stocks NSE",
-    "Muslim friendly investments India",
+    "Muslim friendly stock screening India",
     "halal equity India",
     "shariah compliant NSE stocks",
-    "Islamic finance India",
+    "Shariah stock analysis India",
   ],
   openGraph: {
     title: "Halal Stocks in India 2026 — Complete Shariah-Compliant Stock List",

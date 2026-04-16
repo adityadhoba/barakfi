@@ -71,6 +71,12 @@ class Stock(Base):
     data_source = Column(String, nullable=False, default="internal_seed")
     is_active = Column(Boolean, nullable=False, default=True)
     is_etf = Column(Boolean, nullable=False, default=False)
+    isin = Column(String, nullable=True, index=True)
+    symbol_status = Column(String, nullable=False, default="active")
+    canonical_symbol = Column(String, nullable=True, index=True)
+    successor_symbol = Column(String, nullable=True, index=True)
+    screening_blocked_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
 
     stock_index_links = relationship(
@@ -113,6 +119,83 @@ class StockIndexMembership(Base):
     stock = relationship("Stock", back_populates="stock_index_links")
 
 
+class MarketIndexSnapshot(Base):
+    """Latest cached snapshot for a market index shown in the ticker ribbon."""
+
+    __tablename__ = "market_index_snapshots"
+    __table_args__ = (UniqueConstraint("name", name="uq_market_index_snapshots_name"),)
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, index=True)
+    value = Column(Float, nullable=False, default=0.0)
+    change = Column(Float, nullable=False, default=0.0)
+    change_percent = Column(Float, nullable=False, default=0.0)
+    source = Column(String, nullable=False, default="nse_india_public")
+    as_of = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class StockSymbolAlias(Base):
+    """Audited symbol remaps where ISIN proof is required before use."""
+
+    __tablename__ = "stock_symbol_aliases"
+
+    id = Column(Integer, primary_key=True)
+    old_symbol = Column(String, nullable=False, index=True)
+    new_symbol = Column(String, nullable=False, index=True)
+    isin = Column(String, nullable=True, index=True)
+    source = Column(String, nullable=False, default="manual")
+    status = Column(String, nullable=False, default="active")
+    evidence_note = Column(Text, nullable=False, default="")
+    effective_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class StockCorporateEvent(Base):
+    """Normalized corporate-action records used for symbol lifecycle management."""
+
+    __tablename__ = "stock_corporate_events"
+    __table_args__ = (
+        Index("ix_stock_corporate_events_symbol_effective", "symbol", "effective_date"),
+        Index("ix_stock_corporate_events_status_type", "status", "event_type"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False, index=True)
+    event_type = Column(String, nullable=False, index=True)  # merge, demerge, delisted, renamed, acquired
+    effective_date = Column(DateTime(timezone=True), nullable=True, index=True)
+    successor_symbol = Column(String, nullable=True, index=True)
+    canonical_symbol = Column(String, nullable=True, index=True)
+    source = Column(String, nullable=False, default="nse_feed")
+    status = Column(String, nullable=False, default="active")
+    notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class SymbolResolutionIssue(Base):
+    """Tracks unresolved or mismatched symbol identity problems."""
+
+    __tablename__ = "symbol_resolution_issues"
+    __table_args__ = (
+        Index("ix_symbol_resolution_issues_symbol_detected", "symbol", "detected_at"),
+        Index("ix_symbol_resolution_issues_resolved", "resolved", "detected_at"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False, index=True)
+    candidate_symbol = Column(String, nullable=True)
+    isin = Column(String, nullable=True, index=True)
+    candidate_isin = Column(String, nullable=True)
+    reason = Column(String, nullable=False)
+    attempted_tickers = Column(Text, nullable=False, default="")
+    severity = Column(String, nullable=False, default="warning")
+    resolved = Column(Boolean, nullable=False, default=False)
+    resolution_note = Column(Text, nullable=False, default="")
+    detected_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
 class ComplianceRuleVersion(Base):
     """
     Versioned snapshot of Shariah screening rules.
@@ -147,7 +230,7 @@ class User(Base):
     Fields:
     - auth_subject: Clerk user ID (unique)
     - auth_provider: "clerk" (can extend for other OAuth providers)
-    - role: user | reviewer | admin | developer
+    - role: user | reviewer | admin | developer | owner
     - is_active: Soft delete flag
 
     Relationships (cascade delete):
@@ -166,7 +249,7 @@ class User(Base):
     auth_provider = Column(String, nullable=False, default="clerk")
     auth_subject = Column(String, unique=True, index=True, nullable=False)  # Clerk user ID
     is_active = Column(Boolean, nullable=False, default=True)
-    role = Column(String, nullable=False, default="user")  # admin | reviewer | developer | user
+    role = Column(String, nullable=False, default="user")  # owner | admin | reviewer | developer | user
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -370,6 +453,28 @@ class ScreeningLog(Base):
     stock = relationship("Stock")
 
 
+class DailyRefreshRun(Base):
+    __tablename__ = "daily_refresh_runs"
+
+    id = Column(Integer, primary_key=True)
+    run_id = Column(String, nullable=False, unique=True, index=True)
+    status = Column(String, nullable=False, default="started")  # started | success | failed
+    provider = Column(String, nullable=False, default="")
+    screen_chunk_size = Column(Integer, nullable=False, default=150)
+    screening_chunks = Column(Integer, nullable=False, default=0)
+    screening_retries = Column(Integer, nullable=False, default=0)
+    screening_symbols_expected = Column(Integer, nullable=False, default=0)
+    screening_symbols_completed = Column(Integer, nullable=False, default=0)
+    prices_total = Column(Integer, nullable=False, default=0)
+    prices_updated = Column(Integer, nullable=False, default=0)
+    stale_at_finish = Column(Boolean, nullable=False, default=False)
+    latest_fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
+    error_detail = Column(Text, nullable=False, default="")
+    started_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    finished_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+
 # ============================================================================
 # COMPLIANCE HISTORY, COLLECTIONS, SUPER INVESTORS, COVERAGE REQUESTS
 # ============================================================================
@@ -464,20 +569,6 @@ class SuperInvestorHolding(Base):
 
     investor = relationship("SuperInvestor", back_populates="holdings")
     stock = relationship("Stock")
-
-
-class NewsArticle(Base):
-    """Cached RSS news items for the public news section."""
-    __tablename__ = "news_articles"
-
-    id = Column(Integer, primary_key=True)
-    title = Column(String, nullable=False)
-    summary = Column(Text, nullable=False, default="")
-    url = Column(String, nullable=False, unique=True, index=True)
-    image_url = Column(String, nullable=False, default="")
-    source = Column(String, nullable=False, default="RSS")
-    published_at = Column(DateTime, nullable=False, default=utc_now)
-    fetched_at = Column(DateTime, nullable=False, default=utc_now)
 
 
 class CoverageRequest(Base):

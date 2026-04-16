@@ -1,7 +1,8 @@
 import Link from "next/link";
 import styles from "./stock-upsell-card.module.css";
+import type { ReactNode } from "react";
 
-export function StockUpsellCard() {
+export function StockUpsellCard({ readMore }: { readMore?: ReactNode }) {
   return (
     <aside className={styles.card}>
       <h3 className={styles.title}>Want deeper insights?</h3>
@@ -13,6 +14,7 @@ export function StockUpsellCard() {
       <Link href="/premium" className={styles.cta}>
         Unlock Full Analysis
       </Link>
+      {readMore ? <div className={styles.readMoreSlot}>{readMore}</div> : null}
     </aside>
   );
 }

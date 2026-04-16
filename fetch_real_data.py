@@ -47,8 +47,9 @@ import os
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
+import requests
 
 try:
     import yfinance as yf
@@ -65,6 +66,19 @@ CRORE = 1e7  # 1 Crore = 10,000,000
 RATE_LIMIT_SECONDS = 0.5
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
+PRODUCTION_ENV_VALUES = {"production", "prod"}
+OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
+OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
+OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
+OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "true").lower() == "true"
+NSE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -465,6 +479,31 @@ logging.basicConfig(
 )
 log = logging.getLogger("fetch_real_data")
 
+
+def _send_job_a_alert(level: str, title: str, details: dict[str, object]) -> None:
+    level_normalized = (level or "").strip().lower()
+    if level_normalized == "success" and (not OPS_ALERT_SUCCESSES_ENABLED or not OPS_ALERT_JOB_A_SUCCESSES_ENABLED):
+        return
+    if level_normalized in {"warning", "error"} and not OPS_ALERT_FAILURES_ENABLED:
+        return
+    if not OPS_SLACK_WEBHOOK_URL:
+        return
+    lines = [f"*[{os.getenv('APP_ENV', 'unknown').upper()}]* {title}"]
+    for key, value in details.items():
+        if value is None:
+            continue
+        lines.append(f"• {key}: {value}")
+    try:
+        response = requests.post(
+            OPS_SLACK_WEBHOOK_URL,
+            json={"text": "\n".join(lines)},
+            timeout=10,
+        )
+        if response.status_code >= 400:
+            log.warning("Job A alert rejected by Slack (%s): %s", response.status_code, response.text[:400])
+    except Exception as exc:
+        log.warning("Job A alert send failed: %s", exc)
+
 # ---------------------------------------------------------------------------
 # Helper: safe numeric extraction from yfinance data
 # ---------------------------------------------------------------------------
@@ -511,11 +550,147 @@ def _to_crores(value):
 # Some NSE symbols need alternate Yahoo Finance tickers.
 # Primary is tried first; if it fails, alternates are attempted.
 TICKER_ALTERNATES = {
-    "TATAMOTORS": ["TATAMOTORS.NS", "TATAMOTORS.BO"],
-    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS", "MCDOWELL-N.BO"],
-    "PEL": ["PEL.NS", "PEL.BO"],
-    "ZOMATO": ["ZOMATO.NS", "ZOMATO.BO"],
+    "TATAMOTORS": ["TATAMOTORS.NS"],
+    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],
+    "PEL": ["PEL.NS"],
+    "ZOMATO": ["ETERNAL.NS", "ZOMATO.NS", "ZOMATO.BO"],
+    "ADANITRANS": ["ADANIENSOL.NS", "ADANITRANS.NS"],
+    "INDIANHOTELS": ["INDHOTEL.NS", "INDIANHOTELS.NS"],
+    "MAZAGON": ["MAZDOCK.NS", "MAZAGON.NS"],
+    "GARDENREACH": ["GRSE.NS", "GARDENREACH.NS"],
+    "ZENSAR": ["ZENSARTECH.NS", "ZENSAR.NS"],
+    "TV18BRDCST": ["TV18BRDCST.NS"],
+    "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
 }
+
+# Canonical symbol mapping for renamed or legacy NSE symbols.
+CANONICAL_NSE_SYMBOLS = {
+    "ZOMATO": "ETERNAL",
+    "ADANITRANS": "ADANIENSOL",
+    "INDIANHOTELS": "INDHOTEL",
+    "MAZAGON": "MAZDOCK",
+    "GARDENREACH": "GRSE",
+    "ZENSAR": "ZENSARTECH",
+    "TV18BRDCST": "NETWORK18",
+}
+
+# Alternates that require strict ISIN match proof before accepting.
+ISIN_VERIFIED_ALTERNATE_REQUIRED = {
+    "MCDOWELL-N",
+    "CENTURYTEX",
+    "TV18BRDCST",
+}
+
+# Known legacy→current candidates where ISIN proof is expected.
+PREFERRED_ALIAS_CANDIDATES = {
+    "MCDOWELL-N": "UNITDSPR",
+    "CENTURYTEX": "ABREL",
+    "TV18BRDCST": "NETWORK18",
+}
+
+_NSE_ISIN_CACHE: dict[str, str | None] = {}
+_DB_ISIN_BY_SYMBOL: dict[str, str] | None = None
+_DB_ALIAS_BY_OLD_SYMBOL: dict[str, str] | None = None
+
+
+def _normalize_symbol_from_ticker(ticker: str) -> str:
+    return ticker.upper().replace(".NS", "").replace(".BO", "").replace(".BSE", "")
+
+
+def _load_db_isin_map() -> dict[str, str]:
+    global _DB_ISIN_BY_SYMBOL
+    if _DB_ISIN_BY_SYMBOL is not None:
+        return _DB_ISIN_BY_SYMBOL
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import Stock
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(Stock.symbol, Stock.isin)
+                .filter(Stock.exchange == "NSE", Stock.is_active.is_(True), Stock.isin.isnot(None))
+                .all()
+            )
+            _DB_ISIN_BY_SYMBOL = {str(sym).upper(): str(isin).strip().upper() for sym, isin in rows if sym and isin}
+        finally:
+            db.close()
+    except Exception:
+        _DB_ISIN_BY_SYMBOL = {}
+    return _DB_ISIN_BY_SYMBOL
+
+
+def _load_db_alias_map() -> dict[str, str]:
+    global _DB_ALIAS_BY_OLD_SYMBOL
+    if _DB_ALIAS_BY_OLD_SYMBOL is not None:
+        return _DB_ALIAS_BY_OLD_SYMBOL
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import StockSymbolAlias
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(StockSymbolAlias.old_symbol, StockSymbolAlias.new_symbol)
+                .filter(StockSymbolAlias.status == "active")
+                .all()
+            )
+            _DB_ALIAS_BY_OLD_SYMBOL = {str(old).upper(): str(new).upper() for old, new in rows if old and new}
+        finally:
+            db.close()
+    except Exception:
+        _DB_ALIAS_BY_OLD_SYMBOL = {}
+    return _DB_ALIAS_BY_OLD_SYMBOL
+
+
+def _fetch_nse_isin(symbol: str) -> str | None:
+    sym = symbol.strip().upper()
+    if not sym:
+        return None
+    if sym in _NSE_ISIN_CACHE:
+        return _NSE_ISIN_CACHE[sym]
+    try:
+        with requests.Session() as session:
+            session.get("https://www.nseindia.com/", headers=NSE_HEADERS, timeout=15)
+            response = session.get(
+                f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
+                headers=NSE_HEADERS,
+                timeout=15,
+            )
+            if response.status_code != 200:
+                _NSE_ISIN_CACHE[sym] = None
+                return None
+            payload = response.json() if response.content else {}
+            info = payload.get("info") or {}
+            metadata = payload.get("metadata") or {}
+            isin = info.get("isin") or metadata.get("isin")
+            normalized = str(isin).strip().upper() if isin else None
+            _NSE_ISIN_CACHE[sym] = normalized
+            return normalized
+    except Exception:
+        _NSE_ISIN_CACHE[sym] = None
+        return None
+
+
+def _expected_isin_for_symbol(symbol: str) -> str | None:
+    sym = symbol.strip().upper()
+    return _fetch_nse_isin(sym) or _load_db_isin_map().get(sym)
+
+
+def _is_isin_verified_alias(original_symbol: str, candidate_ticker: str) -> tuple[bool, str | None, str | None]:
+    original = original_symbol.strip().upper()
+    candidate_symbol = _normalize_symbol_from_ticker(candidate_ticker)
+    original_isin = _expected_isin_for_symbol(original)
+    candidate_isin = _fetch_nse_isin(candidate_symbol)
+    if original_isin and candidate_isin and original_isin == candidate_isin:
+        return True, original_isin, candidate_isin
+    return False, original_isin, candidate_isin
 
 
 def _nse_ticker(symbol):
@@ -523,7 +698,9 @@ def _nse_ticker(symbol):
     Convert an NSE symbol to a yfinance ticker string.
     Handles the M&M edge case and other special characters.
     """
-    return f"{symbol}.NS"
+    db_alias = _load_db_alias_map().get(symbol.upper())
+    canonical = db_alias or CANONICAL_NSE_SYMBOLS.get(symbol, symbol)
+    return f"{canonical}.NS"
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +726,55 @@ def _convert_value(value, exchange):
         return _to_crores(value)
     # US and LSE: convert to millions
     return round(value / 1e6, 2)
+
+
+def _compute_average_market_cap_36m(
+    ticker,
+    *,
+    symbol: str,
+    exchange: str,
+    market_cap_raw: float,
+    price: float,
+    shares_outstanding_raw: float,
+) -> float:
+    """
+    Compute 36-month average market cap from historical closes × shares outstanding.
+
+    Falls back to current market cap (same unit conversion) only when historical
+    series or shares data is unavailable.
+    """
+    shares_outstanding = float(shares_outstanding_raw or 0.0)
+    if shares_outstanding <= 0 and market_cap_raw > 0 and price > 0:
+        shares_outstanding = market_cap_raw / price
+
+    if shares_outstanding <= 0:
+        return _convert_value(market_cap_raw, exchange)
+
+    try:
+        # Monthly snapshots across 3 years keeps API usage moderate while staying
+        # anchored to real market history.
+        hist = ticker.history(period="3y", interval="1mo", auto_adjust=False, actions=False)
+        if hist is None or hist.empty or "Close" not in hist:
+            return _convert_value(market_cap_raw, exchange)
+
+        closes = hist["Close"].dropna()
+        if closes.empty:
+            return _convert_value(market_cap_raw, exchange)
+
+        avg_close = float(closes.mean())
+        if avg_close <= 0:
+            return _convert_value(market_cap_raw, exchange)
+
+        avg_market_cap_raw = avg_close * shares_outstanding
+        return _convert_value(avg_market_cap_raw, exchange)
+    except Exception as exc:
+        log.warning(
+            "Average market-cap history unavailable for %s (%s): %s. Using current market cap fallback.",
+            symbol,
+            exchange,
+            exc,
+        )
+        return _convert_value(market_cap_raw, exchange)
 
 
 def _get_sector_map(exchange):
@@ -590,6 +816,8 @@ def fetch_stock_data(symbol, exchange="NSE"):
     Returns a dict matching the Stock model fields, or None on failure.
     """
     ticker_str = _build_ticker_str(symbol, exchange)
+    canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
+    resolved_symbol = symbol
     log.info("Fetching %s (%s, %s) ...", symbol, ticker_str, exchange)
 
     sector_map = _get_sector_map(exchange)
@@ -604,10 +832,12 @@ def fetch_stock_data(symbol, exchange="NSE"):
         if not info or (info.get("regularMarketPrice") is None and info.get("currentPrice") is None):
             log.warning("No price data for %s, attempting alternate tickers", symbol)
             found = False
+            attempted_tickers: list[str] = [ticker_str]
             if exchange == "NSE":
                 # Try M&M URL-encoded version
                 if "&" in symbol:
                     alt_ticker = symbol.replace("&", "%26") + ".NS"
+                    attempted_tickers.append(alt_ticker)
                     ticker = yf.Ticker(alt_ticker)
                     info = ticker.info or {}
                     if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
@@ -616,27 +846,56 @@ def fetch_stock_data(symbol, exchange="NSE"):
                 if not found and symbol in TICKER_ALTERNATES:
                     for alt in TICKER_ALTERNATES[symbol]:
                         time.sleep(RATE_LIMIT_SECONDS)
+                        attempted_tickers.append(alt)
                         ticker = yf.Ticker(alt)
                         info = ticker.info or {}
                         if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
+                            candidate_symbol = _normalize_symbol_from_ticker(alt)
+                            if symbol in ISIN_VERIFIED_ALTERNATE_REQUIRED and candidate_symbol != symbol:
+                                verified, orig_isin, cand_isin = _is_isin_verified_alias(symbol, alt)
+                                if not verified:
+                                    log.warning(
+                                        "  Rejecting alternate ticker %s for %s due to ISIN mismatch/unknown (orig_isin=%s, cand_isin=%s)",
+                                        alt,
+                                        symbol,
+                                        orig_isin or "null",
+                                        cand_isin or "null",
+                                    )
+                                    info = {}
+                                    continue
+                            if candidate_symbol != symbol and exchange == "NSE":
+                                resolved_symbol = candidate_symbol
                             log.info("  Found data via alternate ticker: %s", alt)
                             found = True
                             break
             if not found:
-                log.error("FAILED: %s - no data from Yahoo Finance (tried all alternates)", symbol)
+                log.error(
+                    "FAILED: %s - no data from Yahoo Finance (canonical=%s, tried=%s)",
+                    symbol,
+                    canonical_symbol,
+                    ", ".join(dict.fromkeys(attempted_tickers)),
+                )
                 return None
 
         # -- Price --
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
 
-        # -- Market Cap --
+        # -- Market Cap (spot + 36m historical average) --
         market_cap_raw = info.get("marketCap") or 0.0
         market_cap = _convert_value(market_cap_raw, exchange)
-        average_market_cap_36m = round(market_cap * 0.9, 2) if market_cap > 0 else 0.0
+        shares_out = info.get("sharesOutstanding") or 0.0
+        average_market_cap_36m = _compute_average_market_cap_36m(
+            ticker,
+            symbol=symbol,
+            exchange=exchange,
+            market_cap_raw=market_cap_raw,
+            price=price,
+            shares_outstanding_raw=shares_out,
+        )
 
         # -- Name and Sector --
-        name = info.get("longName") or info.get("shortName") or name_map.get(symbol, symbol)
-        sector = sector_map.get(symbol) or info.get("sector") or "Unknown"
+        name = info.get("longName") or info.get("shortName") or name_map.get(resolved_symbol, resolved_symbol)
+        sector = sector_map.get(resolved_symbol) or info.get("sector") or "Unknown"
 
         # -- Financial statements --
         balance_sheet = ticker.balance_sheet
@@ -681,16 +940,14 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "Interest Income Non Operating",
             "Net Interest Income",
         ])
-        # Fallback: try from balance sheet or info
-        if interest_income_raw == 0.0:
-            interest_income_raw = _safe_val(income_stmt, [
-                "Interest Expense",  # Use as rough proxy if no income field
-            ]) * 0.1  # Very rough: assume interest income is ~10% of interest expense
-            if interest_income_raw < 0:
-                interest_income_raw = abs(interest_income_raw)
+        # Keep only statement-derived values; no synthetic fallback multipliers.
+        if interest_income_raw < 0:
+            interest_income_raw = abs(interest_income_raw)
         interest_income = _convert_value(interest_income_raw, exchange)
 
-        # -- Non-Permissible Income (use interest_income as proxy) --
+        # -- Non-Permissible Income proxy --
+        # We currently proxy this with reported interest income where explicit
+        # non-permissible disclosures are not machine-readable in a consistent way.
         non_permissible_income = interest_income
 
         # -- Accounts Receivable --
@@ -769,8 +1026,13 @@ def fetch_stock_data(symbol, exchange="NSE"):
 
         unit_label = "Cr" if exchange == "NSE" else "M"
 
+        isin_value = (
+            (info.get("isin") if isinstance(info, dict) else None)
+            or _fetch_nse_isin(canonical_symbol if exchange == "NSE" else symbol)
+            or _load_db_isin_map().get(symbol.upper())
+        )
         stock_data = {
-            "symbol": symbol,
+            "symbol": resolved_symbol,
             "name": name,
             "sector": sector,
             "exchange": exchange,
@@ -800,11 +1062,13 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "shares_outstanding": float(shares_out) if shares_out else None,
             "price_change_pct": price_chg_pct,
             "is_etf": is_etf,
+            "isin": str(isin_value).strip().upper() if isin_value else None,
         }
 
+        shown_symbol = resolved_symbol if resolved_symbol == symbol else f"{symbol}->{resolved_symbol}"
         log.info(
             "  OK: %s | Price=%.2f | MCap=%.0f %s | Debt=%.0f %s | Rev=%.0f %s",
-            symbol, price, market_cap, unit_label, debt, unit_label, revenue, unit_label,
+            shown_symbol, price, market_cap, unit_label, debt, unit_label, revenue, unit_label,
         )
         return stock_data
 
@@ -823,7 +1087,7 @@ def write_output_file(stocks):
     lines = [
         '"""',
         "Auto-generated real stock data fetched from Yahoo Finance.",
-        f"Generated: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Generated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
         f"Total stocks: {len(stocks)}",
         '"""',
         "",
@@ -853,16 +1117,45 @@ def write_output_file(stocks):
 # ---------------------------------------------------------------------------
 
 
+def _is_production_runtime() -> bool:
+    return (os.getenv("APP_ENV") or "").strip().lower() in PRODUCTION_ENV_VALUES
+
+
+def _is_sqlite_url(url: str) -> bool:
+    return url.strip().lower().startswith("sqlite:")
+
+
+def _assert_production_database_url() -> str:
+    db_url = (os.getenv("DATABASE_URL") or "").strip()
+    if _is_production_runtime():
+        if not db_url:
+            raise RuntimeError(
+                "DATABASE_URL is required in APP_ENV=production for fundamentals ingestion."
+            )
+        if _is_sqlite_url(db_url):
+            raise RuntimeError(
+                "DATABASE_URL points to SQLite in APP_ENV=production. "
+                "Use production Postgres to avoid writing fundamentals to a local file DB."
+            )
+    return db_url
+
+
 def write_to_database(stocks):
     """
     Upsert stock records into the database.
     Uses the same import pattern as fetch_data.py (app.database, app.models).
     """
+    # Fail fast for production cron misconfiguration before opening any DB session.
+    db_url = _assert_production_database_url()
+    if db_url:
+        log.info("Database target: %s", db_url.split("@")[-1])
+
     # Add the project root to sys.path so app imports work
     project_root = str(Path(__file__).parent)
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
+    from sqlalchemy import func
     from app.database import SessionLocal
     from app.models import Stock
 
@@ -872,17 +1165,28 @@ def write_to_database(stocks):
     touched_ids: set[int] = set()
 
     try:
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
+        db_columns = {column.name for column in Stock.__table__.columns}
         for raw in stocks:
             payload = {**raw, "fundamentals_updated_at": now}
-            existing = db.query(Stock).filter(Stock.symbol == payload["symbol"]).first()
+            filtered_payload = _filter_stock_payload_for_model(payload, db_columns)
+            existing = (
+                db.query(Stock)
+                .filter(
+                    Stock.symbol == filtered_payload["symbol"],
+                    Stock.exchange == filtered_payload.get("exchange", "NSE"),
+                )
+                .first()
+            )
+            if not existing:
+                existing = db.query(Stock).filter(Stock.symbol == filtered_payload["symbol"]).first()
             if existing:
-                for key, value in payload.items():
+                for key, value in filtered_payload.items():
                     setattr(existing, key, value)
                 updated += 1
                 touched_ids.add(existing.id)
             else:
-                row = Stock(**payload)
+                row = Stock(**filtered_payload)
                 db.add(row)
                 db.flush()
                 touched_ids.add(row.id)
@@ -900,7 +1204,31 @@ def write_to_database(stocks):
             record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
 
         db.commit()
+        rows_with_timestamp = int(
+            db.query(func.count(Stock.id))
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.fundamentals_updated_at.isnot(None),
+            )
+            .scalar()
+            or 0
+        )
+        rows_missing_timestamp = int(
+            db.query(func.count(Stock.id))
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.fundamentals_updated_at.is_(None),
+            )
+            .scalar()
+            or 0
+        )
         log.info("Database updated: %d created, %d updated", created, updated)
+        return {
+            "created": created,
+            "updated": updated,
+            "rows_with_timestamp": rows_with_timestamp,
+            "rows_missing_timestamp": rows_missing_timestamp,
+        }
     except Exception as exc:
         db.rollback()
         log.error("Database write failed: %s", exc)
@@ -909,12 +1237,49 @@ def write_to_database(stocks):
         db.close()
 
 
+def _filter_stock_payload_for_model(payload: dict, allowed_columns: set[str]) -> dict:
+    """Drop keys that are not present on the Stock ORM model."""
+    return {k: v for k, v in payload.items() if k in allowed_columns}
+
+
+def write_symbol_resolution_issues(failed_symbols: list[str]) -> None:
+    """Persist unresolved symbols from Job A into symbol_resolution_issues."""
+    if not failed_symbols:
+        return
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import SymbolResolutionIssue
+
+        db = SessionLocal()
+        try:
+            for failed in failed_symbols:
+                symbol = str(failed).split(" ", 1)[0].strip().upper()
+                if not symbol:
+                    continue
+                db.add(
+                    SymbolResolutionIssue(
+                        symbol=symbol,
+                        reason="Yahoo fetch failed for NSE symbol; candidate remap unresolved",
+                        severity="warning",
+                        attempted_tickers="",
+                    )
+                )
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:
+        log.warning("Could not persist symbol resolution issues: %s", exc)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="Fetch real financial data for global stocks from Yahoo Finance."
     )
@@ -924,19 +1289,18 @@ def main():
         help="Fetch and display data without writing to the database.",
     )
     args = parser.parse_args()
+    run_started_at = datetime.now(timezone.utc)
 
-    exchanges = [
-        ("NSE", STOCK_SYMBOLS),
-        ("US", US_STOCK_SYMBOLS),
-        ("LSE", UK_STOCK_SYMBOLS),
-    ]
+    if not args.dry_run:
+        _assert_production_database_url()
+
+    exchanges = [("NSE", STOCK_SYMBOLS)]
 
     total_symbols = sum(len(syms) for _, syms in exchanges)
 
     log.info("=" * 70)
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
-    log.info("  NSE: %d stocks | US: %d stocks | LSE: %d stocks",
-             len(STOCK_SYMBOLS), len(US_STOCK_SYMBOLS), len(UK_STOCK_SYMBOLS))
+    log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -994,6 +1358,7 @@ def main():
         log.info("  %-40s %3d stocks", sector, count)
 
     # ── Write output file ────────────────────────────────────────────────
+    db_summary = None
     if successful:
         write_output_file(successful)
 
@@ -1016,13 +1381,106 @@ def main():
                     log.info("    Revenue: %.0f %s | Total Assets: %.0f %s",
                              s["revenue"], unit, s["total_assets"], unit)
         else:
-            write_to_database(successful)
+            db_summary = write_to_database(successful)
             log.info("")
             log.info("Data written to database and %s.", OUTPUT_FILE)
     else:
         log.error("No stocks fetched successfully. Nothing to write.")
-        sys.exit(1)
+        _send_job_a_alert(
+            "error",
+            "Job A failed (no successful fundamentals fetch)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+                "failure_reason": "No stocks fetched successfully",
+                "recovery_hint": "Re-run fetch_real_data.py, then run scripts/run_daily_refresh.py",
+            },
+        )
+        return 1
+
+    run_finished_at = datetime.now(timezone.utc)
+    rows_updated = 0 if db_summary is None else db_summary["created"] + db_summary["updated"]
+    rows_with_timestamp = 0 if db_summary is None else db_summary["rows_with_timestamp"]
+    rows_missing_timestamp = 0 if db_summary is None else db_summary["rows_missing_timestamp"]
+    log.info(
+        "fundamentals_ingest_run started_at=%s finished_at=%s rows_updated=%d rows_failed=%d rows_with_timestamp=%d rows_missing_timestamp=%d",
+        run_started_at.isoformat(),
+        run_finished_at.isoformat(),
+        rows_updated,
+        len(failed),
+        rows_with_timestamp,
+        rows_missing_timestamp,
+    )
+    partial_failure = len(failed) > 0
+    if partial_failure:
+        if not args.dry_run:
+            write_symbol_resolution_issues(failed)
+        _send_job_a_alert(
+            "warning",
+            "Job A partial completion (fundamentals fetch incomplete)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "DRY RUN" if args.dry_run else "LIVE",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+                "failed_symbols_preview": ", ".join(failed[:10]),
+                "rows_updated": rows_updated,
+                "rows_with_timestamp": rows_with_timestamp,
+                "rows_missing_timestamp": rows_missing_timestamp,
+            },
+        )
+        return 1
+
+    if not args.dry_run:
+        _send_job_a_alert(
+            "success",
+            "Job A complete (fundamentals refreshed)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "LIVE",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+                "rows_updated": rows_updated,
+                "rows_failed": len(failed),
+                "rows_with_timestamp": rows_with_timestamp,
+                "rows_missing_timestamp": rows_missing_timestamp,
+                "next_step": "Job B: scripts/run_daily_refresh.py",
+            },
+        )
+    else:
+        _send_job_a_alert(
+            "success",
+            "Job A complete (dry-run fundamentals fetch)",
+            {
+                "started_at_utc": run_started_at.isoformat(),
+                "finished_at_utc": run_finished_at.isoformat(),
+                "mode": "DRY RUN",
+                "total_attempted": total_symbols,
+                "successful": len(successful),
+                "failed": len(failed),
+            },
+        )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        _send_job_a_alert(
+            "error",
+            "Job A failed (exception)",
+            {
+                "finished_at_utc": datetime.now(timezone.utc).isoformat(),
+                "failure_reason": str(exc),
+                "recovery_hint": "Check fundamentals provider connectivity and re-run Job A",
+            },
+        )
+        raise
