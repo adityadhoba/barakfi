@@ -211,6 +211,24 @@ export function AdminPanel() {
     }
   }
 
+  function opsErrorDetail(body: unknown, fallback: string): string {
+    if (body !== null && typeof body === "object") {
+      const o = body as Record<string, unknown>;
+      const d = o.detail;
+      if (typeof d === "string" && d.length > 0) return d;
+      if (Array.isArray(d) && d[0] !== undefined && typeof d[0] === "object" && d[0] !== null) {
+        const msg = (d[0] as { msg?: string }).msg;
+        if (typeof msg === "string" && msg.length > 0) return msg;
+      }
+      const err = o.error;
+      if (err !== null && typeof err === "object" && "message" in err) {
+        const m = (err as { message?: string }).message;
+        if (typeof m === "string" && m.length > 0) return m;
+      }
+    }
+    return fallback;
+  }
+
   async function runOpsJob(job: "job_a" | "job_b") {
     const token = await getToken();
     if (!token) return;
@@ -229,7 +247,7 @@ export function AdminPanel() {
 
       const body: unknown = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(String((body as { detail?: string } | null)?.detail || "Failed to start job"));
+        throw new Error(opsErrorDetail(body, response.status === 404 ? "Route missing — deploy latest frontend." : "Failed to start job"));
       }
 
       const pid =

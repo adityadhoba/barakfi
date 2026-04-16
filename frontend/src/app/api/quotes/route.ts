@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
     try {
       const res = await fetch(
         `${API_BASE}/market-data/quote/${encodeURIComponent(symbol)}?provider=${provider}&exchange=${encodeURIComponent(exchange)}`,
-        { next: { revalidate: 60 } },
+        // Always bypass Next's fetch cache for quotes; otherwise some symbols can look "stuck"
+        // until the Data Cache TTL expires, even when the browser request uses `cache: "no-store"`.
+        { cache: "no-store" },
       );
       if (!res.ok) return { symbol, last_price: null, change: null, change_percent: null };
       const data = unwrapBackendEnvelope<{
