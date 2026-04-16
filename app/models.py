@@ -72,6 +72,9 @@ class Stock(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     is_etf = Column(Boolean, nullable=False, default=False)
     isin = Column(String, nullable=True, index=True)
+    symbol_status = Column(String, nullable=False, default="active")
+    canonical_symbol = Column(String, nullable=True, index=True)
+    successor_symbol = Column(String, nullable=True, index=True)
     screening_blocked_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
@@ -146,6 +149,28 @@ class StockSymbolAlias(Base):
     evidence_note = Column(Text, nullable=False, default="")
     effective_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class StockCorporateEvent(Base):
+    """Normalized corporate-action records used for symbol lifecycle management."""
+
+    __tablename__ = "stock_corporate_events"
+    __table_args__ = (
+        Index("ix_stock_corporate_events_symbol_effective", "symbol", "effective_date"),
+        Index("ix_stock_corporate_events_status_type", "status", "event_type"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String, nullable=False, index=True)
+    event_type = Column(String, nullable=False, index=True)  # merge, demerge, delisted, renamed, acquired
+    effective_date = Column(DateTime(timezone=True), nullable=True, index=True)
+    successor_symbol = Column(String, nullable=True, index=True)
+    canonical_symbol = Column(String, nullable=True, index=True)
+    source = Column(String, nullable=False, default="nse_feed")
+    status = Column(String, nullable=False, default="active")
+    notes = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
 
 
 class SymbolResolutionIssue(Base):

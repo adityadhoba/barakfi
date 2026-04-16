@@ -25,7 +25,7 @@ import {
 } from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PriceChart } from "@/components/price-chart";
 import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
@@ -248,6 +248,10 @@ export default async function StockDetailPage({
   params: Promise<{ symbol: string }>;
 }) {
   const { symbol } = await params;
+  const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
+  if (!normalizedSymbol || normalizedSymbol === "COMPANY" || normalizedSymbol === "SYMBOL") {
+    notFound();
+  }
   const authState = await auth();
   const clerkUser = await currentUser();
   const token = await authState.getToken();
@@ -257,10 +261,10 @@ export default async function StockDetailPage({
       : null;
 
   const [detail, watchlist, allStocks, multiScreening] = await Promise.all([
-    fetchStockAndScreenForPage(symbol),
+    fetchStockAndScreenForPage(normalizedSymbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
-    getStocks(),
-    fetchMultiScreeningForPage(symbol),
+    getStocks().catch(() => []),
+    fetchMultiScreeningForPage(normalizedSymbol),
   ]);
 
   let workspace: WorkspaceBundle | null = null;
@@ -275,13 +279,29 @@ export default async function StockDetailPage({
   if (detail.kind === "not_found") {
     notFound();
   }
+  if (detail.kind === "redirect") {
+    redirect(`/stocks/${encodeURIComponent(detail.targetSymbol)}`);
+  }
+  if (detail.kind === "legacy_blocked") {
+    return (
+      <StockDetailError
+        message={`${detail.stock.name} (${detail.stock.symbol}) is no longer an active screening symbol. ${detail.message}${
+          detail.stock.canonical_symbol
+            ? ` Use ${detail.stock.canonical_symbol} for the current listing.`
+            : ""
+        }`}
+      />
+    );
+  }
   if (detail.kind === "error") {
     return <StockDetailError message={detail.message} />;
   }
 
   const { stock, screening } = detail;
 
-  const liveQuote = sanitizeEquityQuote(await getEquityQuote(symbol, "auto_india", stock.exchange));
+  const liveQuote = sanitizeEquityQuote(
+    await getEquityQuote(stock.symbol, "auto_india", stock.exchange).catch(() => null)
+  );
 
   const isInWatchlist = watchlist.some((e) => e.stock.symbol === stock.symbol);
   const primaryPortfolioId = workspace?.portfolios[0]?.id;

@@ -3,6 +3,17 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+CorporateEventType = Literal["merge", "demerge", "delisted", "renamed", "acquired"]
+
+
+class StockCorporateEventSummaryRead(BaseModel):
+    event_type: CorporateEventType
+    label: str
+    effective_date: datetime | None = None
+    symbol: str
+    successor_symbol: str | None = None
+    source: str | None = None
+
 
 class StockBase(BaseModel):
     symbol: str
@@ -26,6 +37,9 @@ class StockBase(BaseModel):
     country: str = "India"
     data_source: str = "internal_seed"
     is_active: bool = True
+    symbol_status: str = "active"
+    canonical_symbol: str | None = None
+    successor_symbol: str | None = None
     fundamentals_updated_at: datetime | None = None
 
 
@@ -57,7 +71,34 @@ class StockRead(StockBase):
     price_change_pct: float | None = None
     compliance_rating: int | None = None
     is_etf: bool = False
+    latest_corporate_event: StockCorporateEventSummaryRead | None = None
     index_memberships: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StockCorporateEventCreate(BaseModel):
+    symbol: str
+    event_type: CorporateEventType
+    effective_date: datetime | None = None
+    successor_symbol: str | None = None
+    canonical_symbol: str | None = None
+    source: str = "admin_override"
+    status: Literal["active", "superseded", "ignored"] = "active"
+    notes: str = ""
+
+
+class StockCorporateEventRead(BaseModel):
+    id: int
+    symbol: str
+    event_type: CorporateEventType
+    effective_date: datetime | None = None
+    successor_symbol: str | None = None
+    canonical_symbol: str | None = None
+    source: str
+    status: str
+    notes: str
+    created_at: datetime
+    updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
 
