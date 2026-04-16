@@ -1063,8 +1063,6 @@ export default async function StockDetailPage({
               </div>
             </div>
 
-            <AdUnit format="rectangle" />
-
             <StockDetailTablesCollapsible
               ratioRows={ratioRowsForCollapsible}
               methodologyCaption={methodologyCaptionForCollapsible}
