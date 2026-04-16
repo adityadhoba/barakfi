@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query
 from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from starlette.requests import Request
 
@@ -51,6 +52,7 @@ from app.models import (
     ScreeningLog,
     SupportNote,
     Stock,
+    StockSymbolAlias,
     StockIndexMembership,
     User,
     UserSettings,
@@ -165,16 +167,54 @@ def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, lis
     return {k: sorted(set(v)) for k, v in m.items()}
 
 
+def _search_aliases_by_symbol(db: Session, symbols: list[str]) -> dict[str, list[str]]:
+    lookup = {s.strip().upper() for s in symbols if s and s.strip()}
+    if not lookup:
+        return {}
+
+    out: dict[str, set[str]] = {sym: set() for sym in lookup}
+
+    alias_rows = (
+        db.query(StockSymbolAlias.old_symbol, StockSymbolAlias.new_symbol)
+        .filter(StockSymbolAlias.status == "active")
+        .filter(StockSymbolAlias.new_symbol.in_(lookup))
+        .all()
+    )
+    for old_symbol, new_symbol in alias_rows:
+        old = (old_symbol or "").strip().upper()
+        new = (new_symbol or "").strip().upper()
+        if old and new in out and old != new:
+            out[new].add(old)
+
+    corporate_rows = (
+        db.query(StockCorporateEvent.symbol, StockCorporateEvent.canonical_symbol, StockCorporateEvent.successor_symbol)
+        .filter(StockCorporateEvent.status == "active")
+        .filter(
+            (StockCorporateEvent.canonical_symbol.in_(lookup)) | (StockCorporateEvent.successor_symbol.in_(lookup))
+        )
+        .all()
+    )
+    for legacy_symbol, canonical_symbol, successor_symbol in corporate_rows:
+        legacy = (legacy_symbol or "").strip().upper()
+        target = (canonical_symbol or successor_symbol or "").strip().upper()
+        if legacy and target in out and legacy != target:
+            out[target].add(legacy)
+
+    return {k: sorted(v) for k, v in out.items() if v}
+
+
 def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     codes = _index_codes_by_stock_id(db, [stock.id]).get(stock.id, [])
     dq, missing = fundamentals_completeness_payload(stock)
     latest_event = summarize_latest_events_by_symbols(db, [stock.symbol]).get(stock.symbol.upper())
+    alias_map = _search_aliases_by_symbol(db, [stock.symbol])
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
             "data_quality": dq,
             "fundamentals_fields_missing": missing,
             "latest_corporate_event": latest_event,
+            "search_aliases": alias_map.get(stock.symbol.upper(), []),
         }
     )
 
@@ -183,6 +223,7 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     ids = [s.id for s in stocks]
     code_map = _index_codes_by_stock_id(db, ids)
     event_map = summarize_latest_events_by_symbols(db, [s.symbol for s in stocks])
+    alias_map = _search_aliases_by_symbol(db, [s.symbol for s in stocks])
     out: list[StockRead] = []
     for s in stocks:
         dq, missing = fundamentals_completeness_payload(s)
@@ -193,6 +234,7 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
                     "data_quality": dq,
                     "fundamentals_fields_missing": missing,
                     "latest_corporate_event": event_map.get(s.symbol.upper()),
+                    "search_aliases": alias_map.get(s.symbol.upper(), []),
                 }
             )
         )
@@ -349,13 +391,59 @@ def equity_quote_snapshot(
             status_code=400,
             detail=f"provider must be one of: {', '.join(sorted(PUBLIC_MARKET_PROVIDERS))}",
         )
-    row = resolve_stock(db, sym, None, active_only=True, require_indian_listing=True)
-    ex = (exchange or (row.exchange if row else "NSE")).upper()
-    quote = fetch_quote_by_provider(sym, ex, effective)
+    t0 = time.perf_counter()
+    requested_exchange = (exchange or "").strip().upper()
+    ex = requested_exchange or "NSE"
+    try:
+        # Hot path: when caller provides exchange, avoid DB lookup to reduce pool pressure.
+        if not requested_exchange:
+            row = resolve_stock(db, sym, None, active_only=True, require_indian_listing=True)
+            ex = (row.exchange if row else "NSE").upper()
+        quote = fetch_quote_by_provider(sym, ex, effective)
+    except SQLAlchemyError as exc:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.exception(
+            "[quote] db_failure symbol=%s exchange=%s provider=%s error=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            exc.__class__.__name__,
+            latency_ms,
+        )
+        raise HTTPException(status_code=503, detail="Quote service temporarily unavailable. Please retry.")
+    except Exception as exc:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.exception(
+            "[quote] unhandled_failure symbol=%s exchange=%s provider=%s error=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            exc.__class__.__name__,
+            latency_ms,
+        )
+        raise HTTPException(status_code=503, detail="Quote service temporarily unavailable. Please retry.")
     if not quote or quote.last_price is None:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning(
+            "[quote] unavailable symbol=%s exchange=%s provider=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            latency_ms,
+        )
         raise HTTPException(
             status_code=404,
             detail="Quote unavailable for this symbol or provider.",
+        )
+    latency_ms = int((time.perf_counter() - t0) * 1000)
+    if latency_ms >= 1500:
+        logger.warning(
+            "[quote] slow_response symbol=%s exchange=%s provider=%s source=%s latency_ms=%s",
+            sym,
+            ex,
+            effective,
+            quote.source,
+            latency_ms,
         )
     payload = quote_to_dict(quote)
     return EquityQuoteResponse(
@@ -458,7 +546,7 @@ def list_stocks(
     """
     query = db.query(Stock).filter(
         Stock.is_active.is_(True),
-        Stock.exchange.in_(("NSE", "BSE")),
+        Stock.exchange == "NSE",
     )
 
     if search:
@@ -671,7 +759,7 @@ def _active_screenable_symbols(db: Session) -> list[str]:
     for symbol, exchange in rows:
         ex = (exchange or "").upper()
         sym = (symbol or "").upper()
-        if not sym or not is_indian_exchange(ex):
+        if not sym or ex != "NSE":
             continue
         existing = picked.get(sym)
         if existing is None or (ex == "NSE" and existing != "NSE"):
@@ -691,6 +779,19 @@ def _daily_refresh_alert_details(
     stale: bool,
     fundamentals_latest: datetime | None,
     duration_seconds: float | None,
+    fundamentals_rows_with_timestamp: int | None = None,
+    fundamentals_rows_missing_timestamp: int | None = None,
+    fundamentals_staleness_hours: float | None = None,
+    prices_updated: int | None = None,
+    prices_total: int | None = None,
+    prices_failed_count: int | None = None,
+    indices_updated: int | None = None,
+    symbol_master_events_processed: int | None = None,
+    symbol_master_rows_updated: int | None = None,
+    symbol_master_rows_disabled: int | None = None,
+    symbol_master_rows_created: int | None = None,
+    symbol_master_rows_remapped: int | None = None,
+    symbol_master_unresolved_actions: int | None = None,
     failure_reason: str | None = None,
 ) -> dict[str, Any]:
     return {
@@ -701,7 +802,20 @@ def _daily_refresh_alert_details(
         "chunks": chunks,
         "retries": retries,
         "fundamentals_latest_utc": fundamentals_latest.isoformat() if fundamentals_latest else "null",
+        "fundamentals_rows_with_timestamp": fundamentals_rows_with_timestamp,
+        "fundamentals_rows_missing_timestamp": fundamentals_rows_missing_timestamp,
+        "fundamentals_staleness_hours": fundamentals_staleness_hours,
         "stale": stale,
+        "prices_updated": prices_updated,
+        "prices_total": prices_total,
+        "prices_failed_count": prices_failed_count,
+        "indices_updated": indices_updated,
+        "symbol_master_events_processed": symbol_master_events_processed,
+        "symbol_master_rows_updated": symbol_master_rows_updated,
+        "symbol_master_rows_disabled": symbol_master_rows_disabled,
+        "symbol_master_rows_created": symbol_master_rows_created,
+        "symbol_master_rows_remapped": symbol_master_rows_remapped,
+        "symbol_master_unresolved_actions": symbol_master_unresolved_actions,
         "duration_seconds": round(duration_seconds or 0.0, 2),
         "failure_reason": failure_reason,
         "recovery_hint": "Run Job A (fetch_real_data.py) then Job B (run_daily_refresh.py)",
@@ -2894,6 +3008,15 @@ def daily_refresh(
                 stale=True,
                 fundamentals_latest=None,
                 duration_seconds=time.perf_counter() - t0,
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
                 failure_reason=run.error_detail,
             ),
         )
@@ -3013,6 +3136,19 @@ def daily_refresh(
                 stale=stale,
                 fundamentals_latest=fundamentals_latest,
                 duration_seconds=time.perf_counter() - t0,
+                fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+                fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+                fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                indices_updated=int(index_sync_result.get("updated") or 0),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
                 failure_reason=run.error_detail,
             ),
         )
@@ -3046,6 +3182,19 @@ def daily_refresh(
                 stale=stale,
                 fundamentals_latest=fundamentals_latest,
                 duration_seconds=time.perf_counter() - t0,
+                fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+                fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+                fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+                prices_updated=int(price_result.get("updated") or 0),
+                prices_total=int(price_result.get("total") or 0),
+                prices_failed_count=len(price_result.get("failed_symbols") or []),
+                indices_updated=int(index_sync_result.get("updated") or 0),
+                symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+                symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+                symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+                symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+                symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+                symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
                 failure_reason=run.error_detail,
             ),
         )
@@ -3078,10 +3227,22 @@ def daily_refresh(
             stale=stale,
             fundamentals_latest=fundamentals_latest,
             duration_seconds=duration_seconds,
+            fundamentals_rows_with_timestamp=int(fundamentals.get("rows_with_timestamp") or 0),
+            fundamentals_rows_missing_timestamp=int(fundamentals.get("rows_missing_timestamp") or 0),
+            fundamentals_staleness_hours=fundamentals.get("staleness_hours"),
+            prices_updated=int(price_result.get("updated") or 0),
+            prices_total=int(price_result.get("total") or 0),
+            prices_failed_count=len(price_result.get("failed_symbols") or []),
+            indices_updated=int(index_sync_result.get("updated") or 0),
+            symbol_master_events_processed=int(symbol_master.get("events_processed") or 0),
+            symbol_master_rows_updated=int(symbol_master.get("rows_updated") or 0),
+            symbol_master_rows_disabled=int(symbol_master.get("rows_disabled") or 0),
+            symbol_master_rows_created=int(symbol_master.get("rows_created") or 0),
+            symbol_master_rows_remapped=int(symbol_master.get("rows_remapped") or 0),
+            symbol_master_unresolved_actions=int(symbol_master.get("unresolved_actions") or 0),
         )
         | {
-            "job_a_rows_with_timestamp": fundamentals.get("rows_with_timestamp"),
-            "job_a_rows_missing_timestamp": fundamentals.get("rows_missing_timestamp"),
+            "failed_symbols_preview": ", ".join((price_result.get("failed_symbols") or [])[:10]) or "none",
         },
     )
 

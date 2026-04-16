@@ -57,38 +57,43 @@ export async function GET(request: NextRequest) {
   }
 
   const quotes: QuoteResult[] = [];
+  const CONCURRENCY = 4;
 
-  const results = await Promise.allSettled(
-    items.map(async ({ symbol, exchange }) => {
-      const provider = providerForExchange(exchange);
-      try {
-        const res = await fetch(
-          `${API_BASE}/market-data/quote/${encodeURIComponent(symbol)}?provider=${provider}&exchange=${encodeURIComponent(exchange)}`,
-          { next: { revalidate: 60 } },
-        );
-        if (!res.ok) return { symbol, last_price: null, change: null, change_percent: null };
-        const data = unwrapBackendEnvelope<{
-          last_price?: number | null;
-          change?: number | null;
-          change_percent?: number | null;
-        }>(await res.json());
-        return {
-          symbol,
-          last_price: data.last_price ?? null,
-          change: data.change ?? null,
-          change_percent: data.change_percent ?? null,
-        };
-      } catch {
-        return { symbol, last_price: null, change: null, change_percent: null };
-      }
-    }),
-  );
-
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      quotes.push(result.value);
+  async function loadOne(symbol: string, exchange: string): Promise<QuoteResult> {
+    const provider = providerForExchange(exchange);
+    try {
+      const res = await fetch(
+        `${API_BASE}/market-data/quote/${encodeURIComponent(symbol)}?provider=${provider}&exchange=${encodeURIComponent(exchange)}`,
+        { next: { revalidate: 60 } },
+      );
+      if (!res.ok) return { symbol, last_price: null, change: null, change_percent: null };
+      const data = unwrapBackendEnvelope<{
+        last_price?: number | null;
+        change?: number | null;
+        change_percent?: number | null;
+      }>(await res.json());
+      return {
+        symbol,
+        last_price: data.last_price ?? null,
+        change: data.change ?? null,
+        change_percent: data.change_percent ?? null,
+      };
+    } catch {
+      return { symbol, last_price: null, change: null, change_percent: null };
     }
   }
+
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(CONCURRENCY, items.length) }, async () => {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= items.length) return;
+      const item = items[idx];
+      quotes.push(await loadOne(item.symbol, item.exchange));
+    }
+  });
+
+  await Promise.allSettled(workers);
 
   return NextResponse.json(
     { quotes },

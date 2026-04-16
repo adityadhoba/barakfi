@@ -108,6 +108,7 @@ export type Stock = {
   country: string;
   data_source: string;
   is_active: boolean;
+  search_aliases?: string[];
   symbol_status?: string;
   canonical_symbol?: string | null;
   successor_symbol?: string | null;

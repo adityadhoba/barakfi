@@ -49,6 +49,10 @@ class StockCreate(StockBase):
 
 class StockRead(StockBase):
     id: int
+    search_aliases: list[str] = Field(
+        default_factory=list,
+        description="Legacy symbols / aliases mapped to this canonical symbol for search discoverability.",
+    )
     data_quality: Literal["high", "medium", "low"] | None = Field(
         default=None,
         description="Heuristic completeness of fundamentals for screening (high/medium/low).",

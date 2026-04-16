@@ -223,7 +223,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
     return screenedStocks.filter((s) => {
-      if (q && !s.symbol.toLowerCase().includes(q) && !s.name.toLowerCase().includes(q) && !s.sector.toLowerCase().includes(q)) return false;
+      if (q) {
+        const aliasHit = (s.search_aliases || []).some((a) => a.toLowerCase().includes(q));
+        if (
+          !s.symbol.toLowerCase().includes(q) &&
+          !s.name.toLowerCase().includes(q) &&
+          !s.sector.toLowerCase().includes(q) &&
+          !aliasHit
+        ) {
+          return false;
+        }
+      }
       if (statusFilter !== "all" && s.screening.status !== statusFilter) return false;
       if (sectorFilter !== "All" && s.sector !== sectorFilter) return false;
       if (mcapFilter !== "all" && (s.market_cap < mcapOpt.min || s.market_cap >= mcapOpt.max)) return false;
