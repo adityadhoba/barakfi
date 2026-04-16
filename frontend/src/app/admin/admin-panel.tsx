@@ -57,6 +57,8 @@ export function AdminPanel() {
   const [me, setMe] = useState<MePayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [opsBusy, setOpsBusy] = useState<null | "job_a" | "job_b">(null);
+  const [opsMessage, setOpsMessage] = useState<string | null>(null);
 
   const apiBase = "/api";
 
@@ -209,6 +211,46 @@ export function AdminPanel() {
     }
   }
 
+  async function runOpsJob(job: "job_a" | "job_b") {
+    const token = await getToken();
+    if (!token) return;
+    setOpsBusy(job);
+    setOpsMessage(null);
+
+    try {
+      const endpoint = job === "job_a" ? "/admin/ops/run-job-a" : "/admin/ops/run-job-b";
+      const response = await fetch(`${apiBase}${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const body: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(String((body as { detail?: string } | null)?.detail || "Failed to start job"));
+      }
+
+      const pid =
+        body && typeof body === "object" && "pid" in (body as Record<string, unknown>)
+          ? (body as { pid?: unknown }).pid
+          : null;
+      const pidText = typeof pid === "number" ? ` (pid ${pid})` : "";
+      const jobLabel = job === "job_a" ? "Job A (fundamentals)" : "Job B (daily refresh)";
+      setOpsMessage(
+        `${jobLabel} submitted${pidText}. Slack alerts should follow automatically.`,
+      );
+      void loadData();
+    } catch (error) {
+      setOpsMessage(
+        error instanceof Error ? error.message : "Failed to start job. Check server logs for details.",
+      );
+    } finally {
+      setOpsBusy(null);
+    }
+  }
+
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: "overview", label: "Overview" },
     { key: "coverage", label: "Coverage Requests", count: stats.pendingRequests },
@@ -238,7 +280,8 @@ export function AdminPanel() {
         {loading && <div className={styles.loading}>Loading...</div>}
 
         {tab === "overview" && !loading && (
-          <div className={styles.statsGrid}>
+          <>
+            <div className={styles.statsGrid}>
             <div className={styles.statCard}>
               <span className={styles.statValue}>{stats.users}</span>
               <span className={styles.statLabel}>Total Users</span>
@@ -255,7 +298,40 @@ export function AdminPanel() {
               <span className={styles.statValue}>{coverageRequests.length}</span>
               <span className={styles.statLabel}>Total Requests</span>
             </div>
-          </div>
+            </div>
+
+            <div className={styles.opsControls}>
+            <div className={styles.opsTitleRow}>
+              <h3 className={styles.opsTitle}>Refresh Jobs (Admin)</h3>
+              <span className={styles.opsBadge}>Runs immediately</span>
+            </div>
+            <p className={styles.opsNote}>
+              Triggers Job A (fundamentals refresh) and/or Job B (daily refresh pipeline). Slack alerts are sent from
+              the job processes.
+            </p>
+
+            <div className={styles.opsRow}>
+              <button
+                type="button"
+                className={styles.btnApprove}
+                disabled={opsBusy === "job_a"}
+                onClick={() => void runOpsJob("job_a")}
+              >
+                {opsBusy === "job_a" ? "Running Job A..." : "Run Job A"}
+              </button>
+              <button
+                type="button"
+                className={styles.btnApprove}
+                disabled={opsBusy === "job_b"}
+                onClick={() => void runOpsJob("job_b")}
+              >
+                {opsBusy === "job_b" ? "Running Job B..." : "Run Job B"}
+              </button>
+            </div>
+
+            {opsMessage ? <p className={styles.opsMessage}>{opsMessage}</p> : null}
+            </div>
+          </>
         )}
 
         {tab === "coverage" && !loading && (

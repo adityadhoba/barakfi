@@ -48,6 +48,19 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+      # Job A sends Slack alerts directly from fetch_real_data.py,
+      # so it needs the webhook in *this* cron job environment too.
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "true"
+      # Send success alerts from Job A too (so we can verify healthy runs).
+      - key: OPS_ALERT_JOB_A_SUCCESSES_ENABLED
+        value: "true"
 
   # Job B: run internal daily refresh pipeline after fundamentals update
   # 05:45 PM IST Mon–Fri => 12:15 UTC
@@ -68,3 +81,12 @@ services:
           property: hostport
       - key: INTERNAL_SERVICE_TOKEN
         sync: false
+      # Job B sends Slack alerts directly from scripts/run_daily_refresh.py
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "true"

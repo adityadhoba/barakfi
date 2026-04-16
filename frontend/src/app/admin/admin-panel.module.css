@@ -36,3 +36,59 @@
 .btnReject { padding: 4px 10px; border-radius: var(--radius-sm); border: 1px solid var(--red-border); background: var(--red-bg); color: var(--red); font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 150ms; }
 .btnReject:hover { background: var(--red); color: #fff; }
 .empty { text-align: center; padding: 32px; color: var(--text-tertiary); font-size: 0.85rem; }
+
+.opsControls {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  margin-top: 16px;
+}
+
+.opsTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.opsTitle {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.opsBadge {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: var(--bg-soft);
+  color: var(--text-tertiary);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.opsNote {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.opsRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.opsMessage {
+  font-size: 0.78rem;
+  color: var(--text);
+  line-height: 1.4;
+  margin-top: 12px;
+}
