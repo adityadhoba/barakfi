@@ -71,6 +71,14 @@ OPS_SLACK_WEBHOOK_URL = os.getenv("OPS_SLACK_WEBHOOK_URL", "").strip()
 OPS_ALERT_FAILURES_ENABLED = os.getenv("OPS_ALERT_FAILURES_ENABLED", "true").lower() == "true"
 OPS_ALERT_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_SUCCESSES_ENABLED", "true").lower() == "true"
 OPS_ALERT_JOB_A_SUCCESSES_ENABLED = os.getenv("OPS_ALERT_JOB_A_SUCCESSES_ENABLED", "true").lower() == "true"
+NSE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+}
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -542,16 +550,16 @@ def _to_crores(value):
 # Some NSE symbols need alternate Yahoo Finance tickers.
 # Primary is tried first; if it fails, alternates are attempted.
 TICKER_ALTERNATES = {
-    "TATAMOTORS": ["TATAMOTORS.NS", "TATAMOTORS.BO"],
-    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS", "MCDOWELL-N.BO"],
-    "PEL": ["PEL.NS", "PEL.BO"],
+    "TATAMOTORS": ["TATAMOTORS.NS"],
+    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],
+    "PEL": ["PEL.NS"],
     "ZOMATO": ["ETERNAL.NS", "ZOMATO.NS", "ZOMATO.BO"],
     "ADANITRANS": ["ADANIENSOL.NS", "ADANITRANS.NS"],
     "INDIANHOTELS": ["INDHOTEL.NS", "INDIANHOTELS.NS"],
     "MAZAGON": ["MAZDOCK.NS", "MAZAGON.NS"],
     "GARDENREACH": ["GRSE.NS", "GARDENREACH.NS"],
     "ZENSAR": ["ZENSARTECH.NS", "ZENSAR.NS"],
-    "TV18BRDCST": ["TV18BRDCST.NS", "TVTODAY.NS"],
+    "TV18BRDCST": ["TV18BRDCST.NS"],
     "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
 }
 
@@ -565,13 +573,131 @@ CANONICAL_NSE_SYMBOLS = {
     "ZENSAR": "ZENSARTECH",
 }
 
+# Alternates that require strict ISIN match proof before accepting.
+ISIN_VERIFIED_ALTERNATE_REQUIRED = {
+    "MCDOWELL-N",
+    "CENTURYTEX",
+    "TV18BRDCST",
+}
+
+# Known legacy→current candidates where ISIN proof is expected.
+PREFERRED_ALIAS_CANDIDATES = {
+    "MCDOWELL-N": "UNITDSPR",
+    "CENTURYTEX": "ABREL",
+}
+
+_NSE_ISIN_CACHE: dict[str, str | None] = {}
+_DB_ISIN_BY_SYMBOL: dict[str, str] | None = None
+_DB_ALIAS_BY_OLD_SYMBOL: dict[str, str] | None = None
+
+
+def _normalize_symbol_from_ticker(ticker: str) -> str:
+    return ticker.upper().replace(".NS", "").replace(".BO", "").replace(".BSE", "")
+
+
+def _load_db_isin_map() -> dict[str, str]:
+    global _DB_ISIN_BY_SYMBOL
+    if _DB_ISIN_BY_SYMBOL is not None:
+        return _DB_ISIN_BY_SYMBOL
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import Stock
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(Stock.symbol, Stock.isin)
+                .filter(Stock.exchange == "NSE", Stock.is_active.is_(True), Stock.isin.isnot(None))
+                .all()
+            )
+            _DB_ISIN_BY_SYMBOL = {str(sym).upper(): str(isin).strip().upper() for sym, isin in rows if sym and isin}
+        finally:
+            db.close()
+    except Exception:
+        _DB_ISIN_BY_SYMBOL = {}
+    return _DB_ISIN_BY_SYMBOL
+
+
+def _load_db_alias_map() -> dict[str, str]:
+    global _DB_ALIAS_BY_OLD_SYMBOL
+    if _DB_ALIAS_BY_OLD_SYMBOL is not None:
+        return _DB_ALIAS_BY_OLD_SYMBOL
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import StockSymbolAlias
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(StockSymbolAlias.old_symbol, StockSymbolAlias.new_symbol)
+                .filter(StockSymbolAlias.status == "active")
+                .all()
+            )
+            _DB_ALIAS_BY_OLD_SYMBOL = {str(old).upper(): str(new).upper() for old, new in rows if old and new}
+        finally:
+            db.close()
+    except Exception:
+        _DB_ALIAS_BY_OLD_SYMBOL = {}
+    return _DB_ALIAS_BY_OLD_SYMBOL
+
+
+def _fetch_nse_isin(symbol: str) -> str | None:
+    sym = symbol.strip().upper()
+    if not sym:
+        return None
+    if sym in _NSE_ISIN_CACHE:
+        return _NSE_ISIN_CACHE[sym]
+    try:
+        with requests.Session() as session:
+            session.get("https://www.nseindia.com/", headers=NSE_HEADERS, timeout=15)
+            response = session.get(
+                f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
+                headers=NSE_HEADERS,
+                timeout=15,
+            )
+            if response.status_code != 200:
+                _NSE_ISIN_CACHE[sym] = None
+                return None
+            payload = response.json() if response.content else {}
+            info = payload.get("info") or {}
+            metadata = payload.get("metadata") or {}
+            isin = info.get("isin") or metadata.get("isin")
+            normalized = str(isin).strip().upper() if isin else None
+            _NSE_ISIN_CACHE[sym] = normalized
+            return normalized
+    except Exception:
+        _NSE_ISIN_CACHE[sym] = None
+        return None
+
+
+def _expected_isin_for_symbol(symbol: str) -> str | None:
+    sym = symbol.strip().upper()
+    return _fetch_nse_isin(sym) or _load_db_isin_map().get(sym)
+
+
+def _is_isin_verified_alias(original_symbol: str, candidate_ticker: str) -> tuple[bool, str | None, str | None]:
+    original = original_symbol.strip().upper()
+    candidate_symbol = _normalize_symbol_from_ticker(candidate_ticker)
+    original_isin = _expected_isin_for_symbol(original)
+    candidate_isin = _fetch_nse_isin(candidate_symbol)
+    if original_isin and candidate_isin and original_isin == candidate_isin:
+        return True, original_isin, candidate_isin
+    return False, original_isin, candidate_isin
+
 
 def _nse_ticker(symbol):
     """
     Convert an NSE symbol to a yfinance ticker string.
     Handles the M&M edge case and other special characters.
     """
-    canonical = CANONICAL_NSE_SYMBOLS.get(symbol, symbol)
+    db_alias = _load_db_alias_map().get(symbol.upper())
+    canonical = db_alias or CANONICAL_NSE_SYMBOLS.get(symbol, symbol)
     return f"{canonical}.NS"
 
 
@@ -689,6 +815,7 @@ def fetch_stock_data(symbol, exchange="NSE"):
     """
     ticker_str = _build_ticker_str(symbol, exchange)
     canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
+    resolved_symbol = symbol
     log.info("Fetching %s (%s, %s) ...", symbol, ticker_str, exchange)
 
     sector_map = _get_sector_map(exchange)
@@ -721,6 +848,21 @@ def fetch_stock_data(symbol, exchange="NSE"):
                         ticker = yf.Ticker(alt)
                         info = ticker.info or {}
                         if info and (info.get("regularMarketPrice") is not None or info.get("currentPrice") is not None):
+                            candidate_symbol = _normalize_symbol_from_ticker(alt)
+                            if symbol in ISIN_VERIFIED_ALTERNATE_REQUIRED and candidate_symbol != symbol:
+                                verified, orig_isin, cand_isin = _is_isin_verified_alias(symbol, alt)
+                                if not verified:
+                                    log.warning(
+                                        "  Rejecting alternate ticker %s for %s due to ISIN mismatch/unknown (orig_isin=%s, cand_isin=%s)",
+                                        alt,
+                                        symbol,
+                                        orig_isin or "null",
+                                        cand_isin or "null",
+                                    )
+                                    info = {}
+                                    continue
+                            if candidate_symbol != symbol and exchange == "NSE":
+                                resolved_symbol = candidate_symbol
                             log.info("  Found data via alternate ticker: %s", alt)
                             found = True
                             break
@@ -750,8 +892,8 @@ def fetch_stock_data(symbol, exchange="NSE"):
         )
 
         # -- Name and Sector --
-        name = info.get("longName") or info.get("shortName") or name_map.get(symbol, symbol)
-        sector = sector_map.get(symbol) or info.get("sector") or "Unknown"
+        name = info.get("longName") or info.get("shortName") or name_map.get(resolved_symbol, resolved_symbol)
+        sector = sector_map.get(resolved_symbol) or info.get("sector") or "Unknown"
 
         # -- Financial statements --
         balance_sheet = ticker.balance_sheet
@@ -882,8 +1024,13 @@ def fetch_stock_data(symbol, exchange="NSE"):
 
         unit_label = "Cr" if exchange == "NSE" else "M"
 
+        isin_value = (
+            (info.get("isin") if isinstance(info, dict) else None)
+            or _fetch_nse_isin(canonical_symbol if exchange == "NSE" else symbol)
+            or _load_db_isin_map().get(symbol.upper())
+        )
         stock_data = {
-            "symbol": symbol,
+            "symbol": resolved_symbol,
             "name": name,
             "sector": sector,
             "exchange": exchange,
@@ -913,11 +1060,13 @@ def fetch_stock_data(symbol, exchange="NSE"):
             "shares_outstanding": float(shares_out) if shares_out else None,
             "price_change_pct": price_chg_pct,
             "is_etf": is_etf,
+            "isin": str(isin_value).strip().upper() if isin_value else None,
         }
 
+        shown_symbol = resolved_symbol if resolved_symbol == symbol else f"{symbol}->{resolved_symbol}"
         log.info(
             "  OK: %s | Price=%.2f | MCap=%.0f %s | Debt=%.0f %s | Rev=%.0f %s",
-            symbol, price, market_cap, unit_label, debt, unit_label, revenue, unit_label,
+            shown_symbol, price, market_cap, unit_label, debt, unit_label, revenue, unit_label,
         )
         return stock_data
 
@@ -1091,6 +1240,38 @@ def _filter_stock_payload_for_model(payload: dict, allowed_columns: set[str]) ->
     return {k: v for k, v in payload.items() if k in allowed_columns}
 
 
+def write_symbol_resolution_issues(failed_symbols: list[str]) -> None:
+    """Persist unresolved symbols from Job A into symbol_resolution_issues."""
+    if not failed_symbols:
+        return
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import SymbolResolutionIssue
+
+        db = SessionLocal()
+        try:
+            for failed in failed_symbols:
+                symbol = str(failed).split(" ", 1)[0].strip().upper()
+                if not symbol:
+                    continue
+                db.add(
+                    SymbolResolutionIssue(
+                        symbol=symbol,
+                        reason="Yahoo fetch failed for NSE symbol; candidate remap unresolved",
+                        severity="warning",
+                        attempted_tickers="",
+                    )
+                )
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:
+        log.warning("Could not persist symbol resolution issues: %s", exc)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1233,6 +1414,8 @@ def main() -> int:
     )
     partial_failure = len(failed) > 0
     if partial_failure:
+        if not args.dry_run:
+            write_symbol_resolution_issues(failed)
         _send_job_a_alert(
             "warning",
             "Job A partial completion (fundamentals fetch incomplete)",

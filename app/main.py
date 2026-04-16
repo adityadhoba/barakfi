@@ -33,6 +33,7 @@ from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all 
     CoverageRequest,
     Feedback,
     BrokerConnection,
+    StockSymbolAlias,
 )
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)
@@ -413,6 +414,50 @@ def _auto_seed_stocks():
         db.close()
 
 
+def _seed_symbol_aliases():
+    """Seed verified NSE symbol aliases used by Job A resolution."""
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        seeds = [
+            {
+                "old_symbol": "MCDOWELL-N",
+                "new_symbol": "UNITDSPR",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
+            {
+                "old_symbol": "CENTURYTEX",
+                "new_symbol": "ABREL",
+                "isin": None,
+                "source": "startup_seed",
+                "status": "active",
+                "evidence_note": "Requires runtime ISIN match before remap acceptance.",
+            },
+        ]
+        for payload in seeds:
+            exists = (
+                db.query(StockSymbolAlias)
+                .filter(
+                    StockSymbolAlias.old_symbol == payload["old_symbol"],
+                    StockSymbolAlias.new_symbol == payload["new_symbol"],
+                )
+                .first()
+            )
+            if exists:
+                continue
+            db.add(StockSymbolAlias(**payload))
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logger.warning("[symbol-alias-seed] Failed to seed symbol aliases: %s", exc)
+    finally:
+        db.close()
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="utf-8")
 
@@ -463,6 +508,7 @@ _drop_news_articles_table_if_exists()
 _migrate_screening_quota_unique_index()
 # 3. Auto-seed stocks if the database is empty
 _auto_seed_stocks()
+_seed_symbol_aliases()
 
 # 4. Seed collections and super investors (single-worker safe)
 log = logging.getLogger("barakfi")

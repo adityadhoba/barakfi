@@ -45,6 +45,7 @@ class StockRead(StockBase):
     )
     exchange_code: str | None = None
     isin: str | None = None
+    screening_blocked_reason: str | None = None
     beta: float | None = None
     dividend_yield: float | None = None
     pe_ratio: float | None = None
@@ -226,6 +227,31 @@ class DataStackStatusResponse(BaseModel):
     fundamentals_freshness: FundamentalsFreshnessSummaryResponse
     ready_for_scaled_screening: bool
     readiness_gaps: list[str]
+
+
+class SymbolResolutionIssueRead(BaseModel):
+    id: int
+    symbol: str
+    candidate_symbol: str | None = None
+    isin: str | None = None
+    candidate_isin: str | None = None
+    reason: str
+    attempted_tickers: str
+    severity: str
+    resolved: bool
+    resolution_note: str
+    detected_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SymbolResolutionHealthResponse(BaseModel):
+    last_run_at: datetime | None = None
+    symbol_isin_conflicts: int = 0
+    isin_multi_symbol_conflicts: int = 0
+    missing_isin_overdue: int = 0
+    auto_disabled_count: int = 0
+    blocked_from_screening_count: int = 0
+    impacted_symbols: list[str] = Field(default_factory=list)
 
 
 class NormalizedInstrumentRead(BaseModel):
