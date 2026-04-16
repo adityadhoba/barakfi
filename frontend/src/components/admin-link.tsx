@@ -28,7 +28,7 @@ export function AdminLink() {
         }
 
         const user = await response.json();
-        setIsAdmin(user.role === "admin");
+        setIsAdmin(["admin", "owner"].includes(user.role ?? ""));
       } catch (error) {
         console.error("Failed to check admin status:", error);
         setIsAdmin(false);

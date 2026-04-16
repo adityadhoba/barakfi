@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 
-from app.models import Stock
+from app.models import Stock, StockSymbolAlias
 
 # Public product APIs only expose Indian listings (safe mode; global rows may still exist in DB).
 INDIAN_EXCHANGES: frozenset[str] = frozenset({"NSE", "BSE"})
@@ -46,5 +46,42 @@ def resolve_stock(
     if row:
         return row
     if require_indian_listing:
+        alias = (
+            db.query(StockSymbolAlias)
+            .filter(
+                StockSymbolAlias.old_symbol == sym,
+                StockSymbolAlias.status == "active",
+            )
+            .first()
+        )
+        if alias and alias.new_symbol:
+            return resolve_stock(
+                db,
+                alias.new_symbol,
+                exchange,
+                is_etf=is_etf,
+                active_only=active_only,
+                require_indian_listing=require_indian_listing,
+            )
         return None
-    return q.order_by(Stock.id.asc()).first()
+    fallback = q.order_by(Stock.id.asc()).first()
+    if fallback:
+        return fallback
+    alias = (
+        db.query(StockSymbolAlias)
+        .filter(
+            StockSymbolAlias.old_symbol == sym,
+            StockSymbolAlias.status == "active",
+        )
+        .first()
+    )
+    if alias and alias.new_symbol:
+        return resolve_stock(
+            db,
+            alias.new_symbol,
+            exchange,
+            is_etf=is_etf,
+            active_only=active_only,
+            require_indian_listing=require_indian_listing,
+        )
+    return None

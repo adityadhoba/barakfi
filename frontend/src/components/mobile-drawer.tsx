@@ -153,8 +153,8 @@ export function MobileDrawer() {
             // Skip auth-required links if not signed in
             if (link.auth && !userId) return null;
 
-            // Skip admin-only links if not admin
-            if (link.adminOnly && (!userRole || userRole !== "admin" || loadingRole)) {
+            // Skip admin-only links if not admin/owner
+            if (link.adminOnly && (!userRole || !["admin", "owner"].includes(userRole) || loadingRole)) {
               return null;
             }
 

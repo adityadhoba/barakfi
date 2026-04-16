@@ -60,17 +60,12 @@ def _is_authenticated(request: Request) -> bool:
 
 
 def _is_admin(request: Request) -> bool:
-    from app.config import ADMIN_EMAILS, ADMIN_AUTH_SUBJECTS, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
+    from app.config import ADMIN_AUTH_SUBJECTS, OWNER_AUTH_SUBJECTS
 
     user_id = request.headers.get("x-clerk-user-id", "")
-    email = request.headers.get("x-actor-email", "").lower()
     if user_id and user_id in OWNER_AUTH_SUBJECTS:
         return True
-    if email and email in OWNER_EMAILS:
-        return True
     if user_id and user_id in ADMIN_AUTH_SUBJECTS:
-        return True
-    if email and email in ADMIN_EMAILS:
         return True
     return False
 

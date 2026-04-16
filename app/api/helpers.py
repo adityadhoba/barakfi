@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
+from app.config import ADMIN_AUTH_SUBJECTS, INTERNAL_SERVICE_TOKEN, OWNER_AUTH_SUBJECTS
 from app.services.auth_service import get_current_auth_claims as verify_clerk_token  # noqa: F401
 from app.models import (
     ComplianceOverride,
@@ -59,7 +59,7 @@ def live_last_prices_for_portfolios(portfolios: list[Portfolio]) -> dict[str, fl
 
 def require_admin(db: Session, claims: dict) -> str:
     """
-    Check if user is admin via: role field, legacy ADMIN_AUTH_SUBJECTS, or legacy ADMIN_EMAILS.
+    Check if user is admin via: role field or controlled auth-subject bootstrap lists.
     Returns the auth_subject if authorized, otherwise raises HTTPException.
     """
     auth_subject = claims.get("sub")
@@ -76,10 +76,6 @@ def require_admin(db: Session, claims: dict) -> str:
 
     if current_user:
         if current_user.role in {"owner", "admin"}:
-            return auth_subject
-        if current_user.email.lower() in OWNER_EMAILS:
-            return auth_subject
-        if current_user.email.lower() in ADMIN_EMAILS:
             return auth_subject
 
     raise HTTPException(status_code=403, detail="Admin access required")

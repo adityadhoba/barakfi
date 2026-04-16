@@ -7,7 +7,7 @@ from typing import Callable, Tuple
 from fastapi import Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
+from app.config import ADMIN_AUTH_SUBJECTS, OWNER_AUTH_SUBJECTS
 from app.database import get_db
 from app.models import User
 from app.services.auth_service import get_current_auth_claims
@@ -57,22 +57,14 @@ def is_admin(db: Session, claims: dict) -> bool:
     Returns True if:
     - User has role="admin" in database, OR
     - User's auth_subject is in ADMIN_AUTH_SUBJECTS, OR
-    - User's email is in ADMIN_EMAILS
+    - User role in database is admin/owner
     """
     auth_subject = claims.get("sub")
-    email = claims.get("email", "").lower()
-
     # Check legacy auth subject and email lists
     if auth_subject in OWNER_AUTH_SUBJECTS:
         return True
 
-    if email in OWNER_EMAILS:
-        return True
-
     if auth_subject in ADMIN_AUTH_SUBJECTS:
-        return True
-
-    if email in ADMIN_EMAILS:
         return True
 
     # Check database role
@@ -85,11 +77,8 @@ def is_admin(db: Session, claims: dict) -> bool:
 
 def is_owner(db: Session, claims: dict) -> bool:
     auth_subject = claims.get("sub")
-    email = claims.get("email", "").lower()
 
     if auth_subject in OWNER_AUTH_SUBJECTS:
-        return True
-    if email in OWNER_EMAILS:
         return True
 
     try:

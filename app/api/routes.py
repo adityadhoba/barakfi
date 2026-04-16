@@ -13,7 +13,6 @@ from starlette.requests import Request
 from app.config import (
     FRONTEND_APP_URL,
     ADMIN_AUTH_SUBJECTS,
-    ADMIN_EMAILS,
     AUTH_GOOGLE_ENABLED,
     AUTH_PROVIDER,
     CLERK_JS_URL,
@@ -24,7 +23,6 @@ from app.config import (
     INTERNAL_SERVICE_TOKEN,
     MARKET_DATA_PROVIDER,
     OWNER_AUTH_SUBJECTS,
-    OWNER_EMAILS,
 )
 from app.services.rbac import (
     is_admin,
@@ -84,6 +82,7 @@ from app.schemas import (
     FundamentalsStatusResponse,
     SymbolResolutionHealthResponse,
     SymbolResolutionIssueRead,
+    SymbolCorporateActionRead,
     UniversePreviewResponse,
     SupportNoteCreateRequest,
     SupportNoteRead,
@@ -131,6 +130,7 @@ from app.services.screening_presenter import (
 from app.services.indian_market_client import fetch_quote_by_provider, quote_to_dict, fetch_nse_indices
 from app.services.index_sync_service import get_cached_market_indices, sync_market_indices
 from app.services.symbol_integrity_service import run_nse_symbol_integrity_checks, symbol_health_summary
+from app.services.symbol_master_service import sync_nse_symbol_master
 from app.services.market_data_service import get_market_data_status
 from app.services.market_data_service import get_data_stack_status, get_fundamentals_status
 from app.services.ops_notification_service import send_ops_alert
@@ -145,8 +145,7 @@ logger = logging.getLogger("barakfi")
 
 
 def _is_owner_user(user: User) -> bool:
-    email = (user.email or "").strip().lower()
-    return user.role == "owner" or email in OWNER_EMAILS or user.auth_subject in OWNER_AUTH_SUBJECTS
+    return user.role == "owner" or user.auth_subject in OWNER_AUTH_SUBJECTS
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -597,6 +596,8 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
             Stock.is_active.is_(True),
             Stock.screening_blocked_reason.is_(None),
         )
+        .filter((Stock.symbol_status.is_(None)) | (Stock.symbol_status == "active"))
+        .filter((Stock.canonical_symbol.is_(None)) | (Stock.canonical_symbol == Stock.symbol))
         .all()
     )
     by_sym: defaultdict[str, list[Stock]] = defaultdict(list)
@@ -637,8 +638,12 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
 def _active_screenable_symbols(db: Session) -> list[str]:
     rows = (
         db.query(Stock.symbol, Stock.exchange)
-        .filter(Stock.is_active.is_(True))
-        .filter(Stock.screening_blocked_reason.is_(None))
+        .filter(
+            Stock.is_active.is_(True),
+            Stock.screening_blocked_reason.is_(None),
+        )
+        .filter((Stock.symbol_status.is_(None)) | (Stock.symbol_status == "active"))
+        .filter((Stock.canonical_symbol.is_(None)) | (Stock.canonical_symbol == Stock.symbol))
         .order_by(Stock.symbol.asc(), Stock.exchange.asc())
         .all()
     )
@@ -1573,16 +1578,11 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
 
     # Auto-promote to owner/admin based on configured identities.
     effective_role = getattr(user, "role", "user") or "user"
-    db_email = (user.email or "").strip().lower()
     owner_match = (
-        (db_email and db_email in OWNER_EMAILS)
-        or (claim_email and claim_email in OWNER_EMAILS)
-        or (auth_subject in OWNER_AUTH_SUBJECTS)
+        auth_subject in OWNER_AUTH_SUBJECTS
     )
     admin_match = (
-        (db_email and db_email in ADMIN_EMAILS)
-        or (claim_email and claim_email in ADMIN_EMAILS)
-        or (auth_subject in ADMIN_AUTH_SUBJECTS)
+        auth_subject in ADMIN_AUTH_SUBJECTS
     )
     if owner_match and effective_role != "owner":
         effective_role = "owner"
@@ -2831,6 +2831,36 @@ def daily_refresh(
     db.commit()
     db.refresh(run)
 
+    symbol_master = {
+        "active_count": 0,
+        "deprecated_count": 0,
+        "remapped_today": 0,
+        "blocked_active": 0,
+        "unresolved_actions": 0,
+        "source_ok": False,
+        "source_detail": "",
+    }
+    try:
+        master_summary = sync_nse_symbol_master(db)
+        db.commit()
+        symbol_master = master_summary.to_dict()
+        if symbol_master.get("unresolved_actions", 0) > 0:
+            send_ops_alert(
+                level="warning",
+                title="Daily refresh symbol-master unresolved actions",
+                alert_key=f"daily-refresh:symbol-master:{run_id}",
+                details={
+                    "run_id": run_id,
+                    "unresolved_actions": symbol_master.get("unresolved_actions", 0),
+                    "blocked_active": symbol_master.get("blocked_active", 0),
+                    "source_ok": symbol_master.get("source_ok", False),
+                    "source_detail": symbol_master.get("source_detail", ""),
+                },
+            )
+    except Exception as exc:
+        db.rollback()
+        logger.exception("[daily-refresh] symbol master sync failed: %s", exc)
+
     price_result = sync_all_stock_prices(db, provider=eff, max_stocks=None)
     if not price_result["ok"]:
         run.status = "failed"
@@ -3042,6 +3072,8 @@ def daily_refresh(
         | {
             "job_a_rows_with_timestamp": fundamentals.get("rows_with_timestamp"),
             "job_a_rows_missing_timestamp": fundamentals.get("rows_missing_timestamp"),
+            "symbol_master_unresolved_actions": symbol_master.get("unresolved_actions", 0),
+            "symbol_master_blocked_active": symbol_master.get("blocked_active", 0),
         },
     )
 
@@ -3065,6 +3097,15 @@ def daily_refresh(
         },
         "indices": {
             "updated": index_sync_result.get("updated", 0),
+        },
+        "symbol_master": {
+            "active_count": symbol_master.get("active_count", 0),
+            "deprecated_count": symbol_master.get("deprecated_count", 0),
+            "remapped_today": symbol_master.get("remapped_today", 0),
+            "blocked_active": symbol_master.get("blocked_active", 0),
+            "unresolved_actions": symbol_master.get("unresolved_actions", 0),
+            "source_ok": symbol_master.get("source_ok", False),
+            "source_detail": symbol_master.get("source_detail", ""),
         },
         "symbol_integrity": {
             "symbol_isin_conflicts": symbol_integrity.get("symbol_isin_conflicts", 0),
@@ -3107,6 +3148,37 @@ def admin_symbol_resolution_issues(
     if unresolved_only:
         q = q.filter(SymbolResolutionIssue.resolved.is_(False))
     return q.limit(limit).all()
+
+
+@router.get("/admin/symbol-resolution/corporate-actions", response_model=list[SymbolCorporateActionRead])
+def admin_symbol_resolution_corporate_actions(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+    limit: int = Query(default=200, ge=1, le=1000),
+):
+    helpers.require_admin(db, claims)
+    rows = (
+        db.query(Stock)
+        .filter(
+            Stock.exchange == "NSE",
+            Stock.symbol_status.in_(["deprecated", "suspended"]),
+        )
+        .order_by(Stock.symbol.asc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        SymbolCorporateActionRead(
+            symbol=r.symbol,
+            symbol_status=r.symbol_status or "active",
+            canonical_symbol=r.canonical_symbol,
+            successor_symbol=r.successor_symbol,
+            symbol_effective_date=r.symbol_effective_date,
+            screening_blocked_reason=r.screening_blocked_reason,
+            is_active=bool(r.is_active),
+        )
+        for r in rows
+    ]
 
 # ═══════════════════════════════════════════════════════════════
 # BROKER: Upstox OAuth

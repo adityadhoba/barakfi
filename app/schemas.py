@@ -45,6 +45,10 @@ class StockRead(StockBase):
     )
     exchange_code: str | None = None
     isin: str | None = None
+    symbol_status: str | None = None
+    canonical_symbol: str | None = None
+    successor_symbol: str | None = None
+    symbol_effective_date: datetime | None = None
     screening_blocked_reason: str | None = None
     beta: float | None = None
     dividend_yield: float | None = None
@@ -252,6 +256,16 @@ class SymbolResolutionHealthResponse(BaseModel):
     auto_disabled_count: int = 0
     blocked_from_screening_count: int = 0
     impacted_symbols: list[str] = Field(default_factory=list)
+
+
+class SymbolCorporateActionRead(BaseModel):
+    symbol: str
+    symbol_status: str
+    canonical_symbol: str | None = None
+    successor_symbol: str | None = None
+    symbol_effective_date: datetime | None = None
+    screening_blocked_reason: str | None = None
+    is_active: bool
 
 
 class NormalizedInstrumentRead(BaseModel):

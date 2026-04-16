@@ -1272,6 +1272,70 @@ def write_symbol_resolution_issues(failed_symbols: list[str]) -> None:
         log.warning("Could not persist symbol resolution issues: %s", exc)
 
 
+def _run_symbol_master_sync() -> dict[str, int | bool | str]:
+    """Run corporate-action-aware symbol master sync (best effort)."""
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.services.symbol_master_service import sync_nse_symbol_master
+
+        db = SessionLocal()
+        try:
+            summary = sync_nse_symbol_master(db).to_dict()
+            db.commit()
+            return summary
+        finally:
+            db.close()
+    except Exception as exc:
+        log.warning("Symbol master sync skipped: %s", exc)
+        return {
+            "active_count": 0,
+            "deprecated_count": 0,
+            "remapped_today": 0,
+            "blocked_active": 0,
+            "unresolved_actions": 0,
+            "source_ok": False,
+            "source_detail": "sync_skipped",
+        }
+
+
+def _load_active_nse_fetch_symbols_from_db() -> list[str]:
+    """
+    Job A fetch universe: canonical active NSE symbols only.
+    Deprecated/blocked symbols remain in DB for audit but are excluded from fetch.
+    """
+    try:
+        project_root = str(Path(__file__).parent)
+        if project_root not in sys.path:
+            sys.path.insert(0, project_root)
+        from app.database import SessionLocal
+        from app.models import Stock
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(Stock.symbol)
+                .filter(
+                    Stock.exchange == "NSE",
+                    Stock.is_active.is_(True),
+                    Stock.screening_blocked_reason.is_(None),
+                )
+                .filter((Stock.symbol_status.is_(None)) | (Stock.symbol_status == "active"))
+                .filter((Stock.canonical_symbol.is_(None)) | (Stock.canonical_symbol == Stock.symbol))
+                .order_by(Stock.symbol.asc())
+                .all()
+            )
+            symbols = sorted({str(row[0]).upper() for row in rows if row and row[0]})
+            return symbols
+        finally:
+            db.close()
+    except Exception as exc:
+        log.warning("Could not load canonical NSE fetch universe from DB: %s", exc)
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1288,17 +1352,39 @@ def main() -> int:
     )
     args = parser.parse_args()
     run_started_at = datetime.now(timezone.utc)
+    symbol_master_summary = {
+        "active_count": 0,
+        "deprecated_count": 0,
+        "remapped_today": 0,
+        "blocked_active": 0,
+        "unresolved_actions": 0,
+        "source_ok": False,
+        "source_detail": "not_run",
+    }
 
     if not args.dry_run:
         _assert_production_database_url()
 
-    exchanges = [("NSE", STOCK_SYMBOLS)]
+    symbol_master_summary = _run_symbol_master_sync()
+    nse_symbols = STOCK_SYMBOLS if args.dry_run else _load_active_nse_fetch_symbols_from_db()
+    if not nse_symbols:
+        nse_symbols = STOCK_SYMBOLS
+    exchanges = [("NSE", nse_symbols)]
 
     total_symbols = sum(len(syms) for _, syms in exchanges)
 
     log.info("=" * 70)
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
-    log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
+    log.info("  NSE: %d stocks", len(nse_symbols))
+    log.info(
+        "Symbol master sync: source_ok=%s active=%s deprecated=%s remapped_today=%s blocked_active=%s unresolved_actions=%s",
+        symbol_master_summary.get("source_ok", False),
+        symbol_master_summary.get("active_count", 0),
+        symbol_master_summary.get("deprecated_count", 0),
+        symbol_master_summary.get("remapped_today", 0),
+        symbol_master_summary.get("blocked_active", 0),
+        symbol_master_summary.get("unresolved_actions", 0),
+    )
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -1430,6 +1516,8 @@ def main() -> int:
                 "rows_updated": rows_updated,
                 "rows_with_timestamp": rows_with_timestamp,
                 "rows_missing_timestamp": rows_missing_timestamp,
+                "symbol_master_unresolved_actions": symbol_master_summary.get("unresolved_actions", 0),
+                "symbol_master_blocked_active": symbol_master_summary.get("blocked_active", 0),
             },
         )
         return 1
@@ -1449,6 +1537,8 @@ def main() -> int:
                 "rows_failed": len(failed),
                 "rows_with_timestamp": rows_with_timestamp,
                 "rows_missing_timestamp": rows_missing_timestamp,
+                "symbol_master_unresolved_actions": symbol_master_summary.get("unresolved_actions", 0),
+                "symbol_master_blocked_active": symbol_master_summary.get("blocked_active", 0),
                 "next_step": "Job B: scripts/run_daily_refresh.py",
             },
         )
