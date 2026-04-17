@@ -17,8 +17,7 @@ def record_compliance_change_if_needed(
 ) -> bool:
     """
     Insert ComplianceHistory when status changed vs latest entry for this stock.
-    `_new_rating` is accepted for call-site compatibility; the history row schema
-    stores status only (see `ComplianceHistory`). Returns True if a new row was added.
+    Returns True if a new row was added.
     """
     latest = (
         db.query(ComplianceHistory)
@@ -29,8 +28,16 @@ def record_compliance_change_if_needed(
     if latest and latest.status == new_status:
         return False
 
+    old_status = latest.status if latest else new_status
+    old_rating = getattr(latest, "new_compliance_rating", None) if latest else None
+
     row = ComplianceHistory(
         stock_id=stock.id,
+        old_status=old_status,
+        new_status=new_status,
+        old_compliance_rating=old_rating,
+        new_compliance_rating=_new_rating,
+        change_reason="status_changed" if latest else "initial_record",
         status=new_status,
         profile_code=profile_code,
         recorded_at=datetime.now(timezone.utc),

@@ -484,6 +484,12 @@ class ComplianceHistory(Base):
 
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    # Newer production schemas persist before/after status and rating deltas.
+    old_status = Column(String, nullable=True)
+    new_status = Column(String, nullable=True)
+    old_compliance_rating = Column(Float, nullable=True)
+    new_compliance_rating = Column(Float, nullable=True)
+    change_reason = Column(Text, nullable=True)
     status = Column(String, nullable=False)
     profile_code = Column(String, nullable=False, default="sp_shariah")
     recorded_at = Column(DateTime, nullable=False, default=utc_now)
