@@ -91,6 +91,7 @@ YF_RETRY_BASE_SECONDS = max(1.0, _env_float("YF_RETRY_BASE_SECONDS", 12.0))
 YF_RETRY_MAX_SECONDS = max(YF_RETRY_BASE_SECONDS, _env_float("YF_RETRY_MAX_SECONDS", 120.0))
 YF_COOLDOWN_TRIGGER_CONSECUTIVE = max(1, _env_int("YF_COOLDOWN_TRIGGER_CONSECUTIVE", 5))
 YF_COOLDOWN_SECONDS = max(5.0, _env_float("YF_COOLDOWN_SECONDS", 180.0))
+JOB_A_MAX_FAILED_SYMBOLS = max(0, _env_int("JOB_A_MAX_FAILED_SYMBOLS", 3))
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
 PRODUCTION_ENV_VALUES = {"production", "prod"}
@@ -1395,13 +1396,14 @@ def main() -> int:
     log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
     log.info(
-        "yfinance throttling: base_delay=%ss max_retries=%d retry_base=%ss retry_max=%ss cooldown_trigger=%d cooldown=%ss",
+        "yfinance throttling: base_delay=%ss max_retries=%d retry_base=%ss retry_max=%ss cooldown_trigger=%d cooldown=%ss max_failed_symbols=%d",
         RATE_LIMIT_SECONDS,
         YF_MAX_RETRIES,
         YF_RETRY_BASE_SECONDS,
         YF_RETRY_MAX_SECONDS,
         YF_COOLDOWN_TRIGGER_CONSECUTIVE,
         YF_COOLDOWN_SECONDS,
+        JOB_A_MAX_FAILED_SYMBOLS,
     )
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
@@ -1531,6 +1533,7 @@ def main() -> int:
         rows_missing_timestamp,
     )
     partial_failure = len(failed) > 0
+    tolerated_partial_failure = partial_failure and len(failed) <= JOB_A_MAX_FAILED_SYMBOLS
     if partial_failure:
         if not args.dry_run:
             write_symbol_resolution_issues(failed)
@@ -1548,8 +1551,16 @@ def main() -> int:
                 "rows_updated": rows_updated,
                 "rows_with_timestamp": rows_with_timestamp,
                 "rows_missing_timestamp": rows_missing_timestamp,
+                "max_failed_symbols_tolerance": JOB_A_MAX_FAILED_SYMBOLS,
             },
         )
+        if tolerated_partial_failure:
+            log.warning(
+                "Proceeding despite partial failure: failed=%d <= tolerance=%d",
+                len(failed),
+                JOB_A_MAX_FAILED_SYMBOLS,
+            )
+            return 0
         return 1
 
     if not args.dry_run:
