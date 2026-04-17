@@ -44,6 +44,7 @@ No cron jobs needed. This is a manual weekly process.
 import argparse
 import logging
 import os
+import random
 import sys
 import time
 from collections import defaultdict
@@ -63,7 +64,33 @@ except ImportError:
 
 CRORE = 1e7  # 1 Crore = 10,000,000
 
-RATE_LIMIT_SECONDS = 0.5
+
+def _env_float(name: str, default: float) -> float:
+    raw = (os.getenv(name) or "").strip()
+    if raw == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = (os.getenv(name) or "").strip()
+    if raw == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+RATE_LIMIT_SECONDS = max(0.1, _env_float("YF_RATE_LIMIT_SECONDS", 1.2))
+YF_MAX_RETRIES = max(0, _env_int("YF_MAX_RETRIES", 4))
+YF_RETRY_BASE_SECONDS = max(1.0, _env_float("YF_RETRY_BASE_SECONDS", 12.0))
+YF_RETRY_MAX_SECONDS = max(YF_RETRY_BASE_SECONDS, _env_float("YF_RETRY_MAX_SECONDS", 120.0))
+YF_COOLDOWN_TRIGGER_CONSECUTIVE = max(1, _env_int("YF_COOLDOWN_TRIGGER_CONSECUTIVE", 5))
+YF_COOLDOWN_SECONDS = max(5.0, _env_float("YF_COOLDOWN_SECONDS", 180.0))
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
 PRODUCTION_ENV_VALUES = {"production", "prod"}
@@ -79,6 +106,9 @@ NSE_HEADERS = {
     "Accept": "application/json",
     "Accept-Language": "en-US,en;q=0.9",
 }
+
+# Set by fetch_stock_data so the main loop can react to bursts of Yahoo throttling.
+_LAST_FETCH_RATE_LIMITED = False
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -804,7 +834,18 @@ def _get_currency(exchange):
     return "INR"
 
 
-def fetch_stock_data(symbol, exchange="NSE"):
+def _is_yf_rate_limited_error(exc: Exception) -> bool:
+    name = exc.__class__.__name__.lower()
+    msg = str(exc).lower()
+    return (
+        "ratelimit" in name
+        or "too many requests" in msg
+        or "rate limited" in msg
+        or "429" in msg
+    )
+
+
+def fetch_stock_data(symbol, exchange="NSE", _retry=0):
     """
     Fetch financial data for a single stock via yfinance.
 
@@ -815,6 +856,9 @@ def fetch_stock_data(symbol, exchange="NSE"):
 
     Returns a dict matching the Stock model fields, or None on failure.
     """
+    global _LAST_FETCH_RATE_LIMITED
+    _LAST_FETCH_RATE_LIMITED = False
+
     ticker_str = _build_ticker_str(symbol, exchange)
     canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
     resolved_symbol = symbol
@@ -1073,6 +1117,22 @@ def fetch_stock_data(symbol, exchange="NSE"):
         return stock_data
 
     except Exception as exc:
+        if _is_yf_rate_limited_error(exc) and _retry < YF_MAX_RETRIES:
+            sleep_for = min(YF_RETRY_BASE_SECONDS * (2 ** _retry), YF_RETRY_MAX_SECONDS)
+            jitter = random.uniform(0, max(0.1, sleep_for * 0.2))
+            total_sleep = sleep_for + jitter
+            log.warning(
+                "Rate limited for %s (%s). Retry %d/%d in %.1fs",
+                symbol,
+                ticker_str,
+                _retry + 1,
+                YF_MAX_RETRIES,
+                total_sleep,
+            )
+            time.sleep(total_sleep)
+            return fetch_stock_data(symbol, exchange, _retry=_retry + 1)
+        if _is_yf_rate_limited_error(exc):
+            _LAST_FETCH_RATE_LIMITED = True
         log.error("FAILED: %s - %s: %s", symbol, type(exc).__name__, exc)
         return None
 
@@ -1319,6 +1379,15 @@ def main() -> int:
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
     log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
+    log.info(
+        "yfinance throttling: base_delay=%ss max_retries=%d retry_base=%ss retry_max=%ss cooldown_trigger=%d cooldown=%ss",
+        RATE_LIMIT_SECONDS,
+        YF_MAX_RETRIES,
+        YF_RETRY_BASE_SECONDS,
+        YF_RETRY_MAX_SECONDS,
+        YF_COOLDOWN_TRIGGER_CONSECUTIVE,
+        YF_COOLDOWN_SECONDS,
+    )
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
 
@@ -1331,6 +1400,7 @@ def main() -> int:
         log.info("Fetching %s stocks (%d symbols) ...", exchange, len(symbols))
         log.info("─" * 50)
 
+        consecutive_rate_limits = 0
         for i, symbol in enumerate(symbols):
             stock_data = fetch_stock_data(symbol, exchange)
 
@@ -1338,6 +1408,20 @@ def main() -> int:
                 successful.append(stock_data)
             else:
                 failed.append(f"{symbol} ({exchange})")
+
+            global _LAST_FETCH_RATE_LIMITED
+            if _LAST_FETCH_RATE_LIMITED:
+                consecutive_rate_limits += 1
+                if consecutive_rate_limits >= YF_COOLDOWN_TRIGGER_CONSECUTIVE:
+                    log.warning(
+                        "Detected %d consecutive Yahoo rate-limit failures. Cooling down for %.1fs before continuing...",
+                        consecutive_rate_limits,
+                        YF_COOLDOWN_SECONDS,
+                    )
+                    time.sleep(YF_COOLDOWN_SECONDS)
+                    consecutive_rate_limits = 0
+            else:
+                consecutive_rate_limits = 0
 
             # Rate limiting between API calls
             if i < len(symbols) - 1:
