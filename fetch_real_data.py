@@ -24,13 +24,14 @@ Every week, add ~10 new pre-screened stocks with the following steps:
 
 2. ADD LOGO MAPPINGS: For each new symbol, add a domain mapping to
    frontend/src/components/stock-logo.tsx in the SYMBOL_TO_DOMAIN dict.
-   Find the company's website domain (e.g., SUZLON -> "suzlon.com").
+   If the Yahoo ticker differs from the BarakFi symbol, also add alternates in
+   app/services/vendor_symbol_aliases.py (mirrored in frontend/src/lib/yahoo-symbol-aliases.ts).
 
 3. FETCH DATA: Run this script to pull financial data:
    python fetch_real_data.py
 
 4. VERIFY: Check the output for any FAILED symbols.
-   Fix alternate tickers in TICKER_ALTERNATES if needed.
+   Fix alternate tickers in app/services/vendor_symbol_aliases.py if needed.
 
 5. DEPLOY: Push changes and redeploy backend (Render auto-deploys from main).
    Frontend will pick up new stocks automatically via API.
@@ -57,6 +58,8 @@ try:
 except ImportError:
     print("ERROR: yfinance is required. Install it with: pip install yfinance")
     sys.exit(1)
+
+from app.services.vendor_symbol_aliases import CANONICAL_NSE_SYMBOLS, TICKER_ALTERNATES
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -576,33 +579,6 @@ def _to_crores(value):
         return 0.0
     return round(value / CRORE, 2)
 
-
-# Some NSE symbols need alternate Yahoo Finance tickers.
-# Primary is tried first; if it fails, alternates are attempted.
-TICKER_ALTERNATES = {
-    "TATAMOTORS": ["TATAMOTORS.NS"],
-    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],
-    "PEL": ["PEL.NS"],
-    "ZOMATO": ["ETERNAL.NS", "ZOMATO.NS", "ZOMATO.BO"],
-    "ADANITRANS": ["ADANIENSOL.NS", "ADANITRANS.NS"],
-    "INDIANHOTELS": ["INDHOTEL.NS", "INDIANHOTELS.NS"],
-    "MAZAGON": ["MAZDOCK.NS", "MAZAGON.NS"],
-    "GARDENREACH": ["GRSE.NS", "GARDENREACH.NS"],
-    "ZENSAR": ["ZENSARTECH.NS", "ZENSAR.NS"],
-    "TV18BRDCST": ["TV18BRDCST.NS"],
-    "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
-}
-
-# Canonical symbol mapping for renamed or legacy NSE symbols.
-CANONICAL_NSE_SYMBOLS = {
-    "ZOMATO": "ETERNAL",
-    "ADANITRANS": "ADANIENSOL",
-    "INDIANHOTELS": "INDHOTEL",
-    "MAZAGON": "MAZDOCK",
-    "GARDENREACH": "GRSE",
-    "ZENSAR": "ZENSARTECH",
-    "TV18BRDCST": "NETWORK18",
-}
 
 # Alternates that require strict ISIN match proof before accepting.
 ISIN_VERIFIED_ALTERNATE_REQUIRED = {

@@ -93,7 +93,11 @@ export function PriceChart({
       const res = await fetch(`/api/chart/${encodeURIComponent(symbol)}?${qs.toString()}`);
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
-      return (data.candles || []) as Candle[];
+      const candles = (data.candles || []) as Candle[];
+      if (candles.length === 0) {
+        setError(true);
+      }
+      return candles;
     } catch {
       setError(true);
       return [];

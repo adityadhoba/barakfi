@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { yahooFinanceBaseCandidates } from "@/lib/yahoo-symbol-aliases";
 
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
@@ -133,6 +134,9 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   IOC: "iocl.com",
   BPCL: "bharatpetroleum.in",
   GAIL: "gailonline.com",
+  GARDENREACH: "grse.in",
+  MAZAGON: "mazdock.in",
+  ZENSAR: "zensar.com",
 };
 
 function normalizeSymbol(symbol: string): string {
@@ -145,8 +149,10 @@ function normalizeSymbol(symbol: string): string {
 function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
   if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
+  const rawForYahoo = symbol.replace(/\.(NS|BO|L|IN)$/i, "").trim().toUpperCase();
+  const yahooBase = yahooFinanceBaseCandidates(rawForYahoo)[0] ?? clean;
   const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
-  const ticker = `${clean}${suffix}`;
+  const ticker = `${yahooBase}${suffix}`;
   return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 

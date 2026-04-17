@@ -15,6 +15,8 @@ from typing import Any
 
 import httpx
 
+from app.services.vendor_symbol_aliases import nse_equity_symbol_candidates, yahoo_base_symbol_candidates
+
 NSE_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -72,107 +74,113 @@ def _to_int(v: Any) -> int | None:
 
 def fetch_nse_equity_quote(symbol: str) -> EquityQuote | None:
     """NSE India `quote-equity` (session cookie required)."""
-    sym = symbol.upper().strip()
+    requested = symbol.upper().strip()
+    candidates = nse_equity_symbol_candidates(requested)
     try:
         with httpx.Client(timeout=25.0, follow_redirects=True) as client:
             client.get("https://www.nseindia.com/", headers=NSE_HEADERS)
-            r = client.get(
-                f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
-                headers=NSE_HEADERS,
-            )
+            for sym in candidates:
+                r = client.get(
+                    f"https://www.nseindia.com/api/quote-equity?symbol={sym}",
+                    headers=NSE_HEADERS,
+                )
+                if r.status_code != 200:
+                    continue
+                try:
+                    data = r.json()
+                except Exception:
+                    continue
+                pi = data.get("priceInfo") or {}
+                last = _to_float(pi.get("lastPrice"))
+                if last is None:
+                    continue
+                prev = _to_float(pi.get("previousClose"))
+                change = _to_float(pi.get("change"))
+                pchg = _to_float(pi.get("pChange"))
+                idhl = pi.get("intraDayHighLow") or {}
+                day_hi = _to_float(idhl.get("max"))
+                day_lo = _to_float(idhl.get("min"))
+                whl = pi.get("weekHighLow") or {}
+                w52h = _to_float(whl.get("max"))
+                w52l = _to_float(whl.get("min"))
+                return EquityQuote(
+                    symbol=requested,
+                    exchange="NSE",
+                    last_price=last,
+                    previous_close=prev,
+                    change=change,
+                    change_percent=pchg,
+                    day_high=day_hi,
+                    day_low=day_lo,
+                    volume=None,
+                    week_52_high=w52h,
+                    week_52_low=w52l,
+                    source="nse_india_public",
+                    as_of=_iso_now(),
+                    currency="INR",
+                )
     except httpx.HTTPError:
         return None
-    if r.status_code != 200:
-        return None
-    try:
-        data = r.json()
-    except Exception:
-        return None
-    pi = data.get("priceInfo") or {}
-    last = _to_float(pi.get("lastPrice"))
-    if last is None:
-        return None
-    prev = _to_float(pi.get("previousClose"))
-    change = _to_float(pi.get("change"))
-    pchg = _to_float(pi.get("pChange"))
-    idhl = pi.get("intraDayHighLow") or {}
-    day_hi = _to_float(idhl.get("max"))
-    day_lo = _to_float(idhl.get("min"))
-    whl = pi.get("weekHighLow") or {}
-    w52h = _to_float(whl.get("max"))
-    w52l = _to_float(whl.get("min"))
-    return EquityQuote(
-        symbol=sym,
-        exchange="NSE",
-        last_price=last,
-        previous_close=prev,
-        change=change,
-        change_percent=pchg,
-        day_high=day_hi,
-        day_low=day_lo,
-        volume=None,
-        week_52_high=w52h,
-        week_52_low=w52l,
-        source="nse_india_public",
-        as_of=_iso_now(),
-        currency="INR",
-    )
+    return None
 
 
 def fetch_yahoo_india_quote(symbol: str, exchange: str = "NSE") -> EquityQuote | None:
     """Yahoo Finance chart API: `.NS` for NSE, `.BO` for common BSE tickers."""
-    sym = symbol.upper().strip()
+    requested = symbol.upper().strip()
     ex = (exchange or "NSE").upper()
     suffix = ".BO" if ex == "BSE" else ".NS"
-    ysym = f"{sym}{suffix}"
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ysym}?interval=1d&range=5d"
-    try:
-        r = httpx.get(url, headers=YAHOO_HEADERS, timeout=20.0)
-    except httpx.HTTPError:
-        return None
-    if r.status_code != 200:
-        return None
-    try:
-        chart = r.json()["chart"]["result"][0]
-    except (KeyError, IndexError, TypeError):
-        return None
-    meta = chart.get("meta") or {}
-    last = _to_float(meta.get("regularMarketPrice"))
-    if last is None:
-        return None
-    prev = _to_float(meta.get("chartPreviousClose"))
-    day_hi = _to_float(meta.get("regularMarketDayHigh"))
-    day_lo = _to_float(meta.get("regularMarketDayLow"))
-    vol = _to_int(meta.get("regularMarketVolume"))
-    w52h = _to_float(meta.get("fiftyTwoWeekHigh"))
-    w52l = _to_float(meta.get("fiftyTwoWeekLow"))
-    chg = (last - prev) if prev is not None else None
-    pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
-    ycur = (meta.get("currency") or "").strip().upper()
-    if isinstance(ycur, str) and len(ycur) == 3:
-        currency = ycur
-    elif ex in ("LSE", "LON"):
-        currency = "GBP"
-    elif ex in ("US", "NYSE", "NASDAQ"):
-        currency = "USD"
-    else:
-        currency = "INR"
-    return EquityQuote(
-        symbol=sym,
-        exchange="BSE" if suffix == ".BO" else "NSE",
-        last_price=last,
-        previous_close=prev,
-        change=chg,
-        change_percent=pchg,
-        day_high=day_hi,
-        day_low=day_lo,
-        volume=vol,
-        week_52_high=w52h,
-        week_52_low=w52l,
-        source="yahoo_finance_chart",
-        as_of=_iso_now(),
-        currency=currency,
-    )
+    bases = yahoo_base_symbol_candidates(requested) if ex in ("NSE", "BSE") else [requested]
+    for base in bases:
+        ysym = f"{base}{suffix}"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ysym}?interval=1d&range=5d"
+        try:
+            r = httpx.get(url, headers=YAHOO_HEADERS, timeout=20.0)
+        except httpx.HTTPError:
+            continue
+        if r.status_code != 200:
+            continue
+        try:
+            chart = r.json()["chart"]["result"][0]
+        except (KeyError, IndexError, TypeError):
+            continue
+        meta = chart.get("meta") or {}
+        last = _to_float(meta.get("regularMarketPrice"))
+        if last is None:
+            continue
+        prev = _to_float(meta.get("chartPreviousClose"))
+        day_hi = _to_float(meta.get("regularMarketDayHigh"))
+        day_lo = _to_float(meta.get("regularMarketDayLow"))
+        vol = _to_int(meta.get("regularMarketVolume"))
+        w52h = _to_float(meta.get("fiftyTwoWeekHigh"))
+        w52l = _to_float(meta.get("fiftyTwoWeekLow"))
+        chg = (last - prev) if prev is not None else None
+        pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
+        ycur = (meta.get("currency") or "").strip().upper()
+        if isinstance(ycur, str) and len(ycur) == 3:
+            currency = ycur
+        elif ex in ("LSE", "LON"):
+            currency = "GBP"
+        elif ex in ("US", "NYSE", "NASDAQ"):
+            currency = "USD"
+        else:
+            currency = "INR"
+        return EquityQuote(
+            symbol=requested,
+            exchange="BSE" if suffix == ".BO" else "NSE",
+            last_price=last,
+            previous_close=prev,
+            change=chg,
+            change_percent=pchg,
+            day_high=day_hi,
+            day_low=day_lo,
+            volume=vol,
+            week_52_high=w52h,
+            week_52_low=w52l,
+            source="yahoo_finance_chart",
+            as_of=_iso_now(),
+            currency=currency,
+        )
+    return None
 
 
 _EXCHANGE_SUFFIX: dict[str, str] = {
@@ -198,58 +206,61 @@ _EXCHANGE_CANONICAL: dict[str, str] = {
 
 def fetch_yahoo_global_quote(symbol: str, exchange: str = "NSE") -> EquityQuote | None:
     """Yahoo Finance chart API for any supported exchange."""
-    sym = symbol.upper().strip()
+    requested = symbol.upper().strip()
     ex = (exchange or "NSE").upper()
     suffix = _EXCHANGE_SUFFIX.get(ex, ".NS")
-    ysym = f"{sym}{suffix}"
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ysym}?interval=1d&range=5d"
-    try:
-        r = httpx.get(url, headers=YAHOO_HEADERS, timeout=20.0)
-    except httpx.HTTPError:
-        return None
-    if r.status_code != 200:
-        return None
-    try:
-        chart = r.json()["chart"]["result"][0]
-    except (KeyError, IndexError, TypeError):
-        return None
-    meta = chart.get("meta") or {}
-    last = _to_float(meta.get("regularMarketPrice"))
-    if last is None:
-        return None
-    prev = _to_float(meta.get("chartPreviousClose"))
-    day_hi = _to_float(meta.get("regularMarketDayHigh"))
-    day_lo = _to_float(meta.get("regularMarketDayLow"))
-    vol = _to_int(meta.get("regularMarketVolume"))
-    w52h = _to_float(meta.get("fiftyTwoWeekHigh"))
-    w52l = _to_float(meta.get("fiftyTwoWeekLow"))
-    chg = (last - prev) if prev is not None else None
-    pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
-    ycur = (meta.get("currency") or "").strip().upper()
-    if isinstance(ycur, str) and len(ycur) == 3:
-        currency = ycur
-    elif ex in ("LSE", "LON"):
-        currency = "GBP"
-    elif ex in ("US", "NYSE", "NASDAQ"):
-        currency = "USD"
-    else:
-        currency = "INR"
-    return EquityQuote(
-        symbol=sym,
-        exchange=_EXCHANGE_CANONICAL.get(ex, ex),
-        last_price=last,
-        previous_close=prev,
-        change=chg,
-        change_percent=pchg,
-        day_high=day_hi,
-        day_low=day_lo,
-        volume=vol,
-        week_52_high=w52h,
-        week_52_low=w52l,
-        source="yahoo_finance_chart",
-        as_of=_iso_now(),
-        currency=currency,
-    )
+    bases = yahoo_base_symbol_candidates(requested) if ex in ("NSE", "BSE") else [requested]
+    for base in bases:
+        ysym = f"{base}{suffix}"
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ysym}?interval=1d&range=5d"
+        try:
+            r = httpx.get(url, headers=YAHOO_HEADERS, timeout=20.0)
+        except httpx.HTTPError:
+            continue
+        if r.status_code != 200:
+            continue
+        try:
+            chart = r.json()["chart"]["result"][0]
+        except (KeyError, IndexError, TypeError):
+            continue
+        meta = chart.get("meta") or {}
+        last = _to_float(meta.get("regularMarketPrice"))
+        if last is None:
+            continue
+        prev = _to_float(meta.get("chartPreviousClose"))
+        day_hi = _to_float(meta.get("regularMarketDayHigh"))
+        day_lo = _to_float(meta.get("regularMarketDayLow"))
+        vol = _to_int(meta.get("regularMarketVolume"))
+        w52h = _to_float(meta.get("fiftyTwoWeekHigh"))
+        w52l = _to_float(meta.get("fiftyTwoWeekLow"))
+        chg = (last - prev) if prev is not None else None
+        pchg = (100.0 * chg / prev) if prev not in (None, 0) and chg is not None else None
+        ycur = (meta.get("currency") or "").strip().upper()
+        if isinstance(ycur, str) and len(ycur) == 3:
+            currency = ycur
+        elif ex in ("LSE", "LON"):
+            currency = "GBP"
+        elif ex in ("US", "NYSE", "NASDAQ"):
+            currency = "USD"
+        else:
+            currency = "INR"
+        return EquityQuote(
+            symbol=requested,
+            exchange=_EXCHANGE_CANONICAL.get(ex, ex),
+            last_price=last,
+            previous_close=prev,
+            change=chg,
+            change_percent=pchg,
+            day_high=day_hi,
+            day_low=day_lo,
+            volume=vol,
+            week_52_high=w52h,
+            week_52_low=w52l,
+            source="yahoo_finance_chart",
+            as_of=_iso_now(),
+            currency=currency,
+        )
+    return None
 
 
 @dataclass
