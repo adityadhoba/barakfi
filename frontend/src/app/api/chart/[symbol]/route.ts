@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { yahooFinanceBaseCandidates } from "@/lib/yahoo-symbol-aliases";
 
 /**
  * Proxy for Yahoo Finance chart data.
@@ -50,9 +51,25 @@ export async function GET(
     // Fallback: India first, then global suffixes.
     return [".NS", ".BO", ".L", ""];
   })();
-  for (const suffix of suffixes) {
+
+  const yahooSlugs: string[] = (() => {
+    if (symbol.includes(".")) return [symbol];
+    const bases =
+      exchange === "US" || exchange === "NYSE" || exchange === "NASDAQ" || exchange === "LSE"
+        ? [symbol]
+        : yahooFinanceBaseCandidates(symbol);
+    const out: string[] = [];
+    for (const suffix of suffixes) {
+      for (const base of bases) {
+        out.push(`${base}${suffix}`);
+      }
+    }
+    return out;
+  })();
+
+  for (const yslug of yahooSlugs) {
     try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}${suffix}?range=${range}&interval=${interval}&includePrePost=false`;
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yslug)}?range=${range}&interval=${interval}&includePrePost=false`;
       const res = await fetch(url, {
         headers: YAHOO_HEADERS,
         next: { revalidate: 300 }, // Cache 5 min
@@ -85,9 +102,15 @@ export async function GET(
         });
       }
 
+      if (candles.length === 0) continue;
+
+      const inferredEx =
+        exchange ||
+        (yslug.endsWith(".NS") ? "NSE" : yslug.endsWith(".BO") ? "BSE" : yslug.endsWith(".L") ? "LSE" : "US");
+
       return NextResponse.json({
         symbol,
-        exchange: exchange || (suffix === ".NS" ? "NSE" : suffix === ".BO" ? "BSE" : suffix === ".L" ? "LSE" : "US"),
+        exchange: inferredEx,
         range,
         interval,
         candles,
