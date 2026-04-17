@@ -7,7 +7,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile.backend
     region: singapore
-    plan: free
+    plan: starter
     branch: main
     healthCheckPath: /health
     envVars:
@@ -17,6 +17,10 @@ services:
         sync: false
       - key: INTERNAL_SERVICE_TOKEN
         sync: false
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: PYTHONUNBUFFERED
+        value: "1"
       - key: MARKET_DATA_PROVIDER
         value: auto_global
       - key: APP_ENV
@@ -44,10 +48,11 @@ services:
     schedule: "0 11 * * 1-5"
     region: singapore
     branch: main
-    plan: free
+    plan: starter
     envVars:
       - key: DATABASE_URL
         sync: false
+<<<<<<< HEAD
       # Job A sends Slack alerts directly from fetch_real_data.py,
       # so it needs the webhook in *this* cron job environment too.
       - key: OPS_SLACK_WEBHOOK_URL
@@ -61,6 +66,10 @@ services:
       # Send success alerts from Job A too (so we can verify healthy runs).
       - key: OPS_ALERT_JOB_A_SUCCESSES_ENABLED
         value: "true"
+=======
+      - key: PYTHONUNBUFFERED
+        value: "1"
+>>>>>>> c4ed623 (chore(render): move services to starter plan and tune runtime env)
 
   # Job B: run internal daily refresh pipeline after fundamentals update
   # 05:45 PM IST Mon–Fri => 12:15 UTC
@@ -72,7 +81,7 @@ services:
     schedule: "15 12 * * 1-5"
     region: singapore
     branch: main
-    plan: free
+    plan: starter
     envVars:
       - key: API_BASE_URL
         fromService:
@@ -81,6 +90,7 @@ services:
           property: hostport
       - key: INTERNAL_SERVICE_TOKEN
         sync: false
+<<<<<<< HEAD
       # Job B sends Slack alerts directly from scripts/run_daily_refresh.py
       - key: OPS_SLACK_WEBHOOK_URL
         sync: false
@@ -90,3 +100,7 @@ services:
         value: "true"
       - key: OPS_ALERT_SUCCESSES_ENABLED
         value: "true"
+=======
+      - key: PYTHONUNBUFFERED
+        value: "1"
+>>>>>>> c4ed623 (chore(render): move services to starter plan and tune runtime env)
