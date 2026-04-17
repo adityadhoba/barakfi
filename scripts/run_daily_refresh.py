@@ -102,7 +102,16 @@ def _normalize_api_base(raw: str) -> str:
     if not candidate:
         candidate = "http://localhost:8001/api"
     if not candidate.startswith(("http://", "https://")):
-        candidate = f"https://{candidate}"
+        # Render cron can inject internal service host:port (e.g. "barakfi-api:10000")
+        # via fromService.hostport, which is plain HTTP on the private network.
+        lowered = candidate.lower()
+        is_internal_hostport = (
+            ":" in candidate
+            and not lowered.startswith(("localhost", "127.", "0.0.0.0"))
+            and "." not in candidate.split(":", 1)[0]
+        )
+        scheme = "http" if is_internal_hostport else "https"
+        candidate = f"{scheme}://{candidate}"
     normalized = candidate.rstrip("/")
     if not normalized.endswith("/api"):
         normalized = f"{normalized}/api"
