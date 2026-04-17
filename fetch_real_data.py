@@ -1224,6 +1224,8 @@ def write_to_database(stocks):
     updated = 0
     touched_ids: set[int] = set()
 
+    compliance_history_error: str | None = None
+
     try:
         now = datetime.now(timezone.utc)
         db_columns = {column.name for column in Stock.__table__.columns}
@@ -1252,18 +1254,30 @@ def write_to_database(stocks):
                 touched_ids.add(row.id)
                 created += 1
 
-        from app.api import helpers
-        from app.services.compliance_history_service import record_compliance_change_if_needed
-        from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock
-
-        for sid in touched_ids:
-            stock = db.query(Stock).filter(Stock.id == sid).first()
-            if not stock:
-                continue
-            r = evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)
-            record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
-
+        # Persist stock/fundamentals updates first so history-table schema drift
+        # never blocks critical data freshness updates.
         db.commit()
+
+        try:
+            from app.api import helpers
+            from app.services.compliance_history_service import record_compliance_change_if_needed
+            from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock
+
+            for sid in touched_ids:
+                stock = db.query(Stock).filter(Stock.id == sid).first()
+                if not stock:
+                    continue
+                r = evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)
+                record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            compliance_history_error = str(exc)
+            log.warning(
+                "Compliance history update skipped (stock fundamentals already committed): %s",
+                exc,
+            )
+
         rows_with_timestamp = int(
             db.query(func.count(Stock.id))
             .filter(
@@ -1288,6 +1302,7 @@ def write_to_database(stocks):
             "updated": updated,
             "rows_with_timestamp": rows_with_timestamp,
             "rows_missing_timestamp": rows_missing_timestamp,
+            "compliance_history_error": compliance_history_error,
         }
     except Exception as exc:
         db.rollback()
