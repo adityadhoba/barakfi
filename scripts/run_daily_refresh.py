@@ -16,6 +16,7 @@ import argparse
 import logging
 import os
 import sys
+import time
 
 try:
     import httpx
@@ -167,8 +168,32 @@ def main() -> int:
         return 1
 
     try:
-        with httpx.Client(timeout=360.0) as client:
-            response = client.post(url, params=params, headers=headers)
+        response = None
+        last_exc: Exception | None = None
+        for attempt in range(1, 4):
+            try:
+                with httpx.Client(timeout=600.0) as client:
+                    response = client.post(url, params=params, headers=headers)
+                break
+            except (
+                httpx.ConnectError,
+                httpx.ReadError,
+                httpx.ReadTimeout,
+                httpx.RemoteProtocolError,
+            ) as exc:
+                last_exc = exc
+                if attempt >= 3:
+                    raise
+                backoff = 5 * attempt
+                log.warning(
+                    "Daily refresh request attempt %d/3 failed (%s). Retrying in %ds...",
+                    attempt,
+                    exc.__class__.__name__,
+                    backoff,
+                )
+                time.sleep(backoff)
+        if response is None:
+            raise RuntimeError(f"Daily refresh request did not return a response: {last_exc}")
         if response.status_code >= 400:
             snippet = response.text[:700]
             log.error("Daily refresh failed: HTTP %d — %s", response.status_code, snippet)
