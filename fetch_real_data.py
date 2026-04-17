@@ -1369,6 +1369,13 @@ def main() -> int:
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
     log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
+    log.info(
+        "yfinance throttling: base_delay=%ss max_retries=%d retry_base=%ss retry_max=%ss",
+        RATE_LIMIT_SECONDS,
+        YF_MAX_RETRIES,
+        YF_RETRY_BASE_SECONDS,
+        YF_RETRY_MAX_SECONDS,
+    )
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
 
