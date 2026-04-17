@@ -44,6 +44,7 @@ No cron jobs needed. This is a manual weekly process.
 import argparse
 import logging
 import os
+import random
 import sys
 import time
 from collections import defaultdict
@@ -63,7 +64,31 @@ except ImportError:
 
 CRORE = 1e7  # 1 Crore = 10,000,000
 
-RATE_LIMIT_SECONDS = 0.5
+
+def _env_float(name: str, default: float) -> float:
+    raw = (os.getenv(name) or "").strip()
+    if raw == "":
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        return default
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = (os.getenv(name) or "").strip()
+    if raw == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+RATE_LIMIT_SECONDS = max(0.1, _env_float("YF_RATE_LIMIT_SECONDS", 1.2))
+YF_MAX_RETRIES = max(0, _env_int("YF_MAX_RETRIES", 4))
+YF_RETRY_BASE_SECONDS = max(1.0, _env_float("YF_RETRY_BASE_SECONDS", 12.0))
+YF_RETRY_MAX_SECONDS = max(YF_RETRY_BASE_SECONDS, _env_float("YF_RETRY_MAX_SECONDS", 120.0))
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
 PRODUCTION_ENV_VALUES = {"production", "prod"}
@@ -804,7 +829,18 @@ def _get_currency(exchange):
     return "INR"
 
 
-def fetch_stock_data(symbol, exchange="NSE"):
+def _is_yf_rate_limited_error(exc: Exception) -> bool:
+    name = exc.__class__.__name__.lower()
+    msg = str(exc).lower()
+    return (
+        "ratelimit" in name
+        or "too many requests" in msg
+        or "rate limited" in msg
+        or "429" in msg
+    )
+
+
+def fetch_stock_data(symbol, exchange="NSE", _retry=0):
     """
     Fetch financial data for a single stock via yfinance.
 
@@ -1073,6 +1109,20 @@ def fetch_stock_data(symbol, exchange="NSE"):
         return stock_data
 
     except Exception as exc:
+        if _is_yf_rate_limited_error(exc) and _retry < YF_MAX_RETRIES:
+            sleep_for = min(YF_RETRY_BASE_SECONDS * (2 ** _retry), YF_RETRY_MAX_SECONDS)
+            jitter = random.uniform(0, max(0.1, sleep_for * 0.2))
+            total_sleep = sleep_for + jitter
+            log.warning(
+                "Rate limited for %s (%s). Retry %d/%d in %.1fs",
+                symbol,
+                ticker_str,
+                _retry + 1,
+                YF_MAX_RETRIES,
+                total_sleep,
+            )
+            time.sleep(total_sleep)
+            return fetch_stock_data(symbol, exchange, _retry=_retry + 1)
         log.error("FAILED: %s - %s: %s", symbol, type(exc).__name__, exc)
         return None
 
