@@ -61,6 +61,10 @@ services:
         value: "15"
       - key: YF_RETRY_MAX_SECONDS
         value: "180"
+      - key: YF_COOLDOWN_TRIGGER_CONSECUTIVE
+        value: "5"
+      - key: YF_COOLDOWN_SECONDS
+        value: "180"
       # Job A sends Slack alerts directly from fetch_real_data.py,
       # so it needs the webhook in *this* cron job environment too.
       - key: OPS_SLACK_WEBHOOK_URL
