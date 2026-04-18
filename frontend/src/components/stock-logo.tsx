@@ -137,13 +137,23 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   GARDENREACH: "grse.in",
   MAZAGON: "mazdock.in",
   ZENSAR: "zensar.com",
+  AUBANK: "aubank.in",
+  FEDERALBNK: "federalbank.co.in",
+  INDUSINDBK: "indusind.com",
+  POWERMECH: "powermechprojects.com",
 };
 
 function normalizeSymbol(symbol: string): string {
   return symbol
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(/\.(NS|BO|L|IN)$/i, "")
     .replace(/-/g, "")
     .toUpperCase();
+}
+
+/** Works without logo.dev; used when CDN returns 403/empty. */
+function googleS2FaviconFromDomain(domain: string): string {
+  return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
 }
 
 function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
@@ -191,18 +201,21 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
 
   const cleanSym = normalizeSymbol(symbol);
   const hasCuratedDomain = Boolean(SYMBOL_TO_DOMAIN[cleanSym]);
+  const domainForFallback = SYMBOL_TO_DOMAIN[cleanSym];
 
   const tickerUrl = getTickerLogoUrl(symbol, exchange);
   const domainLogoUrl = getDomainLogoUrl(symbol);
   const faviconUrl = getFaviconUrl(symbol);
+  const googleS2Url = domainForFallback ? googleS2FaviconFromDomain(domainForFallback) : null;
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
   // Prefer domain for symbols in SYMBOL_TO_DOMAIN: logo.dev ticker slugs (e.g. AXISBANK.NS) can map to the wrong brand.
+  // Append Google s2 favicon (no API key) when logo.dev URLs fail.
   const sources = LOGO_DEV_TOKEN
     ? hasCuratedDomain && domainLogoUrl && tickerUrl
-      ? [domainLogoUrl, tickerUrl]
-      : ([tickerUrl, domainLogoUrl].filter(Boolean) as string[])
-    : ([faviconUrl].filter(Boolean) as string[]);
+      ? ([domainLogoUrl, tickerUrl, googleS2Url].filter(Boolean) as string[])
+      : ([tickerUrl, domainLogoUrl, googleS2Url].filter(Boolean) as string[])
+    : ([faviconUrl, googleS2Url].filter(Boolean) as string[]);
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
