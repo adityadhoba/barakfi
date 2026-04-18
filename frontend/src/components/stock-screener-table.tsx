@@ -20,6 +20,9 @@ import {
   SCREENING_STATUS_TOOLTIP,
   screeningUiLabel,
 } from "@/lib/screening-status";
+import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 type ScreenedStock = Stock & { screening: ScreeningResult };
 type SortKey = "symbol" | "price" | "market_cap" | "status" | "debt_ratio" | "income_purity";
@@ -580,6 +583,17 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         </div>
 
+        <div className="mb-4 rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+          <span className="font-medium text-[var(--text)]">
+            Screened using BarakFi methodology v{PRIMARY_METHODOLOGY_VERSION}
+          </span>
+          {" · "}
+          Educational screening — not a religious ruling or certification.{" "}
+          <Link href="/methodology" className="font-medium text-[var(--emerald)] underline-offset-2 hover:underline">
+            Methodology
+          </Link>
+        </div>
+
         {/* Active filter chips */}
         {hasActiveFilters && (
           <div className={styles.activeFiltersBar}>
@@ -617,8 +631,83 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         )}
 
-        {/* Table */}
-        <div className={styles.tableContainer} ref={listRef}>
+        {/* Results: mobile cards + desktop table (shared ref for keyboard focus) */}
+        <div ref={listRef}>
+        {isMobileLayout ? (
+          <div className="flex flex-col gap-3 md:hidden">
+            {pageItems.map((s, idx) => {
+              const globalIdx = pageStart + idx + 1;
+              const st = STATUS_CONFIG[s.screening.status]?.label || s.screening.status;
+              return (
+                <Card
+                  key={s.symbol}
+                  data-stock-idx={idx}
+                  className={`border-[var(--line)] bg-[var(--bg-elevated)] ${focusedIdx === idx ? "ring-2 ring-[var(--emerald)]" : ""}`}
+                >
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <StockLogo symbol={s.symbol} size={36} exchange={s.exchange} />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-[var(--text)]">{s.name}</p>
+                            <p className="text-xs text-[var(--text-tertiary)]">
+                              {globalIdx}. {s.symbol} · {s.sector}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge
+                        variant={
+                          s.screening.status === "HALAL"
+                            ? "success"
+                            : s.screening.status === "NON_COMPLIANT"
+                              ? "destructive"
+                              : "warning"
+                        }
+                      >
+                        {st}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm tabular-nums">
+                      <div>
+                        <p className="text-[var(--text-tertiary)]">Mkt cap</p>
+                        <p className="font-medium text-[var(--text)]">
+                          {formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[var(--text-tertiary)]">Price</p>
+                        <p className="font-medium text-[var(--text)]">
+                          {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.screenRowBtn}
+                      style={{ width: "100%" }}
+                      disabled={pendingSymbol === s.symbol}
+                      onClick={() => void handleSeeWhy(s.symbol)}
+                    >
+                      {pendingSymbol === s.symbol ? "Opening..." : "See Why?"}
+                    </button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {sorted.length === 0 && (
+              <p className="rounded-lg border border-dashed border-[var(--line)] p-6 text-center text-sm text-[var(--text-secondary)]">
+                No stocks match your filters.{" "}
+                <button type="button" className={styles.clearAll} onClick={resetAllFilters}>
+                  Reset filters
+                </button>
+              </p>
+            )}
+          </div>
+        ) : null}
+
+        <div className={`${styles.tableContainer} ${isMobileLayout ? "hidden md:block" : ""}`}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -719,6 +808,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               )}
             </tbody>
           </table>
+        </div>
         </div>
 
         {/* Ad placement */}

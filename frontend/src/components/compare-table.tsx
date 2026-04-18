@@ -3,6 +3,14 @@
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
@@ -292,6 +300,7 @@ export function CompareTable({
   const [compareLimitState, setCompareLimitState] = useState<CompareLimitState | null>(null);
   const [checkingQuota, setCheckingQuota] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const activeSymbols = mode === "results" ? requestedSymbols : selectedSymbols;
 
@@ -464,8 +473,7 @@ export function CompareTable({
     const queryString = selectedSymbols.join(",");
 
     if (!userId) {
-      const redirectPath = `/compare/results?symbols=${queryString}`;
-      router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+      setAuthDialogOpen(true);
       return;
     }
 
@@ -762,6 +770,40 @@ export function CompareTable({
         {compareLimitState ? (
           <CompareLimitReachedState limitState={compareLimitState} />
         ) : null}
+
+        <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Sign in to run the comparison</DialogTitle>
+              <DialogDescription>
+                You can search and select stocks without an account. Starting a compare session uses your daily quota
+                and requires a free BarakFi sign-in.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" asChild>
+                <Link
+                  href={`/sign-up?redirect_url=${encodeURIComponent(
+                    `/compare/results?symbols=${selectedSymbols.join(",")}`,
+                  )}`}
+                  onClick={() => setAuthDialogOpen(false)}
+                >
+                  Create account
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link
+                  href={`/sign-in?redirect_url=${encodeURIComponent(
+                    `/compare/results?symbols=${selectedSymbols.join(",")}`,
+                  )}`}
+                  onClick={() => setAuthDialogOpen(false)}
+                >
+                  Sign in
+                </Link>
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

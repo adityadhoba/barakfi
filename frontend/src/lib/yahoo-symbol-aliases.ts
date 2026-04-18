@@ -2,7 +2,6 @@
  * BarakFi screening symbols vs Yahoo Finance base symbols (no .NS/.BO).
  * Keep aligned with `app/services/vendor_symbol_aliases.py`.
  */
-
 const TICKER_ALTERNATES: Record<string, string[]> = {
   TATAMOTORS: ["TATAMOTORS.NS"],
   "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],

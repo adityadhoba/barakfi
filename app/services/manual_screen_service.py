@@ -119,7 +119,10 @@ def fetch_and_screen(symbol: str, exchange: str = "NSE") -> dict | None:
             return None
 
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
-        market_cap_raw = info.get("marketCap") or 0.0
+        sh_raw = float(info.get("sharesOutstanding") or 0.0)
+        yahoo_mcap = float(info.get("marketCap") or 0.0)
+        implied = float(price) * sh_raw if price and sh_raw > 0 else 0.0
+        market_cap_raw = implied if implied > 0 else yahoo_mcap
         market_cap = _scale(market_cap_raw)
         average_market_cap_36m = round(market_cap * 0.9, 2) if market_cap > 0 else 0.0
 

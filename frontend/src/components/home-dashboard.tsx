@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { getStocks, getTrending } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { MethodologyTrustCard } from "@/components/methodology-trust-card";
 import { SCREENING_LEGAL_DISCLAIMER } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
@@ -31,6 +32,9 @@ export async function HomeDashboard() {
           interest exposure, receivables, and balance-sheet quality.
         </p>
         <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
+        <div className={styles.methodologyCardWrap}>
+          <MethodologyTrustCard />
+        </div>
       </section>
 
       {/* ── Popular Stocks ── */}

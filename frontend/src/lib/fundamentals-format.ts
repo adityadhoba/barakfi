@@ -84,7 +84,7 @@ export function formatFundamentalsLastUpdatedIst(iso: string | null | undefined)
 export function fundamentalsUnitNote(currency: string = "INR"): string {
   const c = (currency || "INR").toUpperCase();
   if (c === "INR") {
-    return "Fundamentals are shown in ₹ Crores (1 Cr = ₹1,00,00,000), matching our database. Refresh via your data pipeline for the latest filings.";
+    return "Fundamentals are shown in ₹ Crores (1 Cr = ₹1,00,00,000), matching our database. Market cap and filing-based fields refresh on the fundamentals job schedule (timestamp above), not on every live price tick, so they can differ slightly from the NSE or Yahoo headline until the next sync.";
   }
   if (c === "USD") return "Fundamentals are in USD millions per our database. Refresh via your data pipeline for the latest filings.";
   if (c === "GBP") return "Fundamentals are in GBP millions per our database. Refresh via your data pipeline for the latest filings.";

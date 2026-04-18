@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useMobileNav } from "@/components/mobile-nav-context";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import s from "./mobile-drawer.module.css";
 
 type DrawerLink = {
@@ -33,7 +35,6 @@ export function MobileDrawer() {
   const { userId } = useAuth();
   const { user } = useUser();
 
-  // Fetch user role via Next.js proxy (avoids CORS / direct backend issues)
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
@@ -58,155 +59,125 @@ export function MobileDrawer() {
       }
     };
 
-    fetchUserRole();
+    void fetchUserRole();
   }, [userId]);
 
-  // Close drawer when route changes
   useEffect(() => {
     setOpen(false);
   }, [pathname, setOpen]);
 
-  // Prevent scroll when drawer is open
-  useEffect(() => {
-    if (isOpen) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-      return () => {
-        document.body.style.overflow = "";
-        document.body.style.paddingRight = "";
-      };
-    }
-  }, [isOpen]);
-
   return (
     <>
-      {/* Hamburger button (mobile only) */}
       <button
         className={s.hamburger}
         onClick={() => setOpen(true)}
         aria-label="Open navigation menu"
         aria-expanded={isOpen}
+        type="button"
       >
         <span className={s.hamburgerIcon}>☰</span>
       </button>
 
-      {/* Backdrop overlay */}
-      {isOpen && (
-        <div
-          className={s.backdrop}
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      <Sheet open={isOpen} onOpenChange={setOpen}>
+        <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-md">
+          <SheetHeader className="border-b border-[var(--line)] px-6 py-4 text-left">
+            <SheetTitle className="text-base font-semibold">Menu</SheetTitle>
+          </SheetHeader>
 
-      {/* Drawer */}
-      <nav
-        className={`${s.drawer} ${isOpen ? s.drawerOpen : ""}`}
-        aria-label="Mobile navigation"
-      >
-        <div className={s.drawerHeader}>
-          <h2 className={s.drawerTitle}>Menu</h2>
-          <button
-            className={s.closeButton}
-            onClick={() => setOpen(false)}
-            aria-label="Close navigation menu"
-          >
-            <span className={s.closeIcon}>✕</span>
-          </button>
-        </div>
-
-        {!userId && (
-          <div className={s.drawerAuthRow}>
-            <Link href="/sign-in" className={s.drawerAuthPrimary} onClick={() => setOpen(false)}>
-              Log in
-            </Link>
-            <Link href="/sign-up" className={s.drawerAuthSecondary} onClick={() => setOpen(false)}>
-              Get started
-            </Link>
-          </div>
-        )}
-
-        {/* User avatar section */}
-        {userId && user && (
-          <div className={s.userSection}>
-            {user.imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element -- Clerk-hosted avatar URL
-              <img
-                src={user.imageUrl}
-                alt={user.firstName || "User"}
-                className={s.userAvatar}
-              />
-            )}
-            <div className={s.userInfo}>
-              <div className={s.userName}>
-                {user.firstName} {user.lastName}
+          <div className="flex flex-1 flex-col px-4 py-4">
+            {!userId && (
+              <div className={cn(s.drawerAuthRow, "mb-4")}>
+                <Link href="/sign-in" className={s.drawerAuthPrimary} onClick={() => setOpen(false)}>
+                  Log in
+                </Link>
+                <Link href="/sign-up" className={s.drawerAuthSecondary} onClick={() => setOpen(false)}>
+                  Get started
+                </Link>
               </div>
-              <div className={s.userEmail}>{user.primaryEmailAddress?.emailAddress}</div>
+            )}
+
+            {userId && user && (
+              <div className={cn(s.userSection, "mb-4")}>
+                {user.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- Clerk-hosted avatar URL
+                  <img
+                    src={user.imageUrl}
+                    alt={user.firstName || "User"}
+                    className={s.userAvatar}
+                  />
+                )}
+                <div className={s.userInfo}>
+                  <div className={s.userName}>
+                    {user.firstName} {user.lastName}
+                  </div>
+                  <div className={s.userEmail}>{user.primaryEmailAddress?.emailAddress}</div>
+                </div>
+              </div>
+            )}
+
+            <nav className={cn(s.drawerLinks, "flex flex-col gap-1")} aria-label="Mobile navigation">
+              {DRAWER_LINKS.map((link) => {
+                if (link.auth && !userId) return null;
+
+                if (link.adminOnly && (loadingRole || (userRole !== "admin" && userRole !== "owner"))) {
+                  return null;
+                }
+
+                const isActive =
+                  link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`${s.drawerLink} ${isActive ? s.drawerLinkActive : ""}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className={s.drawerLinkIcon} aria-hidden="true">
+                      {link.icon}
+                    </span>
+                    <span className={s.drawerLinkLabel}>{link.label}</span>
+                  </Link>
+                );
+              })}
+              {userId && (
+                <Link
+                  href="/account"
+                  className={`${s.drawerLink} ${pathname.startsWith("/account") ? s.drawerLinkActive : ""}`}
+                  onClick={() => setOpen(false)}
+                >
+                  <span className={s.drawerLinkIcon} aria-hidden="true">
+                    &#x2699;
+                  </span>
+                  <span className={s.drawerLinkLabel}>Account</span>
+                </Link>
+              )}
+            </nav>
+
+            <div className={cn(s.drawerLegal, "mt-auto border-t border-[var(--line)] pt-4")}>
+              <Link href="/terms" className={s.drawerLegalLink}>
+                Terms
+              </Link>
+              <Link href="/privacy" className={s.drawerLegalLink}>
+                Privacy
+              </Link>
+              <Link href="/disclaimer" className={s.drawerLegalLink}>
+                Disclaimer
+              </Link>
+              <Link href="/shariah-compliance" className={s.drawerLegalLink}>
+                Shariah
+              </Link>
+            </div>
+
+            <div className={cn(s.drawerFooter, "mt-4 border-t border-[var(--line)] pt-4")}>
+              <div className={s.themeToggleWrapper}>
+                <span className={s.themeLabel}>Theme</span>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Navigation links */}
-        <div className={s.drawerLinks}>
-          {DRAWER_LINKS.map((link) => {
-            // Skip auth-required links if not signed in
-            if (link.auth && !userId) return null;
-
-            // Skip admin-only links unless role is admin/owner
-            if (link.adminOnly && (loadingRole || (userRole !== "admin" && userRole !== "owner"))) {
-              return null;
-            }
-
-            const isActive =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`${s.drawerLink} ${isActive ? s.drawerLinkActive : ""}`}
-                onClick={() => setOpen(false)}
-              >
-                <span className={s.drawerLinkIcon} aria-hidden="true">
-                  {link.icon}
-                </span>
-                <span className={s.drawerLinkLabel}>{link.label}</span>
-              </Link>
-            );
-          })}
-          {userId && (
-            <Link
-              href="/account"
-              className={`${s.drawerLink} ${pathname.startsWith("/account") ? s.drawerLinkActive : ""}`}
-              onClick={() => setOpen(false)}
-            >
-              <span className={s.drawerLinkIcon} aria-hidden="true">
-                &#x2699;
-              </span>
-              <span className={s.drawerLinkLabel}>Account</span>
-            </Link>
-          )}
-        </div>
-
-        {/* Legal links */}
-        <div className={s.drawerLegal}>
-          <Link href="/terms" className={s.drawerLegalLink}>Terms</Link>
-          <Link href="/privacy" className={s.drawerLegalLink}>Privacy</Link>
-          <Link href="/disclaimer" className={s.drawerLegalLink}>Disclaimer</Link>
-          <Link href="/shariah-compliance" className={s.drawerLegalLink}>Shariah</Link>
-        </div>
-
-        {/* Theme toggle */}
-        <div className={s.drawerFooter}>
-          <div className={s.themeToggleWrapper}>
-            <span className={s.themeLabel}>Theme</span>
-            <ThemeToggle />
-          </div>
-        </div>
-      </nav>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

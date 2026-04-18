@@ -22,6 +22,7 @@ from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_UR
 from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_PUBLISHABLE_KEY
 from app.database import Base, engine
 from app.api.routes import router
+from app.api.v1.routes import router as api_v1_router
 from app.middleware.api_envelope import ApiEnvelopeMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all tables
@@ -34,6 +35,23 @@ from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all 
     Feedback,
     BrokerConnection,
     StockSymbolAlias,
+)
+from app.models_data_warehouse import (  # noqa: F401 – ISIN-first warehouse (additive)
+    DataCorporateEvent,
+    DataCorporateEventParticipant,
+    DataFiling,
+    DataFinancialFact,
+    DataFinancialPeriod,
+    DataIngestionIssue,
+    DataIngestionRun,
+    DataIssuer,
+    DataListing,
+    DataListingSymbolAlias,
+    DataPriceDaily,
+    DataRawArtifact,
+    DataScreeningMethodology,
+    DataScreeningSnapshot,
+    DataSecurity,
 )
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)
@@ -722,6 +740,7 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 app.include_router(router)
+app.include_router(api_v1_router)
 
 
 @app.get("/")

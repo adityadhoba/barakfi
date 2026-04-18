@@ -14,6 +14,7 @@ import { ToastProvider } from "@/components/toast";
 import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
 import { Logo } from "@/components/logo";
+import { SiteHeader } from "@/components/layout/site-header";
 import { TopbarAuth } from "@/components/topbar-auth";
 import { ScreeningProvider } from "@/contexts/screening-context";
 import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
@@ -281,7 +282,7 @@ export default function RootLayout({
             <HideTopbarSearchOnHome />
             <a className="skipToContent" href="#main-content">Skip to content</a>
             <MarketTicker />
-            <header className="topbar" role="banner">
+            <SiteHeader>
               <Link className="wordmark" href="/" style={{ textDecoration: "none" }}>
                 <Logo size={28} showText />
               </Link>
@@ -294,7 +295,7 @@ export default function RootLayout({
               <MobileDrawer />
 
               <TopbarAuth />
-            </header>
+            </SiteHeader>
             <ToastProvider>
               <ScreeningProvider>
               <Suspense fallback={null}>
