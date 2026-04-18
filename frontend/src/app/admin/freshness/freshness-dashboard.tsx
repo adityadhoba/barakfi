@@ -48,12 +48,14 @@ function StatCard({
 
 function JobHealthRow({
   job,
+  nowMs,
 }: {
   job: { job_name: string; last_success?: string | null; total_runs: number };
+  nowMs: number;
 }) {
   const lastSuccessDate = job.last_success ? new Date(job.last_success) : null;
   const hoursAgo = lastSuccessDate
-    ? Math.round((Date.now() - lastSuccessDate.getTime()) / (1000 * 60 * 60))
+    ? Math.round((nowMs - lastSuccessDate.getTime()) / (1000 * 60 * 60))
     : null;
 
   const stale = hoursAgo === null || hoursAgo > 25;
@@ -196,6 +198,7 @@ export function FreshnessDashboard({ serviceToken }: { serviceToken: string }) {
   const [jobRuns, setJobRuns] = useState<JobRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     async function load() {
@@ -284,7 +287,7 @@ export function FreshnessDashboard({ serviceToken }: { serviceToken: string }) {
           ) : (
             <div>
               {job_health.map((job) => (
-                <JobHealthRow key={job.job_name} job={job} />
+                <JobHealthRow key={job.job_name} job={job} nowMs={now} />
               ))}
             </div>
           )}

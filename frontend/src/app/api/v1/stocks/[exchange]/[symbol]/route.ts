@@ -7,7 +7,7 @@ import { getPublicApiBaseUrl } from "@/lib/api-base";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { exchange: string; symbol: string } }
+  { params }: { params: Promise<{ exchange: string; symbol: string }> }
 ) {
   const { exchange, symbol } = await params;
   const base = getPublicApiBaseUrl().replace(/\/api\/?$/, "");

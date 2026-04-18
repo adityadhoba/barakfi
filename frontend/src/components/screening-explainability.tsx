@@ -15,7 +15,6 @@
  */
 
 import React from "react";
-import Link from "next/link";
 import type {
   Explainability,
   CheckResult,
@@ -121,7 +120,7 @@ export function FreshnessIndicator({
 // Source link
 // ---------------------------------------------------------------------------
 
-function SourceLink({ ref: sourceRef }: { ref: SourceRef }) {
+function SourceLink({ sourceRef }: { sourceRef: SourceRef }) {
   if (!sourceRef.url) {
     return (
       <span className="text-zinc-500 text-xs">{sourceRef.label}</span>
@@ -205,7 +204,7 @@ function CheckRow({ check }: { check: CheckResult }) {
         <div className="flex flex-wrap gap-2 mt-2">
           <span className="text-xs text-zinc-600">Sources:</span>
           {check.source_refs.map((ref, i) => (
-            <SourceLink key={i} ref={ref} />
+            <SourceLink key={i} sourceRef={ref} />
           ))}
         </div>
       )}
@@ -256,7 +255,6 @@ export function ScreeningExplainability({
   const {
     overall_status,
     short_reason,
-    detailed_reason,
     methodology_version,
     disclosure,
     basis,
