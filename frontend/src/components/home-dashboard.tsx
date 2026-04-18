@@ -20,101 +20,191 @@ export async function HomeDashboard() {
 
   return (
     <div className={styles.home}>
-      {/* ── Hero: one action ── */}
-      <section className={styles.heroClean}>
-        <span className={styles.heroKicker}>Financially Grounded Screening</span>
-        <h1 className={styles.heroHeadline}>
-          Screen Indian stocks with transparent Shariah compliance checks
-        </h1>
-        <p className={styles.heroSub}>
-          Built for NSE and BSE investors who want evidence-first outcomes across debt, income purity,
-          interest exposure, receivables, and balance-sheet quality.
-        </p>
-        <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
+
+      {/* ── Hero ── */}
+      <section className={styles.hero}>
+        <div className={styles.heroInner}>
+          <div className={styles.heroBadge}>
+            <span className={styles.heroBadgeDot} />
+            NSE &amp; BSE · Shariah Compliant Screening
+          </div>
+          <h1 className={styles.heroHeadline}>
+            Invest with<br />
+            <span className={styles.heroAccent}>Intention.</span>
+          </h1>
+          <p className={styles.heroSub}>
+            India&apos;s most transparent halal stock screener — 6 core Shariah
+            checks, live financials, and full ratio disclosure for every listed
+            company on NSE and BSE.
+          </p>
+          <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
+          <div className={styles.heroProof}>
+            <span className={styles.heroProofItem}><strong>2,000+</strong> stocks screened</span>
+            <span className={styles.heroProofDivider} />
+            <span className={styles.heroProofItem}><strong>6</strong> Shariah checks</span>
+            <span className={styles.heroProofDivider} />
+            <span className={styles.heroProofItem}><strong>Free</strong> to use</span>
+          </div>
+        </div>
+        <div className={styles.heroGlow} aria-hidden />
+      </section>
+
+      {/* ── Big Quote ── */}
+      <section className={styles.quoteSection}>
+        <div className={styles.quoteInner}>
+          <p className={styles.quoteText}>
+            &ldquo;Wealth built on principles that honour your faith.&rdquo;
+          </p>
+          <span className={styles.quoteAttrib}>— The Barakfi Promise</span>
+        </div>
+      </section>
+
+      {/* ── Beliefs ── */}
+      <section className={styles.beliefsSection}>
+        <div className={styles.beliefsHeader}>
+          <span className={styles.sectionEyebrow}>Our Principles</span>
+          <h2 className={styles.beliefsTitle}>What we believe</h2>
+        </div>
+        <div className={styles.beliefsGrid}>
+          <div className={styles.beliefCard}>
+            <span className={styles.beliefIcon} aria-hidden>☽</span>
+            <h3 className={styles.beliefName}>Shariah First</h3>
+            <p className={styles.beliefDesc}>
+              Every screening decision is grounded in AAOIFI, S&amp;P, and FTSE
+              Maxis Shariah methodologies — no shortcuts, no guesswork.
+            </p>
+          </div>
+          <div className={styles.beliefCard}>
+            <span className={styles.beliefIcon} aria-hidden>◎</span>
+            <h3 className={styles.beliefName}>Full Transparency</h3>
+            <p className={styles.beliefDesc}>
+              We show every ratio, threshold, and data source on screen. You
+              always know exactly why a stock passed or failed.
+            </p>
+          </div>
+          <div className={styles.beliefCard}>
+            <span className={styles.beliefIcon} aria-hidden>⬡</span>
+            <h3 className={styles.beliefName}>Knowledge Over Fear</h3>
+            <p className={styles.beliefDesc}>
+              Halal investing should feel empowering, not restrictive. We give
+              you the tools to invest confidently in India&apos;s markets.
+            </p>
+          </div>
+          <div className={styles.beliefCard}>
+            <span className={styles.beliefIcon} aria-hidden>✦</span>
+            <h3 className={styles.beliefName}>Built for Muslim India</h3>
+            <p className={styles.beliefDesc}>
+              NSE and BSE coverage purpose-built for Indian Muslim investors —
+              in the language and context you understand.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* ── Popular Stocks ── */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Popular Stocks Right Now</h2>
-          <Link href="/screener" className={styles.seeAll}>Browse all stocks &rarr;</Link>
+      <section className={styles.stocksSection}>
+        <div className={styles.stocksHeader}>
+          <div>
+            <span className={styles.sectionEyebrow}>Live Screening</span>
+            <h2 className={styles.stocksTitle}>Popular Stocks Right Now</h2>
+          </div>
+          <Link href="/screener" className={styles.seeAll}>
+            Browse all stocks →
+          </Link>
         </div>
         <HomeTopStocksLive rows={popular} />
       </section>
 
       {/* ── How It Works ── */}
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>How It Works</h2>
+      <section className={styles.howSection}>
+        <div className={styles.howHeader}>
+          <span className={styles.sectionEyebrow}>Simple Process</span>
+          <h2 className={styles.howTitle}>How It Works</h2>
+          <p className={styles.howSub}>
+            From question to answer in seconds. No jargon, no waiting.
+          </p>
         </div>
         <div className={styles.howGrid}>
           <div className={styles.howCard}>
-            <span className={styles.howStep}>1</span>
-            <h3 className={styles.howTitle}>Search a stock</h3>
-            <p className={styles.howDesc}>Type any NSE stock symbol or company name.</p>
+            <span className={styles.howNum}>01</span>
+            <h3 className={styles.howCardTitle}>Search a stock</h3>
+            <p className={styles.howCardDesc}>
+              Type any NSE or BSE stock symbol or company name in the search bar.
+            </p>
           </div>
           <div className={styles.howCard}>
-            <span className={styles.howStep}>2</span>
-            <h3 className={styles.howTitle}>Screening runs</h3>
-            <p className={styles.howDesc}>Our engine runs 6 core financial checks against widely used Shariah thresholds.</p>
+            <span className={styles.howNum}>02</span>
+            <h3 className={styles.howCardTitle}>Six checks run</h3>
+            <p className={styles.howCardDesc}>
+              Our engine runs 6 core financial checks against widely-used Shariah
+              thresholds — debt, income purity, interest exposure, and more.
+            </p>
           </div>
           <div className={styles.howCard}>
-            <span className={styles.howStep}>3</span>
-            <h3 className={styles.howTitle}>Get your result</h3>
-            <p className={styles.howDesc}>See whether a stock screens as Shariah Compliant, Requires Review, or Not Compliant — with full transparency.</p>
+            <span className={styles.howNum}>03</span>
+            <h3 className={styles.howCardTitle}>See your result</h3>
+            <p className={styles.howCardDesc}>
+              Compliant, Requires Review, or Not Compliant — with full ratio
+              transparency so you can make an informed decision.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* ── Trust ── */}
-      <section className={styles.authoritySection} aria-labelledby="trust-heading">
-        <div className={styles.authorityCard}>
-          <h2 id="trust-heading" className={styles.authorityTitle}>
-            Why trust our screening
+      {/* ── Methodology Trust ── */}
+      <section className={styles.trustSection} aria-labelledby="trust-heading">
+        <div className={styles.trustInner}>
+          <span className={styles.sectionEyebrowLight}>Why Trust Us</span>
+          <h2 id="trust-heading" className={styles.trustTitle}>
+            Built on published<br />Shariah standards
           </h2>
           <div className={styles.trustGrid}>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon} aria-hidden>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M9 13h6M9 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className={styles.trustLabel}>Grounded in published company financial disclosures</span>
+              <span className={styles.trustItemNum}>—</span>
+              <p className={styles.trustItemText}>
+                Grounded in published company financial disclosures from NSE and BSE
+              </p>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon} aria-hidden>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="m4 18 7-12 9 12H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                  <path d="M11 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className={styles.trustLabel}>Benchmarked against multiple global screening methodologies</span>
+              <span className={styles.trustItemNum}>—</span>
+              <p className={styles.trustItemText}>
+                Benchmarked against S&amp;P, AAOIFI &amp; FTSE/Maxis Shariah methodologies
+              </p>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon} aria-hidden>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M6.4 9A7 7 0 0 1 18.2 7M17.6 15A7 7 0 0 1 5.8 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className={styles.trustLabel}>Continuously refreshed with latest fundamentals and pricing snapshots</span>
+              <span className={styles.trustItemNum}>—</span>
+              <p className={styles.trustItemText}>
+                Continuously refreshed with latest fundamentals and pricing snapshots
+              </p>
             </div>
             <div className={styles.trustItem}>
-              <span className={styles.trustIcon} aria-hidden>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 3a6 6 0 0 0-6 6v3h12V9a6 6 0 0 0-6-6Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <rect x="4" y="12" width="16" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M12 15v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              </span>
-              <span className={styles.trustLabel}>Transparent ratios, thresholds, and result reasoning on every stock</span>
+              <span className={styles.trustItemNum}>—</span>
+              <p className={styles.trustItemText}>
+                Transparent ratios, thresholds, and full result reasoning on every stock
+              </p>
             </div>
           </div>
-          <p className={styles.authorityDisclaimer}>
-            {SCREENING_LEGAL_DISCLAIMER}
+          <p className={styles.trustDisclaimer}>{SCREENING_LEGAL_DISCLAIMER}</p>
+        </div>
+      </section>
+
+      {/* ── CTA Banner ── */}
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <h2 className={styles.ctaTitle}>
+            Ready to screen your portfolio?
+          </h2>
+          <p className={styles.ctaSub}>
+            Search any Indian stock and get an instant Shariah compliance result — completely free.
           </p>
+          <div className={styles.ctaActions}>
+            <Link href="/screener" className={styles.ctaPrimary}>
+              Open Screener
+            </Link>
+            <Link href="/methodology" className={styles.ctaSecondary}>
+              Read our Methodology
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -123,7 +213,9 @@ export async function HomeDashboard() {
         <div className={styles.footerTop}>
           <div className={styles.footerBrand}>
             <Logo size={24} showText />
-            <p className={styles.footerTagline}>Shariah-compliant equity screening for the Indian market.</p>
+            <p className={styles.footerTagline}>
+              Shariah-compliant equity screening for the Indian market.
+            </p>
           </div>
           <div className={styles.footerLinks}>
             <div className={styles.footerCol}>
