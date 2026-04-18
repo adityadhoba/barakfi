@@ -131,17 +131,35 @@ def _auto_migrate_columns():
                 if is_sqlite and "DATETIME" in str(col_type).upper() and "CURRENT_TIMESTAMP" in default_clause:
                     sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
                     logger.info("[auto-migrate] %s", sql)
-                    conn.execute(text(sql))
-                    backfill = (
-                        f'UPDATE "{table.name}" SET "{column.name}" = CURRENT_TIMESTAMP '
-                        f'WHERE "{column.name}" IS NULL'
-                    )
-                    logger.info("[auto-migrate] %s", backfill)
-                    conn.execute(text(backfill))
+                    try:
+                        conn.execute(text(sql))
+                    except Exception as _col_exc:
+                        if "already exists" in str(_col_exc).lower() or "duplicate" in str(_col_exc).lower():
+                            logger.debug("[auto-migrate] Column already exists (concurrent worker), skipping: %s", _col_exc)
+                        else:
+                            raise
+                    else:
+                        backfill = (
+                            f'UPDATE "{table.name}" SET "{column.name}" = CURRENT_TIMESTAMP '
+                            f'WHERE "{column.name}" IS NULL'
+                        )
+                        logger.info("[auto-migrate] %s", backfill)
+                        conn.execute(text(backfill))
                 else:
-                    sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
+                    # Postgres supports IF NOT EXISTS on ADD COLUMN; SQLite does not.
+                    if_not_exists = "IF NOT EXISTS " if is_postgres else ""
+                    sql = (
+                        f'ALTER TABLE "{table.name}" ADD COLUMN {if_not_exists}'
+                        f'"{column.name}" {col_type}{nullable}{default_clause}'
+                    )
                     logger.info("[auto-migrate] %s", sql)
-                    conn.execute(text(sql))
+                    try:
+                        conn.execute(text(sql))
+                    except Exception as _col_exc:
+                        if "already exists" in str(_col_exc).lower() or "duplicate" in str(_col_exc).lower():
+                            logger.debug("[auto-migrate] Column already exists (concurrent worker), skipping: %s", _col_exc)
+                        else:
+                            raise
 
     logger.info("[auto-migrate] Schema check complete.")
 
@@ -477,8 +495,16 @@ def _seed_symbol_aliases():
 BASE_DIR = Path(__file__).resolve().parent.parent
 APP_TEMPLATE = (BASE_DIR / "templates" / "dashboard.html").read_text(encoding="utf-8")
 
-# 1. Create any brand-new tables
-Base.metadata.create_all(bind=engine)
+# 1. Create any brand-new tables.
+# checkfirst=True emits CREATE TABLE IF NOT EXISTS, making concurrent worker
+# boots safe — the second worker sees the table already exists and skips.
+try:
+    Base.metadata.create_all(bind=engine, checkfirst=True)
+except Exception as _create_exc:
+    # On Postgres, two workers racing on CREATE TABLE can still hit a
+    # pg_type uniqueness error before IF NOT EXISTS is evaluated.
+    # Log and continue — the table was created by the winning worker.
+    logger.warning("[startup] create_all race (safe to ignore): %s", _create_exc)
 
 
 def _sqlite_migrate_stocks_composite_unique():
