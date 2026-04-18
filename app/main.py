@@ -23,6 +23,7 @@ from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_P
 from app.database import Base, engine
 from app.api.routes import router
 from app.api.v1.routes import router as api_v1_router
+from app.api.routes_v1 import router_v1
 from app.middleware.api_envelope import ApiEnvelopeMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.models import (  # noqa: F401 – imported so SQLAlchemy registers all tables
@@ -53,6 +54,7 @@ from app.models_data_warehouse import (  # noqa: F401 – ISIN-first warehouse (
     DataScreeningSnapshot,
     DataSecurity,
 )
+import app.models_v2  # noqa: F401 – registers v2 tables with SQLAlchemy metadata
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, debug=DEBUG)
 
@@ -741,6 +743,7 @@ async def add_security_headers(request: Request, call_next):
 
 app.include_router(router)
 app.include_router(api_v1_router)
+app.include_router(router_v1)
 
 
 @app.get("/")

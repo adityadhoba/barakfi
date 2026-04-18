@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
 from app.connectors.bse_master import sync_bse_master
-from app.connectors.nse_master import sync_nse_master
+from app.connectors.nse_equity_master import sync_nse_master
 
 
 def main() -> None:

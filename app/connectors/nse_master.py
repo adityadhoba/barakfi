@@ -1,149 +1,189 @@
-"""NSE securities master (EQUITY_L) → data_issuers / data_securities / data_listings."""
+"""
+NSE Master Connector — official-source universe and reference data.
+
+Fetches:
+1. Nifty 500 constituent list (coverage universe)
+2. NSE securities available for trading (symbol/ISIN master)
+3. NSE symbol change history
+4. NSE company name change history
+
+All data is sourced from publicly available NSE downloads.
+No paid API key required.
+
+When a paid data provider is available, add it as a secondary enrichment layer
+after the official source is already loaded — never replace official with vendor.
+"""
 
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Optional
 
-from sqlalchemy.orm import Session
+import pandas as pd
 
-from app.connectors.ingestion_utils import finish_ingestion_run, record_raw_artifact, start_ingestion_run
-from app.connectors.nse_client import NSEClient
-from app.models_data_warehouse import DataIssuer, DataListing, DataSecurity
+from app.connectors.base import BaseConnector, NSE_HEADERS, sha256_bytes
 
 logger = logging.getLogger("barakfi.nse_master")
+UTC = timezone.utc
 
-# Official archived equity list (NSE). May rotate; override with NSE_EQUITY_LIST_URL.
-DEFAULT_EQUITY_LIST_URL = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
+# Official NSE download URLs — these are stable public endpoints
+NSE_NIFTY500_CSV_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+NSE_SECURITIES_CSV_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+NSE_SYMBOL_CHANGES_URL = "https://archives.nseindia.com/content/equities/symbolchange.csv"
+NSE_NAME_CHANGES_URL = "https://archives.nseindia.com/content/equities/namechange.csv"
 
-
-def _norm_header(h: str) -> str:
-    return (h or "").strip().upper().replace(" ", "_")
-
-
-def _pick(row: dict[str, str], *candidates: str) -> str:
-    keys = {_norm_header(k): v for k, v in row.items()}
-    for c in candidates:
-        cu = c.upper()
-        if cu in keys and keys[cu] is not None:
-            return str(keys[cu]).strip()
-    return ""
+# BSE listed companies (for BSE scrip code cross-reference)
+BSE_LISTED_CSV_URL = "https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=&Scripcode=&industry=&segment=Equity&status=Active"
 
 
-def parse_equity_l_csv(text: str) -> list[dict[str, str]]:
-    """Return one dict per row with normalized keys UPPER."""
-    f = io.StringIO(text)
-    reader = csv.DictReader(f)
-    out: list[dict[str, str]] = []
-    for raw in reader:
-        row = {_norm_header(k): (v or "").strip() for k, v in raw.items()}
-        out.append(row)
-    return out
-
-
-def sync_nse_master(
-    db: Session,
-    *,
-    url: str | None = None,
-    idempotency_key: str | None = None,
-) -> dict[str, Any]:
+class NSEMasterConnector(BaseConnector):
     """
-    Download NSE EQUITY_L, store raw artifact, upsert warehouse rows for EQ series.
+    Downloads and normalises NSE reference/master data files.
+
+    All fetched data is returned as pandas DataFrames with normalised column names.
+    The caller is responsible for persisting to the database.
     """
-    import os
 
-    src = (url or os.getenv("NSE_EQUITY_LIST_URL") or DEFAULT_EQUITY_LIST_URL).strip()
-    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    ikey = idempotency_key or f"nse_master:{day}:{src}"
+    source_name = "nse_master"
+    default_headers = NSE_HEADERS
 
-    run = start_ingestion_run(db, "nse_master", ikey)
-    metrics: dict[str, Any] = {"url": src, "rows_seen": 0, "upserted": 0, "skipped": 0}
+    # ------------------------------------------------------------------
+    # Nifty 500 constituent list
+    # ------------------------------------------------------------------
 
-    try:
-        client = NSEClient()
-        code, content, _headers = client.fetch_bytes(src)
-        if code != 200:
-            raise RuntimeError(f"HTTP {code} fetching {src}")
-        art = record_raw_artifact(
-            db,
-            job_run_id=run.id,
-            source_name="NSE",
-            source_kind="csv",
-            source_url=src,
-            content=content,
-            http_status=code,
-        )
-        text = content.decode("utf-8", errors="replace")
-        rows = parse_equity_l_csv(text)
-        metrics["rows_seen"] = len(rows)
+    def fetch_nifty500(self) -> pd.DataFrame:
+        """
+        Download the Nifty 500 constituent CSV from NSE archives.
 
-        for row in rows:
-            series = _pick(row, "SERIES", "INSTRUMENT")
-            if series and series.upper() not in {"EQ", "BE", "BZ"}:
-                metrics["skipped"] += 1
-                continue
-            sym = _pick(row, "SYMBOL")
-            isin = _pick(row, "ISIN")
-            name = _pick(row, "NAME_OF_COMPANY", "SECURITY_NAME", "COMPANY_NAME")
-            if not sym or not isin or len(isin) < 12:
-                metrics["skipped"] += 1
-                continue
+        Returns a DataFrame with columns:
+            company_name, industry, symbol, series, isin_code
+        """
+        logger.info("Fetching Nifty 500 constituent list from NSE")
+        content, _ = self.fetch(NSE_NIFTY500_CSV_URL)
+        df = pd.read_csv(io.BytesIO(content))
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-            issuer = db.query(DataIssuer).filter(DataIssuer.canonical_isin == isin[:12]).one_or_none()
-            if not issuer:
-                issuer = DataIssuer(
-                    canonical_isin=isin[:12],
-                    legal_name=name or sym,
-                    display_name=name or sym,
-                    coverage_universe="nse_equity",
-                    lifecycle_status="active",
-                )
-                db.add(issuer)
-                db.flush()
+        rename = {
+            "company_name": "company_name",
+            "industry": "industry",
+            "symbol": "symbol",
+            "series": "series",
+            "isin_code": "isin",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
 
-            sec = db.query(DataSecurity).filter(DataSecurity.isin == isin[:12]).one_or_none()
-            if not sec:
-                sec = DataSecurity(
-                    issuer_id=issuer.id,
-                    isin=isin[:12],
-                    security_type="EQUITY",
-                    currency_code="INR",
-                    active=True,
-                )
-                db.add(sec)
-                db.flush()
+        df["symbol"] = df["symbol"].str.strip().str.upper()
+        df["isin"] = df["isin"].str.strip()
+        df["exchange_code"] = "NSE"
+        df["coverage_universe"] = "nifty500"
+        df["source_hash"] = sha256_bytes(content)
+        logger.info("Nifty 500: %d rows fetched", len(df))
+        return df
 
-            listing = (
-                db.query(DataListing)
-                .filter(
-                    DataListing.security_id == sec.id,
-                    DataListing.exchange_code == "NSE",
-                    DataListing.native_symbol == sym,
-                    DataListing.series_code == (series or "EQ"),
-                )
-                .one_or_none()
-            )
-            if not listing:
-                listing = DataListing(
-                    security_id=sec.id,
-                    exchange_code="NSE",
-                    native_symbol=sym,
-                    series_code=series or "EQ",
-                    is_primary=True,
-                )
-                db.add(listing)
-            metrics["upserted"] += 1
+    # ------------------------------------------------------------------
+    # NSE equity master (all listed securities)
+    # ------------------------------------------------------------------
 
-        db.commit()
-        art.parse_status = "parsed"
-        db.commit()
+    def fetch_securities_master(self) -> pd.DataFrame:
+        """
+        Download the NSE EQUITY_L.csv — all securities available for trading.
 
-        finish_ingestion_run(db, run, "succeeded", metrics=metrics)
-        return {"ok": True, **metrics}
-    except Exception as exc:
-        logger.exception("nse_master failed")
-        finish_ingestion_run(db, run, "failed", metrics=metrics, error={"message": str(exc)})
-        raise
+        Returns a DataFrame with columns:
+            symbol, name_of_company, series, date_of_listing, face_value, isin_number
+        """
+        logger.info("Fetching NSE securities master (EQUITY_L.csv)")
+        content, _ = self.fetch(NSE_SECURITIES_CSV_URL)
+        df = pd.read_csv(io.BytesIO(content))
+        df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+        rename = {
+            "symbol": "symbol",
+            "name_of_company": "company_name",
+            "series": "series",
+            "date_of_listing": "listing_date",
+            "face_value": "face_value",
+            "isin_number": "isin",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+
+        df["symbol"] = df["symbol"].str.strip().str.upper()
+        if "isin" in df.columns:
+            df["isin"] = df["isin"].str.strip()
+        df["exchange_code"] = "NSE"
+        df["source_hash"] = sha256_bytes(content)
+        logger.info("NSE securities master: %d rows fetched", len(df))
+        return df
+
+    # ------------------------------------------------------------------
+    # Symbol change history
+    # ------------------------------------------------------------------
+
+    def fetch_symbol_changes(self) -> pd.DataFrame:
+        """
+        Download NSE symbol change history CSV.
+
+        Returns a DataFrame with columns:
+            old_symbol, new_symbol, company_name, date_of_change, isin
+        """
+        logger.info("Fetching NSE symbol change history")
+        try:
+            content, _ = self.fetch(NSE_SYMBOL_CHANGES_URL)
+        except Exception as exc:
+            logger.warning("Symbol changes fetch failed (non-fatal): %s", exc)
+            return pd.DataFrame()
+
+        df = pd.read_csv(io.BytesIO(content))
+        df.columns = [c.strip().lower().replace(" ", "_").replace("-", "_") for c in df.columns]
+
+        rename = {
+            "old_symbol": "old_symbol",
+            "new_symbol": "new_symbol",
+            "company_name": "company_name",
+            "date_of_change": "effective_date",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+
+        if "old_symbol" in df.columns:
+            df["old_symbol"] = df["old_symbol"].str.strip().str.upper()
+        if "new_symbol" in df.columns:
+            df["new_symbol"] = df["new_symbol"].str.strip().str.upper()
+        df["source_hash"] = sha256_bytes(content)
+        logger.info("Symbol changes: %d rows fetched", len(df))
+        return df
+
+    # ------------------------------------------------------------------
+    # Company name change history
+    # ------------------------------------------------------------------
+
+    def fetch_name_changes(self) -> pd.DataFrame:
+        """
+        Download NSE company name change history CSV.
+
+        Returns a DataFrame with columns:
+            symbol, old_name, new_name, date_of_change
+        """
+        logger.info("Fetching NSE company name change history")
+        try:
+            content, _ = self.fetch(NSE_NAME_CHANGES_URL)
+        except Exception as exc:
+            logger.warning("Name changes fetch failed (non-fatal): %s", exc)
+            return pd.DataFrame()
+
+        df = pd.read_csv(io.BytesIO(content))
+        df.columns = [c.strip().lower().replace(" ", "_").replace("-", "_") for c in df.columns]
+
+        rename = {
+            "symbol": "symbol",
+            "old_name": "old_name",
+            "new_name": "new_name",
+            "date_of_change": "effective_date",
+        }
+        df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+
+        if "symbol" in df.columns:
+            df["symbol"] = df["symbol"].str.strip().str.upper()
+        df["source_hash"] = sha256_bytes(content)
+        logger.info("Name changes: %d rows fetched", len(df))
+        return df
