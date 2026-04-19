@@ -399,11 +399,11 @@ def _fallback_yfinance(symbol: str, db: Any) -> dict[str, float]:
         ticker = yf.Ticker(ticker_sym)
         info = ticker.info or {}
     except Exception as exc:
-        logger.debug("yfinance fetch failed for %s: %s", symbol, exc)
+        logger.warning("yfinance fetch failed for %s: %s", symbol, exc)
         return {}
 
     if not info or (info.get("marketCap") is None and info.get("totalRevenue") is None):
-        logger.debug("yfinance: empty info for %s", symbol)
+        logger.warning("yfinance: empty info for %s (Yahoo Finance may be blocking this IP)", symbol)
         return {}
 
     def _cr(val: Any) -> float | None:

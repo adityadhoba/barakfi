@@ -190,32 +190,49 @@ def _extract_latest_value(row: dict[str, Any]) -> float | None:
     """
     Extract the most-recent numeric value from an NSE financial-results row.
 
-    NSE returns rows with period columns named like "Mar 2024", "Jun 2024", etc.
-    We take the first (most-recent) numeric value we find when iterating.
-    The row might also have a 'currentValue' or 'value' key in some API shapes.
+    Handles multiple NSE API response shapes:
+      1. Flat period columns: {"rowName": "Net Sales", "Mar 2024": 1000, "Mar 2023": 900}
+      2. Named scalar:        {"rowName": "...", "value": 1000}
+      3. Values array:        {"rowName": "...", "values": [1000, 900, 800]}
+         (results-comparision endpoint — first element is most recent)
     """
-    for key in ("currentValue", "value", "latestValue"):
-        v = row.get(key)
-        if v is not None:
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                pass
+    def _to_float(v: Any) -> float | None:
+        if v is None:
+            return None
+        if isinstance(v, (int, float)):
+            f = float(v)
+            return f if f == f else None  # NaN guard
+        try:
+            return float(str(v).replace(",", "").strip())
+        except (TypeError, ValueError):
+            return None
 
-    # Fall back to the first non-label, non-None numeric column
-    skip = {"name", "title", "description", "type", "unit", "rowName"}
+    # Named scalar keys (old /api/financial-results shape)
+    for key in ("currentValue", "value", "latestValue"):
+        num = _to_float(row.get(key))
+        if num is not None:
+            return num
+
+    # "values" array (results-comparision shape) — first element = most recent period
+    values_arr = row.get("values")
+    if isinstance(values_arr, list) and values_arr:
+        num = _to_float(values_arr[0])
+        if num is not None:
+            return num
+
+    # Flat period-column keys: "Mar 2024", "FY2024", etc.
+    skip = {"name", "label", "title", "description", "type", "unit", "rowName",
+            "xbrlTag", "xbrl_tag", "symbol", "series", "period", "values"}
     for key, val in row.items():
-        if key in skip:
+        if key in skip or isinstance(val, (list, dict)):
             continue
         if val is None or val == "":
             continue
-        try:
-            num = float(str(val).replace(",", ""))
-            # Reject zero-ish sentinel values but allow actual zeros
+        num = _to_float(val)
+        if num is not None:
+            # Reject zero unless the key looks like a period label
             if num != 0 or key.lower().startswith(("mar", "jun", "sep", "dec", "fy", "20")):
                 return num
-        except (TypeError, ValueError):
-            continue
     return None
 
 
