@@ -81,6 +81,30 @@ export function formatFundamentalsLastUpdatedIst(iso: string | null | undefined)
   })} IST`;
 }
 
+/**
+ * Returns true when all critical financial fields are missing or zero.
+ * Used to show a "Data Pending" banner for newly seeded stocks.
+ */
+export function isFundamentalsEmpty(stock: {
+  total_assets?: number | null;
+  revenue?: number | null;
+  debt?: number | null;
+  total_business_income?: number | null;
+  market_cap?: number | null;
+  data_quality?: string | null;
+}): boolean {
+  // If data_quality is explicitly high or medium, trust it
+  if (stock.data_quality === "high" || stock.data_quality === "medium") return false;
+  const critical = [
+    stock.total_assets,
+    stock.revenue,
+    stock.debt,
+    stock.total_business_income,
+    stock.market_cap,
+  ];
+  return critical.every((v) => !v || v === 0);
+}
+
 export function fundamentalsUnitNote(currency: string = "INR"): string {
   const c = (currency || "INR").toUpperCase();
   if (c === "INR") {

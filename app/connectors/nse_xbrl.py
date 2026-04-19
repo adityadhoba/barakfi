@@ -216,19 +216,31 @@ def _parse_period_end(row_data: dict[str, Any] | None, period: str) -> date:
 def fetch_nse_financials(
     symbol: str,
     period: str = "Annual",
+    session: "Any | None" = None,
 ) -> tuple[dict[str, float], str, int]:
     """
     Fetch NSE financial-results JSON for *symbol* and extract canonical metrics.
+
+    Args:
+        symbol: NSE ticker symbol (e.g. "RELIANCE")
+        period: "Annual" or "Quarterly"
+        session: Optional NSESession instance for cookie reuse across batch runs.
+                 If None, a temporary NSEClient is created (not recommended for batches).
 
     Returns:
         (metrics_dict, source_url, http_status)
         metrics_dict: {METRIC_CODE: value_in_crores}
         Returns ({}, url, status) on failure.
     """
+    from app.connectors.nse_client import NSESession
     url = _NSE_FIN_RESULTS_BASE.format(period=period, symbol=symbol.upper())
-    client = NSEClient(timeout=45.0)
+
     try:
-        code, content, _headers = client.fetch_bytes(url)
+        if session is not None:
+            code, content, _headers = session.get(url)
+        else:
+            client = NSEClient(timeout=45.0)
+            code, content, _headers = client.fetch_bytes(url)
     except Exception as exc:
         logger.warning("nse_xbrl: HTTP error symbol=%s period=%s: %s", symbol, period, exc)
         return {}, url, 0
@@ -280,6 +292,7 @@ def sync_symbol_financials(
     *,
     period: str = "Annual",
     idempotency_key: str | None = None,
+    session: "Any | None" = None,
 ) -> dict[str, Any]:
     """
     Fetch NSE financials for *symbol*, write DataFinancialFact rows.
@@ -305,7 +318,7 @@ def sync_symbol_financials(
         "source": "nse_xbrl",
     }
 
-    extracted, source_url, http_status = fetch_nse_financials(symbol, period)
+    extracted, source_url, http_status = fetch_nse_financials(symbol, period, session=session)
 
     if not extracted:
         metrics_out["status"] = "empty_or_error"

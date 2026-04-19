@@ -182,23 +182,47 @@ def _compute_market_cap(
     if not prices:
         return None, None, None
 
+    # NSE SHARES_OUTSTANDING metric = paid-up equity capital in Crores.
+    # Face value is typically ₹1–₹10. Approximate shares from paid-up capital:
+    #   shares = (paid_up_capital_crores × 1_crore) / face_value
+    # Since face_value is usually ₹1 or ₹2 or ₹10, and we store paid-up capital
+    # in crores (INR), we derive shares as paid_up_capital_crores * 1e7 / face_value.
+    # Use face_value from ListingV2 if available, else default to ₹10.
+    face_value = float(primary_listing.face_value) if primary_listing.face_value else 10.0
+    if face_value <= 0:
+        face_value = 10.0
+
+    # shares_outstanding_cr is in Crores of paid-up equity capital (INR).
+    # paid_up_capital = shares * face_value => shares = paid_up_capital / face_value
+    # paid_up_capital in rupees = shares_outstanding_cr * 1e7 (since 1 Cr = 1e7 rupees for ₹10 fv)
+    # More precisely: shares = (shares_outstanding_cr * 1e7) / face_value
+    shares_count = (shares_outstanding_cr * 1_00_00_000) / face_value  # absolute share count
+
     latest_close = float(prices[0].close_price)
-    # shares_outstanding_cr is paid-up capital in Crores (face value × shares / 1Cr)
-    # Derive shares from face value (typically ₹10 or ₹1); we use market cap proxy instead
-    # If the listing has shares from close × shares we can compute directly.
-    # For now, skip if no share count is available from a reliable source.
-    # Instead: use all close prices to derive avg market cap ratios normalized to latest.
+    # Market cap in INR = shares × price; convert to Crores
+    market_cap_inr_cr = (shares_count * latest_close) / 1_00_00_000
+
     closes = [float(p.close_price) for p in prices if p.close_price]
     if not closes:
-        return None, None, None
+        return market_cap_inr_cr, None, None
 
-    # We don't know absolute share count; compute market cap proportionally
-    # as latest market cap × (avg close / latest close)
-    # This is approximate — will be replaced with exact shares from shareholding XBRL.
-    # Provide market cap = None if no external source; store relative averages for ratios.
-    # For now return None to signal "not yet computable without shares".
-    # Screening engine will use market_cap from Stock table as fallback.
-    return None, None, None
+    # 24m and 36m averages: slice prices by cutoff dates
+    prices_24m = [
+        float(p.close_price) for p in prices
+        if p.close_price and p.trade_date >= cutoff_24m
+    ]
+    avg_close_36m = sum(closes) / len(closes)
+    avg_close_24m = sum(prices_24m) / len(prices_24m) if prices_24m else avg_close_36m
+
+    avg_36m = (shares_count * avg_close_36m) / 1_00_00_000
+    avg_24m = (shares_count * avg_close_24m) / 1_00_00_000
+
+    logger.debug(
+        "_compute_market_cap: symbol issuer_id=%d face_value=%.2f shares=%.0f "
+        "latest_close=%.2f market_cap=%.2f Cr avg36m=%.2f Cr",
+        issuer_id, face_value, shares_count, latest_close, market_cap_inr_cr, avg_36m,
+    )
+    return market_cap_inr_cr, avg_24m, avg_36m
 
 
 def _upsert_fundamentals_snapshot(
@@ -286,7 +310,42 @@ def _write_back_to_stock(
         .one_or_none()
     )
     if not stock:
-        return False
+        # Create a skeleton row so the /stocks API can serve this symbol.
+        # universe_sync should have done this already, but guard here too.
+        stock = Stock(
+            symbol=symbol,
+            exchange="NSE",
+            name=symbol,
+            sector="Unknown",
+            is_active=True,
+            is_etf=False,
+            currency="INR",
+            country="India",
+            data_source="nse_xbrl",
+            market_cap=0.0,
+            average_market_cap_36m=0.0,
+            debt=0.0,
+            revenue=0.0,
+            total_business_income=0.0,
+            interest_income=0.0,
+            non_permissible_income=0.0,
+            accounts_receivable=0.0,
+            cash_and_equivalents=0.0,
+            short_term_investments=0.0,
+            fixed_assets=0.0,
+            total_assets=0.0,
+            price=0.0,
+        )
+        db.add(stock)
+        try:
+            db.flush()
+        except Exception:
+            db.rollback()
+            stock = db.query(Stock).filter(
+                Stock.symbol == symbol, Stock.exchange == "NSE"
+            ).one_or_none()
+            if not stock:
+                return False
 
     updated = False
     for metric_code, stock_col in _METRIC_TO_STOCK.items():
@@ -309,55 +368,143 @@ def _write_back_to_stock(
     return updated
 
 
+_INR_TO_CRORES = 1_00_00_000  # 1 Crore = 10 million rupees
+
+
 def _fallback_yfinance(symbol: str, db: Any) -> dict[str, float]:
     """
-    Fallback: write yfinance fundamentals to DataFinancialFact when NSE returns nothing.
+    Fallback: fetch yfinance data and write it both to DataFinancialFact (warehouse)
+    AND directly to the legacy Stock table.
 
-    Uses the existing yfinance_fallback connector which writes tall facts in TTM_VENDOR periods.
-    Returns {metric_code: value} read back from those fact rows, or {} on failure.
+    yfinance returns monetary values in raw INR for .NS tickers.
+    We convert to INR Crores (divide by 1e7) before storing so that all values
+    are on the same scale as NSE XBRL data.
+
+    Returns {metric_code: value_in_crores} for the snapshot pipeline, or {} on failure.
     """
     try:
-        from app.connectors.yfinance_fallback import write_yfinance_facts_for_symbol
-        result = write_yfinance_facts_for_symbol(db, symbol, exchange="NSE")
-        if not result.get("ok"):
-            return {}
-
-        # The issuer_id is embedded in the fact rows — read them back via DataIssuer
-        from app.models_data_warehouse import DataIssuer, DataFinancialPeriod, DataFinancialFact
-        from app.models import Stock
-        stock = db.query(Stock).filter(Stock.symbol == symbol, Stock.exchange == "NSE").one_or_none()
-        if not stock or not stock.isin:
-            return {}
-        data_issuer = (
-            db.query(DataIssuer)
-            .filter(DataIssuer.canonical_isin == stock.isin)
-            .one_or_none()
-        )
-        if not data_issuer:
-            return {}
-
-        from datetime import timedelta
-        period = (
-            db.query(DataFinancialPeriod)
-            .filter(
-                DataFinancialPeriod.issuer_id == data_issuer.id,
-                DataFinancialPeriod.period_type == "TTM_VENDOR",
-            )
-            .order_by(DataFinancialPeriod.period_end_date.desc())
-            .first()
-        )
-        if not period:
-            return {}
-
-        facts = (
-            db.query(DataFinancialFact)
-            .filter(DataFinancialFact.period_id == period.id)
-            .all()
-        )
-        return {f.metric_code: float(f.value_numeric) for f in facts if f.value_numeric is not None}
-    except Exception as exc:
-        logger.debug("yfinance fallback failed for %s: %s", symbol, exc)
+        import yfinance as yf
+    except ImportError:
+        logger.warning("yfinance not installed — skipping fallback for %s", symbol)
         return {}
+
+    try:
+        suffix = ".NS"
+        ticker_sym = f"{symbol}{suffix}"
+        ticker = yf.Ticker(ticker_sym)
+        info = ticker.info or {}
+    except Exception as exc:
+        logger.debug("yfinance fetch failed for %s: %s", symbol, exc)
+        return {}
+
+    if not info or (info.get("marketCap") is None and info.get("totalRevenue") is None):
+        logger.debug("yfinance: empty info for %s", symbol)
+        return {}
+
+    def _cr(val: Any) -> float | None:
+        """Convert raw INR value to INR Crores."""
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            if f != f:  # NaN check
+                return None
+            return round(f / _INR_TO_CRORES, 4)
+        except (TypeError, ValueError):
+            return None
+
+    def _raw(val: Any) -> float | None:
+        """Return raw non-monetary value (shares count, ratios, etc.)."""
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            return f if f == f else None
+        except (TypeError, ValueError):
+            return None
+
+    # Build a metric_code → value_in_crores dict for the canonical pipeline
+    facts: dict[str, float] = {}
+
+    revenue_cr = _cr(info.get("totalRevenue"))
+    if revenue_cr:
+        facts["REVENUE"] = revenue_cr
+        facts["TOTAL_BUSINESS_INCOME"] = revenue_cr
+
+    debt_cr = _cr(info.get("totalDebt"))
+    if debt_cr:
+        facts["TOTAL_DEBT"] = debt_cr
+
+    cash_cr = _cr(info.get("totalCash"))
+    if cash_cr:
+        facts["CASH_AND_EQUIVALENTS"] = cash_cr
+
+    sti_cr = _cr(info.get("shortTermInvestments"))
+    if sti_cr:
+        facts["SHORT_TERM_INVESTMENTS"] = sti_cr
+
+    assets_cr = _cr(info.get("totalAssets"))
+    if assets_cr:
+        facts["TOTAL_ASSETS"] = assets_cr
+
+    ar_cr = _cr(info.get("accountsReceivable") or info.get("netReceivables"))
+    if ar_cr:
+        facts["ACCOUNTS_RECEIVABLE"] = ar_cr
+
+    ppe_cr = _cr(info.get("propertyPlantEquipmentNet") or info.get("netPPE"))
+    if ppe_cr:
+        facts["FIXED_ASSETS"] = ppe_cr
+
+    ni_cr = _cr(info.get("netIncomeToCommon"))
+    if ni_cr:
+        facts["NET_INCOME"] = ni_cr
+
+    ebitda_cr = _cr(info.get("ebitda"))
+    if ebitda_cr:
+        facts["EBITDA"] = ebitda_cr
+
+    interest_income_cr = _cr(info.get("interestIncome"))
+    if interest_income_cr:
+        facts["INTEREST_INCOME"] = interest_income_cr
+
+    shares = _raw(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
+    if shares:
+        # Convert absolute share count to "Crores of shares" for consistency with NSE XBRL
+        facts["SHARES_OUTSTANDING"] = shares / _INR_TO_CRORES
+
+    mcap_cr = _cr(info.get("marketCap"))
+
+    if not facts and mcap_cr is None:
+        return {}
+
+    # Also write directly to the legacy Stock table for immediate visibility
+    from app.models import Stock
+    stock = db.query(Stock).filter(Stock.symbol == symbol, Stock.exchange == "NSE").one_or_none()
+    if stock:
+        for metric_code, stock_col in _METRIC_TO_STOCK.items():
+            val = facts.get(metric_code)
+            if val is not None and hasattr(stock, stock_col):
+                setattr(stock, stock_col, val)
+        if mcap_cr is not None:
+            stock.market_cap = mcap_cr
+        stock.fundamentals_updated_at = datetime.now(UTC)
+        stock.data_source = "yfinance_fallback"
+        try:
+            db.add(stock)
+            db.flush()
+        except Exception as exc:
+            db.rollback()
+            logger.debug("yfinance direct stock write failed for %s: %s", symbol, exc)
+
+    # Also write to warehouse fact store for FundamentalsSnapshot
+    try:
+        from app.connectors.yfinance_fallback import write_yfinance_facts_for_symbol
+        write_yfinance_facts_for_symbol(db, symbol, exchange="NSE")
+    except Exception as exc:
+        logger.debug("yfinance warehouse write failed for %s: %s", symbol, exc)
+
+    logger.debug("yfinance fallback: %d metrics for %s (mcap=%.1f Cr)", len(facts), symbol, mcap_cr or 0)
+    return facts
 
 
 def run(
@@ -424,10 +571,21 @@ def run(
         logger.info("fundamentals_sync: %d symbols to process", len(listings))
 
         from app.connectors.nse_xbrl import sync_symbol_financials
+        from app.connectors.nse_client import NSESession
 
         # Resolve issuer_id in data_warehouse (DataIssuer) for DataFinancialFact writes
         from app.models_data_warehouse import DataIssuer
         snapshot_date = date.today()
+
+        # Warm a single NSE session for the whole batch — this prevents NSE from
+        # seeing 500 separate "new browser" connections and getting blocked.
+        nse_session = NSESession(timeout=45.0)
+        nse_warm_ok = nse_session.warm()
+        if not nse_warm_ok:
+            logger.warning(
+                "fundamentals_sync: NSE session warm failed (403/network issue). "
+                "NSE XBRL data will be unavailable; yfinance fallback will be used for all symbols."
+            )
 
         for listing, issuer in listings:
             metrics["symbols_attempted"] += 1
@@ -453,10 +611,10 @@ def run(
                     db.add(data_issuer)
                     db.flush()
 
-                # Step 1: Fetch NSE XBRL → DataFinancialFact
+                # Step 1: Fetch NSE XBRL → DataFinancialFact (reuse persistent session)
                 if not dry_run:
                     xbrl_result = sync_symbol_financials(
-                        db, symbol, data_issuer.id, period=period
+                        db, symbol, data_issuer.id, period=period, session=nse_session
                     )
                     nse_ok = xbrl_result.get("status") == "ok" and xbrl_result.get("facts_written", 0) > 0
                 else:
@@ -515,6 +673,8 @@ def run(
                 logger.exception("fundamentals_sync: error for %s: %s", symbol, exc)
                 db.rollback()
                 metrics["errors"] += 1
+
+        nse_session.close()
 
         # Finalize job run
         job_run.status = "succeeded"

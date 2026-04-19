@@ -529,24 +529,28 @@ def list_stocks(
     halal_only: bool = Query(default=False),
     search: str | None = Query(default=None),
     limit: int | None = Query(default=None, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     order_by: str = Query(default="symbol", pattern="^(symbol|market_cap_desc)$"),
     db: Session = Depends(get_db),
 ):
     """
-    Get all active stocks with fundamental data.
+    Get active stocks with fundamental data.
 
     Auth: None (public endpoint)
 
     Query Params:
-        halal_only: If True, filter to only HALAL-compliant stocks (expensive, done in Python)
+        halal_only: Filter to HALAL-compliant stocks only (expensive, done in Python)
         search: Search by symbol or name (case insensitive, substring match)
+        limit: Max rows to return (1-1000). Omit for all.
+        offset: Row offset for pagination (use with limit for infinite scroll).
+        order_by: Sort order — 'symbol' (default) or 'market_cap_desc'
 
     Returns:
         List of StockRead with symbol, name, sector, market cap, fundamentals
 
     Performance:
-        ~50-500 stocks typically. halal_only=true filters in Python (slow for 500+).
-        Consider using bulk screening endpoint for large universes.
+        500 stocks at ~1 KB each = ~500 KB. Use limit+offset for paginated loads.
+        halal_only=true filters in Python — avoid for large limits.
     """
     query = db.query(Stock).filter(
         Stock.is_active.is_(True),
@@ -561,6 +565,9 @@ def list_stocks(
         query = query.order_by(Stock.market_cap.desc(), Stock.symbol.asc())
     else:
         query = query.order_by(Stock.symbol.asc())
+
+    if offset > 0:
+        query = query.offset(offset)
     if limit is not None:
         query = query.limit(limit)
     stocks = query.all()
@@ -600,6 +607,96 @@ def get_stock(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return _stock_read_enriched(db, stock)
+
+
+@router.get("/stocks/{symbol}/chart")
+def get_stock_chart(
+    symbol: str,
+    range: str = Query(default="6mo", pattern="^(1mo|3mo|6mo|1y|5y)$"),
+    exchange: str = Query(default="NSE", pattern="^(NSE|BSE)$"),
+    db: Session = Depends(get_db),
+):
+    """
+    Return OHLC candle data for a stock sourced from NSE Bhavcopy (MarketPriceDaily).
+
+    Auth: None (public endpoint, cached at CDN level)
+
+    Returns:
+        {symbol, exchange, range, candles: [{time, open, high, low, close}]}
+
+    Falls back to empty candles if no bhavcopy data yet exists for this symbol.
+    """
+    from datetime import date, timedelta
+    import calendar
+
+    try:
+        from app.models_v2 import ListingV2, MarketPriceDaily
+    except ImportError:
+        return JSONResponse({"symbol": symbol, "exchange": exchange, "range": range, "candles": []})
+
+    sym_upper = symbol.strip().upper()
+    exch_upper = exchange.strip().upper()
+
+    listing = (
+        db.query(ListingV2)
+        .filter(ListingV2.symbol == sym_upper, ListingV2.exchange_code == exch_upper)
+        .first()
+    )
+    if not listing:
+        # Try BSE as fallback if NSE not found
+        listing = (
+            db.query(ListingV2)
+            .filter(ListingV2.symbol == sym_upper)
+            .first()
+        )
+    if not listing:
+        return JSONResponse(
+            {"symbol": symbol, "exchange": exchange, "range": range, "candles": []},
+            headers={"Cache-Control": "public, max-age=60"},
+        )
+
+    today = date.today()
+    range_map = {
+        "1mo": today - timedelta(days=31),
+        "3mo": today - timedelta(days=92),
+        "6mo": today - timedelta(days=183),
+        "1y": today - timedelta(days=366),
+        "5y": today - timedelta(days=5 * 366),
+    }
+    cutoff = range_map.get(range, today - timedelta(days=183))
+
+    rows = (
+        db.query(MarketPriceDaily)
+        .filter(
+            MarketPriceDaily.listing_id == listing.id,
+            MarketPriceDaily.trade_date >= cutoff,
+        )
+        .order_by(MarketPriceDaily.trade_date.asc())
+        .all()
+    )
+
+    candles = []
+    for r in rows:
+        if r.close_price is None:
+            continue
+        # Unix timestamp for midnight IST (use date as-is; lightweight-charts handles dates)
+        import time as _time
+        import datetime as _dt
+        dt = _dt.datetime.combine(r.trade_date, _dt.time.min)
+        unix_ts = int(dt.timestamp())
+        candles.append({
+            "time": unix_ts,
+            "open": float(r.open_price) if r.open_price else float(r.close_price),
+            "high": float(r.high_price) if r.high_price else float(r.close_price),
+            "low": float(r.low_price) if r.low_price else float(r.close_price),
+            "close": float(r.close_price),
+        })
+
+    # Cache for 5 min — same as the old Yahoo Finance proxy cache
+    return JSONResponse(
+        {"symbol": sym_upper, "exchange": exch_upper, "range": range, "candles": candles},
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 @router.get("/check-stock")
