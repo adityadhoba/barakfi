@@ -71,7 +71,7 @@ services:
       # Set to 1 in Render dashboard to bypass the "already ran today" guard,
       # trigger the run, then set back to 0.
       - key: PIPELINE_FORCE_RUN
-        value: "0"
+        value: "1"
 
   # Job D-pre: Fundamentals sync — NSE Financial Results API (official Reg 33 source)
   # 05:00 PM IST Mon–Fri => 11:30 UTC  (after market close, before screening recompute)
@@ -101,7 +101,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PIPELINE_FORCE_RUN
-        value: "0"
+        value: "1"
 
   # Job D: EOD price sync — NSE bhavcopy (official end-of-day prices)
   # 06:30 PM IST Mon–Fri => 13:00 UTC  (after market close + bhavcopy publish lag)
@@ -129,7 +129,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PIPELINE_FORCE_RUN
-        value: "0"
+        value: "1"
 
   # Job E: Screening recompute — runs after EOD prices are available
   # 07:30 PM IST Mon–Fri => 14:00 UTC
@@ -157,5 +157,5 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PIPELINE_FORCE_RUN
-        value: "0"
+        value: "1"
 
