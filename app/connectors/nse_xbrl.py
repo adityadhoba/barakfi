@@ -47,6 +47,10 @@ logger = logging.getLogger("barakfi.nse_xbrl")
 
 IST = ZoneInfo("Asia/Kolkata")
 
+
+class NSESoftBlockError(RuntimeError):
+    """Raised when NSE returns an HTML page instead of JSON (IP soft-blocked)."""
+
 # ---------------------------------------------------------------------------
 # Canonical metric codes used in DataFinancialFact.metric_code
 # ---------------------------------------------------------------------------
@@ -281,10 +285,23 @@ def fetch_nse_financials(
         logger.debug("nse_xbrl: HTTP %s for %s", http_code, sym)
         return {}, url, http_code, None
 
+    # Detect HTML soft-block: NSE returns 200 with an HTML challenge page instead of JSON.
+    # This happens when the Render/cloud IP is flagged by Cloudflare.
+    # Raise a distinct exception so the caller can abort the whole batch early.
+    if content[:1] in (b"<", b"\xef"):  # HTML or BOM prefix
+        snippet = content[:120].decode("utf-8", errors="replace").strip()
+        raise NSESoftBlockError(
+            f"NSE returned HTML instead of JSON for {sym} — "
+            f"IP is soft-blocked. Response starts: {snippet!r}"
+        )
+
     try:
         payload = json.loads(content.decode("utf-8", errors="replace"))
     except json.JSONDecodeError:
-        logger.warning("nse_xbrl: JSON decode error for %s", sym)
+        snippet = content[:120].decode("utf-8", errors="replace").strip()
+        logger.warning(
+            "nse_xbrl: JSON decode error for %s — response starts: %r", sym, snippet
+        )
         return {}, url, http_code, None
 
     metrics, period_end = _extract_rescmpdata_metrics(payload, period, sym)

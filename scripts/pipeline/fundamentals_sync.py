@@ -579,12 +579,14 @@ def run(
         listings = query.all()
         logger.info("fundamentals_sync: %d symbols to process", len(listings))
 
-        from app.connectors.nse_xbrl import sync_symbol_financials
+        from app.connectors.nse_xbrl import sync_symbol_financials, NSESoftBlockError
         from app.connectors.nse_client import NSESession
 
         # Resolve issuer_id in data_warehouse (DataIssuer) for DataFinancialFact writes
         from app.models_data_warehouse import DataIssuer
         snapshot_date = date.today()
+
+        import time as _time
 
         # Warm a single NSE session for the whole batch — this prevents NSE from
         # seeing 500 separate "new browser" connections and getting blocked.
@@ -595,6 +597,10 @@ def run(
                 "fundamentals_sync: NSE session warm failed (403/network issue). "
                 "NSE XBRL data will be unavailable; yfinance fallback will be used for all symbols."
             )
+
+        # Set to True the first time NSE returns HTML instead of JSON (IP soft-blocked).
+        # When set, we skip NSE for ALL remaining symbols to avoid 500 wasted calls.
+        nse_soft_blocked = not nse_warm_ok
 
         for listing, issuer in listings:
             metrics["symbols_attempted"] += 1
@@ -621,24 +627,32 @@ def run(
                     db.flush()
 
                 # Step 1: Fetch NSE XBRL → DataFinancialFact (reuse persistent session)
-                if not dry_run:
-                    xbrl_result = sync_symbol_financials(
-                        db, symbol, data_issuer.id, period=period, session=nse_session
-                    )
-                    # Accept both fresh writes and idempotent skips (facts already exist)
-                    nse_ok = xbrl_result.get("status") == "ok" and (
-                        xbrl_result.get("facts_written", 0) > 0
-                        or xbrl_result.get("facts_skipped", 0) > 0
-                    )
-                else:
-                    nse_ok = False  # dry run: skip writes
+                nse_ok = False
+                if not dry_run and not nse_soft_blocked:
+                    try:
+                        xbrl_result = sync_symbol_financials(
+                            db, symbol, data_issuer.id, period=period, session=nse_session
+                        )
+                        # Accept both fresh writes and idempotent skips (facts already exist)
+                        nse_ok = xbrl_result.get("status") == "ok" and (
+                            xbrl_result.get("facts_written", 0) > 0
+                            or xbrl_result.get("facts_skipped", 0) > 0
+                        )
+                    except NSESoftBlockError as e:
+                        # NSE returned HTML — IP is blocked. Skip NSE for all remaining symbols.
+                        logger.warning(
+                            "fundamentals_sync: NSE soft-block detected — switching to "
+                            "yfinance-only mode for all remaining symbols. Detail: %s", e
+                        )
+                        nse_soft_blocked = True
 
                 if nse_ok:
                     metrics["nse_xbrl_ok"] += 1
                     data_source = "nse_xbrl"
                 else:
                     # Step 2: Fallback to yfinance
-                    logger.debug("fundamentals_sync: NSE empty for %s, trying yfinance", symbol)
+                    # Small delay to avoid Yahoo Finance rate-limiting across 500 symbols
+                    _time.sleep(0.25)
                     fallback_facts = _fallback_yfinance(symbol, db)
                     if fallback_facts:
                         metrics["yfinance_fallback"] += 1
