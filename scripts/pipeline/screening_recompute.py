@@ -63,7 +63,7 @@ def _ensure_tables() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
+def run(symbol: Optional[str] = None, dry_run: bool = False, force: bool = False) -> dict:
     """
     Recompute screening results.
 
@@ -96,9 +96,11 @@ def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
     try:
         # Idempotency guard (per-symbol runs can repeat)
         existing_run = db.query(JobRun).filter_by(idempotency_key=idempotency_key).first()
-        if existing_run and existing_run.status == "succeeded" and symbol is None:
-            logger.info("Full recompute already ran today — skipping")
+        if existing_run and existing_run.status == "succeeded" and symbol is None and not force:
+            logger.info("Full recompute already ran today — skipping (use --force to re-run)")
             return {**metrics, "skipped": True}
+        if existing_run and force:
+            logger.info("Screening recompute: --force: resetting previous run")
 
         job_run = existing_run or JobRun(
             job_name="screening_recompute",
@@ -302,8 +304,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Screening recompute pipeline")
     parser.add_argument("--symbol", type=str, help="Recompute only for this NSE symbol")
     parser.add_argument("--dry-run", action="store_true", help="Compute but do not write to DB")
+    parser.add_argument("--force", action="store_true", help="Re-run even if today's job already completed")
     args = parser.parse_args()
 
-    result = run(symbol=args.symbol, dry_run=args.dry_run)
+    result = run(symbol=args.symbol, dry_run=args.dry_run, force=args.force)
     logger.info("Result: %s", result)
     sys.exit(0 if result.get("errors", 0) == 0 else 1)

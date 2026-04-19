@@ -63,7 +63,7 @@ def _ensure_tables() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def run(dry_run: bool = False) -> dict:
+def run(dry_run: bool = False, force: bool = False) -> dict:
     """
     Main entry point for universe sync.
 
@@ -100,9 +100,11 @@ def run(dry_run: bool = False) -> dict:
     try:
         # ---- Check/create job run (idempotency guard) ----
         existing_run = db.query(JobRun).filter_by(idempotency_key=idempotency_key).first()
-        if existing_run and existing_run.status == "succeeded":
-            logger.info("Universe sync already completed today (idempotency key: %s)", idempotency_key)
+        if existing_run and existing_run.status == "succeeded" and not force:
+            logger.info("Universe sync already completed today (%s) — use --force to re-run", idempotency_key)
             return {**metrics, "skipped": True, "reason": "already_ran_today"}
+        if existing_run and force:
+            logger.info("Universe sync: --force: resetting previous run")
 
         job_run = existing_run or JobRun(
             job_name="universe_sync",
@@ -359,8 +361,9 @@ def run(dry_run: bool = False) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Universe sync pipeline")
     parser.add_argument("--dry-run", action="store_true", help="Fetch data but do not write to DB")
+    parser.add_argument("--force", action="store_true", help="Re-run even if today's job already completed")
     args = parser.parse_args()
 
-    result = run(dry_run=args.dry_run)
+    result = run(dry_run=args.dry_run, force=args.force)
     logger.info("Result: %s", result)
     sys.exit(0 if result.get("errors", 0) == 0 else 1)
