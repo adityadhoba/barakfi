@@ -62,6 +62,7 @@ def _ensure_tables() -> None:
 def run_for_date(
     trade_date: date,
     dry_run: bool = False,
+    force: bool = False,
 ) -> dict:
     """Fetch and persist EOD prices for one trading date."""
     _ensure_tables()
@@ -86,9 +87,11 @@ def run_for_date(
     try:
         # Idempotency guard
         existing = db.query(JobRun).filter_by(idempotency_key=idempotency_key).first()
-        if existing and existing.status == "succeeded":
-            logger.info("EOD sync for %s already ran — skipping", trade_date)
+        if existing and existing.status == "succeeded" and not force:
+            logger.info("EOD sync for %s already ran — skipping (use --force to re-run)", trade_date)
             return {**metrics, "skipped": True}
+        if existing and force:
+            logger.info("EOD sync for %s: --force: resetting previous run", trade_date)
 
         job_run = existing or JobRun(
             job_name="eod_price_sync",
@@ -238,7 +241,7 @@ def run_for_date(
     return metrics
 
 
-def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool = False) -> dict:
+def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool = False, force: bool = False) -> dict:
     """
     Run EOD price sync for one or more dates.
 
@@ -254,7 +257,7 @@ def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool
         current = start
         while current <= end:
             try:
-                m = run_for_date(current, dry_run=dry_run)
+                m = run_for_date(current, dry_run=dry_run, force=force)
                 all_metrics.append(m)
             except Exception as exc:
                 logger.warning("Backfill failed for %s: %s", current, exc)
@@ -267,7 +270,7 @@ def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool
     if trade_date is None:
         trade_date = date.today() - timedelta(days=1)
 
-    return run_for_date(trade_date, dry_run=dry_run)
+    return run_for_date(trade_date, dry_run=dry_run, force=force)
 
 
 if __name__ == "__main__":
@@ -275,12 +278,13 @@ if __name__ == "__main__":
     parser.add_argument("--date", type=str, help="Trade date (YYYY-MM-DD). Defaults to yesterday.")
     parser.add_argument("--backfill-days", type=int, default=1, help="Number of days to backfill")
     parser.add_argument("--dry-run", action="store_true", help="Fetch but do not write to DB")
+    parser.add_argument("--force", action="store_true", help="Re-run even if today's job already completed")
     args = parser.parse_args()
 
     target_date: Optional[date] = None
     if args.date:
         target_date = date.fromisoformat(args.date)
 
-    result = run(trade_date=target_date, backfill_days=args.backfill_days, dry_run=args.dry_run)
+    result = run(trade_date=target_date, backfill_days=args.backfill_days, dry_run=args.dry_run, force=args.force)
     logger.info("Result: %s", result)
     sys.exit(0 if result.get("errors", 0) == 0 else 1)
