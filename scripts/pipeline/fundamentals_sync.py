@@ -511,6 +511,7 @@ def run(
     symbol_filter: Optional[str] = None,
     dry_run: bool = False,
     period: str = "Annual",
+    force: bool = False,
 ) -> dict[str, Any]:
     """Main entry point for fundamentals sync."""
     _ensure_tables()
@@ -535,9 +536,12 @@ def run(
 
     try:
         existing_run = db.query(JobRun).filter_by(idempotency_key=ikey).first()
-        if existing_run and existing_run.status == "succeeded":
-            logger.info("fundamentals_sync: already ran today (%s)", ikey)
+        if existing_run and existing_run.status == "succeeded" and not force:
+            logger.info("fundamentals_sync: already ran today (%s) — use --force to re-run", ikey)
             return {**metrics, "skipped": True, "reason": "already_ran_today"}
+
+        if existing_run and force:
+            logger.info("fundamentals_sync: --force: resetting previous run (%s)", ikey)
 
         job_run = existing_run or JobRun(
             job_name="fundamentals_sync",
@@ -710,11 +714,17 @@ def main() -> None:
         default="Annual",
         help="NSE financial results period (default: Annual)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-run even if today's job already completed (bypass idempotency check)",
+    )
     args = parser.parse_args()
     result = run(
         symbol_filter=args.symbol,
         dry_run=args.dry_run,
         period=args.period,
+        force=args.force,
     )
     logger.info("result=%s", result)
     if result.get("errors", 0) > 0:
