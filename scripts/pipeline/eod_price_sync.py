@@ -46,6 +46,8 @@ if not _DB_URL or _DB_URL.startswith("sqlite"):
     )
     sys.exit(1)
 
+_ENV_FORCE = os.getenv("PIPELINE_FORCE_RUN", "").lower() in {"1", "true", "yes"}
+
 
 def _idempotency_key(job_name: str, trade_date: date) -> str:
     raw = f"{job_name}::{trade_date.isoformat()}"
@@ -285,6 +287,6 @@ if __name__ == "__main__":
     if args.date:
         target_date = date.fromisoformat(args.date)
 
-    result = run(trade_date=target_date, backfill_days=args.backfill_days, dry_run=args.dry_run, force=args.force)
+    result = run(trade_date=target_date, backfill_days=args.backfill_days, dry_run=args.dry_run, force=args.force or _ENV_FORCE)
     logger.info("Result: %s", result)
     sys.exit(0 if result.get("errors", 0) == 0 else 1)
