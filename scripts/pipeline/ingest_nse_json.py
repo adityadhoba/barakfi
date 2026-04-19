@@ -302,6 +302,35 @@ def _upsert_snapshot(
     db.flush()
 
 
+def _lookup_issuer_meta(db: Any, symbol: str) -> tuple[str, str]:
+    """
+    Return (company_name, sector) from Issuer for the given NSE symbol.
+    Falls back to (symbol, "Unknown") if not found.
+    """
+    from app.models_v2 import Issuer, ListingV2
+
+    listing = (
+        db.query(ListingV2)
+        .join(Issuer, ListingV2.issuer_id == Issuer.id)
+        .filter(
+            ListingV2.symbol == symbol,
+            ListingV2.exchange_code == "NSE",
+            ListingV2.current_is_primary == True,  # noqa: E712
+        )
+        .first()
+    )
+    if not listing:
+        return symbol, "Unknown"
+
+    issuer = db.query(Issuer).filter(Issuer.id == listing.issuer_id).one_or_none()
+    if not issuer:
+        return symbol, "Unknown"
+
+    name = issuer.display_name or issuer.legal_name or issuer.primary_name or symbol
+    sector = issuer.industry_label or "Unknown"
+    return name, sector
+
+
 def _write_back_to_stock(
     db: Any,
     symbol: str,
@@ -320,9 +349,12 @@ def _write_back_to_stock(
         .filter(Stock.symbol == symbol, Stock.exchange == "NSE")
         .one_or_none()
     )
+
+    company_name, sector = _lookup_issuer_meta(db, symbol)
+
     if not stock:
         stock = Stock(
-            symbol=symbol, exchange="NSE", name=symbol, sector="Unknown",
+            symbol=symbol, exchange="NSE", name=company_name, sector=sector,
             is_active=True, is_etf=False, currency="INR", country="India",
             data_source="nse_json_ingest",
             market_cap=0.0, average_market_cap_36m=0.0, debt=0.0,
@@ -341,6 +373,12 @@ def _write_back_to_stock(
             ).one_or_none()
             if not stock:
                 return False
+    else:
+        # Always patch name/sector from Issuer so stale symbol-as-name rows get corrected
+        if company_name != symbol:
+            stock.name = company_name
+        if sector != "Unknown":
+            stock.sector = sector
 
     for metric_code, stock_col in _METRIC_TO_STOCK.items():
         val = facts.get(metric_code)
