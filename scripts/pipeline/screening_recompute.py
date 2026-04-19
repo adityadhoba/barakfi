@@ -39,6 +39,15 @@ logging.basicConfig(
 logger = logging.getLogger("pipeline.screening_recompute")
 UTC = timezone.utc
 
+_DB_URL = os.getenv("DATABASE_URL", "")
+if not _DB_URL or _DB_URL.startswith("sqlite"):
+    logger.error(
+        "DATABASE_URL is not set or is SQLite. "
+        "Set DATABASE_URL to a Postgres connection string in the Render "
+        "dashboard for this cron job (barakfi-screening-recompute → Environment Variables)."
+    )
+    sys.exit(1)
+
 
 def _idempotency_key(job_name: str, symbol: Optional[str] = None) -> str:
     today = datetime.now(UTC).strftime("%Y-%m-%d")
