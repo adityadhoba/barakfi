@@ -256,10 +256,10 @@ def _parse_rows_from_payload(payload: Any, symbol: str) -> list[dict[str, Any]]:
     """
     Extract a list of financial-result row dicts from any known NSE API response shape.
 
-    NSE has returned at least three shapes across API versions:
-      1. Old /api/financial-results → {"data": [{rowName, ...}, ...]}
-      2. /api/results-comparision  → {"financialResultsComparisons": [...]} or nested
-      3. /api/corporates-financial-results → list of company dicts, each with "data" or "financial"
+    NSE has returned at least these shapes:
+      1. Old /api/financial-results (deprecated) → {"data": [{name/rowName, value cols...}]}
+      2. /api/results-comparision  → various nested shapes; log unknown formats for debugging
+      3. /api/corporates-financial-results → list of per-company flat dicts
     """
     sym_upper = symbol.upper()
 
@@ -271,39 +271,51 @@ def _parse_rows_from_payload(payload: Any, symbol: str) -> list[dict[str, Any]]:
             item_sym = (
                 item.get("symbol") or item.get("ticker") or item.get("companySymbol") or ""
             ).upper()
-            if item_sym == sym_upper:
-                for key in ("data", "financial", "financials", "results"):
-                    candidate = item.get(key)
-                    if isinstance(candidate, list) and candidate:
-                        return candidate
-                # Sometimes the company dict itself contains the row list directly
-                if any(isinstance(v, list) and v and isinstance(v[0], dict) for v in item.values()):
-                    for v in item.values():
-                        if isinstance(v, list) and v and isinstance(v[0], dict):
-                            return v
+            if item_sym != sym_upper:
+                continue
+            # Look for nested row list
+            for key in ("data", "financial", "financials", "results", "rows", "list"):
+                candidate = item.get(key)
+                if isinstance(candidate, list) and candidate:
+                    return candidate
+            # Flat company dict: synthesise row list from numeric keys
+            flat_rows = []
+            for k, v in item.items():
+                if k in ("symbol", "ticker", "companySymbol", "series", "isin"):
+                    continue
+                if v is not None:
+                    flat_rows.append({"name": k, "value": v})
+            return flat_rows
         return []
 
     if isinstance(payload, dict):
-        # Try all known wrapper keys
+        # Exhaustive key search — log which key was found so we can tune
+        all_list_keys = [k for k, v in payload.items() if isinstance(v, list) and v]
         for key in (
-            "data",
-            "results",
-            "financials",
-            "items",
-            "financialResultsComparisons",
-            "comparisons",
-            "quarterly",
-            "annual",
+            "data", "results", "financials", "items",
+            "financialResultsComparisons", "comparisons",
+            "quarterly", "annual", "rows", "list",
+            "ResultsList", "resultsList", "financialResults",
+            "financialResultsList", "records",
         ):
             candidate = payload.get(key)
             if isinstance(candidate, list) and candidate:
-                # If items are company dicts, filter to our symbol
                 first = candidate[0] if candidate else {}
                 if isinstance(first, dict) and (
                     "symbol" in first or "ticker" in first or "companySymbol" in first
                 ):
                     return _parse_rows_from_payload(candidate, symbol)
+                logger.debug("nse_xbrl: found rows under key '%s' (%d items)", key, len(candidate))
                 return candidate
+
+        # Log the actual top-level keys so we can extend the parser later
+        if all_list_keys:
+            logger.info(
+                "nse_xbrl: 200 OK but unknown payload shape for %s — "
+                "top-level list keys: %s, sample: %s",
+                symbol, all_list_keys,
+                str(payload.get(all_list_keys[0], [])[:1])[:200],
+            )
 
     return []
 
@@ -314,68 +326,63 @@ def fetch_nse_financials(
     session: "Any | None" = None,
 ) -> tuple[dict[str, float], str, int]:
     """
-    Fetch NSE financial data for *symbol* using the current live endpoints.
+    Fetch NSE financial data for *symbol*.
 
-    Strategy (tries in order):
-      1. /api/results-comparision?symbol={symbol}  — per-symbol comparison (live)
-      2. /api/corporates-financial-results?index=equities&period={period}  — bulk (live)
-      3. /api/financial-results?...  — legacy (deprecated 2025, usually 404)
-
-    Args:
-        symbol: NSE ticker symbol (e.g. "RELIANCE")
-        period: "Annual" or "Quarterly"
-        session: Optional NSESession for cookie reuse across batch runs.
+    Tries /api/results-comparision (per-symbol, live) only.
+    The legacy /api/financial-results always returns 404 and is not tried.
+    The bulk /api/corporates-financial-results is too large (downloads all 500
+    companies per call) and is not used here.
 
     Returns:
         (metrics_dict, source_url, http_status)
         metrics_dict: {METRIC_CODE: value_in_crores}  — empty on failure.
     """
     sym = symbol.upper()
-    candidates = [
-        _NSE_RESULTS_COMPARISON.format(symbol=sym),
-        _NSE_CORPORATES_RESULTS.format(period=period),
-        _NSE_FIN_RESULTS_LEGACY.format(period=period, symbol=sym),
-    ]
+    url = _NSE_RESULTS_COMPARISON.format(symbol=sym)
 
-    for url in candidates:
-        code, content = _fetch_url(url, session)
-        if code != 200 or not content:
-            logger.debug("nse_xbrl: HTTP %s for %s → %s", code, sym, url)
+    code, content = _fetch_url(url, session)
+    if code != 200 or not content:
+        logger.debug("nse_xbrl: HTTP %s for %s", code, sym)
+        return {}, url, code
+
+    try:
+        payload = json.loads(content.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError:
+        return {}, url, code
+
+    rows = _parse_rows_from_payload(payload, sym)
+    if not rows:
+        # Already logged inside _parse_rows_from_payload with actual key names
+        return {}, url, code
+
+    metrics: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, dict):
             continue
+        row_name = (
+            row.get("name")
+            or row.get("rowName")
+            or row.get("label")
+            or row.get("title")
+            or row.get("description")
+            or ""
+        )
+        code_key = _match_metric(str(row_name))
+        if code_key and code_key not in metrics:
+            val = _extract_latest_value(row)
+            if val is not None:
+                metrics[code_key] = val
 
-        try:
-            payload = json.loads(content.decode("utf-8", errors="replace"))
-        except json.JSONDecodeError:
-            continue
+    if metrics:
+        logger.debug("nse_xbrl: %d metrics for %s", len(metrics), sym)
+    else:
+        logger.info(
+            "nse_xbrl: 200 OK but 0 metrics matched for %s — "
+            "first row sample: %s",
+            sym, str(rows[:1])[:300],
+        )
 
-        rows = _parse_rows_from_payload(payload, sym)
-        if not rows:
-            logger.debug("nse_xbrl: no rows extracted for %s from %s", sym, url)
-            continue
-
-        metrics: dict[str, float] = {}
-        for row in rows:
-            if not isinstance(row, dict):
-                continue
-            row_name = (
-                row.get("name")
-                or row.get("rowName")
-                or row.get("title")
-                or row.get("description")
-                or ""
-            )
-            code_key = _match_metric(str(row_name))
-            if code_key and code_key not in metrics:
-                val = _extract_latest_value(row)
-                if val is not None:
-                    metrics[code_key] = val
-
-        if metrics:
-            logger.debug("nse_xbrl: %d metrics for %s from %s", len(metrics), sym, url)
-            return metrics, url, code
-
-    # All endpoints failed or returned no parseable metrics
-    return {}, candidates[0], 0
+    return metrics, url, code
 
 
 def sync_symbol_financials(
