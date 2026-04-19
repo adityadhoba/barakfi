@@ -6,7 +6,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import SessionLocal
+from app.database import Base, SessionLocal, engine
+import app.models_data_warehouse  # noqa: F401
+Base.metadata.create_all(bind=engine)
+
 from app.connectors.nse_corporate_actions import sync_nse_corporate_actions
 
 

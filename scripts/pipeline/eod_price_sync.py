@@ -43,11 +43,19 @@ def _idempotency_key(job_name: str, trade_date: date) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
+def _ensure_tables() -> None:
+    """Create any missing v2 tables before first use (idempotent)."""
+    from app.database import Base, engine
+    import app.models_v2  # noqa: F401 – registers all v2 models
+    Base.metadata.create_all(bind=engine)
+
+
 def run_for_date(
     trade_date: date,
     dry_run: bool = False,
 ) -> dict:
     """Fetch and persist EOD prices for one trading date."""
+    _ensure_tables()
     from app.database import SessionLocal
     from app.models_v2 import Issuer, ListingV2, MarketPriceDaily, JobRun
     from app.connectors.nse_bhavcopy import NSEBhavCopyConnector

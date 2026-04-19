@@ -46,12 +46,20 @@ def _idempotency_key(job_name: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
+def _ensure_tables() -> None:
+    """Create any missing v2 tables before first use (idempotent)."""
+    from app.database import Base, engine
+    import app.models_v2  # noqa: F401 – registers all v2 models
+    Base.metadata.create_all(bind=engine)
+
+
 def run(dry_run: bool = False) -> dict:
     """
     Main entry point for universe sync.
 
     Returns metrics dict: {inserted, updated, unchanged, errors, warnings}
     """
+    _ensure_tables()
     from app.database import SessionLocal
     from app.models_v2 import (
         Issuer, ListingV2, SymbolHistory, JobRun, RawArtifact,

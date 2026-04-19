@@ -47,6 +47,13 @@ def _idempotency_key(job_name: str, symbol: Optional[str] = None) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
+def _ensure_tables() -> None:
+    """Create any missing v2 tables before first use (idempotent)."""
+    from app.database import Base, engine
+    import app.models_v2  # noqa: F401 – registers all v2 models
+    Base.metadata.create_all(bind=engine)
+
+
 def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
     """
     Recompute screening results.
@@ -55,6 +62,7 @@ def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
         symbol: if provided, only recompute for this NSE symbol
         dry_run: compute but do not write to DB
     """
+    _ensure_tables()
     from app.database import SessionLocal
     from app.models_v2 import (
         Issuer, ListingV2, FundamentalsSnapshot, BusinessActivityReview,
