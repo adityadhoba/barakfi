@@ -325,14 +325,15 @@ def _parse_rows_from_payload(payload: Any, symbol: str) -> list[dict[str, Any]]:
                 logger.debug("nse_xbrl: found rows under key '%s' (%d items)", key, len(candidate))
                 return candidate
 
-        # Log the actual top-level keys so we can extend the parser later
-        if all_list_keys:
-            logger.info(
-                "nse_xbrl: 200 OK but unknown payload shape for %s — "
-                "top-level list keys: %s, sample: %s",
-                symbol, all_list_keys,
-                str(payload.get(all_list_keys[0], [])[:1])[:200],
-            )
+        # Log the full payload structure so we can fix the parser
+        logger.warning(
+            "nse_xbrl: 200 OK but unknown payload shape for %s — "
+            "ALL keys: %s | list keys: %s | raw[:600]: %s",
+            symbol,
+            list(payload.keys()),
+            all_list_keys,
+            str(payload)[:600],
+        )
 
     return []
 
@@ -391,9 +392,9 @@ def fetch_nse_financials(
                 metrics[code_key] = val
 
     if metrics:
-        logger.debug("nse_xbrl: %d metrics for %s", len(metrics), sym)
+        logger.info("nse_xbrl: %d metrics for %s", len(metrics), sym)
     else:
-        logger.info(
+        logger.warning(
             "nse_xbrl: 200 OK but 0 metrics matched for %s — "
             "first row sample: %s",
             sym, str(rows[:1])[:300],
