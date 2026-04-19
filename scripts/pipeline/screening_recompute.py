@@ -39,12 +39,28 @@ logging.basicConfig(
 logger = logging.getLogger("pipeline.screening_recompute")
 UTC = timezone.utc
 
+_DB_URL = os.getenv("DATABASE_URL", "")
+if not _DB_URL or _DB_URL.startswith("sqlite"):
+    logger.error(
+        "DATABASE_URL is not set or is SQLite. "
+        "Set DATABASE_URL to a Postgres connection string in the Render "
+        "dashboard for this cron job (barakfi-screening-recompute → Environment Variables)."
+    )
+    sys.exit(1)
+
 
 def _idempotency_key(job_name: str, symbol: Optional[str] = None) -> str:
     today = datetime.now(UTC).strftime("%Y-%m-%d")
     suffix = symbol or "all"
     raw = f"{job_name}::{today}::{suffix}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _ensure_tables() -> None:
+    """Create any missing v2 tables before first use (idempotent)."""
+    from app.database import Base, engine
+    import app.models_v2  # noqa: F401 – registers all v2 models
+    Base.metadata.create_all(bind=engine)
 
 
 def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
@@ -55,6 +71,7 @@ def run(symbol: Optional[str] = None, dry_run: bool = False) -> dict:
         symbol: if provided, only recompute for this NSE symbol
         dry_run: compute but do not write to DB
     """
+    _ensure_tables()
     from app.database import SessionLocal
     from app.models_v2 import (
         Issuer, ListingV2, FundamentalsSnapshot, BusinessActivityReview,

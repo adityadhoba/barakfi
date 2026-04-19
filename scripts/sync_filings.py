@@ -6,8 +6,13 @@ from __future__ import annotations
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import Base, SessionLocal, engine
+import app.models_data_warehouse  # noqa: F401
+Base.metadata.create_all(bind=engine)
+
 from app.connectors.nse_filings import sync_nse_filings_catalog
-from app.database import SessionLocal
 
 
 def main() -> int:

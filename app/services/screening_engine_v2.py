@@ -476,9 +476,19 @@ class ScreeningEngineV2:
         if snapshot:
             total_debt = snapshot.get("total_debt")
             cash = snapshot.get("cash_and_equivalents")
+            short_term_investments = snapshot.get("short_term_investments") or 0.0
+            cash_and_ib = (cash or 0.0) + short_term_investments
             revenue = snapshot.get("revenue")
+            total_business_income = snapshot.get("total_business_income") or revenue
             non_compliant_income = snapshot.get("non_operating_income")
-            market_cap = snapshot.get("market_cap") or snapshot.get("average_market_cap_24m")
+            interest_income = snapshot.get("interest_income")
+            accounts_receivable = snapshot.get("accounts_receivable")
+            total_assets = snapshot.get("total_assets")
+            # Denominator priority: 36m avg > current market cap > 24m avg
+            market_cap_36m = snapshot.get("average_market_cap_36m")
+            market_cap_current = snapshot.get("market_cap")
+            market_cap_24m = snapshot.get("average_market_cap_24m")
+            market_cap = market_cap_36m or market_cap_current or market_cap_24m
             snapshot_date = snapshot.get("snapshot_date")
             basis = snapshot.get("basis", "unknown")
 
@@ -494,46 +504,89 @@ class ScreeningEngineV2:
                 if snapshot_date and (date.today() - snapshot_date).days > 365:
                     stale = True
 
-            snapshot_refs = [
-                ref for ref in snapshot.get("source_refs_json", [])
-            ]
+            snapshot_refs = list(snapshot.get("source_refs_json", []))
 
+            # Debt ratio: total_debt / average_market_cap_36m (S&P Shariah style)
             checks.append(check_debt_ratio(
                 total_debt=total_debt,
                 market_cap=market_cap,
                 threshold=self.thresholds.get("debt_ratio", 0.33),
-                formula=self.formulas.get("debt_ratio", "total_debt / market_cap"),
+                formula=self.formulas.get(
+                    "debt_ratio",
+                    "total_debt / average_market_cap_36m",
+                ),
                 source_refs=snapshot_refs,
                 stale=stale,
             ))
 
+            # Cash + interest-bearing assets ratio: (cash + short_term_investments) / market_cap
             checks.append(check_cash_ratio(
-                cash_and_equivalents=cash,
+                cash_and_equivalents=cash_and_ib if cash_and_ib else cash,
                 market_cap=market_cap,
                 threshold=self.thresholds.get("cash_ratio", 0.33),
-                formula=self.formulas.get("cash_ratio", "cash_and_equivalents / market_cap"),
+                formula=self.formulas.get(
+                    "cash_ratio",
+                    "(cash_and_equivalents + short_term_investments) / market_cap",
+                ),
                 source_refs=snapshot_refs,
                 stale=stale,
             ))
 
+            # Non-compliant income ratio: non_operating_income / total_business_income
             checks.append(check_non_compliant_income_ratio(
                 non_compliant_income=non_compliant_income,
-                total_revenue=revenue,
+                total_revenue=total_business_income,
                 threshold=self.thresholds.get("non_compliant_income_ratio", 0.05),
                 formula=self.formulas.get(
                     "non_compliant_income_ratio",
-                    "non_operating_income / revenue"
+                    "non_operating_income / total_business_income",
                 ),
                 source_refs=snapshot_refs,
                 stale=stale,
                 is_proxy=True,
             ))
+
+            # Interest income ratio: interest_income / total_business_income
+            if interest_income is not None:
+                checks.append(check_non_compliant_income_ratio(
+                    non_compliant_income=interest_income,
+                    total_revenue=total_business_income,
+                    threshold=self.thresholds.get("interest_income_ratio", 0.05),
+                    formula=self.formulas.get(
+                        "interest_income_ratio",
+                        "interest_income / total_business_income",
+                    ),
+                    source_refs=snapshot_refs,
+                    stale=stale,
+                    is_proxy=False,
+                ))
+
+            # Receivables ratio: accounts_receivable / market_cap
+            if accounts_receivable is not None and market_cap:
+                recv_ratio = accounts_receivable / market_cap
+                recv_threshold = self.thresholds.get("receivables_ratio", 0.33)
+                checks.append(CheckResult(
+                    key="receivables_ratio",
+                    status="pass" if recv_ratio < recv_threshold else "fail",
+                    value=round(recv_ratio, 6),
+                    threshold=recv_threshold,
+                    formula="accounts_receivable / market_cap",
+                    reason=(
+                        f"Receivables ratio {recv_ratio:.4f} "
+                        + ("within" if recv_ratio < recv_threshold else "exceeds")
+                        + f" threshold {recv_threshold}."
+                    ),
+                    source_refs=snapshot_refs,
+                    quality_flags=["stale_financials"] if stale else [],
+                ))
         else:
             # No snapshot available
             for key, label in [
                 ("debt_ratio", "Debt"),
-                ("cash_ratio", "Cash"),
+                ("cash_ratio", "Cash and interest-bearing assets"),
                 ("non_compliant_income_ratio", "Non-compliant income"),
+                ("interest_income_ratio", "Interest income"),
+                ("receivables_ratio", "Accounts receivable"),
             ]:
                 checks.append(CheckResult(
                     key=key,
@@ -651,11 +704,15 @@ DEFAULT_METHODOLOGY_V1 = {
         "debt_ratio": 0.33,
         "cash_ratio": 0.33,
         "non_compliant_income_ratio": 0.05,
+        "interest_income_ratio": 0.05,
+        "receivables_ratio": 0.33,
     },
     "formulas_json": {
-        "debt_ratio": "total_debt / market_cap",
-        "cash_ratio": "cash_and_equivalents / market_cap",
-        "non_compliant_income_ratio": "non_operating_income / revenue",
+        "debt_ratio": "total_debt / average_market_cap_36m",
+        "cash_ratio": "(cash_and_equivalents + short_term_investments) / market_cap",
+        "non_compliant_income_ratio": "non_operating_income / total_business_income",
+        "interest_income_ratio": "interest_income / total_business_income",
+        "receivables_ratio": "accounts_receivable / market_cap",
     },
     "disclosure_text": (
         "This result is a rules-based research screen generated from public filings, "

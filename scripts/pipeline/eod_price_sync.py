@@ -37,10 +37,26 @@ logging.basicConfig(
 logger = logging.getLogger("pipeline.eod_price_sync")
 UTC = timezone.utc
 
+_DB_URL = os.getenv("DATABASE_URL", "")
+if not _DB_URL or _DB_URL.startswith("sqlite"):
+    logger.error(
+        "DATABASE_URL is not set or is SQLite. "
+        "Set DATABASE_URL to a Postgres connection string in the Render "
+        "dashboard for this cron job (barakfi-eod-price-sync → Environment Variables)."
+    )
+    sys.exit(1)
+
 
 def _idempotency_key(job_name: str, trade_date: date) -> str:
     raw = f"{job_name}::{trade_date.isoformat()}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
+
+
+def _ensure_tables() -> None:
+    """Create any missing v2 tables before first use (idempotent)."""
+    from app.database import Base, engine
+    import app.models_v2  # noqa: F401 – registers all v2 models
+    Base.metadata.create_all(bind=engine)
 
 
 def run_for_date(
@@ -48,6 +64,7 @@ def run_for_date(
     dry_run: bool = False,
 ) -> dict:
     """Fetch and persist EOD prices for one trading date."""
+    _ensure_tables()
     from app.database import SessionLocal
     from app.models_v2 import Issuer, ListingV2, MarketPriceDaily, JobRun
     from app.connectors.nse_bhavcopy import NSEBhavCopyConnector
