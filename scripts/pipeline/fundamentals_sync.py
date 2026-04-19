@@ -56,6 +56,11 @@ if not _DB_URL or _DB_URL.startswith("sqlite"):
     )
     sys.exit(1)
 
+# Allow Render dashboard to force a re-run without code changes:
+# Set PIPELINE_FORCE_RUN=1 in the service's Environment Variables,
+# trigger a manual run, then remove it again.
+_ENV_FORCE = os.getenv("PIPELINE_FORCE_RUN", "").lower() in {"1", "true", "yes"}
+
 
 # ---------------------------------------------------------------------------
 # Metric code → FundamentalsSnapshot column mapping
@@ -724,7 +729,7 @@ def main() -> None:
         symbol_filter=args.symbol,
         dry_run=args.dry_run,
         period=args.period,
-        force=args.force,
+        force=args.force or _ENV_FORCE,
     )
     logger.info("result=%s", result)
     if result.get("errors", 0) > 0:

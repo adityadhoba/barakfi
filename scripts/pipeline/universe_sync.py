@@ -48,6 +48,8 @@ if not _DB_URL or _DB_URL.startswith("sqlite"):
     )
     sys.exit(1)
 
+_ENV_FORCE = os.getenv("PIPELINE_FORCE_RUN", "").lower() in {"1", "true", "yes"}
+
 
 def _idempotency_key(job_name: str) -> str:
     today = datetime.now(UTC).strftime("%Y-%m-%d")
@@ -364,6 +366,6 @@ if __name__ == "__main__":
     parser.add_argument("--force", action="store_true", help="Re-run even if today's job already completed")
     args = parser.parse_args()
 
-    result = run(dry_run=args.dry_run, force=args.force)
+    result = run(dry_run=args.dry_run, force=args.force or _ENV_FORCE)
     logger.info("Result: %s", result)
     sys.exit(0 if result.get("errors", 0) == 0 else 1)
