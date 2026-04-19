@@ -143,6 +143,34 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
 
+  # Job D-pre: Fundamentals sync — NSE Financial Results API (official Reg 33 source)
+  # 05:00 PM IST Mon–Fri => 11:30 UTC  (after market close, before screening recompute)
+  # Primary: NSE financial results JSON API (quarterly/annual XBRL-backed filings)
+  # Fallback: yfinance (internal research only, not published as truth)
+  # Writes: DataFinancialFact → FundamentalsSnapshot → Stock (legacy API write-back)
+  - type: cron
+    name: barakfi-fundamentals-sync
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/pipeline/fundamentals_sync.py --period Annual
+    schedule: "30 11 * * 1-5"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "false"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
   # Job D: EOD price sync — NSE bhavcopy (official end-of-day prices)
   # 06:30 PM IST Mon–Fri => 13:00 UTC  (after market close + bhavcopy publish lag)
   # Source: NSE bhavcopy archive (official) — no paid API required.

@@ -440,6 +440,15 @@ class FundamentalsSnapshot(Base):
     shares_outstanding = Column(Numeric(24, 2), nullable=True)
     market_cap = Column(Numeric(24, 2), nullable=True)
     average_market_cap_24m = Column(Numeric(24, 2), nullable=True)
+    # Extended fields required for full halal screening parity with legacy halal_service
+    accounts_receivable = Column(Numeric(24, 2), nullable=True)
+    total_assets = Column(Numeric(24, 2), nullable=True)
+    fixed_assets = Column(Numeric(24, 2), nullable=True)
+    short_term_investments = Column(Numeric(24, 2), nullable=True)
+    total_business_income = Column(Numeric(24, 2), nullable=True)
+    interest_income = Column(Numeric(24, 2), nullable=True)  # distinct from interest_expense
+    average_market_cap_36m = Column(Numeric(24, 2), nullable=True)  # S&P Shariah denominator
+    data_source = Column(String(60), nullable=False, default="nse_xbrl")  # nse_xbrl | yfinance_fallback
     segment_revenue_json = Column(JSON, nullable=False, default=list)
     source_refs_json = Column(JSON, nullable=False, default=list)
     completeness_score = Column(Numeric(5, 2), nullable=True)
