@@ -632,9 +632,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         )}
 
         {/* Results: mobile cards + desktop table (shared ref for keyboard focus) */}
-        <div ref={listRef}>
+        <div ref={listRef} className="flex min-h-0 flex-1 flex-col">
         {isMobileLayout ? (
-          <div className="flex flex-col gap-3 md:hidden">
+          <div className="flex flex-col gap-3 overflow-y-auto pb-20 md:hidden">
             {pageItems.map((s, idx) => {
               const globalIdx = pageStart + idx + 1;
               const st = STATUS_CONFIG[s.screening.status]?.label || s.screening.status;

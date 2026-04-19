@@ -64,8 +64,8 @@ export default async function AdminPage() {
   return (
     <div className={s.adminPageContainer}>
       <div className={s.adminPageHeader}>
-        <h1>Admin Panel</h1>
-        <p className={s.adminPageSubtitle}>User and role management</p>
+        <h1>Admin</h1>
+        <p className={s.adminPageSubtitle}>Users · Coverage · Feedback · Demand</p>
       </div>
       <AdminPanel />
     </div>

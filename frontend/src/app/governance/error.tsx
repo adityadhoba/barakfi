@@ -3,7 +3,8 @@
 import styles from "@/app/page.module.css";
 import Link from "next/link";
 
-export default function GovernanceError({ reset }: { error: Error; reset: () => void }) {
+export default function GovernanceError({ error, reset }: { error: Error; reset: () => void }) {
+  void error;
   return (
     <main className="shellPage">
       <section className={styles.onboardingState}>

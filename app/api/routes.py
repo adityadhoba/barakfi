@@ -1303,6 +1303,7 @@ def admin_governance_overview(
         "users": users,
         "review_cases": review_cases,
         "review_events": review_events,
+        "feature_flags": [],
     }
 
 

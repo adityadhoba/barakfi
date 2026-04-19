@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import styles from "./admin-panel.module.css";
 
 type Tab = "overview" | "coverage" | "feedback" | "users" | "demand";
@@ -47,6 +45,33 @@ type MePayload = {
 
 const ROLE_OPTIONS = ["owner", "admin", "reviewer", "developer", "user"] as const;
 
+function IconServer() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" />
+      <line x1="6" y1="6" x2="6.01" y2="6" /><line x1="6" y1="18" x2="6.01" y2="18" />
+    </svg>
+  );
+}
+
+function IconExternalLink() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+function IconRefresh() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+  );
+}
+
 export function AdminPanel() {
   const { getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
@@ -61,16 +86,14 @@ export function AdminPanel() {
   const [loading, setLoading] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [opsBusy, setOpsBusy] = useState<null | "job_a" | "job_b">(null);
-  const [opsMessage, setOpsMessage] = useState<string | null>(null);
+  const [opsMessage, setOpsMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   const apiBase = "/api";
 
   const fetchWithAuth = useCallback(async <T,>(path: string): Promise<T | null> => {
     const token = await getToken();
     if (!token) return null;
-    const res = await fetch(`${apiBase}${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(`${apiBase}${path}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) return null;
     return (await res.json()) as T;
   }, [getToken]);
@@ -98,28 +121,16 @@ export function AdminPanel() {
         pendingRequests: (crData || []).filter((r) => r.status === "pending").length,
         newFeedback: (fbData || []).filter((f) => f.status === "new").length,
       });
-    } catch (e) {
-      console.error("Failed to load admin data", e);
-    }
+    } catch (e) { console.error("Failed to load admin data", e); }
     setLoading(false);
   }, [fetchWithAuth]);
 
-  useEffect(() => {
-    const t = setTimeout(() => void loadData(), 0);
-    return () => clearTimeout(t);
-  }, [loadData]);
+  useEffect(() => { const t = setTimeout(() => void loadData(), 0); return () => clearTimeout(t); }, [loadData]);
 
   async function updateCoverageStatus(id: number, status: string) {
     const token = await getToken();
     if (!token) return;
-    await fetch(`${apiBase}/admin/coverage-requests/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status }),
-    });
+    await fetch(`${apiBase}/admin/coverage-requests/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
     void loadData();
   }
 
@@ -128,14 +139,7 @@ export function AdminPanel() {
     if (!token) return;
     const body: Record<string, string> = { status };
     if (notes !== undefined) body.admin_notes = notes;
-    await fetch(`${apiBase}/admin/feedback/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+    await fetch(`${apiBase}/admin/feedback/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
     void loadData();
   }
 
@@ -144,24 +148,11 @@ export function AdminPanel() {
     if (!token) return;
     setBusyUserId(userId);
     try {
-      const response = await fetch(`${apiBase}/admin/users`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, action: "role", role }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(String(body?.detail || body?.error || "Failed to update role"));
-      }
+      const response = await fetch(`${apiBase}/admin/users`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ userId, action: "role", role }) });
+      if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(String(body?.detail || body?.error || "Failed to update role")); }
       await loadData();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update role");
-    } finally {
-      setBusyUserId(null);
-    }
+    } catch (error) { alert(error instanceof Error ? error.message : "Failed to update role"); }
+    finally { setBusyUserId(null); }
   }
 
   async function updateUserActive(userId: number, isActive: boolean) {
@@ -169,24 +160,11 @@ export function AdminPanel() {
     if (!token) return;
     setBusyUserId(userId);
     try {
-      const response = await fetch(`${apiBase}/admin/users`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, action: "active", is_active: isActive }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(String(body?.detail || body?.error || "Failed to update status"));
-      }
+      const response = await fetch(`${apiBase}/admin/users`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ userId, action: "active", is_active: isActive }) });
+      if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(String(body?.detail || body?.error || "Failed to update status")); }
       await loadData();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to update status");
-    } finally {
-      setBusyUserId(null);
-    }
+    } catch (error) { alert(error instanceof Error ? error.message : "Failed to update status"); }
+    finally { setBusyUserId(null); }
   }
 
   async function resetUserQuota(userId: number) {
@@ -194,24 +172,11 @@ export function AdminPanel() {
     if (!token) return;
     setBusyUserId(userId);
     try {
-      const response = await fetch(`${apiBase}/admin/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId, action: "quota_reset" }),
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(String(body?.detail || body?.error || "Failed to reset limits"));
-      }
+      const response = await fetch(`${apiBase}/admin/users`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ userId, action: "quota_reset" }) });
+      if (!response.ok) { const body = await response.json().catch(() => ({})); throw new Error(String(body?.detail || body?.error || "Failed to reset limits")); }
       await loadData();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Failed to reset limits");
-    } finally {
-      setBusyUserId(null);
-    }
+    } catch (error) { alert(error instanceof Error ? error.message : "Failed to reset limits"); }
+    finally { setBusyUserId(null); }
   }
 
   function opsErrorDetail(body: unknown, fallback: string): string {
@@ -219,15 +184,9 @@ export function AdminPanel() {
       const o = body as Record<string, unknown>;
       const d = o.detail;
       if (typeof d === "string" && d.length > 0) return d;
-      if (Array.isArray(d) && d[0] !== undefined && typeof d[0] === "object" && d[0] !== null) {
-        const msg = (d[0] as { msg?: string }).msg;
-        if (typeof msg === "string" && msg.length > 0) return msg;
-      }
+      if (Array.isArray(d) && d[0] && typeof d[0] === "object") { const msg = (d[0] as { msg?: string }).msg; if (typeof msg === "string" && msg.length > 0) return msg; }
       const err = o.error;
-      if (err !== null && typeof err === "object" && "message" in err) {
-        const m = (err as { message?: string }).message;
-        if (typeof m === "string" && m.length > 0) return m;
-      }
+      if (err !== null && typeof err === "object" && "message" in err) { const m = (err as { message?: string }).message; if (typeof m === "string" && m.length > 0) return m; }
     }
     return fallback;
   }
@@ -237,39 +196,19 @@ export function AdminPanel() {
     if (!token) return;
     setOpsBusy(job);
     setOpsMessage(null);
-
     try {
       const endpoint = job === "job_a" ? "/admin/ops/run-job-a" : "/admin/ops/run-job-b";
-      const response = await fetch(`${apiBase}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await fetch(`${apiBase}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` } });
       const body: unknown = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(opsErrorDetail(body, response.status === 404 ? "Route missing — deploy latest frontend." : "Failed to start job"));
-      }
-
-      const pid =
-        body && typeof body === "object" && "pid" in (body as Record<string, unknown>)
-          ? (body as { pid?: unknown }).pid
-          : null;
+      if (!response.ok) throw new Error(opsErrorDetail(body, response.status === 404 ? "Route missing — deploy latest frontend." : "Failed to start job"));
+      const pid = body && typeof body === "object" && "pid" in (body as Record<string, unknown>) ? (body as { pid?: unknown }).pid : null;
       const pidText = typeof pid === "number" ? ` (pid ${pid})` : "";
       const jobLabel = job === "job_a" ? "Job A (fundamentals)" : "Job B (daily refresh)";
-      setOpsMessage(
-        `${jobLabel} submitted${pidText}. Slack alerts should follow automatically.`,
-      );
+      setOpsMessage({ text: `${jobLabel} submitted${pidText}. Slack alerts should follow.`, ok: true });
       void loadData();
     } catch (error) {
-      setOpsMessage(
-        error instanceof Error ? error.message : "Failed to start job. Check server logs for details.",
-      );
-    } finally {
-      setOpsBusy(null);
-    }
+      setOpsMessage({ text: error instanceof Error ? error.message : "Failed to start job.", ok: false });
+    } finally { setOpsBusy(null); }
   }
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
@@ -281,106 +220,122 @@ export function AdminPanel() {
   ];
 
   return (
-    <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className={styles.panel}>
-      <TabsList className="mb-4 flex w-full flex-wrap justify-start gap-1 rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] p-1">
+    <div className={styles.panel}>
+      {/* ── Tab bar ── */}
+      <div className={styles.tabs} role="tablist">
         {TABS.map((t) => (
-          <TabsTrigger key={t.key} value={t.key} className="gap-1 data-[state=active]:shadow-sm">
+          <button
+            key={t.key}
+            role="tab"
+            type="button"
+            aria-selected={tab === t.key}
+            className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`}
+            onClick={() => setTab(t.key)}
+          >
             {t.label}
             {t.count !== undefined && t.count > 0 && (
               <span className={styles.tabBadge}>{t.count}</span>
             )}
-          </TabsTrigger>
+          </button>
         ))}
-      </TabsList>
+      </div>
 
       <div className={styles.content}>
-        {loading && <div className={styles.loading}>Loading...</div>}
+        {loading && (
+          <div className={styles.loading}>
+            <IconRefresh />
+            Loading…
+          </div>
+        )}
 
-        <TabsContent value="overview" className="mt-0">
+        {/* ── OVERVIEW ── */}
         {tab === "overview" && !loading && (
           <>
-            <Card className="mb-6 border-[var(--line)] bg-[var(--bg-elevated)]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Connectors &amp; review</CardTitle>
-                <CardDescription>
-                  Ingestion crons (universe, EOD, corporate actions, filings catalog) run on Render. Deep compliance
-                  cases live in the governance console.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm">
-                <Link href="/governance" className="font-medium text-[var(--emerald)] underline-offset-2 hover:underline">
-                  Open governance console →
-                </Link>
-              </CardContent>
-            </Card>
-
+            {/* Stats */}
             <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <span className={styles.statValue}>{stats.users}</span>
-              <span className={styles.statLabel}>Total Users</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statValue}>{stats.pendingRequests}</span>
-              <span className={styles.statLabel}>Pending Requests</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statValue}>{stats.newFeedback}</span>
-              <span className={styles.statLabel}>New Feedback</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statValue}>{coverageRequests.length}</span>
-              <span className={styles.statLabel}>Total Requests</span>
-            </div>
+              <div className={styles.statCard}>
+                <span className={styles.statValue}>{stats.users}</span>
+                <span className={styles.statLabel}>Total Users</span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statValue}>{stats.pendingRequests}</span>
+                <span className={styles.statLabel}>Pending Requests</span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statValue}>{stats.newFeedback}</span>
+                <span className={styles.statLabel}>New Feedback</span>
+              </div>
+              <div className={styles.statCard}>
+                <span className={styles.statValue}>{coverageRequests.length}</span>
+                <span className={styles.statLabel}>Total Requests</span>
+              </div>
             </div>
 
+            {/* Connectors card */}
+            <div className={styles.connectorCard}>
+              <div className={styles.connectorIcon}>
+                <IconServer />
+              </div>
+              <div className={styles.connectorBody}>
+                <p className={styles.connectorTitle}>Connectors &amp; Compliance Review</p>
+                <p className={styles.connectorDesc}>
+                  Ingestion crons (universe, EOD, corporate actions, filings catalog) run on Render. Deep compliance cases live in the governance console.
+                </p>
+                <Link href="/governance" className={styles.connectorLink}>
+                  Open governance console
+                  <IconExternalLink />
+                </Link>
+              </div>
+            </div>
+
+            {/* Ops jobs */}
             <div className={styles.opsControls}>
-            <div className={styles.opsTitleRow}>
-              <h3 className={styles.opsTitle}>Refresh Jobs (Admin)</h3>
-              <span className={styles.opsBadge}>Runs immediately</span>
-            </div>
-            <p className={styles.opsNote}>
-              Triggers Job A (fundamentals refresh) and/or Job B (daily refresh pipeline). Slack alerts are sent from
-              the job processes.
-            </p>
-
-            <div className={styles.opsRow}>
-              <button
-                type="button"
-                className={styles.btnApprove}
-                disabled={opsBusy === "job_a"}
-                onClick={() => void runOpsJob("job_a")}
-              >
-                {opsBusy === "job_a" ? "Running Job A..." : "Run Job A"}
-              </button>
-              <button
-                type="button"
-                className={styles.btnApprove}
-                disabled={opsBusy === "job_b"}
-                onClick={() => void runOpsJob("job_b")}
-              >
-                {opsBusy === "job_b" ? "Running Job B..." : "Run Job B"}
-              </button>
-            </div>
-
-            {opsMessage ? <p className={styles.opsMessage}>{opsMessage}</p> : null}
+              <div className={styles.opsTitleRow}>
+                <span className={styles.opsTitle}>Refresh Jobs (Admin)</span>
+                <span className={styles.opsBadge}>Runs immediately</span>
+              </div>
+              <p className={styles.opsNote}>
+                Triggers Job A (fundamentals refresh) and/or Job B (daily refresh pipeline). Slack alerts are sent from the job processes.
+              </p>
+              <div className={styles.opsRow}>
+                <button
+                  type="button"
+                  className={styles.btnApprove}
+                  disabled={opsBusy === "job_a"}
+                  onClick={() => void runOpsJob("job_a")}
+                >
+                  {opsBusy === "job_a" ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}><IconRefresh /> Running Job A…</span>
+                  ) : "Run Job A"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnApprove}
+                  disabled={opsBusy === "job_b"}
+                  onClick={() => void runOpsJob("job_b")}
+                >
+                  {opsBusy === "job_b" ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}><IconRefresh /> Running Job B…</span>
+                  ) : "Run Job B"}
+                </button>
+              </div>
+              {opsMessage && (
+                <p className={styles.opsMessage} style={opsMessage.ok ? undefined : { background: "var(--red-bg)", border: "1px solid var(--red-border, rgba(239,68,68,0.25))", color: "var(--red)" }}>
+                  {opsMessage.text}
+                </p>
+              )}
             </div>
           </>
         )}
-        </TabsContent>
 
-        <TabsContent value="coverage" className="mt-0">
+        {/* ── COVERAGE ── */}
         {tab === "coverage" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Symbol</th>
-                  <th>Exchange</th>
-                  <th>User</th>
-                  <th>Notes</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
+                  <th>Symbol</th><th>Exchange</th><th>User</th><th>Notes</th>
+                  <th>Status</th><th>Date</th><th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -390,7 +345,7 @@ export function AdminPanel() {
                     <td>{r.exchange}</td>
                     <td>{r.user_email || r.user_name || "—"}</td>
                     <td className={styles.truncate}>{r.notes}</td>
-                    <td><span className={`${styles.badge} ${styles[`badge_${r.status}`] || ""}`}>{r.status}</span></td>
+                    <td><span className={`${styles.badge} ${styles[`badge_${r.status}` as keyof typeof styles] || ""}`}>{r.status}</span></td>
                     <td className={styles.date}>{r.created_at?.split("T")[0]}</td>
                     <td className={styles.actions}>
                       {r.status === "pending" && (
@@ -409,39 +364,26 @@ export function AdminPanel() {
             </table>
           </div>
         )}
-        </TabsContent>
 
-        <TabsContent value="feedback" className="mt-0">
+        {/* ── FEEDBACK ── */}
         {tab === "feedback" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Category</th>
-                  <th>Message</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Actions</th>
-                </tr>
+                <tr><th>Name</th><th>Email</th><th>Category</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {feedbackItems.map((f) => (
                   <tr key={f.id}>
                     <td>{f.name || "Anonymous"}</td>
-                    <td>{f.email || "-"}</td>
+                    <td>{f.email || "–"}</td>
                     <td><span className={styles.categoryBadge}>{f.category}</span></td>
                     <td className={styles.truncate}>{f.message}</td>
-                    <td><span className={`${styles.badge} ${styles[`badge_${f.status}`] || ""}`}>{f.status}</span></td>
+                    <td><span className={`${styles.badge} ${styles[`badge_${f.status}` as keyof typeof styles] || ""}`}>{f.status}</span></td>
                     <td className={styles.date}>{f.created_at?.split("T")[0]}</td>
                     <td className={styles.actions}>
-                      {f.status === "new" && (
-                        <button className={styles.btnApprove} onClick={() => updateFeedbackStatus(f.id, "reviewed")}>Mark Reviewed</button>
-                      )}
-                      {f.status !== "closed" && (
-                        <button className={styles.btnReject} onClick={() => updateFeedbackStatus(f.id, "closed")}>Close</button>
-                      )}
+                      {f.status === "new" && <button className={styles.btnApprove} onClick={() => updateFeedbackStatus(f.id, "reviewed")}>Mark Reviewed</button>}
+                      {f.status !== "closed" && <button className={styles.btnReject} onClick={() => updateFeedbackStatus(f.id, "closed")}>Close</button>}
                     </td>
                   </tr>
                 ))}
@@ -452,29 +394,28 @@ export function AdminPanel() {
             </table>
           </div>
         )}
-        </TabsContent>
 
-        <TabsContent value="users" className="mt-0">
+        {/* ── USERS ── */}
         {tab === "users" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Joined</th>
-                  <th>Actions</th>
-                </tr>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id}>
-                    <td>{u.display_name}</td>
+                    <td style={{ fontWeight: 600, color: "var(--text)" }}>{u.display_name}</td>
                     <td>{u.email}</td>
                     <td><span className={styles.roleBadge}>{u.role}</span></td>
-                    <td>{u.is_active ? "Active" : "Disabled"}</td>
+                    <td>
+                      <span style={{
+                        fontSize: "0.72rem", fontWeight: 600,
+                        color: u.is_active ? "var(--emerald)" : "var(--text-tertiary)",
+                      }}>
+                        {u.is_active ? "Active" : "Disabled"}
+                      </span>
+                    </td>
                     <td className={styles.date}>{u.created_at?.split("T")[0]}</td>
                     <td className={styles.actions}>
                       <select
@@ -515,28 +456,27 @@ export function AdminPanel() {
             </table>
           </div>
         )}
-        </TabsContent>
 
-        <TabsContent value="demand" className="mt-0">
+        {/* ── DEMAND ── */}
         {tab === "demand" && !loading && (
           <>
-            <h3 className={styles.sectionTitle}>Event Aggregates</h3>
-            <div className={styles.statsGrid}>
+            <p className={styles.sectionTitle}>Event Aggregates</p>
+            <div className={styles.statsGrid} style={{ marginBottom: 24 }}>
               {demandAggregates.map((a) => (
                 <div key={a.event_name} className={styles.statCard}>
                   <span className={styles.statValue}>{a.count}</span>
                   <span className={styles.statLabel}>{a.event_name}</span>
                 </div>
               ))}
-              {demandAggregates.length === 0 && <p className={styles.empty}>No events recorded yet</p>}
+              {demandAggregates.length === 0 && (
+                <p style={{ gridColumn: "1/-1", color: "var(--text-tertiary)", fontSize: "0.84rem" }}>No events recorded yet</p>
+              )}
             </div>
 
-            <h3 className={styles.sectionTitle} style={{ marginTop: 24 }}>Early Access Signups ({earlyAccess.length})</h3>
-            <div className={styles.tableWrap}>
+            <p className={styles.sectionTitle}>Early Access Signups ({earlyAccess.length})</p>
+            <div className={styles.tableWrap} style={{ marginBottom: 20 }}>
               <table className={styles.table}>
-                <thead>
-                  <tr><th>Email</th><th>Name</th><th>Source</th><th>Date</th></tr>
-                </thead>
+                <thead><tr><th>Email</th><th>Name</th><th>Source</th><th>Date</th></tr></thead>
                 <tbody>
                   {earlyAccess.map((r, i) => (
                     <tr key={i}>
@@ -546,38 +486,31 @@ export function AdminPanel() {
                       <td className={styles.date}>{String(r.created_at ?? "").split("T")[0]}</td>
                     </tr>
                   ))}
-                  {earlyAccess.length === 0 && (
-                    <tr><td colSpan={4} className={styles.empty}>No signups yet</td></tr>
-                  )}
+                  {earlyAccess.length === 0 && <tr><td colSpan={4} className={styles.empty}>No signups yet</td></tr>}
                 </tbody>
               </table>
             </div>
 
-            <h3 className={styles.sectionTitle} style={{ marginTop: 24 }}>Recent Events</h3>
+            <p className={styles.sectionTitle}>Recent Events</p>
             <div className={styles.tableWrap}>
               <table className={styles.table}>
-                <thead>
-                  <tr><th>Event</th><th>Symbol</th><th>User</th><th>Time</th></tr>
-                </thead>
+                <thead><tr><th>Event</th><th>Symbol</th><th>User</th><th>Time</th></tr></thead>
                 <tbody>
                   {demandRecent.slice(0, 50).map((e, i) => (
                     <tr key={i}>
                       <td>{String(e.event_name ?? "")}</td>
-                      <td>{String(e.symbol ?? "—")}</td>
+                      <td className={styles.mono}>{String(e.symbol ?? "—")}</td>
                       <td>{String(e.user_id ?? e.session_id ?? "anon")}</td>
                       <td className={styles.date}>{String(e.created_at ?? "").slice(0, 16)}</td>
                     </tr>
                   ))}
-                  {demandRecent.length === 0 && (
-                    <tr><td colSpan={4} className={styles.empty}>No events yet</td></tr>
-                  )}
+                  {demandRecent.length === 0 && <tr><td colSpan={4} className={styles.empty}>No events yet</td></tr>}
                 </tbody>
               </table>
             </div>
           </>
         )}
-        </TabsContent>
       </div>
-    </Tabs>
+    </div>
   );
 }
