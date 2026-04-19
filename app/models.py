@@ -46,7 +46,10 @@ class Stock(Base):
     - (1) stock -> (N) index_memberships
     """
     __tablename__ = "stocks"
-    __table_args__ = (UniqueConstraint("exchange", "symbol", name="uq_stocks_exchange_symbol"),)
+    __table_args__ = (
+        UniqueConstraint("exchange", "symbol", name="uq_stocks_exchange_symbol"),
+        Index("ix_stocks_exchange_active", "exchange", "is_active"),
+    )
 
     id = Column(Integer, primary_key=True)
     symbol = Column(String, index=True, nullable=False)

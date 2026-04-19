@@ -576,6 +576,7 @@ async function apiFetch<T>(path: string, fallback: T, options: ApiFetchOptions =
  */
 export type GetStocksOptions = {
   limit?: number;
+  offset?: number;
   orderBy?: "symbol" | "market_cap_desc";
   revalidateSeconds?: number;
 };
@@ -584,6 +585,9 @@ export function getStocks(options: GetStocksOptions = {}) {
   const params = new URLSearchParams();
   if (typeof options.limit === "number") {
     params.set("limit", String(options.limit));
+  }
+  if (typeof options.offset === "number" && options.offset > 0) {
+    params.set("offset", String(options.offset));
   }
   if (options.orderBy) {
     params.set("order_by", options.orderBy);

@@ -178,18 +178,47 @@ def run_for_date(
 
         db.commit()
 
+        # Propagate today's close prices back to the legacy stocks table so
+        # the /stocks API and stock detail pages show current prices without
+        # relying on Yahoo Finance.  One UPDATE statement via a subquery join.
+        stocks_updated = 0
+        if metrics["rows_inserted"] > 0:
+            try:
+                from sqlalchemy import text
+                update_sql = text("""
+                    UPDATE stocks s
+                    SET price = mpd.close_price,
+                        data_source = 'nse_bhavcopy'
+                    FROM market_prices_daily mpd
+                    JOIN listings_v2 lv ON lv.id = mpd.listing_id
+                    WHERE lv.exchange_code = 'NSE'
+                      AND lv.symbol = s.symbol
+                      AND s.exchange = 'NSE'
+                      AND mpd.trade_date = :trade_date
+                """)
+                result = db.execute(update_sql, {"trade_date": trade_date})
+                stocks_updated = result.rowcount
+                db.commit()
+                logger.info("Updated stocks.price for %d rows from bhavcopy %s", stocks_updated, trade_date)
+            except Exception as exc:
+                logger.warning("stocks.price writeback failed (non-fatal): %s", exc)
+                db.rollback()
+        metrics["stocks_price_updated"] = stocks_updated
+
         job_run.status = "succeeded"
         job_run.finished_at = datetime.now(UTC)
         job_run.metrics_json = metrics
         db.commit()
 
         logger.info(
-            "EOD price sync %s: %d fetched, %d inserted, %d skipped, %d listings not found",
+            "EOD price sync %s: %d fetched, %d inserted, %d skipped, "
+            "%d listings not found, %d stocks.price updated",
             trade_date,
             metrics["rows_fetched"],
             metrics["rows_inserted"],
             metrics["rows_skipped"],
             metrics["listings_not_found"],
+            stocks_updated,
         )
 
     except Exception as exc:

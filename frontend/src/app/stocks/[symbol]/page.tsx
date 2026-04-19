@@ -1,6 +1,22 @@
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+// ISR: revalidate every hour. generateStaticParams pre-builds all 500 stock
+// pages at deploy time so they are served from CDN edge, not on-demand.
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  try {
+    const { getStocks } = await import("@/lib/api");
+    const stocks = await getStocks({ orderBy: "market_cap_desc" });
+    return stocks
+      .filter((s) => s.symbol && s.exchange === "NSE")
+      .map((s) => ({ symbol: s.symbol }));
+  } catch {
+    // If the API is not reachable at build time, fall back to an empty list
+    // — pages will be rendered on-demand and then cached.
+    return [];
+  }
+}
 
 import pageStyles from "@/app/page.module.css";
 import styles from "@/app/screener.module.css";
@@ -46,6 +62,7 @@ import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
 import {
   capTierLabel,
   formatFundamentalAmount,
+  isFundamentalsEmpty,
   formatFundamentalsAsOfLine,
   formatFundamentalsLastUpdatedIst,
   fundamentalsUnitNote,
@@ -717,6 +734,32 @@ export default async function StockDetailPage({
           <span className={styles.breadcrumbSep} aria-hidden>/</span>
           <span className={styles.breadcrumbCurrent} aria-current="page">{stock.symbol}</span>
         </nav>
+
+        {/* Data Pending banner — shown when the stock was seeded from NSE master
+            but fundamentals have not yet been populated by the XBRL sync job. */}
+        {isFundamentalsEmpty(stock) && (
+          <div
+            role="status"
+            style={{
+              margin: "12px 0 8px",
+              padding: "10px 16px",
+              borderRadius: "var(--radius-lg)",
+              background: "var(--bg-soft)",
+              border: "1px solid var(--line)",
+              fontSize: "0.82rem",
+              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: "1rem" }}>⏳</span>
+            <span>
+              Financial data for <strong>{stock.symbol}</strong> is being sourced from NSE filings.
+              Ratios and compliance scores will update within 24 hours after the next sync.
+            </span>
+          </div>
+        )}
 
         {/* Hero */}
         <div className={styles.complianceHero}>

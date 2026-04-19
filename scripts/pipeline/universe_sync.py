@@ -56,9 +56,10 @@ def _idempotency_key(job_name: str) -> str:
 
 
 def _ensure_tables() -> None:
-    """Create any missing v2 tables before first use (idempotent)."""
+    """Create any missing v2 and legacy tables before first use (idempotent)."""
     from app.database import Base, engine
     import app.models_v2  # noqa: F401 – registers all v2 models
+    import app.models  # noqa: F401 – registers legacy Stock model
     Base.metadata.create_all(bind=engine)
 
 
@@ -74,6 +75,7 @@ def run(dry_run: bool = False) -> dict:
         Issuer, ListingV2, SymbolHistory, JobRun, RawArtifact,
         MethodologyVersion
     )
+    from app.models import Stock
     from app.connectors.nse_master import NSEMasterConnector
     from app.services.screening_engine_v2 import DEFAULT_METHODOLOGY_V1
     from sqlalchemy.exc import IntegrityError
@@ -84,6 +86,7 @@ def run(dry_run: bool = False) -> dict:
         "issuers_unchanged": 0,
         "listings_inserted": 0,
         "listings_updated": 0,
+        "stocks_seeded": 0,
         "symbol_history_inserted": 0,
         "methodology_seeded": False,
         "errors": 0,
@@ -222,6 +225,59 @@ def run(dry_run: bool = False) -> dict:
                     metrics["listings_updated"] += 1
                     db.flush()
 
+            # Seed legacy Stock row so the /stocks API and screener can serve
+            # this symbol immediately — fundamentals_sync will enrich later.
+            # Uses on_conflict_do_nothing so existing data is never overwritten.
+            if not dry_run:
+                existing_stock = (
+                    db.query(Stock)
+                    .filter_by(exchange="NSE", symbol=symbol)
+                    .first()
+                )
+                if existing_stock is None:
+                    skeleton = Stock(
+                        symbol=symbol,
+                        name=company_name,
+                        sector=industry or "Unknown",
+                        exchange="NSE",
+                        isin=isin,
+                        currency="INR",
+                        country="India",
+                        is_active=True,
+                        is_etf=False,
+                        data_source="nse_master",
+                        market_cap=0.0,
+                        average_market_cap_36m=0.0,
+                        debt=0.0,
+                        revenue=0.0,
+                        total_business_income=0.0,
+                        interest_income=0.0,
+                        non_permissible_income=0.0,
+                        accounts_receivable=0.0,
+                        cash_and_equivalents=0.0,
+                        short_term_investments=0.0,
+                        fixed_assets=0.0,
+                        total_assets=0.0,
+                        price=0.0,
+                    )
+                    db.add(skeleton)
+                    try:
+                        db.flush()
+                        metrics["stocks_seeded"] += 1
+                    except IntegrityError:
+                        db.rollback()
+                else:
+                    # Keep name/sector fresh if NSE master has better data
+                    updated = False
+                    if existing_stock.name != company_name and company_name:
+                        existing_stock.name = company_name
+                        updated = True
+                    if existing_stock.isin != isin and isin:
+                        existing_stock.isin = isin
+                        updated = True
+                    if updated:
+                        db.flush()
+
         db.commit()
 
         # ---- Fetch and import symbol change history ----
@@ -274,11 +330,13 @@ def run(dry_run: bool = False) -> dict:
         db.commit()
 
         logger.info(
-            "Universe sync complete: %d issuers inserted, %d updated, %d unchanged, %d listing inserts",
+            "Universe sync complete: %d issuers inserted, %d updated, %d unchanged, "
+            "%d listing inserts, %d legacy Stock rows seeded",
             metrics["issuers_inserted"],
             metrics["issuers_updated"],
             metrics["issuers_unchanged"],
             metrics["listings_inserted"],
+            metrics["stocks_seeded"],
         )
 
     except Exception as exc:

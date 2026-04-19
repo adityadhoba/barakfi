@@ -182,23 +182,47 @@ def _compute_market_cap(
     if not prices:
         return None, None, None
 
+    # NSE SHARES_OUTSTANDING metric = paid-up equity capital in Crores.
+    # Face value is typically ₹1–₹10. Approximate shares from paid-up capital:
+    #   shares = (paid_up_capital_crores × 1_crore) / face_value
+    # Since face_value is usually ₹1 or ₹2 or ₹10, and we store paid-up capital
+    # in crores (INR), we derive shares as paid_up_capital_crores * 1e7 / face_value.
+    # Use face_value from ListingV2 if available, else default to ₹10.
+    face_value = float(primary_listing.face_value) if primary_listing.face_value else 10.0
+    if face_value <= 0:
+        face_value = 10.0
+
+    # shares_outstanding_cr is in Crores of paid-up equity capital (INR).
+    # paid_up_capital = shares * face_value => shares = paid_up_capital / face_value
+    # paid_up_capital in rupees = shares_outstanding_cr * 1e7 (since 1 Cr = 1e7 rupees for ₹10 fv)
+    # More precisely: shares = (shares_outstanding_cr * 1e7) / face_value
+    shares_count = (shares_outstanding_cr * 1_00_00_000) / face_value  # absolute share count
+
     latest_close = float(prices[0].close_price)
-    # shares_outstanding_cr is paid-up capital in Crores (face value × shares / 1Cr)
-    # Derive shares from face value (typically ₹10 or ₹1); we use market cap proxy instead
-    # If the listing has shares from close × shares we can compute directly.
-    # For now, skip if no share count is available from a reliable source.
-    # Instead: use all close prices to derive avg market cap ratios normalized to latest.
+    # Market cap in INR = shares × price; convert to Crores
+    market_cap_inr_cr = (shares_count * latest_close) / 1_00_00_000
+
     closes = [float(p.close_price) for p in prices if p.close_price]
     if not closes:
-        return None, None, None
+        return market_cap_inr_cr, None, None
 
-    # We don't know absolute share count; compute market cap proportionally
-    # as latest market cap × (avg close / latest close)
-    # This is approximate — will be replaced with exact shares from shareholding XBRL.
-    # Provide market cap = None if no external source; store relative averages for ratios.
-    # For now return None to signal "not yet computable without shares".
-    # Screening engine will use market_cap from Stock table as fallback.
-    return None, None, None
+    # 24m and 36m averages: slice prices by cutoff dates
+    prices_24m = [
+        float(p.close_price) for p in prices
+        if p.close_price and p.trade_date >= cutoff_24m
+    ]
+    avg_close_36m = sum(closes) / len(closes)
+    avg_close_24m = sum(prices_24m) / len(prices_24m) if prices_24m else avg_close_36m
+
+    avg_36m = (shares_count * avg_close_36m) / 1_00_00_000
+    avg_24m = (shares_count * avg_close_24m) / 1_00_00_000
+
+    logger.debug(
+        "_compute_market_cap: symbol issuer_id=%d face_value=%.2f shares=%.0f "
+        "latest_close=%.2f market_cap=%.2f Cr avg36m=%.2f Cr",
+        issuer_id, face_value, shares_count, latest_close, market_cap_inr_cr, avg_36m,
+    )
+    return market_cap_inr_cr, avg_24m, avg_36m
 
 
 def _upsert_fundamentals_snapshot(
@@ -286,7 +310,42 @@ def _write_back_to_stock(
         .one_or_none()
     )
     if not stock:
-        return False
+        # Create a skeleton row so the /stocks API can serve this symbol.
+        # universe_sync should have done this already, but guard here too.
+        stock = Stock(
+            symbol=symbol,
+            exchange="NSE",
+            name=symbol,
+            sector="Unknown",
+            is_active=True,
+            is_etf=False,
+            currency="INR",
+            country="India",
+            data_source="nse_xbrl",
+            market_cap=0.0,
+            average_market_cap_36m=0.0,
+            debt=0.0,
+            revenue=0.0,
+            total_business_income=0.0,
+            interest_income=0.0,
+            non_permissible_income=0.0,
+            accounts_receivable=0.0,
+            cash_and_equivalents=0.0,
+            short_term_investments=0.0,
+            fixed_assets=0.0,
+            total_assets=0.0,
+            price=0.0,
+        )
+        db.add(stock)
+        try:
+            db.flush()
+        except Exception:
+            db.rollback()
+            stock = db.query(Stock).filter(
+                Stock.symbol == symbol, Stock.exchange == "NSE"
+            ).one_or_none()
+            if not stock:
+                return False
 
     updated = False
     for metric_code, stock_col in _METRIC_TO_STOCK.items():
