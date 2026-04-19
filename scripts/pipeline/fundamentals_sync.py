@@ -625,7 +625,11 @@ def run(
                     xbrl_result = sync_symbol_financials(
                         db, symbol, data_issuer.id, period=period, session=nse_session
                     )
-                    nse_ok = xbrl_result.get("status") == "ok" and xbrl_result.get("facts_written", 0) > 0
+                    # Accept both fresh writes and idempotent skips (facts already exist)
+                    nse_ok = xbrl_result.get("status") == "ok" and (
+                        xbrl_result.get("facts_written", 0) > 0
+                        or xbrl_result.get("facts_skipped", 0) > 0
+                    )
                 else:
                     nse_ok = False  # dry run: skip writes
 

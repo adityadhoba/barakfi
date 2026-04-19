@@ -94,81 +94,24 @@ _NSE_FIN_RESULTS_LEGACY = (
     "?index=equities&period={period}&symbol={symbol}"
 )
 
-# Row-name fragments that map to each canonical metric code.
-# NSE's JSON uses display-name keys; we match by substring (case-insensitive).
-# Multiple fragments listed in priority order — first match wins.
-_NSE_ROW_MAP: dict[str, list[str]] = {
-    METRIC_TOTAL_DEBT: [
-        "total borrowings",
-        "total debt",
-        "borrowings",
-        "long-term borrowing",
-        "short-term borrowing",
-    ],
-    METRIC_CASH: [
-        "cash and cash equivalents",
-        "cash & cash equivalents",
-        "cash and bank balance",
-    ],
-    METRIC_ST_INVESTMENTS: [
-        "current investments",
-        "short-term investments",
-        "liquid investments",
-    ],
-    METRIC_REVENUE: [
-        "revenue from operations",
-        "net revenue from operations",
-        "total revenue from operations",
-        "income from operations",
-    ],
-    METRIC_TOTAL_BUSINESS_INCOME: [
-        "total income",
-        "total revenue",
-        "income from operations",
-    ],
-    METRIC_INTEREST_INCOME: [
-        "interest income",
-        "finance income",
-        "income on deposits",
-        "interest on fixed deposit",
-    ],
-    METRIC_NON_OPERATING_INCOME: [
-        "other income",
-        "other operating income",
-        "exceptional items",
-        "non-operating income",
-    ],
-    METRIC_ACCOUNTS_RECEIVABLE: [
-        "trade receivables",
-        "sundry debtors",
-        "accounts receivable",
-        "debtors",
-    ],
-    METRIC_TOTAL_ASSETS: [
-        "total assets",
-        "balance sheet total",
-    ],
-    METRIC_FIXED_ASSETS: [
-        "property, plant and equipment",
-        "tangible assets",
-        "fixed assets",
-        "net block",
-    ],
-    METRIC_NET_INCOME: [
-        "profit after tax",
-        "net profit",
-        "profit for the period",
-        "net income",
-    ],
-    METRIC_EBITDA: [
-        "ebitda",
-        "operating profit",
-    ],
-    METRIC_SHARES_OUTSTANDING: [
-        "paid-up equity share capital",
-        "equity share capital",
-        "shares outstanding",
-    ],
+# ---------------------------------------------------------------------------
+# NSE resCmpData field mapping
+# ---------------------------------------------------------------------------
+# /api/results-comparision returns:
+#   {"resCmpData": [{re_net_sale, re_net_profit, re_total_inc, ...}], "bankNonBnking": "N"}
+#
+# All monetary fields are in INR Lakhs.  Divide by 100 to get INR Crores.
+# The `re_res_type` field: "U" = Unaudited quarterly, "A" = Audited (annual Q4 filing).
+#
+_LAKHS_TO_CRORES = 0.01  # 1 Lakh = 0.01 Crore
+
+# Direct re_* field → canonical metric code
+_RE_FIELD_MAP: dict[str, str] = {
+    "re_net_sale":    METRIC_REVENUE,                # Revenue from operations
+    "re_total_inc":   METRIC_TOTAL_BUSINESS_INCOME,  # Total income (ops + other)
+    "re_net_profit":  METRIC_NET_INCOME,              # PAT (profit after tax)
+    "re_oth_inc_new": METRIC_NON_OPERATING_INCOME,   # Other income — halal non-permissible proxy
+    "re_int_new":     METRIC_INTEREST_INCOME,         # Finance costs (interest expense proxy)
 }
 
 
@@ -176,64 +119,109 @@ _NSE_ROW_MAP: dict[str, list[str]] = {
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _match_metric(row_name: str) -> str | None:
-    """Return canonical metric code if row_name matches any known fragment."""
-    lower = row_name.lower().strip()
-    for code, fragments in _NSE_ROW_MAP.items():
-        for frag in fragments:
-            if frag in lower:
-                return code
-    return None
+def _to_float_safe(v: Any) -> float | None:
+    """Safely convert any value to float; returns None on failure or NaN."""
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return f if f == f else None  # NaN guard
+    s = str(v).replace(",", "").strip()
+    if not s or s in ("-", "null", "None", "N/A"):
+        return None
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
 
 
-def _extract_latest_value(row: dict[str, Any]) -> float | None:
+def _pick_rescmpdata_record(records: list[dict], period: str) -> dict[str, Any] | None:
     """
-    Extract the most-recent numeric value from an NSE financial-results row.
+    From resCmpData list (newest-first), pick the best record for *period*.
 
-    Handles multiple NSE API response shapes:
-      1. Flat period columns: {"rowName": "Net Sales", "Mar 2024": 1000, "Mar 2023": 900}
-      2. Named scalar:        {"rowName": "...", "value": 1000}
-      3. Values array:        {"rowName": "...", "values": [1000, 900, 800]}
-         (results-comparision endpoint — first element is most recent)
+    For Annual: prefer re_res_type == "A" (audited Q4 filing which represents the
+    annual period end).  Falls back to the most recent record if no "A" found.
+    For Quarterly: return the first element (most recent quarter).
     """
-    def _to_float(v: Any) -> float | None:
-        if v is None:
-            return None
-        if isinstance(v, (int, float)):
-            f = float(v)
-            return f if f == f else None  # NaN guard
-        try:
-            return float(str(v).replace(",", "").strip())
-        except (TypeError, ValueError):
-            return None
+    if not records:
+        return None
+    if period == "Annual":
+        for rec in records:
+            if str(rec.get("re_res_type", "")).upper() == "A":
+                return rec
+    return records[0]
 
-    # Named scalar keys (old /api/financial-results shape)
-    for key in ("currentValue", "value", "latestValue"):
-        num = _to_float(row.get(key))
-        if num is not None:
-            return num
 
-    # "values" array (results-comparision shape) — first element = most recent period
-    values_arr = row.get("values")
-    if isinstance(values_arr, list) and values_arr:
-        num = _to_float(values_arr[0])
-        if num is not None:
-            return num
+def _extract_rescmpdata_metrics(
+    payload: dict[str, Any], period: str, symbol: str
+) -> tuple[dict[str, float], date | None]:
+    """
+    Parse the resCmpData response from NSE /api/results-comparision.
 
-    # Flat period-column keys: "Mar 2024", "FY2024", etc.
-    skip = {"name", "label", "title", "description", "type", "unit", "rowName",
-            "xbrlTag", "xbrl_tag", "symbol", "series", "period", "values"}
-    for key, val in row.items():
-        if key in skip or isinstance(val, (list, dict)):
-            continue
-        if val is None or val == "":
-            continue
-        num = _to_float(val)
-        if num is not None:
-            # Reject zero unless the key looks like a period label
-            if num != 0 or key.lower().startswith(("mar", "jun", "sep", "dec", "fy", "20")):
-                return num
-    return None
+    Response shape:
+      {"resCmpData": [{re_net_sale, re_net_profit, re_total_inc, ...}], "bankNonBnking": "N"}
+
+    Monetary fields are in INR Lakhs; we convert to INR Crores (* 0.01).
+    Returns (metrics_dict, period_end_date).
+    """
+    res_list = payload.get("resCmpData")
+    if not isinstance(res_list, list) or not res_list:
+        logger.warning(
+            "nse_xbrl: no resCmpData for %s (top-level keys=%s)",
+            symbol, list(payload.keys()),
+        )
+        return {}, None
+
+    rec = _pick_rescmpdata_record(res_list, period)
+    if not rec:
+        return {}, None
+
+    period_str = f"{rec.get('re_from_dt', '?')} → {rec.get('re_to_dt', '?')}"
+    res_type = rec.get("re_res_type", "?")
+    logger.info("nse_xbrl: %s using record %s (type=%s)", symbol, period_str, res_type)
+
+    metrics: dict[str, float] = {}
+
+    # Direct field mappings (Lakhs → Crores)
+    for field, code in _RE_FIELD_MAP.items():
+        val = _to_float_safe(rec.get(field))
+        if val is not None:
+            metrics[code] = round(val * _LAKHS_TO_CRORES, 4)
+
+    # EBITDA = PAT + Tax + Interest + Depreciation (all Lakhs → Crores)
+    ebitda_parts = [
+        _to_float_safe(rec.get("re_net_profit")),
+        _to_float_safe(rec.get("re_tax")),
+        _to_float_safe(rec.get("re_int_new")),
+        _to_float_safe(rec.get("re_depr_und_exp")),
+    ]
+    valid_parts = [x for x in ebitda_parts if x is not None]
+    if len(valid_parts) >= 2:
+        metrics[METRIC_EBITDA] = round(sum(valid_parts) * _LAKHS_TO_CRORES, 4)
+
+    # Shares outstanding: re_pdup (Lakhs INR) / re_face_val (INR) × 100,000
+    pdup = _to_float_safe(rec.get("re_pdup"))
+    face_val = _to_float_safe(rec.get("re_face_val")) or 10.0
+    if pdup and pdup > 0 and face_val > 0:
+        metrics[METRIC_SHARES_OUTSTANDING] = round((pdup * 100_000) / face_val, 0)
+
+    # Parse period_end from re_to_dt ("31-DEC-2024" format)
+    period_end: date | None = None
+    re_to_dt = rec.get("re_to_dt", "")
+    try:
+        period_end = datetime.strptime(re_to_dt, "%d-%b-%Y").date()
+    except (ValueError, AttributeError):
+        pass
+
+    if metrics:
+        logger.info(
+            "nse_xbrl: %d metrics for %s — %s",
+            len(metrics), symbol, {k: round(v, 2) for k, v in metrics.items()},
+        )
+    else:
+        logger.warning("nse_xbrl: 0 metrics extracted for %s (record=%s)", symbol, str(rec)[:200])
+
+    return metrics, period_end
 
 
 def _parse_period_end(row_data: dict[str, Any] | None, period: str) -> date:
@@ -269,138 +257,38 @@ def _fetch_url(
         return 0, b""
 
 
-def _parse_rows_from_payload(payload: Any, symbol: str) -> list[dict[str, Any]]:
-    """
-    Extract a list of financial-result row dicts from any known NSE API response shape.
-
-    NSE has returned at least these shapes:
-      1. Old /api/financial-results (deprecated) → {"data": [{name/rowName, value cols...}]}
-      2. /api/results-comparision  → various nested shapes; log unknown formats for debugging
-      3. /api/corporates-financial-results → list of per-company flat dicts
-    """
-    sym_upper = symbol.upper()
-
-    if isinstance(payload, list):
-        # Bulk endpoint: each item is one company; filter to our symbol
-        for item in payload:
-            if not isinstance(item, dict):
-                continue
-            item_sym = (
-                item.get("symbol") or item.get("ticker") or item.get("companySymbol") or ""
-            ).upper()
-            if item_sym != sym_upper:
-                continue
-            # Look for nested row list
-            for key in ("data", "financial", "financials", "results", "rows", "list"):
-                candidate = item.get(key)
-                if isinstance(candidate, list) and candidate:
-                    return candidate
-            # Flat company dict: synthesise row list from numeric keys
-            flat_rows = []
-            for k, v in item.items():
-                if k in ("symbol", "ticker", "companySymbol", "series", "isin"):
-                    continue
-                if v is not None:
-                    flat_rows.append({"name": k, "value": v})
-            return flat_rows
-        return []
-
-    if isinstance(payload, dict):
-        # Exhaustive key search — log which key was found so we can tune
-        all_list_keys = [k for k, v in payload.items() if isinstance(v, list) and v]
-        for key in (
-            "data", "results", "financials", "items",
-            "financialResultsComparisons", "comparisons",
-            "quarterly", "annual", "rows", "list",
-            "ResultsList", "resultsList", "financialResults",
-            "financialResultsList", "records",
-        ):
-            candidate = payload.get(key)
-            if isinstance(candidate, list) and candidate:
-                first = candidate[0] if candidate else {}
-                if isinstance(first, dict) and (
-                    "symbol" in first or "ticker" in first or "companySymbol" in first
-                ):
-                    return _parse_rows_from_payload(candidate, symbol)
-                logger.debug("nse_xbrl: found rows under key '%s' (%d items)", key, len(candidate))
-                return candidate
-
-        # Log the full payload structure so we can fix the parser
-        logger.warning(
-            "nse_xbrl: 200 OK but unknown payload shape for %s — "
-            "ALL keys: %s | list keys: %s | raw[:600]: %s",
-            symbol,
-            list(payload.keys()),
-            all_list_keys,
-            str(payload)[:600],
-        )
-
-    return []
-
-
 def fetch_nse_financials(
     symbol: str,
     period: str = "Annual",
     session: "Any | None" = None,
-) -> tuple[dict[str, float], str, int]:
+) -> tuple[dict[str, float], str, int, "date | None"]:
     """
-    Fetch NSE financial data for *symbol*.
+    Fetch NSE financial data for *symbol* via /api/results-comparision.
 
-    Tries /api/results-comparision (per-symbol, live) only.
-    The legacy /api/financial-results always returns 404 and is not tried.
-    The bulk /api/corporates-financial-results is too large (downloads all 500
-    companies per call) and is not used here.
+    The endpoint returns a resCmpData list of quarterly/annual records with re_*
+    prefixed flat fields.  Values are in INR Lakhs; we convert to INR Crores.
 
     Returns:
-        (metrics_dict, source_url, http_status)
-        metrics_dict: {METRIC_CODE: value_in_crores}  — empty on failure.
+        (metrics_dict, source_url, http_status, period_end_date)
+        metrics_dict: {METRIC_CODE: value_in_crores} — empty on failure.
+        period_end_date: derived from re_to_dt of the chosen record (may be None).
     """
     sym = symbol.upper()
     url = _NSE_RESULTS_COMPARISON.format(symbol=sym)
 
-    code, content = _fetch_url(url, session)
-    if code != 200 or not content:
-        logger.debug("nse_xbrl: HTTP %s for %s", code, sym)
-        return {}, url, code
+    http_code, content = _fetch_url(url, session)
+    if http_code != 200 or not content:
+        logger.debug("nse_xbrl: HTTP %s for %s", http_code, sym)
+        return {}, url, http_code, None
 
     try:
         payload = json.loads(content.decode("utf-8", errors="replace"))
     except json.JSONDecodeError:
-        return {}, url, code
+        logger.warning("nse_xbrl: JSON decode error for %s", sym)
+        return {}, url, http_code, None
 
-    rows = _parse_rows_from_payload(payload, sym)
-    if not rows:
-        # Already logged inside _parse_rows_from_payload with actual key names
-        return {}, url, code
-
-    metrics: dict[str, float] = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        row_name = (
-            row.get("name")
-            or row.get("rowName")
-            or row.get("label")
-            or row.get("title")
-            or row.get("description")
-            or ""
-        )
-        code_key = _match_metric(str(row_name))
-        if code_key and code_key not in metrics:
-            val = _extract_latest_value(row)
-            if val is not None:
-                metrics[code_key] = val
-
-    if metrics:
-        logger.info("nse_xbrl: %d metrics for %s", len(metrics), sym)
-    else:
-        logger.warning(
-            "nse_xbrl: 200 OK but 0 metrics matched for %s — "
-            "first row sample: %s",
-            sym, str(rows[:1])[:300],
-        )
-
-    return metrics, url, code
+    metrics, period_end = _extract_rescmpdata_metrics(payload, period, sym)
+    return metrics, url, http_code, period_end
 
 
 def sync_symbol_financials(
@@ -436,7 +324,9 @@ def sync_symbol_financials(
         "source": "nse_xbrl",
     }
 
-    extracted, source_url, http_status = fetch_nse_financials(symbol, period, session=session)
+    extracted, source_url, http_status, api_period_end = fetch_nse_financials(
+        symbol, period, session=session
+    )
 
     if not extracted:
         metrics_out["status"] = "empty_or_error"
@@ -447,8 +337,8 @@ def sync_symbol_financials(
     content_bytes = json.dumps(extracted).encode()
     content_hash = sha256_bytes(content_bytes)
 
-    # Resolve or create DataFiling row for provenance
-    period_end = _parse_period_end(None, period)
+    # Use the period_end from the API response if available, else fall back to computed
+    period_end = api_period_end if api_period_end is not None else _parse_period_end(None, period)
     period_type = "ANNUAL" if period == "Annual" else "QUARTERLY"
     statement_scope = "CONSOLIDATED"
 
