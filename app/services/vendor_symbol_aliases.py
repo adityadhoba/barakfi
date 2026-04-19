@@ -1,22 +1,12 @@
 """
-BarakFi `Stock.symbol` values vs symbols used by public market APIs (NSE website,
-Yahoo Finance). Keep aligned with `frontend/src/lib/yahoo-symbol-aliases.ts`.
+BarakFi internal symbols vs NSE / Yahoo Finance vendor tickers.
+
+Keep aligned with frontend/src/lib/yahoo-symbol-aliases.ts where applicable.
 """
 
 from __future__ import annotations
 
-# Canonical NSE trading symbols for renamed / alternate listings.
-CANONICAL_NSE_SYMBOLS: dict[str, str] = {
-    "ZOMATO": "ETERNAL",
-    "ADANITRANS": "ADANIENSOL",
-    "INDIANHOTELS": "INDHOTEL",
-    "MAZAGON": "MAZDOCK",
-    "GARDENREACH": "GRSE",
-    "ZENSAR": "ZENSARTECH",
-    "TV18BRDCST": "NETWORK18",
-}
-
-# Yahoo Finance tickers to try (primary first). Values use .NS / .BO suffixes.
+# BarakFi symbol -> list of full Yahoo tickers to try (e.g. GRSE.NS before GARDENREACH.NS)
 TICKER_ALTERNATES: dict[str, list[str]] = {
     "TATAMOTORS": ["TATAMOTORS.NS"],
     "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],
@@ -31,6 +21,17 @@ TICKER_ALTERNATES: dict[str, list[str]] = {
     "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
 }
 
+# BarakFi symbol -> Yahoo base (no suffix) used for primary .NS ticker
+CANONICAL_NSE_SYMBOLS: dict[str, str] = {
+    "ZOMATO": "ETERNAL",
+    "ADANITRANS": "ADANIENSOL",
+    "INDIANHOTELS": "INDHOTEL",
+    "MAZAGON": "MAZDOCK",
+    "GARDENREACH": "GRSE",
+    "ZENSAR": "ZENSARTECH",
+    "TV18BRDCST": "NETWORK18",
+}
+
 
 def _strip_yahoo_suffix(ticker: str) -> str:
     u = ticker.upper().strip()
@@ -41,29 +42,28 @@ def _strip_yahoo_suffix(ticker: str) -> str:
 
 
 def nse_equity_symbol_candidates(barcode: str) -> list[str]:
-    """Ordered NSE `quote-equity` symbols to try for a BarakFi listing code."""
+    """
+    NSE quote-equity API uses native symbols (e.g. GRSE), not BarakFi display names.
+    """
     u = barcode.upper().strip()
-    out: list[str] = []
     mapped = CANONICAL_NSE_SYMBOLS.get(u)
+    out: list[str] = []
     if mapped:
         out.append(mapped)
-    out.append(u)
+    if u not in out:
+        out.append(u)
+    # Dedupe preserving order
     seen: set[str] = set()
-    deduped: list[str] = []
-    for s in out:
-        if s not in seen:
-            seen.add(s)
-            deduped.append(s)
-    return deduped
+    return [x for x in out if not (x in seen or seen.add(x))]
 
 
 def yahoo_base_symbol_candidates(barcode: str) -> list[str]:
     """
-    Ordered Yahoo *base* symbols (no .NS/.BO) for chart/quote lookups.
+    Ordered Yahoo base symbols (no .NS/.BO) for chart and quote fallbacks.
     """
     u = barcode.upper().strip()
-    bases: list[str] = []
     alts = TICKER_ALTERNATES.get(u)
+    bases: list[str] = []
     if alts:
         for full in alts:
             bases.append(_strip_yahoo_suffix(full))
@@ -73,9 +73,9 @@ def yahoo_base_symbol_candidates(barcode: str) -> list[str]:
             bases.append(mapped)
         bases.append(u)
     seen: set[str] = set()
-    deduped: list[str] = []
+    out: list[str] = []
     for b in bases:
-        if b not in seen:
+        if b and b not in seen:
             seen.add(b)
-            deduped.append(b)
-    return deduped
+            out.append(b)
+    return out

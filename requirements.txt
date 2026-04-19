@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 gunicorn
 sqlalchemy
+alembic>=1.13
 python-dotenv
 requests
 pydantic

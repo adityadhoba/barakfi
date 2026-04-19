@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import styles from "./admin-panel.module.css";
 
 type Tab = "overview" | "coverage" | "feedback" | "users" | "demand";
@@ -278,27 +281,39 @@ export function AdminPanel() {
   ];
 
   return (
-    <div className={styles.panel}>
-      <nav className={styles.tabs}>
+    <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className={styles.panel}>
+      <TabsList className="mb-4 flex w-full flex-wrap justify-start gap-1 rounded-lg border border-[var(--line)] bg-[var(--bg-soft)] p-1">
         {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`}
-            onClick={() => setTab(t.key)}
-          >
+          <TabsTrigger key={t.key} value={t.key} className="gap-1 data-[state=active]:shadow-sm">
             {t.label}
             {t.count !== undefined && t.count > 0 && (
               <span className={styles.tabBadge}>{t.count}</span>
             )}
-          </button>
+          </TabsTrigger>
         ))}
-      </nav>
+      </TabsList>
 
       <div className={styles.content}>
         {loading && <div className={styles.loading}>Loading...</div>}
 
+        <TabsContent value="overview" className="mt-0">
         {tab === "overview" && !loading && (
           <>
+            <Card className="mb-6 border-[var(--line)] bg-[var(--bg-elevated)]">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Connectors &amp; review</CardTitle>
+                <CardDescription>
+                  Ingestion crons (universe, EOD, corporate actions, filings catalog) run on Render. Deep compliance
+                  cases live in the governance console.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm">
+                <Link href="/governance" className="font-medium text-[var(--emerald)] underline-offset-2 hover:underline">
+                  Open governance console →
+                </Link>
+              </CardContent>
+            </Card>
+
             <div className={styles.statsGrid}>
             <div className={styles.statCard}>
               <span className={styles.statValue}>{stats.users}</span>
@@ -351,7 +366,9 @@ export function AdminPanel() {
             </div>
           </>
         )}
+        </TabsContent>
 
+        <TabsContent value="coverage" className="mt-0">
         {tab === "coverage" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -392,7 +409,9 @@ export function AdminPanel() {
             </table>
           </div>
         )}
+        </TabsContent>
 
+        <TabsContent value="feedback" className="mt-0">
         {tab === "feedback" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -433,7 +452,9 @@ export function AdminPanel() {
             </table>
           </div>
         )}
+        </TabsContent>
 
+        <TabsContent value="users" className="mt-0">
         {tab === "users" && !loading && (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -494,7 +515,9 @@ export function AdminPanel() {
             </table>
           </div>
         )}
+        </TabsContent>
 
+        <TabsContent value="demand" className="mt-0">
         {tab === "demand" && !loading && (
           <>
             <h3 className={styles.sectionTitle}>Event Aggregates</h3>
@@ -553,7 +576,8 @@ export function AdminPanel() {
             </div>
           </>
         )}
+        </TabsContent>
       </div>
-    </div>
+    </Tabs>
   );
 }

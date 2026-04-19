@@ -194,3 +194,79 @@ services:
         value: "true"
       - key: PYTHONUNBUFFERED
         value: "1"
+
+  # ============================================================================
+  # Data Warehouse Pipeline (ISIN-first, additive)
+  # ============================================================================
+
+  # Official NSE/BSE universe → data_warehouse tables (daily, overnight)
+  - type: cron
+    name: barakfi-sync-universe
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/sync_universe.py
+    schedule: "0 1 * * *"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: APP_ENV
+        value: production
+
+  # NSE bhavcopy EOD prices → data_warehouse (weekdays, later slot to avoid collision)
+  - type: cron
+    name: barakfi-sync-eod-prices
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/sync_eod_prices.py
+    schedule: "30 12 * * 1-5"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: APP_ENV
+        value: production
+
+  # NSE corporate announcements / filings catalog (daily)
+  - type: cron
+    name: barakfi-sync-filings-catalog
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/sync_filings.py
+    schedule: "30 14 * * *"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: APP_ENV
+        value: production
+
+  # NSE corporate actions poll (weekdays)
+  - type: cron
+    name: barakfi-sync-corp-actions
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/sync_corporate_actions.py
+    schedule: "30 2,12 * * 1-5"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: APP_ENV
+        value: production

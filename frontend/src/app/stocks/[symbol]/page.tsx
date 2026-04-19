@@ -42,6 +42,7 @@ import {
   methodologyTableCaption,
 } from "@/lib/stock-detail-screening-tables";
 import { displayCountryForStock } from "@/lib/stock-display";
+import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
 import {
   capTierLabel,
   formatFundamentalAmount,
@@ -593,8 +594,8 @@ export default async function StockDetailPage({
                   : stock.data_quality === "medium"
                     ? "Medium"
                     : "Low"}
-                — indicates how complete the fundamentals are for ratio screening. Source:{" "}
-                {stock.data_source}.
+                — indicates how complete the fundamentals are for ratio screening. Live quote
+                source: {stock.data_source}.
                 {stock.fundamentals_fields_missing &&
                 stock.fundamentals_fields_missing.length > 0 ? (
                   <>
@@ -1141,6 +1142,13 @@ export default async function StockDetailPage({
                 View methodology
               </Link>
             </div>
+            <p className={styles.seoProse} style={{ marginTop: 16 }}>
+              <strong>Transparency:</strong> Verdicts here are{" "}
+              <strong>likely compliant / needs review / likely non-compliant under BarakFi methodology v
+              {PRIMARY_METHODOLOGY_VERSION}</strong> based on the latest data we could source — not a fatwa
+              or certification. When filings are incomplete or ambiguous, we bias toward review rather than
+              a false &quot;pass&quot;.
+            </p>
           </div>
 
           {/* Tab 2: Financials */}
@@ -1173,8 +1181,12 @@ export default async function StockDetailPage({
                     </td>
                   </tr>
                   <tr>
-                    <td>Data source</td>
+                    <td>Live quote source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
+                  </tr>
+                  <tr>
+                    <td>Fundamentals source</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>Yahoo Finance (yfinance)</td>
                   </tr>
                   <tr>
                     <td>Fundamentals last updated</td>

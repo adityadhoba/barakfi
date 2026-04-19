@@ -901,9 +901,17 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
 
         # -- Market Cap (spot + 36m historical average) --
-        market_cap_raw = info.get("marketCap") or 0.0
+        # Prefer price × shares from the same `info` snapshot. Yahoo's `marketCap`
+        # field can lag `regularMarketPrice` between sessions, which made DB mcap
+        # disagree with NSE/Yahoo summary until the next fundamentals job.
+        shares_out = float(info.get("sharesOutstanding") or 0.0)
+        yahoo_mcap_raw = float(info.get("marketCap") or 0.0)
+        implied_raw = float(price) * shares_out if price and shares_out > 0 else 0.0
+        if implied_raw > 0:
+            market_cap_raw = implied_raw
+        else:
+            market_cap_raw = yahoo_mcap_raw
         market_cap = _convert_value(market_cap_raw, exchange)
-        shares_out = info.get("sharesOutstanding") or 0.0
         average_market_cap_36m = _compute_average_market_cap_36m(
             ticker,
             symbol=symbol,
