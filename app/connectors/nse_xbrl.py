@@ -143,16 +143,30 @@ def _pick_rescmpdata_record(records: list[dict], period: str) -> dict[str, Any] 
     """
     From resCmpData list (newest-first), pick the best record for *period*.
 
-    For Annual: prefer re_res_type == "A" (audited Q4 filing which represents the
-    annual period end).  Falls back to the most recent record if no "A" found.
-    For Quarterly: return the first element (most recent quarter).
+    Strategy: always prefer the most recent audited annual ("A") record that is
+    within the last 18 months.  If none exists that recent, fall back to the most
+    recent record (unaudited quarterly) so we never serve data older than ~2 years.
+    For Quarterly: always return the first element (most recent quarter).
     """
+    from datetime import date, datetime
+
     if not records:
         return None
+
     if period == "Annual":
+        cutoff = date.today().replace(year=date.today().year - 2)
+        # First pass: prefer a recent audited annual
         for rec in records:
             if str(rec.get("re_res_type", "")).upper() == "A":
-                return rec
+                try:
+                    rec_date = datetime.strptime(rec.get("re_to_dt", ""), "%d-%b-%Y").date()
+                    if rec_date >= cutoff:
+                        return rec
+                except (ValueError, AttributeError):
+                    return rec  # can't parse date, use it anyway
+        # Second pass: no recent audited record — return the most recent record
+        # (unaudited quarterly is better than stale audited annual)
+
     return records[0]
 
 

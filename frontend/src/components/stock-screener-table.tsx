@@ -75,6 +75,45 @@ function formatEventDate(value?: string | null): string {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+/** Render market cap; shows a subtle "Syncing" badge when no price data exists yet. */
+function McapCell({ marketCap, currency }: { marketCap: number; currency: "INR" | "USD" | "GBP" }) {
+  if (marketCap === 0) {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "4px",
+          fontSize: "0.72rem",
+          fontWeight: 500,
+          color: "var(--text-tertiary)",
+          background: "var(--bg-soft)",
+          border: "1px solid var(--line)",
+          borderRadius: "4px",
+          padding: "2px 6px",
+          letterSpacing: "0.02em",
+          whiteSpace: "nowrap",
+        }}
+        title="Price data not yet available — will update after next EOD sync"
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        Pending
+      </span>
+    );
+  }
+  return <>{formatMcapShort(marketCap, currency)}</>;
+}
+
+/** Render sector; shows dash for "Unknown" sectors not yet synced. */
+function SectorCell({ sector }: { sector: string }) {
+  if (!sector || sector === "Unknown") {
+    return <span style={{ color: "var(--text-tertiary)" }}>—</span>;
+  }
+  return <>{sector}</>;
+}
+
 function getSortValue(
   s: ScreenedStock,
   key: SortKey,
@@ -219,7 +258,10 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     return counts;
   }, [screenedStocks]);
 
-  const sectors = useMemo(() => ["All", ...Object.keys(sectorCounts).filter((k) => k !== "All").sort()], [sectorCounts]);
+  const sectors = useMemo(
+    () => ["All", ...Object.keys(sectorCounts).filter((k) => k !== "All" && k !== "Unknown").sort()],
+    [sectorCounts],
+  );
 
   const mcapOpt = MCAP_OPTIONS.find((o) => o.key === mcapFilter) ?? MCAP_OPTIONS[0];
 
@@ -493,42 +535,26 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         </div>
 
         {/* Locked premium filters */}
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>
-            Compliance Score <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
-          </h4>
-          <button
-            type="button"
-            className={styles.lockedFilter}
-            onClick={() => router.push("/premium")}
-          >
-            Score range filter — Premium (Coming Soon)
-          </button>
-        </div>
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>
-            Debt Ratio <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
-          </h4>
-          <button
-            type="button"
-            className={styles.lockedFilter}
-            onClick={() => router.push("/premium")}
-          >
-            Debt ratio filter — Premium (Coming Soon)
-          </button>
-        </div>
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>
-            Interest Income % <span className={styles.lockIcon} title="Premium (Coming Soon)">🔒</span>
-          </h4>
-          <button
-            type="button"
-            className={styles.lockedFilter}
-            onClick={() => router.push("/premium")}
-          >
-            Income filter — Premium (Coming Soon)
-          </button>
-        </div>
+        {(["Compliance Score", "Debt Ratio", "Interest Income %"] as const).map((label) => (
+          <div key={label} className={styles.filterSection}>
+            <h4 className={styles.filterLabel}>
+              {label}{" "}
+              <span className={styles.lockIcon} title="Premium (Coming Soon)" aria-label="Premium">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </span>
+            </h4>
+            <button
+              type="button"
+              className={styles.lockedFilter}
+              onClick={() => router.push("/premium")}
+            >
+              {label} filter — Premium
+            </button>
+          </div>
+        ))}
 
         {/* Sidebar toggle on mobile */}
         <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
@@ -652,7 +678,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                           <div className="min-w-0">
                             <p className="truncate font-medium text-[var(--text)]">{s.name}</p>
                             <p className="text-xs text-[var(--text-tertiary)]">
-                              {globalIdx}. {s.symbol} · {s.sector}
+                              {globalIdx}. {s.symbol}{s.sector && s.sector !== "Unknown" ? ` · ${s.sector}` : ""}
                             </p>
                           </div>
                         </div>
@@ -673,7 +699,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       <div>
                         <p className="text-[var(--text-tertiary)]">Mkt cap</p>
                         <p className="font-medium text-[var(--text)]">
-                          {formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency))}
+                          <McapCell marketCap={s.market_cap} currency={resolveDisplayCurrency(s.exchange, s.currency)} />
                         </p>
                       </div>
                       <div>
@@ -750,9 +776,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                         </div>
                       </StockPreviewPopup>
                     </td>
-                    <td className={styles.tdSector}>{s.sector}</td>
+                    <td className={styles.tdSector}><SectorCell sector={s.sector} /></td>
                     <td className={styles.tdRight}>
-                      {formatMcapShort(s.market_cap, resolveDisplayCurrency(s.exchange, s.currency))}
+                      <McapCell marketCap={s.market_cap} currency={resolveDisplayCurrency(s.exchange, s.currency)} />
                     </td>
                     <td className={styles.tdRight}>
                       {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
