@@ -76,7 +76,7 @@ function formatEventDate(value?: string | null): string {
 }
 
 /** Render market cap; shows a subtle "Syncing" badge when no price data exists yet. */
-function McapCell({ marketCap, currency }: { marketCap: number; currency: string }) {
+function McapCell({ marketCap, currency }: { marketCap: number; currency: "INR" | "USD" | "GBP" }) {
   if (marketCap === 0) {
     return (
       <span
