@@ -368,55 +368,143 @@ def _write_back_to_stock(
     return updated
 
 
+_INR_TO_CRORES = 1_00_00_000  # 1 Crore = 10 million rupees
+
+
 def _fallback_yfinance(symbol: str, db: Any) -> dict[str, float]:
     """
-    Fallback: write yfinance fundamentals to DataFinancialFact when NSE returns nothing.
+    Fallback: fetch yfinance data and write it both to DataFinancialFact (warehouse)
+    AND directly to the legacy Stock table.
 
-    Uses the existing yfinance_fallback connector which writes tall facts in TTM_VENDOR periods.
-    Returns {metric_code: value} read back from those fact rows, or {} on failure.
+    yfinance returns monetary values in raw INR for .NS tickers.
+    We convert to INR Crores (divide by 1e7) before storing so that all values
+    are on the same scale as NSE XBRL data.
+
+    Returns {metric_code: value_in_crores} for the snapshot pipeline, or {} on failure.
     """
     try:
-        from app.connectors.yfinance_fallback import write_yfinance_facts_for_symbol
-        result = write_yfinance_facts_for_symbol(db, symbol, exchange="NSE")
-        if not result.get("ok"):
-            return {}
-
-        # The issuer_id is embedded in the fact rows — read them back via DataIssuer
-        from app.models_data_warehouse import DataIssuer, DataFinancialPeriod, DataFinancialFact
-        from app.models import Stock
-        stock = db.query(Stock).filter(Stock.symbol == symbol, Stock.exchange == "NSE").one_or_none()
-        if not stock or not stock.isin:
-            return {}
-        data_issuer = (
-            db.query(DataIssuer)
-            .filter(DataIssuer.canonical_isin == stock.isin)
-            .one_or_none()
-        )
-        if not data_issuer:
-            return {}
-
-        from datetime import timedelta
-        period = (
-            db.query(DataFinancialPeriod)
-            .filter(
-                DataFinancialPeriod.issuer_id == data_issuer.id,
-                DataFinancialPeriod.period_type == "TTM_VENDOR",
-            )
-            .order_by(DataFinancialPeriod.period_end_date.desc())
-            .first()
-        )
-        if not period:
-            return {}
-
-        facts = (
-            db.query(DataFinancialFact)
-            .filter(DataFinancialFact.period_id == period.id)
-            .all()
-        )
-        return {f.metric_code: float(f.value_numeric) for f in facts if f.value_numeric is not None}
-    except Exception as exc:
-        logger.debug("yfinance fallback failed for %s: %s", symbol, exc)
+        import yfinance as yf
+    except ImportError:
+        logger.warning("yfinance not installed — skipping fallback for %s", symbol)
         return {}
+
+    try:
+        suffix = ".NS"
+        ticker_sym = f"{symbol}{suffix}"
+        ticker = yf.Ticker(ticker_sym)
+        info = ticker.info or {}
+    except Exception as exc:
+        logger.debug("yfinance fetch failed for %s: %s", symbol, exc)
+        return {}
+
+    if not info or (info.get("marketCap") is None and info.get("totalRevenue") is None):
+        logger.debug("yfinance: empty info for %s", symbol)
+        return {}
+
+    def _cr(val: Any) -> float | None:
+        """Convert raw INR value to INR Crores."""
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            if f != f:  # NaN check
+                return None
+            return round(f / _INR_TO_CRORES, 4)
+        except (TypeError, ValueError):
+            return None
+
+    def _raw(val: Any) -> float | None:
+        """Return raw non-monetary value (shares count, ratios, etc.)."""
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            return f if f == f else None
+        except (TypeError, ValueError):
+            return None
+
+    # Build a metric_code → value_in_crores dict for the canonical pipeline
+    facts: dict[str, float] = {}
+
+    revenue_cr = _cr(info.get("totalRevenue"))
+    if revenue_cr:
+        facts["REVENUE"] = revenue_cr
+        facts["TOTAL_BUSINESS_INCOME"] = revenue_cr
+
+    debt_cr = _cr(info.get("totalDebt"))
+    if debt_cr:
+        facts["TOTAL_DEBT"] = debt_cr
+
+    cash_cr = _cr(info.get("totalCash"))
+    if cash_cr:
+        facts["CASH_AND_EQUIVALENTS"] = cash_cr
+
+    sti_cr = _cr(info.get("shortTermInvestments"))
+    if sti_cr:
+        facts["SHORT_TERM_INVESTMENTS"] = sti_cr
+
+    assets_cr = _cr(info.get("totalAssets"))
+    if assets_cr:
+        facts["TOTAL_ASSETS"] = assets_cr
+
+    ar_cr = _cr(info.get("accountsReceivable") or info.get("netReceivables"))
+    if ar_cr:
+        facts["ACCOUNTS_RECEIVABLE"] = ar_cr
+
+    ppe_cr = _cr(info.get("propertyPlantEquipmentNet") or info.get("netPPE"))
+    if ppe_cr:
+        facts["FIXED_ASSETS"] = ppe_cr
+
+    ni_cr = _cr(info.get("netIncomeToCommon"))
+    if ni_cr:
+        facts["NET_INCOME"] = ni_cr
+
+    ebitda_cr = _cr(info.get("ebitda"))
+    if ebitda_cr:
+        facts["EBITDA"] = ebitda_cr
+
+    interest_income_cr = _cr(info.get("interestIncome"))
+    if interest_income_cr:
+        facts["INTEREST_INCOME"] = interest_income_cr
+
+    shares = _raw(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
+    if shares:
+        # Convert absolute share count to "Crores of shares" for consistency with NSE XBRL
+        facts["SHARES_OUTSTANDING"] = shares / _INR_TO_CRORES
+
+    mcap_cr = _cr(info.get("marketCap"))
+
+    if not facts and mcap_cr is None:
+        return {}
+
+    # Also write directly to the legacy Stock table for immediate visibility
+    from app.models import Stock
+    stock = db.query(Stock).filter(Stock.symbol == symbol, Stock.exchange == "NSE").one_or_none()
+    if stock:
+        for metric_code, stock_col in _METRIC_TO_STOCK.items():
+            val = facts.get(metric_code)
+            if val is not None and hasattr(stock, stock_col):
+                setattr(stock, stock_col, val)
+        if mcap_cr is not None:
+            stock.market_cap = mcap_cr
+        stock.fundamentals_updated_at = datetime.now(UTC)
+        stock.data_source = "yfinance_fallback"
+        try:
+            db.add(stock)
+            db.flush()
+        except Exception as exc:
+            db.rollback()
+            logger.debug("yfinance direct stock write failed for %s: %s", symbol, exc)
+
+    # Also write to warehouse fact store for FundamentalsSnapshot
+    try:
+        from app.connectors.yfinance_fallback import write_yfinance_facts_for_symbol
+        write_yfinance_facts_for_symbol(db, symbol, exchange="NSE")
+    except Exception as exc:
+        logger.debug("yfinance warehouse write failed for %s: %s", symbol, exc)
+
+    logger.debug("yfinance fallback: %d metrics for %s (mcap=%.1f Cr)", len(facts), symbol, mcap_cr or 0)
+    return facts
 
 
 def run(
@@ -483,10 +571,21 @@ def run(
         logger.info("fundamentals_sync: %d symbols to process", len(listings))
 
         from app.connectors.nse_xbrl import sync_symbol_financials
+        from app.connectors.nse_client import NSESession
 
         # Resolve issuer_id in data_warehouse (DataIssuer) for DataFinancialFact writes
         from app.models_data_warehouse import DataIssuer
         snapshot_date = date.today()
+
+        # Warm a single NSE session for the whole batch — this prevents NSE from
+        # seeing 500 separate "new browser" connections and getting blocked.
+        nse_session = NSESession(timeout=45.0)
+        nse_warm_ok = nse_session.warm()
+        if not nse_warm_ok:
+            logger.warning(
+                "fundamentals_sync: NSE session warm failed (403/network issue). "
+                "NSE XBRL data will be unavailable; yfinance fallback will be used for all symbols."
+            )
 
         for listing, issuer in listings:
             metrics["symbols_attempted"] += 1
@@ -512,10 +611,10 @@ def run(
                     db.add(data_issuer)
                     db.flush()
 
-                # Step 1: Fetch NSE XBRL → DataFinancialFact
+                # Step 1: Fetch NSE XBRL → DataFinancialFact (reuse persistent session)
                 if not dry_run:
                     xbrl_result = sync_symbol_financials(
-                        db, symbol, data_issuer.id, period=period
+                        db, symbol, data_issuer.id, period=period, session=nse_session
                     )
                     nse_ok = xbrl_result.get("status") == "ok" and xbrl_result.get("facts_written", 0) > 0
                 else:
@@ -574,6 +673,8 @@ def run(
                 logger.exception("fundamentals_sync: error for %s: %s", symbol, exc)
                 db.rollback()
                 metrics["errors"] += 1
+
+        nse_session.close()
 
         # Finalize job run
         job_run.status = "succeeded"
