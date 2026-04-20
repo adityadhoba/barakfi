@@ -810,23 +810,25 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
     chunks.push(symbols.slice(i, i + CHUNK_SIZE));
   }
 
-  try {
-    const results = await Promise.all(
-      chunks.map(async (chunk) => {
-        const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(chunk),
-          next: { revalidate: 300 },
-        });
-        if (!response.ok) return [];
-        return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
-      })
-    );
-    return results.flat();
-  } catch {
-    return [];
-  }
+  // NOTE: POST requests are not cached by Next.js Data Cache. Do not pass
+  // `next: { revalidate }` here — it has no effect on POST fetches and gives
+  // a false impression of caching. The screener page's segment-level
+  // `export const revalidate = 300` controls re-rendering frequency instead.
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`/screen/bulk returned ${response.status}`);
+      }
+      return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
+    })
+  );
+  return results.flat();
 }
 
 /**
