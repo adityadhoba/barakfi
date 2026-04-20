@@ -555,7 +555,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.83rem;
-  table-layout: fixed;
 }
 
 .th {
@@ -580,6 +579,7 @@
 .th:hover { color: var(--text); }
 .thRight { text-align: right; }
 .thNum { width: 44px; padding-right: 8px; }
+.thTrend { width: 80px; text-align: center; }
 .thAction { width: 110px; }
 .thActive { color: var(--emerald) !important; }
 .sortIcon { font-size: 0.55rem; opacity: 0.6; margin-left: 2px; }
@@ -676,6 +676,18 @@
   white-space: nowrap;
   width: 12%;
   min-width: 100px;
+}
+
+.tdTrend {
+  width: 80px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.tdAction {
+  width: 110px;
+  white-space: nowrap;
 }
 
 .up { color: var(--emerald); font-size: 0.72rem; font-weight: 600; }

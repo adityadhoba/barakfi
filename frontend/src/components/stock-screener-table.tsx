@@ -752,7 +752,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                       <span className={styles.statusHeaderInfo}>i</span>
                     </span>
                   </th>
-                  <th className={styles.th}>Recent Event</th>
+                  <th className={`${styles.th} ${styles.thTrend}`}>Trend</th>
                   <th className={`${styles.th} ${styles.thAction}`}>Action</th>
                 </tr>
               </thead>
@@ -801,19 +801,10 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                           {screeningUiLabel(s.screening.status)}
                         </span>
                       </td>
-                      <td className={styles.tdSector}>
-                        {s.latest_corporate_event ? (
-                          <span
-                            className={styles.statusBadge}
-                            title={`${s.latest_corporate_event.label}${s.latest_corporate_event.effective_date ? ` · ${formatEventDate(s.latest_corporate_event.effective_date)}` : ""}${s.latest_corporate_event.successor_symbol ? ` · ${s.latest_corporate_event.successor_symbol}` : ""}`}
-                          >
-                            {s.latest_corporate_event.label}
-                          </span>
-                        ) : (
-                          <span className={styles.emDash}>—</span>
-                        )}
+                      <td className={styles.tdTrend}>
+                        <MiniSparkline quote={quotes[s.symbol] ?? null} />
                       </td>
-                      <td>
+                      <td className={styles.tdAction}>
                         <button
                           type="button"
                           className={styles.screenRowBtn}
@@ -934,5 +925,49 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MiniSparkline — draws a tiny SVG directional line using the day's
+// change_percent. Green line trending up for positive, red trending down
+// for negative. Falls back to a flat grey line while quotes load.
+// ---------------------------------------------------------------------------
+type QuoteSnap = { last_price: number | null; change: number | null; change_percent: number | null };
+
+function MiniSparkline({ quote }: { quote: QuoteSnap | null | undefined }) {
+  const W = 56;
+  const H = 26;
+  const PAD = 2;
+  const mid = H / 2;
+
+  const pct = quote?.change_percent ?? null;
+
+  if (pct == null) {
+    return (
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden>
+        <line x1={PAD} y1={mid} x2={W - PAD} y2={mid} stroke="var(--line)" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  const isUp = pct >= 0;
+  const color = isUp ? "var(--emerald)" : "var(--red)";
+
+  // Build a 5-point path that mimics an intraday curve in the correct direction.
+  // Points are normalised 0-1 then scaled to the SVG canvas.
+  const shape = isUp
+    ? [0.5, 0.35, 0.6, 0.2, 0.1]  // starts mid, dips, rises
+    : [0.5, 0.65, 0.4, 0.8, 0.9]; // starts mid, rises, falls
+
+  const xs = [PAD, W * 0.25, W * 0.5, W * 0.75, W - PAD];
+  const toY = (v: number) => PAD + v * (H - PAD * 2);
+
+  const d = shape.map((v, i) => `${i === 0 ? "M" : "L"}${xs[i].toFixed(1)},${toY(v).toFixed(1)}`).join(" ");
+
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden>
+      <path d={d} fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+    </svg>
   );
 }
