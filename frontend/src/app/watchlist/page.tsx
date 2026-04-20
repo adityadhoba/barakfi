@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import styles from "@/app/screener.module.css";
-import { WatchlistPublicLanding } from "@/components/watchlist-public-landing";
 import {
   getAuthenticatedWatchlist,
   getBulkScreeningResults,
@@ -24,7 +24,7 @@ export default async function WatchlistPage() {
   const token = await authState.getToken();
 
   if (!clerkUser || !token) {
-    return <WatchlistPublicLanding />;
+    redirect("/sign-in?redirect_url=%2Fwatchlist");
   }
 
   const actor = {

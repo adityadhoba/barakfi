@@ -2227,13 +2227,18 @@ def delete_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
-    if not stock:
-        raise HTTPException(status_code=404, detail="Stock not found")
-
+    # Look up the watchlist entry directly by symbol so non-Indian stocks
+    # (e.g. AAPL, META) that were saved before the India-only policy can still
+    # be removed.  We do NOT use require_indian_listing=True here because the
+    # user must be able to clean up their own watchlist regardless of origin.
+    normalised_symbol = symbol.strip().upper()
     entry = (
         db.query(WatchlistEntry)
-        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .join(Stock, Stock.id == WatchlistEntry.stock_id)
+        .filter(
+            WatchlistEntry.user_id == user.id,
+            Stock.symbol == normalised_symbol,
+        )
         .first()
     )
     if not entry:
