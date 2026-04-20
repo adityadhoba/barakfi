@@ -1515,20 +1515,16 @@ a[href*="clerk.com"] {
   border-width: 0;
 }
 
-/* ─── Scroll-bounce effect ─────────────────────────────────────────────── */
+/* ─── Scroll-bounce effect (single rubber-band pull, no jitter) ─────────── */
 @keyframes scroll-bounce-up {
   0%   { transform: translateY(0); }
-  35%  { transform: translateY(-10px); }
-  65%  { transform: translateY(3px); }
-  85%  { transform: translateY(-4px); }
+  40%  { transform: translateY(-12px); }
   100% { transform: translateY(0); }
 }
 @keyframes scroll-bounce-down {
   0%   { transform: translateY(0); }
-  35%  { transform: translateY(10px); }
-  65%  { transform: translateY(-3px); }
-  85%  { transform: translateY(4px); }
+  40%  { transform: translateY(12px); }
   100% { transform: translateY(0); }
 }
-html.scroll-bounce-up   body { animation: scroll-bounce-up   0.38s cubic-bezier(0.22, 1, 0.36, 1); }
-html.scroll-bounce-down body { animation: scroll-bounce-down 0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+html.scroll-bounce-up   body { animation: scroll-bounce-up   0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+html.scroll-bounce-down body { animation: scroll-bounce-down 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
