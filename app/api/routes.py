@@ -228,18 +228,21 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     alias_map = _search_aliases_by_symbol(db, [s.symbol for s in stocks])
     out: list[StockRead] = []
     for s in stocks:
-        dq, missing = fundamentals_completeness_payload(s)
-        out.append(
-            StockRead.model_validate(s).model_copy(
-                update={
-                    "index_memberships": code_map.get(s.id, []),
-                    "data_quality": dq,
-                    "fundamentals_fields_missing": missing,
-                    "latest_corporate_event": event_map.get(s.symbol.upper()),
-                    "search_aliases": alias_map.get(s.symbol.upper(), []),
-                }
+        try:
+            dq, missing = fundamentals_completeness_payload(s)
+            out.append(
+                StockRead.model_validate(s).model_copy(
+                    update={
+                        "index_memberships": code_map.get(s.id, []),
+                        "data_quality": dq,
+                        "fundamentals_fields_missing": missing,
+                        "latest_corporate_event": event_map.get(s.symbol.upper()),
+                        "search_aliases": alias_map.get(s.symbol.upper(), []),
+                    }
+                )
             )
-        )
+        except Exception as exc:
+            logger.warning("[_stocks_read_enriched] skipping %s — validation error: %s", s.symbol, exc)
     return out
 
 
