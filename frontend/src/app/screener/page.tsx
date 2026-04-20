@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { unstable_noStore } from "next/cache";
 import styles from "@/app/screener.module.css";
 import { getScreenerSnapshot, getStocks, getBulkScreeningResults } from "@/lib/api";
 import { StockScreenerTable } from "@/components/stock-screener-table";
@@ -46,9 +47,10 @@ export default function ScreenerPage() {
 // ---------------------------------------------------------------------------
 async function ScreenerDataLayer() {
   const validStocks = await loadScreenerStocks();
-  // When backend is cold/unavailable, return the warming-up component instead
-  // of throwing. This lets ISR builds succeed and ensures a graceful retry UX.
   if (validStocks.length === 0) {
+    // Backend is cold or unreachable. Opt out of ISR caching so this
+    // empty state is never stored — the next request will try again fresh.
+    unstable_noStore();
     return <ScreenerWarmingUp />;
   }
   return <StockScreenerTable screenedStocks={validStocks} />;
