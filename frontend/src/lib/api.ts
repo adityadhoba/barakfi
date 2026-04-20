@@ -848,7 +848,7 @@ export type ScreenerSnapshotEntry = {
  */
 export async function getScreenerSnapshot(): Promise<ScreenerSnapshotEntry[]> {
   const response = await fetch(`${apiBaseUrl}/screener/snapshot`, {
-    next: { revalidate: 300 },
+    next: { revalidate: 600 },
   });
   if (!response.ok) {
     throw new Error(`/screener/snapshot returned ${response.status}`);

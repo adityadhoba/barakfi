@@ -711,6 +711,73 @@ except Exception as exc:
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+
+# ---------------------------------------------------------------------------
+# Startup cache warmup — runs once in a background thread after server starts
+# ---------------------------------------------------------------------------
+def _warmup_screening_cache() -> None:
+    """Pre-warm the screening cache so /screener/snapshot is never cold.
+
+    Called from the FastAPI startup event in a daemon thread so it doesn't
+    block the server from accepting requests. If the screening cache is
+    already warm (e.g. Redis with data from the previous deploy), the
+    individual `get` checks inside _screen_stocks_bulk_impl short-circuit and
+    the warmup finishes in milliseconds.
+    """
+    import time as _time
+    _time.sleep(3)  # Let the server finish starting before we hit the DB
+
+    try:
+        from app.database import SessionLocal as _Session
+        from app.models import Stock as _Stock
+        from app.api.routes import _screen_stocks_bulk_impl
+        from app.services.cache_service import screening_cache, screening_cache_key
+
+        db = _Session()
+        try:
+            stocks = (
+                db.query(_Stock.symbol, _Stock.exchange)
+                .filter(
+                    _Stock.is_active.is_(True),
+                    _Stock.exchange == "NSE",
+                    _Stock.screening_blocked_reason.is_(None),
+                )
+                .all()
+            )
+
+            # Only warm symbols that are not already cached
+            cold_symbols = [
+                s.symbol for s in stocks
+                if screening_cache.get(screening_cache_key(s.symbol, s.exchange)) is None
+            ]
+
+            if not cold_symbols:
+                log.info("[warmup] Screening cache already warm (%d stocks)", len(stocks))
+                return
+
+            log.info("[warmup] Warming screening cache for %d cold symbols…", len(cold_symbols))
+            chunk_size = 50
+            for i in range(0, len(cold_symbols), chunk_size):
+                chunk = cold_symbols[i: i + chunk_size]
+                try:
+                    _screen_stocks_bulk_impl(chunk, db)
+                except Exception as chunk_exc:
+                    log.warning("[warmup] chunk %d failed: %s", i, chunk_exc)
+
+            log.info("[warmup] Screening cache warmup complete (%d symbols)", len(cold_symbols))
+        finally:
+            db.close()
+    except Exception as exc:
+        log.warning("[warmup] Screening cache warmup failed: %s", exc)
+
+
+@app.on_event("startup")
+async def startup_warmup():
+    import threading
+    t = threading.Thread(target=_warmup_screening_cache, daemon=True, name="screening-warmup")
+    t.start()
+    log.info("[startup] Screening cache warmup thread started")
+
 # Avoid rate limiting in local/test runs; keep it in production-like environments.
 if not DEBUG and APP_ENV.lower() == "production":
     # Mobile users + SPAs can burst many API calls on first paint; keep generous limits.
