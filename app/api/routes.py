@@ -956,53 +956,60 @@ def screener_snapshot(db: Session = Depends(get_db)):
 
     Auth: None (public, read-only)
     """
-    stocks = (
-        db.query(Stock)
-        .filter(
-            Stock.is_active.is_(True),
-            Stock.exchange == "NSE",
-            Stock.screening_blocked_reason.is_(None),
-        )
-        .order_by(Stock.market_cap.desc().nullslast())
-        .limit(1000)
-        .all()
-    )
-
-    results = []
-    for stock in stocks:
-        ck = screening_cache_key(stock.symbol, stock.exchange)
-        cached = screening_cache.get(ck)
-        if cached is not None:
-            results.append({
-                "stock": {
-                    **helpers.stock_to_dict(stock),
-                    # Extra fields needed by the screener table
-                    "exchange": stock.exchange,
-                    "currency": stock.currency or "INR",
-                    "isin": stock.isin,
-                    "index_memberships": [
-                        m.index_name for m in stock.index_memberships
-                    ],
-                },
-                "screening": cached,
-            })
-
-    if not results and stocks:
-        # Cache is cold (backend restarted, pipeline not yet run).
-        # 503 tells Next.js ISR to skip caching so users see the skeleton
-        # rather than a stale "0 of 0" page.
-        raise HTTPException(
-            status_code=503,
-            detail="Screening cache is warming up — retry in a moment",
+    try:
+        stocks = (
+            db.query(Stock)
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.exchange == "NSE",
+                Stock.screening_blocked_reason.is_(None),
+            )
+            # nulls_last() is the SQLAlchemy 2.x method (nullslast() was 1.x)
+            .order_by(Stock.market_cap.desc().nulls_last())
+            .limit(1000)
+            .all()
         )
 
-    return JSONResponse(
-        content={"stocks": results, "count": len(results)},
-        headers={
-            "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
-            "Vary": "Accept-Encoding",
-        },
-    )
+        # Fetch all index memberships in one query (avoids N+1 lazy loads)
+        index_map = _index_codes_by_stock_id(db, [s.id for s in stocks])
+
+        results = []
+        for stock in stocks:
+            ck = screening_cache_key(stock.symbol, stock.exchange)
+            cached = screening_cache.get(ck)
+            if cached is not None:
+                results.append({
+                    "stock": {
+                        **helpers.stock_to_dict(stock),
+                        "exchange": stock.exchange,
+                        "currency": stock.currency or "INR",
+                        "isin": stock.isin,
+                        "index_memberships": index_map.get(stock.id, []),
+                    },
+                    "screening": cached,
+                })
+
+        if not results and stocks:
+            # Cache is cold (backend restarted, pipeline not yet run).
+            # 503 tells Next.js ISR to skip caching so users see the skeleton
+            # rather than a stale "0 of 0" page.
+            raise HTTPException(
+                status_code=503,
+                detail="Screening cache is warming up — retry in a moment",
+            )
+
+        return JSONResponse(
+            content={"stocks": results, "count": len(results)},
+            headers={
+                "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+                "Vary": "Accept-Encoding",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("[screener/snapshot] unexpected error: %s", exc)
+        raise HTTPException(status_code=503, detail="Screener snapshot temporarily unavailable")
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])

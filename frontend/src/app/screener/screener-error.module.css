@@ -50,7 +50,8 @@
   margin: 4px 0 8px;
 }
 
-.body strong {
+.body strong,
+.countdown {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
