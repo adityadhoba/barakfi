@@ -23,6 +23,7 @@ const ENGINE_TO_PRODUCT: Record<string, string> = {
 };
 
 function formatRatio(value: number): string {
+  if (!Number.isFinite(value) || value > 9.99) return "—";
   return `${(value * 100).toFixed(2)}%`;
 }
 

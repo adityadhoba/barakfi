@@ -200,6 +200,8 @@ function formatVolumeShorthand(volume: number, currency: string) {
 }
 
 function formatRatio(value: number) {
+  // Cap at 999% — values above this signal a data pipeline error (e.g. wrong market cap unit)
+  if (!Number.isFinite(value) || value > 9.99) return "—";
   return `${(value * 100).toFixed(2)}%`;
 }
 
@@ -327,13 +329,16 @@ export default async function StockDetailPage({
   const b = screening.breakdown;
   const takeaway = buildTakeaway(screening.status, screening.reasons, screening.manual_review_flags);
 
+  // Sanitize ratio values: cap at 9.99 (999%) to prevent data pipeline errors from
+  // skewing the UI (e.g. wrong market cap unit causing 48420223% debt ratio).
+  const _sanitizeRatio = (v: number) => (!Number.isFinite(v) || v > 9.99 ? 0 : v);
   const ratios = [
-    { label: "Debt level", value: b.debt_to_36m_avg_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "How much debt the company carries. Must be under 33%." },
-    { label: "Current debt", value: b.debt_to_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "Debt compared to current company value." },
-    { label: "Income purity", value: b.non_permissible_income_ratio, threshold: 0.05, max: 0.1, desc: "How much income comes from non-halal sources. Must be under 5%." },
-    { label: "Interest earned", value: b.interest_income_ratio, threshold: 0.05, max: 0.1, desc: "Interest income as portion of total revenue." },
-    { label: "Money owed to company", value: b.receivables_to_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%." },
-    { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
+    { label: "Debt level", value: _sanitizeRatio(b.debt_to_36m_avg_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "How much debt the company carries. Must be under 33%.", raw: b.debt_to_36m_avg_market_cap_ratio },
+    { label: "Current debt", value: _sanitizeRatio(b.debt_to_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "Debt compared to current company value.", raw: b.debt_to_market_cap_ratio },
+    { label: "Income purity", value: _sanitizeRatio(b.non_permissible_income_ratio), threshold: 0.05, max: 0.1, desc: "How much income comes from non-halal sources. Must be under 5%.", raw: b.non_permissible_income_ratio },
+    { label: "Interest earned", value: _sanitizeRatio(b.interest_income_ratio), threshold: 0.05, max: 0.1, desc: "Interest income as portion of total revenue.", raw: b.interest_income_ratio },
+    { label: "Money owed to company", value: _sanitizeRatio(b.receivables_to_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%.", raw: b.receivables_to_market_cap_ratio },
+    { label: "Cash & interest-bearing", value: _sanitizeRatio(b.cash_and_interest_bearing_to_assets_ratio), threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%.", raw: b.cash_and_interest_bearing_to_assets_ratio },
   ];
 
   const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
@@ -1125,12 +1130,15 @@ export default async function StockDetailPage({
               {ratios.map((r) => {
                 const pct = Math.min((r.value / r.max) * 100, 100);
                 const thresholdPct = (r.threshold / r.max) * 100;
+                const dataError = r.raw > 9.99 || !Number.isFinite(r.raw);
                 return (
                   <div className={styles.financialCard} key={r.label}>
                     <div className={styles.financialCardHeader}>
                       <span className={styles.financialCardLabel}>{r.label}</span>
                     </div>
-                    <span className={styles.financialCardValue}>{formatRatio(r.value)}</span>
+                    <span className={styles.financialCardValue} title={dataError ? "Data pipeline error — value could not be verified" : undefined}>
+                      {dataError ? <span style={{ color: "var(--color-amber, #f59e0b)", fontSize: "0.8em" }}>Data pending</span> : formatRatio(r.value)}
+                    </span>
                     <div className={styles.financialCardGauge} role="meter" aria-label={r.label} aria-valuenow={Math.round(r.value * 100)} aria-valuemin={0} aria-valuemax={Math.round(r.max * 100)}>
                       <div
                         className={`${styles.financialCardGaugeFill} ${ratioBarColor(r.value, r.threshold)}`}
