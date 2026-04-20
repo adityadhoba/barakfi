@@ -6,9 +6,11 @@ import { getScreenerSnapshot } from "@/lib/api";
 import { StockScreenerTable } from "@/components/stock-screener-table";
 import { ScreenerSkeleton } from "@/components/screener-skeleton";
 
-// ISR: page segment cache — revalidated on-demand by the pipeline via
-// POST /api/revalidate-screener, or automatically every 5 minutes.
-export const revalidate = 300;
+// Use force-dynamic so Next.js does not attempt to prerender this page at
+// build time (the backend /screener/snapshot endpoint may not exist yet when
+// the frontend deploys). Data caching is handled by next: { revalidate: 300 }
+// inside getScreenerSnapshot(), so each render is still fast (cached fetch).
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Shariah Stock Screener — Barakfi",

@@ -1369,7 +1369,7 @@ export async function getTrending(category: string = "popular", exchange?: strin
 }
 
 export async function getCollections(): Promise<Collection[]> {
-  return apiFetch("/collections", []);
+  return apiFetch("/collections", [], { revalidateSeconds: 3600 });
 }
 
 export async function getCollection(slug: string): Promise<CollectionDetail | null> {
@@ -1377,7 +1377,7 @@ export async function getCollection(slug: string): Promise<CollectionDetail | nu
 }
 
 export async function getSuperInvestors(): Promise<SuperInvestorSummary[]> {
-  return apiFetch("/super-investors", []);
+  return apiFetch("/super-investors", [], { revalidateSeconds: 3600 });
 }
 
 export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetail | null> {

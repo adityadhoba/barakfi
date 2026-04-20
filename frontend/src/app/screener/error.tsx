@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import styles from "@/app/screener/screener-error.module.css";
 
 export default function ScreenerError({
@@ -55,9 +56,9 @@ export default function ScreenerError({
           <button className={styles.primaryBtn} onClick={reset} type="button">
             Retry now
           </button>
-          <a className={styles.secondaryBtn} href="/">
+          <Link className={styles.secondaryBtn} href="/">
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     </div>

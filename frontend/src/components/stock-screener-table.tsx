@@ -68,12 +68,6 @@ function formatPrice(value: number, currency?: string) {
   }).format(value);
 }
 
-function formatEventDate(value?: string | null): string {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 /** Render market cap; shows a subtle "Syncing" badge when no price data exists yet. */
 function McapCell({ marketCap, currency }: { marketCap: number; currency: "INR" | "USD" | "GBP" }) {
