@@ -38,15 +38,25 @@ export default function ScreenerPage() {
 // ---------------------------------------------------------------------------
 // Loads ALL stocks server-side in one shot so the client always sees the
 // stable total count — no jitter from lazy-loading batches.
-// Data Cache (revalidateSeconds: 300) means the upstream API is called at
-// most once per 5 minutes, not on every user visit.
+//
+// If the backend screening API is down, this throws so Next.js ISR does NOT
+// cache the empty-state page. Users will see the Suspense skeleton until the
+// backend recovers, rather than a stale "0 of 0 stocks" cached render.
 // ---------------------------------------------------------------------------
 async function ScreenerDataLayer() {
   const stocks = (
     await getStocks({ limit: 1000, orderBy: "market_cap_desc", revalidateSeconds: 300 })
   ).filter((stock) => stock.exchange === "NSE");
 
+  if (stocks.length === 0) {
+    // Backend /stocks API is down — let ISR retry instead of caching empty page
+    throw new Error("No stocks returned from backend — skipping ISR cache");
+  }
+
   const symbols = stocks.map((s) => s.symbol);
+
+  // getBulkScreeningResults throws on HTTP errors so a bad response also
+  // prevents caching an empty screener page.
   const screeningResults = await getBulkScreeningResults(symbols);
   const screeningMap = new Map(screeningResults.map((r) => [r.symbol, r]));
 
@@ -57,6 +67,12 @@ async function ScreenerDataLayer() {
       return { ...stock, screening };
     })
     .filter((s): s is NonNullable<typeof s> => s != null);
+
+  if (validStocks.length === 0 && stocks.length > 0) {
+    // /screen/bulk returned data but none matched — almost certainly a backend
+    // schema mismatch or empty database. Throw to prevent caching empty UI.
+    throw new Error("Screening results empty despite having stocks — skipping ISR cache");
+  }
 
   return <StockScreenerTable screenedStocks={validStocks} />;
 }

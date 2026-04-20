@@ -533,7 +533,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
@@ -553,6 +554,7 @@
 
 .table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
   font-size: 0.83rem;
 }
@@ -619,8 +621,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-width: 0;
-  width: 28%;
+  min-width: 280px;
+  width: 32%;
 }
 
 .avatar {
@@ -648,9 +650,8 @@
   font-weight: 600;
   font-size: 0.83rem;
   color: var(--text);
-  white-space: normal;
+  white-space: nowrap;
   line-height: 1.3;
-  word-break: break-word;
 }
 .stockSymbol {
   font-size: 0.68rem;
@@ -951,7 +952,7 @@
   }
   .searchBox { flex: 1; min-width: 120px; }
   .table th, .table td, .row td { padding: 8px 10px; font-size: 0.78rem; }
-  .tdName { min-width: 150px; }
+  .tdName { min-width: 200px; }
   .stockName { font-size: 0.78rem; }
   .avatar { width: 28px; height: 28px; font-size: 0.6rem; }
   .pageTitle { font-size: 1.15rem; }
