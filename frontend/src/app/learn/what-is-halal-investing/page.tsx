@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description:
     "A practical introduction to halal investing: avoiding riba-heavy business models, understanding purification, and how automated Shariah stock screening on Indian exchanges fits into a disciplined Muslim portfolio — with links to BarakFi tools and live NSE/BSE pages.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://barakfi.in/learn/what-is-halal-investing" },
 };
 
 export default function WhatIsHalalInvestingPage() {
