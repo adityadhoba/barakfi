@@ -3,9 +3,8 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .screenerPage {
-  height: calc(100vh - 56px);
+  min-height: calc(100vh - 56px);
   background: var(--bg);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -78,9 +77,8 @@
 .screenerLayout {
   display: grid;
   grid-template-columns: 240px 1fr;
+  align-items: start;
   flex: 1;
-  min-height: 0;
-  overflow: hidden;
   position: relative;
 }
 
@@ -98,6 +96,9 @@
 
 /* ── Left Sidebar ── */
 .sidebar {
+  position: sticky;
+  top: 56px;
+  max-height: calc(100vh - 56px);
   border-right: 1px solid var(--line);
   background: var(--panel);
   padding: 20px 16px;
@@ -246,14 +247,10 @@
 
 /* ── Main Content ── */
 .mainContent {
-  padding: 20px 24px 0;
+  padding: 20px 24px 48px;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
 }
 
 /* Content Header */
@@ -530,12 +527,7 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .tableContainer {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
   overflow-x: auto;
-  overflow-y: hidden;
-  min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--bg-card);
