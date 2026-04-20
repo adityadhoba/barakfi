@@ -491,12 +491,23 @@
 
 .tableContainer {
   flex: 1;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-xl);
   background: var(--bg-card);
+}
+
+/* Scrollable virtual body below the sticky thead */
+.tableVirtualBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  min-height: 0;
 }
 
 .table {

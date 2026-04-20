@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useToast } from "@/components/toast";
@@ -181,11 +182,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     return () => mq.removeEventListener("change", sync);
   }, []);
   const listRef = useRef<HTMLDivElement>(null);
+  const tableBodyRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(query);
-
-  const PAGE_SIZE = 40;
-  const [currentPage, setCurrentPage] = useState(1);
 
   const applyExampleChip = useCallback((value: string) => {
     setQuery(value);
@@ -298,12 +297,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     return arr;
   }, [filtered, sortKey, sortDir, quotes]);
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageEnd = Math.min(pageStart + PAGE_SIZE, sorted.length);
-  const pageItems = sorted.slice(pageStart, pageEnd);
+  // Virtual list — all sorted items in memory, only ~20 rendered in DOM at a time
+  const rowVirtualizer = useVirtualizer({
+    count: sorted.length,
+    getScrollElement: () => tableBodyRef.current,
+    estimateSize: () => 52,
+    overscan: 8,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
 
-  useEffect(() => { setCurrentPage(1); setFocusedIdx(-1); }, [sorted.length]);
+  useEffect(() => { setFocusedIdx(-1); tableBodyRef.current?.scrollTo({ top: 0 }); }, [sorted.length]);
 
   useEffect(() => {
     if (!initialized) return;
@@ -361,28 +364,28 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const handleKeyNav = useCallback((e: KeyboardEvent) => {
     const tag = (e.target as HTMLElement).tagName;
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-    if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((p) => Math.min(p + 1, pageItems.length - 1)); }
+    if (e.key === "j" || e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((p) => Math.min(p + 1, sorted.length - 1)); }
     else if (e.key === "k" || e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((p) => Math.max(p - 1, 0)); }
-    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < pageItems.length) {
+    else if (e.key === "Enter" && focusedIdx >= 0 && focusedIdx < sorted.length) {
       e.preventDefault();
-      void handleSeeWhy(pageItems[focusedIdx].symbol);
+      void handleSeeWhy(sorted[focusedIdx].symbol);
     }
     else if (e.key === "Escape") setFocusedIdx(-1);
-  }, [focusedIdx, handleSeeWhy, pageItems]);
+  }, [focusedIdx, handleSeeWhy, sorted]);
 
   useEffect(() => { document.addEventListener("keydown", handleKeyNav); return () => document.removeEventListener("keydown", handleKeyNav); }, [handleKeyNav]);
 
+  // Scroll focused row into view inside the virtual container
   useEffect(() => {
-    if (focusedIdx < 0 || !listRef.current) return;
-    const items = listRef.current.querySelectorAll("[data-stock-idx]");
-    items[focusedIdx]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [focusedIdx]);
+    if (focusedIdx < 0) return;
+    rowVirtualizer.scrollToIndex(focusedIdx, { align: "auto" });
+  }, [focusedIdx, rowVirtualizer]);
 
   const hasActiveFilters = statusFilter !== "all" || sectorFilter !== "All" || mcapFilter !== "all" || indexFilter !== "all" || query.trim() !== "";
 
   function resetAllFilters() {
     setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
-    setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
+    setSortKey("market_cap"); setSortDir("desc");
   }
 
   const filterCount = [statusFilter !== "all", sectorFilter !== "All", mcapFilter !== "all", indexFilter !== "all", query.trim() !== ""].filter(Boolean).length;
@@ -429,20 +432,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         {active && <span className={styles.sortIcon}>{sortDir === "asc" ? " ▲" : " ▼"}</span>}
       </th>
     );
-  }
-
-  function renderPageNumbers() {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      if (currentPage > 3) pages.push("...");
-      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
-      if (currentPage < totalPages - 2) pages.push("...");
-      pages.push(totalPages);
-    }
-    return pages;
   }
 
   return (
@@ -569,7 +558,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           <div className={styles.contentHeaderLeft}>
             <h1 className={styles.pageTitle}>Stock Screener</h1>
             <p className={styles.resultSummary}>
-              Showing {sorted.length > 0 ? pageStart + 1 : 0} - {pageEnd} of {sorted.length} results
+              {sorted.length} result{sorted.length !== 1 ? "s" : ""}
             </p>
           </div>
           <div className={styles.contentHeaderRight}>
@@ -657,12 +646,11 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         )}
 
-        {/* Results: mobile cards + desktop table (shared ref for keyboard focus) */}
+        {/* Results: mobile cards + desktop virtual table */}
         <div ref={listRef} className="flex min-h-0 flex-1 flex-col">
         {isMobileLayout ? (
           <div className="flex flex-col gap-3 overflow-y-auto pb-20 md:hidden">
-            {pageItems.map((s, idx) => {
-              const globalIdx = pageStart + idx + 1;
+            {sorted.map((s, idx) => {
               const st = STATUS_CONFIG[s.screening.status]?.label || s.screening.status;
               return (
                 <Card
@@ -678,7 +666,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                           <div className="min-w-0">
                             <p className="truncate font-medium text-[var(--text)]">{s.name}</p>
                             <p className="text-xs text-[var(--text-tertiary)]">
-                              {globalIdx}. {s.symbol}{s.sector && s.sector !== "Unknown" ? ` · ${s.sector}` : ""}
+                              {idx + 1}. {s.symbol}{s.sector && s.sector !== "Unknown" ? ` · ${s.sector}` : ""}
                             </p>
                           </div>
                         </div>
@@ -733,8 +721,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         ) : null}
 
+        {/* Desktop: virtual table — only ~20 <tr> in DOM regardless of total stock count */}
         <div className={`${styles.tableContainer} ${isMobileLayout ? "hidden md:block" : ""}`}>
-          <table className={styles.table}>
+          <table className={styles.table} style={{ tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th className={styles.th} style={{ width: 40 }}>#</th>
@@ -742,139 +731,127 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <th className={styles.th}>Sector</th>
                 <SortTh col="market_cap" numeric>Market Cap</SortTh>
                 <SortTh col="price" numeric>Close Price</SortTh>
-              <th className={styles.th}>
-                <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
-                  Status
-                  <span className={styles.statusHeaderInfo}>i</span>
-                </span>
-              </th>
-              <th className={styles.th}>Recent Event</th>
-              <th className={styles.th} style={{ width: 100 }}>Action</th>
-            </tr>
-          </thead>
-            <tbody>
-              {pageItems.map((s, idx) => {
-                const globalIdx = pageStart + idx + 1;
-                return (
-                  <tr
-                    key={s.symbol}
-                    data-stock-idx={idx}
-                    className={`${styles.row} ${focusedIdx === idx ? styles.rowFocused : ""}`}
-                    tabIndex={0}
-                  >
-                    <td className={styles.tdNum}>{globalIdx}.</td>
-                    <td className={styles.tdName}>
-                      <StockPreviewPopup
-                        stock={s}
-                        price={quotes[s.symbol]?.last_price ?? s.price}
-                        changePct={quotes[s.symbol]?.change_percent ?? null}
-                      >
-                        <StockLogo symbol={s.symbol} size={32} />
-                        <div className={styles.nameBlock}>
-                          <span className={styles.stockName}>{s.name}</span>
-                          <span className={styles.stockSymbol}>{s.symbol}</span>
-                        </div>
-                      </StockPreviewPopup>
-                    </td>
-                    <td className={styles.tdSector}><SectorCell sector={s.sector} /></td>
-                    <td className={styles.tdRight}>
-                      <McapCell marketCap={s.market_cap} currency={resolveDisplayCurrency(s.exchange, s.currency)} />
-                    </td>
-                    <td className={styles.tdRight}>
-                      {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
-                      {quotes[s.symbol]?.change_percent != null && (
-                        <span className={(quotes[s.symbol].change_percent ?? 0) >= 0 ? styles.up : styles.down}>
-                          {" "}{(quotes[s.symbol].change_percent ?? 0) >= 0 ? "+" : ""}
-                          {(quotes[s.symbol].change_percent ?? 0).toFixed(2)}%
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span
-                        className={`${styles.statusBadge} ${styles[STATUS_CONFIG[s.screening.status]?.cls || "statusReview"]}`}
-                        title={SCREENING_STATUS_TOOLTIP}
-                      >
-                        {screeningUiLabel(s.screening.status)}
-                      </span>
-                    </td>
-                    <td className={styles.tdSector}>
-                      {s.latest_corporate_event ? (
-                        <span
-                          className={styles.statusBadge}
-                          title={`${s.latest_corporate_event.label}${s.latest_corporate_event.effective_date ? ` · ${formatEventDate(s.latest_corporate_event.effective_date)}` : ""}${s.latest_corporate_event.successor_symbol ? ` · ${s.latest_corporate_event.successor_symbol}` : ""}`}
-                        >
-                          {s.latest_corporate_event.label}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--text-tertiary)" }}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className={styles.screenRowBtn}
-                        disabled={pendingSymbol === s.symbol}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void handleSeeWhy(s.symbol);
-                        }}
-                      >
-                        {pendingSymbol === s.symbol ? "Opening..." : "See Why?"}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {sorted.length === 0 && (
-                <tr>
-                  <td colSpan={8} className={styles.emptyRow}>
-                    No stocks match your filters. <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
+                <th className={styles.th}>
+                  <span className={styles.statusHeader} title={SCREENING_STATUS_TOOLTIP}>
+                    Status
+                    <span className={styles.statusHeaderInfo}>i</span>
+                  </span>
+                </th>
+                <th className={styles.th}>Recent Event</th>
+                <th className={styles.th} style={{ width: 100 }}>Action</th>
+              </tr>
+            </thead>
           </table>
+          {/* Scrollable virtual body — separate from the sticky thead */}
+          <div
+            ref={tableBodyRef}
+            style={{ overflow: "auto", flex: 1, height: "100%" }}
+            className={styles.tableVirtualBody}
+          >
+            {sorted.length === 0 ? (
+              <div className={styles.emptyRow} style={{ padding: "24px 20px", textAlign: "center" }}>
+                No stocks match your filters.{" "}
+                <button type="button" className={styles.clearAll} onClick={resetAllFilters}>Reset filters</button>
+              </div>
+            ) : (
+              <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}>
+                {virtualItems.map((virtualRow) => {
+                  const s = sorted[virtualRow.index];
+                  if (!s) return null;
+                  return (
+                    <div
+                      key={s.symbol}
+                      data-stock-idx={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                        display: "grid",
+                        gridTemplateColumns: "40px 1fr 120px 110px 110px 130px 110px 100px",
+                        alignItems: "center",
+                        borderBottom: "1px solid var(--line)",
+                        background: focusedIdx === virtualRow.index ? "var(--bg-soft)" : "transparent",
+                        outline: focusedIdx === virtualRow.index ? "2px solid var(--emerald)" : "none",
+                        outlineOffset: "-2px",
+                        cursor: "default",
+                      }}
+                      className={styles.row}
+                    >
+                      <span className={styles.tdNum}>{virtualRow.index + 1}.</span>
+                      <span className={styles.tdName}>
+                        <StockPreviewPopup
+                          stock={s}
+                          price={quotes[s.symbol]?.last_price ?? s.price}
+                          changePct={quotes[s.symbol]?.change_percent ?? null}
+                        >
+                          <StockLogo symbol={s.symbol} size={32} />
+                          <div className={styles.nameBlock}>
+                            <span className={styles.stockName}>{s.name}</span>
+                            <span className={styles.stockSymbol}>{s.symbol}</span>
+                          </div>
+                        </StockPreviewPopup>
+                      </span>
+                      <span className={styles.tdSector}><SectorCell sector={s.sector} /></span>
+                      <span className={styles.tdRight}>
+                        <McapCell marketCap={s.market_cap} currency={resolveDisplayCurrency(s.exchange, s.currency)} />
+                      </span>
+                      <span className={styles.tdRight}>
+                        {formatPrice(quotes[s.symbol]?.last_price ?? s.price, s.currency)}
+                        {quotes[s.symbol]?.change_percent != null && (
+                          <span className={(quotes[s.symbol].change_percent ?? 0) >= 0 ? styles.up : styles.down}>
+                            {" "}{(quotes[s.symbol].change_percent ?? 0) >= 0 ? "+" : ""}
+                            {(quotes[s.symbol].change_percent ?? 0).toFixed(2)}%
+                          </span>
+                        )}
+                      </span>
+                      <span>
+                        <span
+                          className={`${styles.statusBadge} ${styles[STATUS_CONFIG[s.screening.status]?.cls || "statusReview"]}`}
+                          title={SCREENING_STATUS_TOOLTIP}
+                        >
+                          {screeningUiLabel(s.screening.status)}
+                        </span>
+                      </span>
+                      <span className={styles.tdSector}>
+                        {s.latest_corporate_event ? (
+                          <span
+                            className={styles.statusBadge}
+                            title={`${s.latest_corporate_event.label}${s.latest_corporate_event.effective_date ? ` · ${formatEventDate(s.latest_corporate_event.effective_date)}` : ""}${s.latest_corporate_event.successor_symbol ? ` · ${s.latest_corporate_event.successor_symbol}` : ""}`}
+                          >
+                            {s.latest_corporate_event.label}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-tertiary)" }}>—</span>
+                        )}
+                      </span>
+                      <span>
+                        <button
+                          type="button"
+                          className={styles.screenRowBtn}
+                          disabled={pendingSymbol === s.symbol}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleSeeWhy(s.symbol);
+                          }}
+                        >
+                          {pendingSymbol === s.symbol ? "Opening..." : "See Why?"}
+                        </button>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
         </div>
 
         {/* Ad placement */}
-        {currentPage === 1 && sorted.length > PAGE_SIZE && <AdUnit format="banner" />}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className={styles.pagination}>
-            <button
-              type="button"
-              className={styles.pageBtn}
-              disabled={currentPage === 1}
-              onClick={() => { setCurrentPage((p) => p - 1); setFocusedIdx(-1); listRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}
-            >
-              &lsaquo; Prev
-            </button>
-            {renderPageNumbers().map((p, i) =>
-              p === "..." ? (
-                <span key={`dots-${i}`} className={styles.pageDots}>&hellip;</span>
-              ) : (
-                <button
-                  key={p}
-                  type="button"
-                  className={`${styles.pageBtn} ${currentPage === p ? styles.pageBtnActive : ""}`}
-                  onClick={() => { setCurrentPage(p); setFocusedIdx(-1); listRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}
-                >
-                  {p}
-                </button>
-              )
-            )}
-            <button
-              type="button"
-              className={styles.pageBtn}
-              disabled={currentPage === totalPages}
-              onClick={() => { setCurrentPage((p) => p + 1); setFocusedIdx(-1); listRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}
-            >
-              Next &rsaquo;
-            </button>
-          </div>
-        )}
+        <AdUnit format="banner" />
 
         <div className={styles.screenerDisclaimer}>
           {SCREENING_LEGAL_DISCLAIMER}{" "}

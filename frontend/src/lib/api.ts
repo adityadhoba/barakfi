@@ -817,7 +817,7 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(chunk),
-          next: { revalidate: 60 },
+          next: { revalidate: 300 },
         });
         if (!response.ok) return [];
         return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
