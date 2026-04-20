@@ -4,10 +4,10 @@ import { Suspense } from "react";
 import styles from "@/app/screener.module.css";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
 import { ScreenerInfiniteLoader } from "@/components/screener-infinite-loader";
+import { ScreenerSkeleton } from "@/components/screener-skeleton";
 
-// Revalidate every 5 minutes so the screener page is not force-dynamic.
-// ISR means the first 100 stocks are served from CDN, not re-rendered on
-// every request — critical for performance at 500 stocks.
+// ISR: page segment cache — revalidated on-demand by the pipeline via
+// POST /api/revalidate-screener, or automatically every 5 minutes.
 export const revalidate = 300;
 
 export const metadata: Metadata = {
@@ -18,14 +18,40 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const INITIAL_LIMIT = 100;
+// ---------------------------------------------------------------------------
+// Page shell — rendered instantly from ISR CDN edge on every visit.
+// ScreenerDataLayer is wrapped in Suspense so the shell (navbar + learn links)
+// is sent to the browser immediately while the API calls stream in.
+// ---------------------------------------------------------------------------
+export default function ScreenerPage() {
+  return (
+    <main className={styles.screenerPage}>
+      <nav className={styles.screenerLearnLinks} aria-label="Learn and lists">
+        <Link href="/learn/halal-stocks-india">Halal stocks in India — guide</Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/learn/what-is-halal-investing">What is halal investing?</Link>
+        <span aria-hidden="true">·</span>
+        <Link href="/halal-stocks">Curated halal list</Link>
+      </nav>
+      <Suspense fallback={<ScreenerSkeleton />}>
+        <ScreenerDataLayer />
+      </Suspense>
+    </main>
+  );
+}
 
-export default async function ScreenerPage() {
-  // Load only the first 100 stocks server-side (ordered by market cap so the
-  // most important stocks are visible immediately).  The ScreenerInfiniteLoader
-  // will lazily fetch the remaining pages as the user scrolls.
+// ---------------------------------------------------------------------------
+// Data layer — async Server Component that fetches stocks + screening.
+// Suspends until both API calls resolve; the skeleton above is shown until
+// this streams into the page. Uses Data Cache (revalidateSeconds: 300) so
+// the upstream Render API is hit at most once per 5 minutes, not on every
+// ISR revalidation or every user visit.
+// ---------------------------------------------------------------------------
+async function ScreenerDataLayer() {
+  const INITIAL_LIMIT = 100;
+
   const stocks = (
-    await getStocks({ limit: INITIAL_LIMIT, orderBy: "market_cap_desc" })
+    await getStocks({ limit: INITIAL_LIMIT, orderBy: "market_cap_desc", revalidateSeconds: 300 })
   ).filter((stock) => stock.exchange === "NSE");
 
   const symbols = stocks.map((s) => s.symbol);
@@ -41,20 +67,9 @@ export default async function ScreenerPage() {
     .filter((s): s is NonNullable<typeof s> => s != null);
 
   return (
-    <main className={styles.screenerPage}>
-      <nav className={styles.screenerLearnLinks} aria-label="Learn and lists">
-        <Link href="/learn/halal-stocks-india">Halal stocks in India — guide</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/learn/what-is-halal-investing">What is halal investing?</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/halal-stocks">Curated halal list</Link>
-      </nav>
-      <Suspense fallback={<div className={styles.screenerFallback}>Loading screener&hellip;</div>}>
-        <ScreenerInfiniteLoader
-          initialStocks={validStocks}
-          totalInitial={validStocks.length}
-        />
-      </Suspense>
-    </main>
+    <ScreenerInfiniteLoader
+      initialStocks={validStocks}
+      totalInitial={validStocks.length}
+    />
   );
 }

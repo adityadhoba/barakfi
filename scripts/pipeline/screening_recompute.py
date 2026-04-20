@@ -26,6 +26,7 @@ import hashlib
 import logging
 import os
 import sys
+import urllib.request
 from datetime import date, datetime, timezone
 from typing import Optional
 
@@ -299,7 +300,32 @@ def run(symbol: Optional[str] = None, dry_run: bool = False, force: bool = False
     finally:
         db.close()
 
+    # Notify the Next.js frontend to revalidate the screener page cache so
+    # users see fresh screening results immediately without waiting for ISR TTL.
+    if not dry_run:
+        _revalidate_screener_cache()
+
     return metrics
+
+
+def _revalidate_screener_cache() -> None:
+    """Fire-and-forget POST to /api/revalidate-screener on the frontend."""
+    frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
+    secret = os.environ.get("REVALIDATE_SECRET", "")
+    if not frontend_url or not secret:
+        logger.debug("FRONTEND_URL or REVALIDATE_SECRET not set — skipping screener revalidation")
+        return
+    url = f"{frontend_url}/api/revalidate-screener"
+    req = urllib.request.Request(
+        url,
+        method="POST",
+        headers={"x-revalidate-secret": secret, "Content-Type": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            logger.info("Screener cache revalidated — status %d", resp.status)
+    except Exception as exc:
+        logger.warning("Screener cache revalidation failed (non-fatal): %s", exc)
 
 
 if __name__ == "__main__":

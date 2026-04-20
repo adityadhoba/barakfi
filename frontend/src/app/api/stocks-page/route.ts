@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(200, Math.max(1, parseInt(searchParams.get("limit") ?? "100", 10) || 100));
 
   try {
-    const stocks = await getStocks({ limit, offset, orderBy: "market_cap_desc" });
+    const stocks = await getStocks({ limit, offset, orderBy: "market_cap_desc", revalidateSeconds: 300 });
     return NextResponse.json(stocks, {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60" },
     });
