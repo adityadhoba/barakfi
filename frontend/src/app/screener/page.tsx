@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import styles from "@/app/screener.module.css";
 import { getStocks, getBulkScreeningResults } from "@/lib/api";
-import { ScreenerInfiniteLoader } from "@/components/screener-infinite-loader";
+import { StockScreenerTable } from "@/components/stock-screener-table";
 import { ScreenerSkeleton } from "@/components/screener-skeleton";
 
 // ISR: page segment cache — revalidated on-demand by the pipeline via
@@ -18,11 +18,6 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-// ---------------------------------------------------------------------------
-// Page shell — rendered instantly from ISR CDN edge on every visit.
-// ScreenerDataLayer is wrapped in Suspense so the shell (navbar + learn links)
-// is sent to the browser immediately while the API calls stream in.
-// ---------------------------------------------------------------------------
 export default function ScreenerPage() {
   return (
     <main className={styles.screenerPage}>
@@ -41,17 +36,14 @@ export default function ScreenerPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Data layer — async Server Component that fetches stocks + screening.
-// Suspends until both API calls resolve; the skeleton above is shown until
-// this streams into the page. Uses Data Cache (revalidateSeconds: 300) so
-// the upstream Render API is hit at most once per 5 minutes, not on every
-// ISR revalidation or every user visit.
+// Loads ALL stocks server-side in one shot so the client always sees the
+// stable total count — no jitter from lazy-loading batches.
+// Data Cache (revalidateSeconds: 300) means the upstream API is called at
+// most once per 5 minutes, not on every user visit.
 // ---------------------------------------------------------------------------
 async function ScreenerDataLayer() {
-  const INITIAL_LIMIT = 100;
-
   const stocks = (
-    await getStocks({ limit: INITIAL_LIMIT, orderBy: "market_cap_desc", revalidateSeconds: 300 })
+    await getStocks({ limit: 1000, orderBy: "market_cap_desc", revalidateSeconds: 300 })
   ).filter((stock) => stock.exchange === "NSE");
 
   const symbols = stocks.map((s) => s.symbol);
@@ -66,10 +58,5 @@ async function ScreenerDataLayer() {
     })
     .filter((s): s is NonNullable<typeof s> => s != null);
 
-  return (
-    <ScreenerInfiniteLoader
-      initialStocks={validStocks}
-      totalInitial={validStocks.length}
-    />
-  );
+  return <StockScreenerTable screenedStocks={validStocks} />;
 }
