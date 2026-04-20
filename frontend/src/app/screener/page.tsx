@@ -44,13 +44,17 @@ export default function ScreenerPage() {
 // see the screener — never the error page — during backend transitions.
 // ---------------------------------------------------------------------------
 async function ScreenerDataLayer() {
+  const validStocks = await loadScreenerStocks();
+  return <StockScreenerTable screenedStocks={validStocks} />;
+}
+
+async function loadScreenerStocks() {
   // ── Fast path: single GET, cached by CDN ─────────────────────────────────
   try {
     const entries = await getScreenerSnapshot();
-    const validStocks = entries.map(({ stock, screening }) => ({ ...stock, screening }));
-    return <StockScreenerTable screenedStocks={validStocks} />;
+    return entries.map(({ stock, screening }) => ({ ...stock, screening }));
   } catch {
-    // Snapshot endpoint not yet deployed or cache cold — use legacy path.
+    // Snapshot endpoint not yet deployed or cache cold — fall through to legacy.
   }
 
   // ── Legacy fallback: GET /stocks + POST /screen/bulk ─────────────────────
@@ -77,5 +81,5 @@ async function ScreenerDataLayer() {
     throw new Error("Screening results empty — backend may be warming up");
   }
 
-  return <StockScreenerTable screenedStocks={validStocks} />;
+  return validStocks;
 }
