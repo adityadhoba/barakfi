@@ -250,9 +250,9 @@ def _latest_trading_date(max_lookback: int = 5) -> date:
     weekdays to handle public holidays (e.g. Diwali, Republic Day).
     Falls back to calendar yesterday if nothing is found.
     """
-    from app.connectors.nse_bhavcopy import NseBhavcopyConnector
+    from app.connectors.nse_bhavcopy import NSEBhavCopyConnector
 
-    connector = NseBhavcopyConnector()
+    connector = NSEBhavCopyConnector()
     candidate = date.today() - timedelta(days=1)
     checked = 0
     while checked < max_lookback:
