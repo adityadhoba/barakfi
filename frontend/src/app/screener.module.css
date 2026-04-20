@@ -599,10 +599,6 @@
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
   color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 0;
 }
 .row:last-child td { border-bottom: none; }
 
@@ -625,8 +621,6 @@
   gap: 10px;
   min-width: 0;
   width: 28%;
-  overflow: visible;
-  white-space: normal;
 }
 
 .avatar {
