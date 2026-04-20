@@ -381,7 +381,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
 
   function resetAllFilters() {
     setQuery(""); setStatusFilter("all"); setSectorFilter("All"); setMcapFilter("all"); setIndexFilter("all");
-    setSortKey("market_cap"); setSortDir("desc"); setCurrentPage(1);
+    setSortKey("market_cap"); setSortDir("desc");
   }
 
   function renderPageNumbers(): (number | "...")[] {

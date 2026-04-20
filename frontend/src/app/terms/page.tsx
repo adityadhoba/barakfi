@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Terms of Service — Barakfi",
   description:
     "Terms for Halal Stock Checker — check if a stock is Halal; instant Halal status.",
+  alternates: { canonical: "https://barakfi.in/terms" },
 };
 
 export default function TermsOfServicePage() {

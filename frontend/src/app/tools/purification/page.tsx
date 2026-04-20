@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     "stock purification India",
     "Shariah purification tool",
   ],
+  alternates: { canonical: "https://barakfi.in/tools/purification" },
 };
 
 export default function PurificationPage() {
