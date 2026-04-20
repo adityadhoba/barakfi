@@ -4,7 +4,7 @@ import { useBatchQuotes } from "@/hooks/use-batch-quotes";
 import { TrendingStockRow } from "@/components/trending-stock-row";
 import type { TrendingStock } from "@/lib/api";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
-import { formatMoney, formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
+import { formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "@/app/trending/trending.module.css";
 
 type Props = { stocks: TrendingStock[] };
@@ -31,7 +31,6 @@ export function TrendingStocksGrid({ stocks }: Props) {
             name={stock.name}
             exchange={stock.exchange}
             priceLabel={priceLabel}
-            mcapLabel={formatMcapShort(stock.market_cap, cur)}
           />
         );
       })}
