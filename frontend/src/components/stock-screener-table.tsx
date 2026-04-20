@@ -663,7 +663,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         )}
 
         {/* Results: mobile cards + desktop table */}
-        <div ref={listRef} className="flex min-h-0 flex-1 flex-col">
+        <div ref={listRef} className="flex flex-col">
           {isMobileLayout ? (
             <div className="flex flex-col gap-3 overflow-y-auto pb-20 md:hidden">
               {pageItems.map((s, idx) => {
