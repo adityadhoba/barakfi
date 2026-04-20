@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import styles from "@/app/screener.module.css";
-import { getScreenerSnapshot } from "@/lib/api";
+import { getScreenerSnapshot, getStocks, getBulkScreeningResults } from "@/lib/api";
 import { StockScreenerTable } from "@/components/stock-screener-table";
 import { ScreenerSkeleton } from "@/components/screener-skeleton";
 
@@ -38,22 +38,44 @@ export default function ScreenerPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Single GET call to /screener/snapshot — pre-computed, cacheable by Next.js
-// Data Cache (unlike the old POST /screen/bulk which was uncacheable).
-//
-// The backend sets Cache-Control: s-maxage=300 so the response is served from
-// CDN/Next.js cache between pipeline runs. No more hitting the backend on
-// every ISR background revalidation from every Vercel edge region.
-//
-// Throws on backend errors so ISR never caches an empty/broken page.
+// Try the fast GET /screener/snapshot (pre-computed, CDN-cacheable).
+// If the backend hasn't deployed that endpoint yet (404) or the screening
+// cache is cold, fall back to the original two-call approach so users always
+// see the screener — never the error page — during backend transitions.
 // ---------------------------------------------------------------------------
 async function ScreenerDataLayer() {
-  const entries = await getScreenerSnapshot();
+  // ── Fast path: single GET, cached by CDN ─────────────────────────────────
+  try {
+    const entries = await getScreenerSnapshot();
+    const validStocks = entries.map(({ stock, screening }) => ({ ...stock, screening }));
+    return <StockScreenerTable screenedStocks={validStocks} />;
+  } catch {
+    // Snapshot endpoint not yet deployed or cache cold — use legacy path.
+  }
 
-  const validStocks = entries.map(({ stock, screening }) => ({
-    ...stock,
-    screening,
-  }));
+  // ── Legacy fallback: GET /stocks + POST /screen/bulk ─────────────────────
+  const stocks = (
+    await getStocks({ limit: 1000, orderBy: "market_cap_desc", revalidateSeconds: 300 })
+  ).filter((s) => s.exchange === "NSE");
+
+  if (stocks.length === 0) {
+    throw new Error("No stocks returned from backend");
+  }
+
+  const screeningResults = await getBulkScreeningResults(stocks.map((s) => s.symbol));
+  const screeningMap = new Map(screeningResults.map((r) => [r.symbol, r]));
+
+  const validStocks = stocks
+    .map((stock) => {
+      const screening = screeningMap.get(stock.symbol);
+      if (!screening) return null;
+      return { ...stock, screening };
+    })
+    .filter((s): s is NonNullable<typeof s> => s !== null);
+
+  if (validStocks.length === 0) {
+    throw new Error("Screening results empty — backend may be warming up");
+  }
 
   return <StockScreenerTable screenedStocks={validStocks} />;
 }
