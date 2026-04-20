@@ -648,10 +648,9 @@
   font-weight: 600;
   font-size: 0.83rem;
   color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 260px;
+  white-space: normal;
+  line-height: 1.3;
+  word-break: break-word;
 }
 .stockSymbol {
   font-size: 0.68rem;
@@ -953,7 +952,7 @@
   .searchBox { flex: 1; min-width: 120px; }
   .table th, .table td, .row td { padding: 8px 10px; font-size: 0.78rem; }
   .tdName { min-width: 150px; }
-  .stockName { max-width: 150px; font-size: 0.78rem; }
+  .stockName { font-size: 0.78rem; }
   .avatar { width: 28px; height: 28px; font-size: 0.6rem; }
   .pageTitle { font-size: 1.15rem; }
 }
