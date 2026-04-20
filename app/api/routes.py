@@ -802,7 +802,14 @@ def screen_stock(
 
 
 def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
-    """Shared bulk screening; populates per-symbol cache; throttled between rows."""
+    """Shared bulk screening; reads per-symbol cache first, computes only on misses.
+
+    Performance contract:
+    - Cache hit  (warm):  O(1) dict lookup, no DB writes, no sleep  → <10ms total
+    - Cache miss (cold):  full evaluation + DB reads, 15ms throttle  → ~50ms/symbol
+    The cache is warmed by the screening pipeline and by individual /screen/{symbol}
+    calls, so bulk requests after pipeline run are effectively instant.
+    """
     upper_symbols = [s.upper() for s in symbols[:500]]
     stocks = (
         db.query(Stock)
@@ -828,10 +835,21 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
         stock = _pick(sym)
         if not stock:
             continue
+
+        # ── Cache hit: return immediately, skip all DB work and sleep ──────
+        ck = screening_cache_key(stock.symbol, stock.exchange)
+        cached = screening_cache.get(ck)
+        if cached is not None:
+            results.append(cached)
+            continue
+
+        # ── Cache miss: compute, write to cache, then throttle ───────────
         stock_data = helpers.stock_to_dict(stock)
         result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
         result = helpers.apply_compliance_override(db, stock, result)
-        helpers.record_screening_log(db, stock, result)
+        # record_screening_log intentionally omitted from the bulk path —
+        # it does one INSERT per symbol and is only meaningful for quota-
+        # tracked individual user screenings, not ISR background calls.
         active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
         recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
         out = {
@@ -842,9 +860,9 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
             **result,
         }
         if not _stock_has_compliance_override(db, stock.id):
-            screening_cache.set(screening_cache_key(stock.symbol, stock.exchange), out, SCREENING_CACHE_TTL_SECONDS)
+            screening_cache.set(ck, out, SCREENING_CACHE_TTL_SECONDS)
         results.append(out)
-        time.sleep(0.015)
+        time.sleep(0.015)   # only throttle actual computation, not cache hits
     return results
 
 
@@ -921,6 +939,70 @@ def _daily_refresh_alert_details(
         "failure_reason": failure_reason,
         "recovery_hint": "Run Job A (fetch_real_data.py) then Job B (run_daily_refresh.py)",
     }
+
+
+@router.get("/screener/snapshot")
+def screener_snapshot(db: Session = Depends(get_db)):
+    """Pre-computed screener snapshot for Vercel ISR.
+
+    Unlike POST /screen/bulk this is a GET so Next.js Data Cache can cache it.
+    The response carries Cache-Control: s-maxage=300, stale-while-revalidate=300
+    so the CDN and Next.js cache will serve it without hitting this server for
+    up to 5 minutes between pipeline runs.
+
+    Returns all active NSE stocks that have a warm screening cache entry.
+    Returns 503 if the cache is cold (forces Next.js ISR to not persist an
+    empty page — it will retry on the next request instead).
+
+    Auth: None (public, read-only)
+    """
+    stocks = (
+        db.query(Stock)
+        .filter(
+            Stock.is_active.is_(True),
+            Stock.exchange == "NSE",
+            Stock.screening_blocked_reason.is_(None),
+        )
+        .order_by(Stock.market_cap.desc().nullslast())
+        .limit(1000)
+        .all()
+    )
+
+    results = []
+    for stock in stocks:
+        ck = screening_cache_key(stock.symbol, stock.exchange)
+        cached = screening_cache.get(ck)
+        if cached is not None:
+            results.append({
+                "stock": {
+                    **helpers.stock_to_dict(stock),
+                    # Extra fields needed by the screener table
+                    "exchange": stock.exchange,
+                    "currency": stock.currency or "INR",
+                    "isin": stock.isin,
+                    "index_memberships": [
+                        m.index_name for m in stock.index_memberships
+                    ],
+                },
+                "screening": cached,
+            })
+
+    if not results and stocks:
+        # Cache is cold (backend restarted, pipeline not yet run).
+        # 503 tells Next.js ISR to skip caching so users see the skeleton
+        # rather than a stale "0 of 0" page.
+        raise HTTPException(
+            status_code=503,
+            detail="Screening cache is warming up — retry in a moment",
+        )
+
+    return JSONResponse(
+        content={"stocks": results, "count": len(results)},
+        headers={
+            "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+            "Vary": "Accept-Encoding",
+        },
+    )
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])

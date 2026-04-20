@@ -831,6 +831,36 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
   return results.flat();
 }
 
+export type ScreenerSnapshotEntry = {
+  stock: Stock & { index_memberships: string[] };
+  screening: ScreeningResult;
+};
+
+/**
+ * Fetch the pre-computed screener snapshot from the backend.
+ *
+ * Unlike getBulkScreeningResults (POST, uncacheable), this is a GET so
+ * Next.js Data Cache can cache it. The backend sets Cache-Control:
+ * s-maxage=300, stale-while-revalidate=300 so the response is served from
+ * cache between pipeline runs.
+ *
+ * Throws on non-2xx so ISR never caches an empty/broken screener page.
+ */
+export async function getScreenerSnapshot(): Promise<ScreenerSnapshotEntry[]> {
+  const response = await fetch(`${apiBaseUrl}/screener/snapshot`, {
+    next: { revalidate: 300 },
+  });
+  if (!response.ok) {
+    throw new Error(`/screener/snapshot returned ${response.status}`);
+  }
+  const body = (await response.json()) as { stocks?: ScreenerSnapshotEntry[] };
+  const entries = body?.stocks ?? [];
+  if (entries.length === 0) {
+    throw new Error("/screener/snapshot returned 0 entries — skipping ISR cache");
+  }
+  return entries;
+}
+
 /**
  * Compare Stocks page only: uses POST /compare/bulk (counts against daily compare quota).
  * Pass Clerk actor headers from a Server Component so quota applies per user/IP.
