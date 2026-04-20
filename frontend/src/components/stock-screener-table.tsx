@@ -68,12 +68,6 @@ function formatPrice(value: number, currency?: string) {
   }).format(value);
 }
 
-function formatEventDate(value?: string | null): string {
-  if (!value) return "";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 /** Render market cap; shows a subtle "Syncing" badge when no price data exists yet. */
 function McapCell({ marketCap, currency }: { marketCap: number; currency: "INR" | "USD" | "GBP" }) {
@@ -663,7 +657,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         )}
 
         {/* Results: mobile cards + desktop table */}
-        <div ref={listRef} className="flex min-h-0 flex-1 flex-col">
+        <div ref={listRef} className="flex flex-col">
           {isMobileLayout ? (
             <div className="flex flex-col gap-3 overflow-y-auto pb-20 md:hidden">
               {pageItems.map((s, idx) => {
