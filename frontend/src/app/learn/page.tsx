@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Learn — halal investing & NSE/BSE screening",
   description:
     "Index of BarakFi learn articles: what halal investing means, how Shariah stock screening works on Indian exchanges, case studies like Reliance, and how to use the screener responsibly — with links into live stock pages.",
+  alternates: { canonical: "https://barakfi.in/learn" },
 };
 
 export default function LearnIndexPage() {

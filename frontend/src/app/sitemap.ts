@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getCollections, getStocks, getSuperInvestors } from "@/lib/api";
 
-export const dynamic = "force-dynamic";
+// ISR: regenerate sitemap at most once per hour.
+// Do NOT use force-dynamic here — that would re-call the API on every
+// Googlebot crawl, risking timeouts and incomplete sitemaps.
 export const revalidate = 3600;
 
 const CANONICAL_DOMAIN = "https://barakfi.in";

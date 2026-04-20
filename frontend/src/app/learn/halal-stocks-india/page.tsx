@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description:
     "How halal stock screening works for Indian equities: NSE and BSE reporting, common financial ratios, sector exclusions, and how to read BarakFi results alongside annual reports. Includes internal links to live stock pages and the screener for NSE/BSE-listed names.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://barakfi.in/learn/halal-stocks-india" },
 };
 
 export default function HalalStocksIndiaPage() {
