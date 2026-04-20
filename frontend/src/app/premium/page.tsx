@@ -1,14 +1,45 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Infinity,
+  SlidersHorizontal,
+  BarChart2,
+  FileSearch,
+  Bell,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 import styles from "./premium.module.css";
 
 const FEATURES = [
-  { icon: "🔓", label: "Unlimited stock screening" },
-  { icon: "🎯", label: "Advanced compliance filters" },
-  { icon: "📊", label: "Portfolio compliance tracking" },
-  { icon: "📋", label: "Detailed compliance breakdown" },
-  { icon: "🔔", label: "Real-time compliance alerts" },
+  {
+    Icon: Infinity,
+    label: "Unlimited stock screening",
+    desc: "Screen every NSE-listed stock without daily limits.",
+  },
+  {
+    Icon: SlidersHorizontal,
+    label: "Advanced compliance filters",
+    desc: "Filter by debt ratio, compliance score, and more.",
+  },
+  {
+    Icon: BarChart2,
+    label: "Portfolio compliance tracking",
+    desc: "See your portfolio's overall Shariah health at a glance.",
+  },
+  {
+    Icon: FileSearch,
+    label: "Detailed compliance breakdown",
+    desc: "Full ratio-by-ratio explanation for every stock.",
+  },
+  {
+    Icon: Bell,
+    label: "Real-time compliance alerts",
+    desc: "Get notified the moment a stock's status changes.",
+  },
 ];
 
 export default function PremiumPage() {
@@ -36,30 +67,57 @@ export default function PremiumPage() {
 
   return (
     <main className={styles.page}>
-      <div className={styles.card}>
-        <span className={styles.badge}>Coming Soon</span>
-        <h1 className={styles.title}>BarakFi Premium</h1>
-        <p className={styles.subtitle}>
-          Deeper Shariah compliance insights, unlimited screening, and powerful
-          portfolio tools — all in one place.
-        </p>
+      {/* Back link */}
+      <Link href="/" className={styles.backLink}>
+        <ArrowLeft size={16} />
+        Back
+      </Link>
 
+      <div className={styles.card}>
+        {/* Header */}
+        <div className={styles.cardHeader}>
+          <span className={styles.badge}>
+            <Sparkles size={11} />
+            Coming Soon
+          </span>
+          <h1 className={styles.title}>BarakFi Premium</h1>
+          <p className={styles.subtitle}>
+            Deeper Shariah compliance insights, unlimited screening, and
+            powerful portfolio tools — all in one place.
+          </p>
+        </div>
+
+        {/* Features */}
         <ul className={styles.features}>
-          {FEATURES.map((f) => (
-            <li key={f.label} className={styles.feature}>
-              <span className={styles.featureIcon}>{f.icon}</span>
-              <span>{f.label}</span>
+          {FEATURES.map(({ Icon, label, desc }) => (
+            <li key={label} className={styles.feature}>
+              <span className={styles.featureIcon}>
+                <Icon size={18} strokeWidth={1.75} />
+              </span>
+              <div className={styles.featureText}>
+                <span className={styles.featureLabel}>{label}</span>
+                <span className={styles.featureDesc}>{desc}</span>
+              </div>
             </li>
           ))}
         </ul>
 
+        <div className={styles.divider} />
+
+        {/* Form / Success */}
         {status === "done" ? (
           <div className={styles.success}>
-            <span className={styles.successIcon}>✓</span>
-            <p>You&apos;ll be notified when Premium launches.</p>
+            <span className={styles.successIcon}>
+              <CheckCircle2 size={28} strokeWidth={1.75} />
+            </span>
+            <p className={styles.successTitle}>You&apos;re on the list!</p>
+            <p className={styles.successDesc}>
+              We&apos;ll notify you as soon as Premium launches.
+            </p>
           </div>
         ) : (
           <form className={styles.form} onSubmit={handleSubmit}>
+            <p className={styles.formLabel}>Get early access</p>
             <input
               type="text"
               className={styles.input}
@@ -85,6 +143,9 @@ export default function PremiumPage() {
             {status === "error" && (
               <p className={styles.errorMsg}>Something went wrong. Please try again.</p>
             )}
+            <p className={styles.privacyNote}>
+              No spam. Unsubscribe any time.
+            </p>
           </form>
         )}
       </div>

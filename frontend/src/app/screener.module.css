@@ -80,6 +80,10 @@
   align-items: start;
   flex: 1;
   position: relative;
+  transition: grid-template-columns 0.25s ease;
+}
+.screenerLayoutCollapsed {
+  grid-template-columns: 0px 1fr;
 }
 
 /* Dim main content when filter drawer is open on tablet/mobile */
@@ -108,7 +112,12 @@
   overflow-y: auto;
   scrollbar-width: thin;
 }
-.sidebarCollapsed { display: none; }
+.sidebarCollapsed {
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
 
 .sidebarHeader {
   display: flex;
@@ -231,7 +240,10 @@
 }
 
 .sidebarToggle {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
   padding: 10px;
   border: 1px solid var(--line);
@@ -243,6 +255,31 @@
   cursor: pointer;
   text-align: center;
   margin-top: auto;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebarToggle:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+/* Desktop sidebar toggle — visible on all screen sizes in the header */
+.sidebarToggleDesktop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebarToggleDesktop:hover {
+  background: var(--bg-muted);
+  color: var(--text);
 }
 
 /* ── Main Content ── */
@@ -302,6 +339,13 @@
   flex-wrap: wrap;
 }
 .contentHeaderLeft {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.contentHeaderLeft > :last-child,
+.contentHeaderLeft > :nth-child(2) {
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -4,8 +4,8 @@ EOD Price Sync Pipeline — Job Family: Market Data
 Fetches official NSE bhavcopy (end-of-day price data) for trading days
 and persists into market_prices_daily.
 
-Cadence: Trading days after official close (suggested: 18:30 IST = 13:00 UTC)
-Render cron: "0 13 * * 1-5"
+Cadence: Trading days after official close — 7:00 PM IST = 13:30 UTC
+Render cron: "30 13 * * 1-5"
 
 Data source: NSE archives (official bhavcopy) — no paid API required.
 If a paid vendor is available later, use it for historical backfill only
@@ -243,12 +243,43 @@ def run_for_date(
     return metrics
 
 
+def _latest_trading_date(max_lookback: int = 5) -> date:
+    """Return the most recent date that has NSE bhavcopy data.
+
+    Skips weekends automatically, then scans backwards up to max_lookback
+    weekdays to handle public holidays (e.g. Diwali, Republic Day).
+    Falls back to calendar yesterday if nothing is found.
+    """
+    from app.connectors.nse_bhavcopy import NseBhavcopyConnector
+
+    connector = NseBhavcopyConnector()
+    candidate = date.today() - timedelta(days=1)
+    checked = 0
+    while checked < max_lookback:
+        if candidate.weekday() < 5:  # Mon–Fri only
+            df = connector.fetch_bhavcopy(candidate)
+            if not df.empty:
+                logger.info("Latest trading date found: %s", candidate)
+                return candidate
+            checked += 1
+        candidate -= timedelta(days=1)
+
+    fallback = date.today() - timedelta(days=1)
+    logger.warning(
+        "Could not find a trading date in the last %d weekdays; using calendar yesterday %s",
+        max_lookback,
+        fallback,
+    )
+    return fallback
+
+
 def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool = False, force: bool = False) -> dict:
     """
     Run EOD price sync for one or more dates.
 
     Args:
-        trade_date: specific date to sync (defaults to yesterday)
+        trade_date: specific date to sync (defaults to the latest available
+                    trading day — skips weekends and public holidays automatically)
         backfill_days: number of days to backfill (overrides trade_date)
         dry_run: fetch but don't write to DB
     """
@@ -270,7 +301,7 @@ def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool
         }
 
     if trade_date is None:
-        trade_date = date.today() - timedelta(days=1)
+        trade_date = _latest_trading_date()
 
     return run_for_date(trade_date, dry_run=dry_run, force=force)
 
