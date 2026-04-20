@@ -253,7 +253,8 @@ def _latest_trading_date(max_lookback: int = 5) -> date:
     from app.connectors.nse_bhavcopy import NSEBhavCopyConnector
 
     connector = NSEBhavCopyConnector()
-    candidate = date.today() - timedelta(days=1)
+    # Start from today — cron runs at 7 PM IST so today's bhavcopy is already published
+    candidate = date.today()
     checked = 0
     while checked < max_lookback:
         if candidate.weekday() < 5:  # Mon–Fri only
@@ -264,9 +265,9 @@ def _latest_trading_date(max_lookback: int = 5) -> date:
             checked += 1
         candidate -= timedelta(days=1)
 
-    fallback = date.today() - timedelta(days=1)
+    fallback = date.today()
     logger.warning(
-        "Could not find a trading date in the last %d weekdays; using calendar yesterday %s",
+        "Could not find a trading date in the last %d weekdays; using today %s as fallback",
         max_lookback,
         fallback,
     )

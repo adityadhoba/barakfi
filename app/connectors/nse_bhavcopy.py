@@ -27,19 +27,21 @@ from app.connectors.base import BaseConnector, NSE_HEADERS, sha256_bytes
 logger = logging.getLogger("barakfi.nse_bhavcopy")
 UTC = timezone.utc
 
-# NSE bhavcopy URL pattern — archives are available for any trading day
-# Format: https://archives.nseindia.com/content/historical/EQUITIES/{year}/{month}/cm{DD}{MON}{YEAR}bhav.csv.zip
-_BHAVCOPY_URL_TEMPLATE = (
-    "https://archives.nseindia.com/content/historical/EQUITIES/{year}/{month}/"
-    "cm{day}{month_upper}{year}bhav.csv.zip"
-)
-
-# NSE also maintains a "current" bhavcopy endpoint for the latest trading day:
-NSE_BHAVCOPY_CURRENT_URL = "https://archives.nseindia.com/products/content/sec_bhavdata_full_28052024.csv"
+# NSE deprecated the old bhavcopy format on 2024-07-08 (Circular 62424, June 12 2024).
+# New format (UDiFF): https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_{YYYYMMDD}_F_0000.csv.zip
+_UDIFF_CUTOVER = date(2024, 7, 8)
 
 
-def _bhavcopy_url(trade_date: date) -> str:
-    """Build the NSE bhavcopy archive URL for a given trading date."""
+def _bhavcopy_url_new(trade_date: date) -> str:
+    """UDiFF format — used for dates from 2024-07-08 onwards."""
+    return (
+        f"https://nsearchives.nseindia.com/content/cm/"
+        f"BhavCopy_NSE_CM_0_0_0_{trade_date.strftime('%Y%m%d')}_F_0000.csv.zip"
+    )
+
+
+def _bhavcopy_url_legacy(trade_date: date) -> str:
+    """Legacy format — only valid before 2024-07-08."""
     return (
         f"https://archives.nseindia.com/content/historical/EQUITIES/"
         f"{trade_date.year}/{trade_date.strftime('%b').upper()}/"
@@ -47,6 +49,13 @@ def _bhavcopy_url(trade_date: date) -> str:
         f"{trade_date.strftime('%b').upper()}"
         f"{trade_date.year}bhav.csv.zip"
     )
+
+
+def _bhavcopy_url(trade_date: date) -> str:
+    """Return the correct bhavcopy URL for the given date."""
+    if trade_date >= _UDIFF_CUTOVER:
+        return _bhavcopy_url_new(trade_date)
+    return _bhavcopy_url_legacy(trade_date)
 
 
 class NSEBhavCopyConnector(BaseConnector):
@@ -117,19 +126,42 @@ class NSEBhavCopyConnector(BaseConnector):
             logger.warning("Error reading bhavcopy ZIP for %s: %s", trade_date, exc)
             return pd.DataFrame()
 
-        df.columns = [c.strip().upper() for c in df.columns]
+        df.columns = [c.strip() for c in df.columns]
+        cols_upper = {c.upper(): c for c in df.columns}
 
-        rename = {
-            "SYMBOL": "symbol",
-            "SERIES": "series",
-            "OPEN": "open_price",
-            "HIGH": "high_price",
-            "LOW": "low_price",
-            "CLOSE": "close_price",
-            "TOTTRDQTY": "volume",
-            "TOTTRDVAL": "turnover_value",
-            "ISIN": "isin",
-        }
+        # ── Detect format ────────────────────────────────────────────────────
+        # UDiFF (new, from 2024-07-08): columns like TckrSymb, SctySrs, OpnPric …
+        # Legacy (old): columns like SYMBOL, SERIES, OPEN, HIGH, LOW, CLOSE …
+        is_udiff = "TckrSymb" in df.columns or "TCKRSYMB" in cols_upper
+
+        if is_udiff:
+            # Normalise to upper for safety then rename
+            df.columns = [c.strip().upper() for c in df.columns]
+            rename = {
+                "TCKRSYMB": "symbol",
+                "SCTYSRS": "series",
+                "ISIN": "isin",
+                "OPNPRIC": "open_price",
+                "HGHPRIC": "high_price",
+                "LWPRIC": "low_price",
+                "CLSPRIC": "close_price",
+                "TTLTRADGVOL": "volume",
+                "TTLTRFVAL": "turnover_value",
+            }
+        else:
+            df.columns = [c.strip().upper() for c in df.columns]
+            rename = {
+                "SYMBOL": "symbol",
+                "SERIES": "series",
+                "OPEN": "open_price",
+                "HIGH": "high_price",
+                "LOW": "low_price",
+                "CLOSE": "close_price",
+                "TOTTRDQTY": "volume",
+                "TOTTRDVAL": "turnover_value",
+                "ISIN": "isin",
+            }
+
         df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
 
         # Keep only EQ (equity) series by default
