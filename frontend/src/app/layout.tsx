@@ -18,6 +18,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { TopbarAuth } from "@/components/topbar-auth";
 import { ScreeningProvider } from "@/contexts/screening-context";
 import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
+import { ScrollBounce } from "@/components/scroll-bounce";
 import "./globals.css";
 import "./shell.css";
 
@@ -279,6 +280,7 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <NavProgress />
             </Suspense>
+            <ScrollBounce />
             <HideTopbarSearchOnHome />
             <a className="skipToContent" href="#main-content">Skip to content</a>
             <MarketTicker />

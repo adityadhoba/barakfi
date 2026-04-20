@@ -1514,3 +1514,21 @@ a[href*="clerk.com"] {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ─── Scroll-bounce effect ─────────────────────────────────────────────── */
+@keyframes scroll-bounce-up {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(-10px); }
+  65%  { transform: translateY(3px); }
+  85%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+@keyframes scroll-bounce-down {
+  0%   { transform: translateY(0); }
+  35%  { transform: translateY(10px); }
+  65%  { transform: translateY(-3px); }
+  85%  { transform: translateY(4px); }
+  100% { transform: translateY(0); }
+}
+html.scroll-bounce-up   body { animation: scroll-bounce-up   0.38s cubic-bezier(0.22, 1, 0.36, 1); }
+html.scroll-bounce-down body { animation: scroll-bounce-down 0.38s cubic-bezier(0.22, 1, 0.36, 1); }

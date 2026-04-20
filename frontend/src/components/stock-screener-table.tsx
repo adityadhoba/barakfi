@@ -13,6 +13,7 @@ import { StockLogo } from "@/components/stock-logo";
 import { INDEX_OPTIONS, matchesIndex } from "@/lib/index-membership";
 import { useIsMobileSidebarBreakpoint } from "@/hooks/use-is-mobile";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
+import { SlidersHorizontal, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { formatMcapShort, resolveDisplayCurrency } from "@/lib/currency-format";
 import { useScreening } from "@/contexts/screening-context";
 import {
@@ -445,7 +446,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   }
 
   return (
-    <div className={styles.screenerLayout}>
+    <div className={`${styles.screenerLayout} ${sidebarOpen ? "" : styles.screenerLayoutCollapsed}`}>
       {isMobileLayout && sidebarOpen && (
         <button
           type="button"
@@ -555,9 +556,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </div>
         ))}
 
-        {/* Sidebar toggle on mobile */}
-        <button type="button" className={styles.sidebarToggle} onClick={() => setSidebarOpen((o) => !o)}>
-          {sidebarOpen ? "Hide Filters" : "Show Filters"}
+        {/* Sidebar close button inside panel */}
+        <button
+          type="button"
+          className={styles.sidebarToggle}
+          onClick={() => setSidebarOpen((o) => !o)}
+          aria-label={sidebarOpen ? "Hide filters" : "Show filters"}
+          title={sidebarOpen ? "Hide filters" : "Show filters"}
+        >
+          <PanelLeftClose size={16} />
+          Hide filters
         </button>
       </aside>
 
@@ -566,6 +574,16 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         {/* Header bar */}
         <div className={styles.contentHeader}>
           <div className={styles.contentHeaderLeft}>
+            {/* Desktop sidebar toggle */}
+            <button
+              type="button"
+              className={styles.sidebarToggleDesktop}
+              onClick={() => setSidebarOpen((o) => !o)}
+              aria-label={sidebarOpen ? "Hide filters" : "Show filters"}
+              title={sidebarOpen ? "Hide filters" : "Show filters"}
+            >
+              {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            </button>
             <h1 className={styles.pageTitle}>Stock Screener</h1>
             <p className={styles.resultSummary}>
               {sorted.length > 0 ? `${pageStart + 1}–${pageEnd}` : "0"} of {sorted.length} stocks
@@ -603,7 +621,8 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>Save</button>
             <Link href="/compare" className={styles.headerBtn}>Compare</Link>
             <button type="button" className={styles.sidebarToggleMobile} onClick={() => setSidebarOpen((o) => !o)}>
-              &#x2630; Filters {filterCount > 0 && <span className={styles.filterBadge}>{filterCount}</span>}
+              <SlidersHorizontal size={14} />
+              Filters {filterCount > 0 && <span className={styles.filterBadge}>{filterCount}</span>}
             </button>
           </div>
         </div>
