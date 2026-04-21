@@ -970,6 +970,7 @@
     transform: translateX(0);
     transition: transform 0.25s ease;
     box-shadow: var(--shadow-lg);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
   .sidebarCollapsed {
     display: flex;
@@ -1106,10 +1107,11 @@
 
 /* ── Table wrapper for detail page ── */
 .tableWrap {
-  overflow-x: hidden;
+  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
+  -webkit-overflow-scrolling: touch;
 }
 
 .tableWrap .table {
@@ -1152,6 +1154,7 @@
 .tableWrapPeer .table th,
 .tableWrapPeer .table td {
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .peerRowLocked {
@@ -2201,8 +2204,29 @@
   color: var(--text-tertiary);
 }
 
+/* ── Similar Stocks: horizontal carousel on mobile ── */
+@media (max-width: 768px) {
+  .similarGrid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .similarGrid::-webkit-scrollbar { display: none; }
+  .similarCard {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    width: calc(80vw - 24px);
+    max-width: 300px;
+  }
+}
+
 @media (max-width: 390px) {
-  .similarGrid { grid-template-columns: 1fr 1fr; }
   .keyMetricsStrip { grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .keyMetricCard { padding: 10px 12px; }
   .keyMetricLabel { font-size: 0.62rem; }
