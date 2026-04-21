@@ -611,7 +611,7 @@
 }
 
 @media (max-width: 480px) {
-  .stockGrid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stockGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 }
 
 .stockItem {
@@ -619,6 +619,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
+  min-width: 0;
+  overflow: hidden;
   border-radius: var(--radius-lg);
   border: 1px solid var(--glass-border);
   background: var(--glass-bg);
@@ -1232,7 +1234,7 @@
   .statIcon { width: 30px; height: 30px; font-size: 0.75rem; }
   .statValue { font-size: 1.1rem; }
   .pulse { padding: 14px 16px; gap: 12px; }
-  .stockGrid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stockGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
   .stockItem { padding: 12px; }
   .stockPrice { font-size: 0.85rem; }
 }

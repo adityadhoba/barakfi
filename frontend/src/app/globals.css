@@ -887,7 +887,7 @@ body[data-hide-topbar-search] .topbarSearchSlot {
   .topbarSearch { max-width: none; }
   .topbarSearchKbd { display: none; }
   .ghostLink { padding: 6px 8px; font-size: 0.8rem; }
-  body { padding-bottom: 68px; }
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .bottomNav { display: flex; }
 }
 

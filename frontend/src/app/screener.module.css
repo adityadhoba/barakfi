@@ -970,6 +970,7 @@
     transform: translateX(0);
     transition: transform 0.25s ease;
     box-shadow: var(--shadow-lg);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
   .sidebarCollapsed {
     display: flex;
@@ -981,7 +982,7 @@
 @media (max-width: 600px) {
   .mainContent { padding: 12px 12px 64px; }
   .contentHeader { flex-direction: column; gap: 10px; }
-  .contentHeaderRight { width: 100%; }
+  .contentHeaderRight { width: 100%; flex-wrap: wrap; }
   .headerSearchStack {
     max-width: 100%;
     flex: 1 1 100%;
@@ -992,6 +993,17 @@
   .stockName { font-size: 0.78rem; }
   .avatar { width: 28px; height: 28px; font-size: 0.6rem; }
   .pageTitle { font-size: 1.15rem; }
+}
+
+@media (max-width: 480px) {
+  .mainContent { padding: 10px 10px 72px; }
+  .contentHeaderRight { gap: 6px; }
+  .headerBtn { padding: 6px 10px; font-size: 0.74rem; }
+  .sidebarToggleMobile { padding: 6px 10px; font-size: 0.74rem; }
+  .pageTitle { font-size: 1.05rem; }
+  .tableContainer { border-radius: var(--radius-lg); }
+  .exampleChips { gap: 4px 6px; }
+  .exampleChip { padding: 3px 8px; font-size: 0.7rem; }
 }
 
 
@@ -1095,10 +1107,11 @@
 
 /* ── Table wrapper for detail page ── */
 .tableWrap {
-  overflow-x: hidden;
+  overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
+  -webkit-overflow-scrolling: touch;
 }
 
 .tableWrap .table {
@@ -1141,6 +1154,7 @@
 .tableWrapPeer .table th,
 .tableWrapPeer .table td {
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .peerRowLocked {
@@ -1651,6 +1665,38 @@
   outline-offset: 2px;
 }
 
+/* ── Carousel Dots (mobile only, hidden on desktop grid) ── */
+.carouselDots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+@media (min-width: 768px) {
+  .carouselDots { display: none; }
+}
+
+.carouselDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-strong, #4b5563);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, width 0.2s;
+  flex-shrink: 0;
+}
+
+.carouselDotActive {
+  background: var(--emerald, #10b981);
+  width: 18px;
+  border-radius: 3px;
+  transform: none;
+}
+
 .peopleAlsoCardTop {
   display: flex;
   align-items: center;
@@ -2158,8 +2204,29 @@
   color: var(--text-tertiary);
 }
 
+/* ── Similar Stocks: horizontal carousel on mobile ── */
+@media (max-width: 768px) {
+  .similarGrid {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .similarGrid::-webkit-scrollbar { display: none; }
+  .similarCard {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    width: calc(80vw - 24px);
+    max-width: 300px;
+  }
+}
+
 @media (max-width: 390px) {
-  .similarGrid { grid-template-columns: 1fr 1fr; }
   .keyMetricsStrip { grid-template-columns: repeat(2, 1fr); gap: 6px; }
   .keyMetricCard { padding: 10px 12px; }
   .keyMetricLabel { font-size: 0.62rem; }

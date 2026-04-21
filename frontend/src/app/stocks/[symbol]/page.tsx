@@ -51,6 +51,7 @@ import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-c
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
+import { PeopleAlsoChecked } from "@/components/people-also-checked";
 import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import {
   buildMethodologyTableRowsFromMulti,
@@ -1296,41 +1297,7 @@ export default async function StockDetailPage({
             )}
 
             {peopleAlsoChecked.length > 0 && (
-              <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">
-                <h2 id="people-also-heading" className={styles.peopleAlsoTitle}>
-                  People also checked
-                </h2>
-                <div className={styles.peopleAlsoGrid}>
-                  {peopleAlsoChecked.map((item) => (
-                    <Link
-                      key={item.symbol}
-                      href={`/screening/${encodeURIComponent(item.symbol)}`}
-                      className={styles.peopleAlsoCard}
-                    >
-                      <div className={styles.peopleAlsoCardTop}>
-                        <StockLogo symbol={item.symbol} size={36} status={item.status} />
-                        <div className={styles.peopleAlsoIdentity}>
-                          <span className={styles.peopleAlsoName}>{item.name}</span>
-                          <span className={styles.peopleAlsoSymbol}>{item.symbol}</span>
-                        </div>
-                      </div>
-                      <div className={styles.peopleAlsoMeta}>
-                        <LockedVerdict symbol={item.symbol} compact>
-                          <div className={styles.peopleAlsoScoreWrap}>
-                            <span className={styles.peopleAlsoScore}>{item.score}</span>
-                            <span className={styles.peopleAlsoScoreSuffix}>/100</span>
-                          </div>
-                          <span
-                            className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
-                          >
-                            {screeningUiLabel(item.status)}
-                          </span>
-                        </LockedVerdict>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
+              <PeopleAlsoChecked items={peopleAlsoChecked} />
             )}
 
             {/* Moved to end of detail flow, with Read more nested inside */}
