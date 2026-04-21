@@ -315,6 +315,24 @@
   color: var(--text-secondary);
 }
 
+/* Tighten user section on narrow phones */
+@media (max-width: 400px) {
+  .userSection {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .userAvatar {
+    width: 34px;
+    height: 34px;
+  }
+  .userName {
+    font-size: 0.83rem;
+  }
+  .userEmail {
+    font-size: 0.7rem;
+  }
+}
+
 /* Responsive - hide on desktop */
 @media (min-width: 769px) {
   .hamburger {
