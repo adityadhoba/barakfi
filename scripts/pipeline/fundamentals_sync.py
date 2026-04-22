@@ -127,7 +127,10 @@ def _get_facts_for_issuer(
             DataFinancialPeriod.issuer_id == issuer_id,
             DataFinancialPeriod.period_end_date >= cutoff,
         )
-        .order_by(DataFinancialPeriod.period_end_date.desc())
+        .order_by(
+            DataFinancialPeriod.period_end_date.desc(),
+            DataFinancialPeriod.id.desc(),
+        )
         .first()
     )
     if not period:
@@ -293,6 +296,7 @@ def _write_back_to_stock(
     facts: dict[str, float],
     market_cap: Optional[float],
     avg_36m: Optional[float],
+    data_source_tag: str = "nse_xbrl",
 ) -> bool:
     """
     Write extracted facts back to the legacy Stock table for API compatibility.
@@ -361,7 +365,7 @@ def _write_back_to_stock(
 
     if updated:
         stock.fundamentals_updated_at = datetime.now(UTC)
-        stock.data_source = "nse_xbrl"
+        stock.data_source = data_source_tag
         db.add(stock)
     return updated
 
@@ -783,7 +787,9 @@ def run(
                 metrics["snapshot_written"] += 1
 
                 # Step 6: Write back to Stock table
-                wrote_stock = _write_back_to_stock(db, symbol, facts, market_cap, avg_36m)
+                wrote_stock = _write_back_to_stock(
+                    db, symbol, facts, market_cap, avg_36m, data_source_tag=data_source
+                )
                 if wrote_stock:
                     metrics["stock_written"] += 1
                 db.commit()

@@ -6,7 +6,7 @@ import { yahooFinanceBaseCandidates } from "@/lib/yahoo-symbol-aliases";
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
 /** Bump when forcing clients to bypass stale/wrong img.logo.dev CDN responses (e.g. bad ticker→brand match). */
-const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-17";
+const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-23";
 
 const EXCHANGE_SUFFIX: Record<string, string> = {
   NSE: ".NS",
@@ -141,6 +141,23 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   FEDERALBNK: "federalbank.co.in",
   INDUSINDBK: "indusind.com",
   POWERMECH: "powermechprojects.com",
+  IDFCFIRSTB: "idfcfirstbank.com",
+  BANDHANBNK: "bandhanbank.com",
+  UNIONBANK: "unionbankofindia.co.in",
+  BANKINDIA: "bankofindia.co.in",
+  INDIANB: "indianbank.in",
+  CENTRALBK: "centralbankofindia.co.in",
+  RBLBANK: "rblbank.com",
+  YESBANK: "yesbank.in",
+  CSBBANK: "csb.co.in",
+  KARURVYSYA: "kvb.co.in",
+  SOUTHBANK: "southindianbank.com",
+  IOB: "iob.in",
+  DCBBANK: "dcbbank.com",
+  JKBANK: "jkbank.com",
+  MAHABANK: "bankofmaharashtra.in",
+  EQUITASBNK: "equitasbank.com",
+  UJJIVANSFB: "ujjivansfb.in",
 };
 
 function normalizeSymbol(symbol: string): string {
@@ -154,6 +171,17 @@ function normalizeSymbol(symbol: string): string {
 /** Works without logo.dev; used when CDN returns 403/empty. */
 function googleS2FaviconFromDomain(domain: string): string {
   return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
+}
+
+function uniqueUrls(urls: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of urls) {
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out;
 }
 
 /** logo.dev `size` param: retina-friendly without always fetching 256px for small avatars */
@@ -216,13 +244,13 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   const googleS2Url = domainForFallback ? googleS2FaviconFromDomain(domainForFallback) : null;
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  // Prefer domain for symbols in SYMBOL_TO_DOMAIN: logo.dev ticker slugs (e.g. AXISBANK.NS) can map to the wrong brand.
-  // Append Google s2 favicon (no API key) when logo.dev URLs fail.
+  // Curated symbols: Google s2 + gstatic favicons resolve the *real* site icon first.
+  // logo.dev ticker/domain lookups often mis-associate Indian bank tickers (e.g. wrong institute logos).
   const sources = LOGO_DEV_TOKEN
     ? hasCuratedDomain && domainLogoUrl && tickerUrl
-      ? ([domainLogoUrl, tickerUrl, googleS2Url].filter(Boolean) as string[])
-      : ([tickerUrl, domainLogoUrl, googleS2Url].filter(Boolean) as string[])
-    : ([faviconUrl, googleS2Url].filter(Boolean) as string[]);
+      ? uniqueUrls([googleS2Url, domainLogoUrl, tickerUrl, faviconUrl])
+      : uniqueUrls([tickerUrl, domainLogoUrl, googleS2Url, faviconUrl])
+    : uniqueUrls([googleS2Url, faviconUrl]);
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
