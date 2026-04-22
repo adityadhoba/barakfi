@@ -959,7 +959,23 @@ def screener_snapshot(db: Session = Depends(get_db)):
 
     Auth: None (public, read-only)
     """
+    snapshot_cache_key = "screener:snapshot:nse:v1"
+    snapshot_ttl_seconds = 300.0
+    response_headers = {
+        "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+        "Vary": "Accept-Encoding",
+    }
+
     try:
+        # Fast path: cached assembled snapshot (single Redis read).
+        cached_snapshot = screening_cache.get(snapshot_cache_key)
+        if (
+            isinstance(cached_snapshot, dict)
+            and isinstance(cached_snapshot.get("stocks"), list)
+            and isinstance(cached_snapshot.get("count"), int)
+        ):
+            return JSONResponse(content=cached_snapshot, headers=response_headers)
+
         stocks = (
             db.query(Stock)
             .filter(
@@ -976,10 +992,11 @@ def screener_snapshot(db: Session = Depends(get_db)):
         # Fetch all index memberships in one query (avoids N+1 lazy loads)
         index_map = _index_codes_by_stock_id(db, [s.id for s in stocks])
 
+        cache_keys = [screening_cache_key(stock.symbol, stock.exchange) for stock in stocks]
+        cached_screenings = screening_cache.get_many(cache_keys)
+
         results = []
-        for stock in stocks:
-            ck = screening_cache_key(stock.symbol, stock.exchange)
-            cached = screening_cache.get(ck)
+        for stock, cached in zip(stocks, cached_screenings):
             if cached is not None:
                 results.append({
                     "stock": {
@@ -1001,12 +1018,13 @@ def screener_snapshot(db: Session = Depends(get_db)):
                 detail="Screening cache is warming up — retry in a moment",
             )
 
+        payload = {"stocks": results, "count": len(results)}
+        if results:
+            screening_cache.set(snapshot_cache_key, payload, snapshot_ttl_seconds)
+
         return JSONResponse(
-            content={"stocks": results, "count": len(results)},
-            headers={
-                "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
-                "Vary": "Accept-Encoding",
-            },
+            content=payload,
+            headers=response_headers,
         )
     except HTTPException:
         raise

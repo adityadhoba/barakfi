@@ -37,6 +37,10 @@ class CacheService(ABC):
     def delete(self, key: str) -> None:
         """Invalidate one key."""
 
+    def get_many(self, keys: list[str]) -> list[Any | None]:
+        """Best-effort bulk get; default falls back to per-key get."""
+        return [self.get(key) for key in keys]
+
 
 class InMemoryCacheService(CacheService):
     """Thread-safe TTL cache (single-process, lost on restart)."""
@@ -105,6 +109,25 @@ class RedisCacheService(CacheService):
             self._r.delete(key)
         except Exception as exc:
             log.warning("[RedisCacheService] delete(%s) failed: %s", key, exc)
+
+    def get_many(self, keys: list[str]) -> list[Any | None]:
+        if not keys:
+            return []
+        try:
+            raw_values = self._r.mget(keys)
+            out: list[Any | None] = []
+            for raw in raw_values:
+                if raw is None:
+                    out.append(None)
+                    continue
+                try:
+                    out.append(pickle.loads(raw))  # noqa: S301 — internal data only
+                except Exception:
+                    out.append(None)
+            return out
+        except Exception as exc:
+            log.warning("[RedisCacheService] get_many(%d keys) failed: %s", len(keys), exc)
+            return [None] * len(keys)
 
 
 # ---------------------------------------------------------------------------
