@@ -17,9 +17,11 @@ Writes all available yfinance metrics needed for halal screening:
   - SHARES_OUTSTANDING
   - MARKET_CAP_RAW
 
-Note: Values from yf.Ticker.info are in the native currency reported by
-yfinance (usually USD for ADRs, INR for .NS tickers). We store the raw
-unit from yfinance and flag as source=YFINANCE.
+Note: For NSE/BSE (INR), yfinance reports most **statement totals** in **full INR**.
+We convert those to **INR Crores** (÷ 1e7) before storing, matching
+`fundamentals_sync` / NSE XBRL. Per-share fields (EPS, bookValue per share)
+and ratios (dividendYield) are stored as returned. MARKET_CAP_RAW is stored
+in INR Crores for consistency.
 """
 
 from __future__ import annotations
@@ -40,6 +42,9 @@ from app.models import Stock
 from app.models_data_warehouse import DataFinancialFact, DataFinancialPeriod, DataIssuer, DataListing, DataSecurity
 
 logger = logging.getLogger("barakfi.yfinance_wh")
+
+# Yahoo statement line items for Indian listings are full INR; pipeline expects crores.
+_INR_PER_CRORE = 10_000_000.0
 
 
 def _ensure_warehouse_rows_for_stock(db: Session, stock: Stock) -> DataListing | None:
@@ -164,6 +169,9 @@ def write_yfinance_facts_for_symbol(db: Session, symbol: str, exchange: str = "N
 
     facts_written = 0
 
+    ccy = (info.get("currency") or stock.currency or "INR").upper()
+    scale_inr_totals = exchange.upper() in {"NSE", "BSE"} and ccy == "INR"
+
     def _fact(code: str, val: Any, unit: str = "NATIVE") -> None:
         nonlocal facts_written
         num = _safe_float(val)
@@ -181,43 +189,62 @@ def write_yfinance_facts_for_symbol(db: Session, symbol: str, exchange: str = "N
         )
         facts_written += 1
 
+    def _fact_inr_total(code: str, val: Any) -> None:
+        """Statement total in full INR → INR Crores for NSE/BSE; else store raw."""
+        num = _safe_float(val)
+        if num is None:
+            return
+        if scale_inr_totals:
+            _fact(code, round(num / _INR_PER_CRORE, 4), unit="INR_CRORE")
+        else:
+            _fact(code, num, unit="NATIVE")
+
     # --- Revenue / Income ---
-    _fact("REVENUE", info.get("totalRevenue"))
-    _fact("TOTAL_BUSINESS_INCOME", info.get("totalRevenue"))
-    _fact("GROSS_PROFIT", info.get("grossProfits"))
-    _fact("NET_INCOME", info.get("netIncomeToCommon"))
-    _fact("EBITDA", info.get("ebitda"))
-    _fact("OPERATING_INCOME", info.get("operatingIncome"))
+    _fact_inr_total("REVENUE", info.get("totalRevenue"))
+    _fact_inr_total("TOTAL_BUSINESS_INCOME", info.get("totalRevenue"))
+    _fact_inr_total("GROSS_PROFIT", info.get("grossProfits"))
+    _fact_inr_total("NET_INCOME", info.get("netIncomeToCommon"))
+    _fact_inr_total("EBITDA", info.get("ebitda"))
+    _fact_inr_total("OPERATING_INCOME", info.get("operatingIncome"))
 
     # Interest income proxy: financialInstitutions report interestIncome
     # For non-banks, use interestExpense as a proxy for interest sensitivity
-    _fact("INTEREST_INCOME", info.get("interestIncome"))
-    _fact("INTEREST_EXPENSE", info.get("interestExpense"))
+    _fact_inr_total("INTEREST_INCOME", info.get("interestIncome"))
+    _fact_inr_total("INTEREST_EXPENSE", info.get("interestExpense"))
 
-    # Non-permissible income proxy: other income / non-operating
-    non_op = _safe_float(info.get("totalRevenue")) and (
-        _safe_float(info.get("totalRevenue", 0)) - _safe_float(info.get("operatingRevenue") or info.get("totalRevenue", 0))
-    )
-    _fact("NON_OPERATING_INCOME", info.get("nonInterestIncome") or (non_op if non_op and non_op > 0 else None))
+    # Non-permissible income proxy: other income / non-operating (full INR → Cr)
+    ni = info.get("nonInterestIncome")
+    if ni is not None:
+        _fact_inr_total("NON_OPERATING_INCOME", ni)
+    else:
+        rev = _safe_float(info.get("totalRevenue"))
+        op_rev = _safe_float(info.get("operatingRevenue"))
+        if rev is not None and op_rev is not None and rev > op_rev:
+            _fact_inr_total("NON_OPERATING_INCOME", rev - op_rev)
 
     # --- Debt / Cash ---
-    _fact("TOTAL_DEBT", info.get("totalDebt"))
-    _fact("NET_DEBT", info.get("netDebt") or (
-        (_safe_float(info.get("totalDebt")) or 0) - (_safe_float(info.get("totalCash")) or 0)
-        if info.get("totalDebt") is not None else None
-    ))
-    _fact("CASH_AND_EQUIVALENTS", info.get("totalCash"))
-    _fact("SHORT_TERM_INVESTMENTS", info.get("shortTermInvestments"))
+    _fact_inr_total("TOTAL_DEBT", info.get("totalDebt"))
+    net_debt = info.get("netDebt")
+    if net_debt is not None:
+        _fact_inr_total("NET_DEBT", net_debt)
+    else:
+        td = _safe_float(info.get("totalDebt"))
+        if td is not None:
+            tc = _safe_float(info.get("totalCash")) or 0.0
+            _fact_inr_total("NET_DEBT", td - tc)
+    _fact_inr_total("CASH_AND_EQUIVALENTS", info.get("totalCash"))
+    _fact_inr_total("SHORT_TERM_INVESTMENTS", info.get("shortTermInvestments"))
 
     # --- Balance Sheet ---
-    _fact("TOTAL_ASSETS", info.get("totalAssets"))
-    _fact("CURRENT_ASSETS", info.get("currentAssets") or info.get("totalCurrentAssets"))
-    _fact("ACCOUNTS_RECEIVABLE", info.get("accountsReceivable") or info.get("netReceivables"))
-    _fact("INVENTORY", info.get("inventory"))
-    _fact("FIXED_ASSETS", info.get("propertyPlantEquipmentNet") or info.get("netPPE"))
-    _fact("TOTAL_LIABILITIES", info.get("totalLiab") or info.get("totalLiabilities"))
-    _fact("CURRENT_LIABILITIES", info.get("totalCurrentLiabilities"))
-    _fact("BOOK_VALUE", info.get("bookValue"))
+    _fact_inr_total("TOTAL_ASSETS", info.get("totalAssets"))
+    _fact_inr_total("CURRENT_ASSETS", info.get("currentAssets") or info.get("totalCurrentAssets"))
+    _fact_inr_total("ACCOUNTS_RECEIVABLE", info.get("accountsReceivable") or info.get("netReceivables"))
+    _fact_inr_total("INVENTORY", info.get("inventory"))
+    _fact_inr_total("FIXED_ASSETS", info.get("propertyPlantEquipmentNet") or info.get("netPPE"))
+    _fact_inr_total("TOTAL_LIABILITIES", info.get("totalLiab") or info.get("totalLiabilities"))
+    _fact_inr_total("CURRENT_LIABILITIES", info.get("totalCurrentLiabilities"))
+    # bookValue from yfinance is typically **per share** (₹), not company total — do not ÷ 1e7
+    _fact("BOOK_VALUE", info.get("bookValue"), unit="INR_PER_SHARE" if scale_inr_totals else "NATIVE")
 
     # --- Per share / Market ---
     # Align with NSE pipeline: SHARES_OUTSTANDING = paid-up capital in INR Crores (not share count).
@@ -226,10 +253,14 @@ def write_yfinance_facts_for_symbol(db: Session, symbol: str, exchange: str = "N
     if fv_rupees <= 0:
         fv_rupees = 10.0
     if sh and sh > 0:
-        paid_up_cr = round((sh * fv_rupees) / 1e7, 4)
+        paid_up_cr = round((sh * fv_rupees) / _INR_PER_CRORE, 4)
         _fact("SHARES_OUTSTANDING", paid_up_cr, unit="INR_CRORE")
         _fact("FACE_VALUE_RUPEES", fv_rupees, unit="INR")
-    _fact("MARKET_CAP_RAW", info.get("marketCap"))
+    mcap = _safe_float(info.get("marketCap"))
+    if mcap is not None and scale_inr_totals:
+        _fact("MARKET_CAP_RAW", round(mcap / _INR_PER_CRORE, 4), unit="INR_CRORE")
+    elif mcap is not None:
+        _fact("MARKET_CAP_RAW", mcap, unit="NATIVE")
     _fact("EPS_TTM", info.get("trailingEps"))
     _fact("DIVIDEND_YIELD", info.get("dividendYield"))
 
