@@ -69,6 +69,12 @@ npm run lint
 npm run build
 ```
 
+## Fundamentals display (Indian stocks)
+
+- API **`stocks`** monetary fields for NSE/BSE are stored in **₹ crores**. Large caps may show as **lakhs of crores** (`L Cr`) in the UI to avoid overflow.
+- **Income purity / interest earned** can read **0%** when NSE Reg 33 JSON omits a line (e.g. **`re_int_earned`** often null); balance-sheet lines may be filled via backend **`FUNDAMENTALS_YF_BS_SUPPLEMENT`** when NSE comparison has P&L only.
+- **Sector** comes from the Nifty 500 industry column during **`universe_sync`**; re-run that job if you see `Unknown`.
+
 ## Production (Vercel + Clerk)
 
 - **PageSpeed / Lighthouse**: Test the **canonical** URL **`https://barakfi.in/`** in PageSpeed Insights so scores are not penalized by extra redirect hops (`http`→`https`, `www`→apex). In **Vercel → Domains**, prefer **`barakfi.in`** as the primary hostname so production traffic aligns with `metadataBase` and redirect chains stay minimal.

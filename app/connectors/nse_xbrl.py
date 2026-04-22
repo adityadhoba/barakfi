@@ -22,7 +22,8 @@ Metric code → FundamentalsSnapshot column mapping:
   FIXED_ASSETS          → fixed_assets
   NET_INCOME            → net_income
   EBITDA                → ebitda
-  SHARES_OUTSTANDING    → shares_outstanding (units: number of shares)
+  SHARES_OUTSTANDING    → paid-up equity capital in INR Crores (legacy key name; see fundamentals_sync)
+  FACE_VALUE_RUPEES     → nominal face value per share (₹) from NSE record
 """
 
 from __future__ import annotations
@@ -67,6 +68,8 @@ METRIC_FIXED_ASSETS = "FIXED_ASSETS"
 METRIC_NET_INCOME = "NET_INCOME"
 METRIC_EBITDA = "EBITDA"
 METRIC_SHARES_OUTSTANDING = "SHARES_OUTSTANDING"
+# Face value (₹ per share) from the same NSE record — used with paid-up capital for market-cap math.
+METRIC_FACE_VALUE_RUPEES = "FACE_VALUE_RUPEES"
 
 # ---------------------------------------------------------------------------
 # NSE API endpoints
@@ -109,13 +112,14 @@ _NSE_FIN_RESULTS_LEGACY = (
 #
 _LAKHS_TO_CRORES = 0.01  # 1 Lakh = 0.01 Crore
 
-# Direct re_* field → canonical metric code
+# Direct re_* field → canonical metric code (amounts in lakhs → crores via _LAKHS_TO_CRORES)
 _RE_FIELD_MAP: dict[str, str] = {
-    "re_net_sale":    METRIC_REVENUE,                # Revenue from operations
-    "re_total_inc":   METRIC_TOTAL_BUSINESS_INCOME,  # Total income (ops + other)
-    "re_net_profit":  METRIC_NET_INCOME,              # PAT (profit after tax)
-    "re_oth_inc_new": METRIC_NON_OPERATING_INCOME,   # Other income — halal non-permissible proxy
-    "re_int_new":     METRIC_INTEREST_INCOME,         # Finance costs (interest expense proxy)
+    "re_net_sale": METRIC_REVENUE,  # Revenue from operations
+    "re_total_inc": METRIC_TOTAL_BUSINESS_INCOME,  # Total income (ops + other)
+    "re_net_profit": METRIC_NET_INCOME,  # PAT
+    "re_oth_inc_new": METRIC_NON_OPERATING_INCOME,  # Other income — non-permissible proxy (conservative)
+    # Interest *earned* for Shariah ratio (do not use re_int_new here — it is finance/interest expense in many filings)
+    "re_int_earned": METRIC_INTEREST_INCOME,
 }
 
 
@@ -206,7 +210,8 @@ def _extract_rescmpdata_metrics(
         if val is not None:
             metrics[code] = round(val * _LAKHS_TO_CRORES, 4)
 
-    # EBITDA = PAT + Tax + Interest + Depreciation (all Lakhs → Crores)
+    # EBITDA-style sum: PAT + Tax + interest/finance line + D&A (all Lakhs → Crores).
+    # re_int_new is often interest/finance cost (add-back for EBITDA), not "interest income".
     ebitda_parts = [
         _to_float_safe(rec.get("re_net_profit")),
         _to_float_safe(rec.get("re_tax")),
@@ -217,11 +222,15 @@ def _extract_rescmpdata_metrics(
     if len(valid_parts) >= 2:
         metrics[METRIC_EBITDA] = round(sum(valid_parts) * _LAKHS_TO_CRORES, 4)
 
-    # Shares outstanding: re_pdup (Lakhs INR) / re_face_val (INR) × 100,000
+    # Paid-up equity capital for market-cap pipeline: re_pdup is in INR Lakhs → INR Crores.
+    # Fundamentals sync treats SHARES_OUTSTANDING as *paid-up capital in INR Crores* (misnamed legacy key);
+    # _compute_market_cap converts: shares = (paid_up_crores × 1e7) / face_value.
     pdup = _to_float_safe(rec.get("re_pdup"))
     face_val = _to_float_safe(rec.get("re_face_val")) or 10.0
-    if pdup and pdup > 0 and face_val > 0:
-        metrics[METRIC_SHARES_OUTSTANDING] = round((pdup * 100_000) / face_val, 0)
+    if face_val > 0:
+        metrics[METRIC_FACE_VALUE_RUPEES] = round(face_val, 4)
+    if pdup and pdup > 0:
+        metrics[METRIC_SHARES_OUTSTANDING] = round(pdup * _LAKHS_TO_CRORES, 4)
 
     # Parse period_end from re_to_dt ("31-DEC-2024" format)
     period_end: date | None = None

@@ -220,7 +220,15 @@ def write_yfinance_facts_for_symbol(db: Session, symbol: str, exchange: str = "N
     _fact("BOOK_VALUE", info.get("bookValue"))
 
     # --- Per share / Market ---
-    _fact("SHARES_OUTSTANDING", info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
+    # Align with NSE pipeline: SHARES_OUTSTANDING = paid-up capital in INR Crores (not share count).
+    sh = _safe_float(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
+    fv_rupees = float(listing.face_value) if listing.face_value else 10.0
+    if fv_rupees <= 0:
+        fv_rupees = 10.0
+    if sh and sh > 0:
+        paid_up_cr = round((sh * fv_rupees) / 1e7, 4)
+        _fact("SHARES_OUTSTANDING", paid_up_cr, unit="INR_CRORE")
+        _fact("FACE_VALUE_RUPEES", fv_rupees, unit="INR")
     _fact("MARKET_CAP_RAW", info.get("marketCap"))
     _fact("EPS_TTM", info.get("trailingEps"))
     _fact("DIVIDEND_YIELD", info.get("dividendYield"))

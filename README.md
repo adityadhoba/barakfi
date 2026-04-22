@@ -118,6 +118,23 @@ PYTHONPATH=. python3 fetch_real_data.py --dry-run
 PYTHONPATH=. python3 fetch_real_data.py
 ```
 
+### Postgres: NSE pipeline + screening (after unit-mapping fixes)
+
+When using `DATABASE_URL` with the v2 warehouse (`scripts/pipeline/fundamentals_sync.py`), **rebuild fundamentals and ratios** so market cap and debt/mcap stay consistent:
+
+```bash
+PYTHONPATH=. python3 scripts/pipeline/fundamentals_sync.py --force
+PYTHONPATH=. python3 scripts/pipeline/screening_recompute.py
+```
+
+Refresh **Nifty 500 industry → `stocks.sector`** for existing rows:
+
+```bash
+PYTHONPATH=. python3 scripts/pipeline/universe_sync.py
+```
+
+Optional: set `FUNDAMENTALS_YF_BS_SUPPLEMENT=0` to disable Yahoo balance-sheet gap-fill when NSE P&L JSON omits assets/debt (default is on).
+
 ### External scheduler (alternative)
 
 If you use an external scheduler, keep the same two-job order and times.

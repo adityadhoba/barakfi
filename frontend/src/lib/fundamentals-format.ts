@@ -4,9 +4,35 @@
  * - US / LSE: **Millions** in listing currency (USD or GBP)
  */
 
+/** 1 lakh crore = 1,00,000 crore (compact label used above ~₹1L Cr magnitude). */
+const INR_LAKH_CRORE = 100_000;
+
 export function formatInrCrores(value: number): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })} Cr`;
+}
+
+/**
+ * Shorter INR crores for dense UI (key metrics strip, long tables).
+ * Uses "L Cr" (lakhs of crores) when value ≥ 1,00,000 Cr to avoid overflow.
+ */
+export function formatInrCroresCompact(value: number): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  if (value >= INR_LAKH_CRORE) {
+    const l = value / INR_LAKH_CRORE;
+    return `₹${l.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })} L Cr`;
+  }
+  if (value >= 10_000) {
+    return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0, minimumFractionDigits: 0 })} Cr`;
+  }
+  return formatInrCrores(value);
+}
+
+/** Like formatFundamentalAmount but uses compact INR crores when currency is INR. */
+export function formatFundamentalAmountCompact(value: number, currency: string = "INR"): string {
+  const c = (currency || "INR").toUpperCase();
+  if (c === "INR") return formatInrCroresCompact(value);
+  return formatFundamentalAmount(value, currency);
 }
 
 export function formatUsdMillions(value: number): string {
@@ -108,7 +134,7 @@ export function isFundamentalsEmpty(stock: {
 export function fundamentalsUnitNote(currency: string = "INR"): string {
   const c = (currency || "INR").toUpperCase();
   if (c === "INR") {
-    return "Fundamentals are shown in ₹ Crores (1 Cr = ₹1,00,00,000), matching our database. Market cap and filing-based fields refresh on the fundamentals job schedule (timestamp above), not on every live price tick, so they can differ slightly from the NSE or Yahoo headline until the next sync.";
+    return "Fundamentals are shown in ₹ Crores (1 Cr = ₹1,00,00,000), matching our database. Large values may appear as lakhs of crores (L Cr). Interest income and some balance-sheet lines depend on filing detail; when NSE JSON omits them, ratios may show 0% or require review until the next sync or supplemental source. Market cap refreshes on the fundamentals job schedule, not every price tick.";
   }
   if (c === "USD") return "Fundamentals are in USD millions per our database. Refresh via your data pipeline for the latest filings.";
   if (c === "GBP") return "Fundamentals are in GBP millions per our database. Refresh via your data pipeline for the latest filings.";
