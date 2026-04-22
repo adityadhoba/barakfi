@@ -271,13 +271,16 @@ def run(dry_run: bool = False, force: bool = False) -> dict:
                     except IntegrityError:
                         db.rollback()
                 else:
-                    # Keep name/sector fresh if NSE master has better data
+                    # Keep name, ISIN, and sector fresh from Nifty 500 industry column
                     updated = False
                     if existing_stock.name != company_name and company_name:
                         existing_stock.name = company_name
                         updated = True
                     if existing_stock.isin != isin and isin:
                         existing_stock.isin = isin
+                        updated = True
+                    if industry and existing_stock.sector != industry:
+                        existing_stock.sector = industry
                         updated = True
                     if updated:
                         db.flush()

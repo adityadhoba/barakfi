@@ -63,6 +63,7 @@ import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
 import {
   capTierLabel,
   formatFundamentalAmount,
+  formatFundamentalAmountCompact,
   isFundamentalsEmpty,
   formatFundamentalsAsOfLine,
   formatFundamentalsLastUpdatedIst,
@@ -363,16 +364,16 @@ export default async function StockDetailPage({
         ? "Medium Risk"
         : "Higher Risk";
   const financials = [
-    { label: "Market Cap", value: formatFundamentalAmount(stock.market_cap, cur) },
-    { label: "36M Avg Market Cap", value: formatFundamentalAmount(stock.average_market_cap_36m, cur) },
-    { label: "Revenue", value: formatCurrency(stock.revenue, cur) },
-    { label: "Total Business Income", value: formatCurrency(stock.total_business_income, cur) },
-    { label: "Interest Income", value: formatCurrency(stock.interest_income, cur) },
-    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income, cur) },
-    { label: "Total Debt", value: formatCurrency(stock.debt, cur) },
-    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable, cur) },
-    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets, cur) },
-    { label: "Total Assets", value: formatCurrency(stock.total_assets, cur) },
+    { label: "Market Cap", value: formatFundamentalAmountCompact(stock.market_cap, cur) },
+    { label: "36M Avg Market Cap", value: formatFundamentalAmountCompact(stock.average_market_cap_36m, cur) },
+    { label: "Revenue", value: formatFundamentalAmountCompact(stock.revenue, cur) },
+    { label: "Total Business Income", value: formatFundamentalAmountCompact(stock.total_business_income, cur) },
+    { label: "Interest Income", value: formatFundamentalAmountCompact(stock.interest_income, cur) },
+    { label: "Non-permissible Income", value: formatFundamentalAmountCompact(stock.non_permissible_income, cur) },
+    { label: "Total Debt", value: formatFundamentalAmountCompact(stock.debt, cur) },
+    { label: "Accounts Receivable", value: formatFundamentalAmountCompact(stock.accounts_receivable, cur) },
+    { label: "Fixed Assets", value: formatFundamentalAmountCompact(stock.fixed_assets, cur) },
+    { label: "Total Assets", value: formatFundamentalAmountCompact(stock.total_assets, cur) },
   ];
 
   // Similar stocks from the same sector (excluding current)
@@ -1080,16 +1081,16 @@ export default async function StockDetailPage({
             <div className={styles.keyMetricsStrip}>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Market Cap</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.market_cap, cur)}</span>
                 <span className={styles.keyMetricSubvalue}>{marketCapTier}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Revenue</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.revenue, cur)}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Total Debt</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.debt, cur)}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Debt / Mcap</span>

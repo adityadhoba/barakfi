@@ -66,9 +66,15 @@ export function formatMoney(value: number, currency: "INR" | "USD" | "GBP"): str
  * - INR (NSE/BSE): **Crores** (not raw rupees)
  * - USD / GBP: **Millions** in listing currency
  */
+const INR_LAKH_CRORE = 100_000;
+
 export function formatMcapShort(value: number, currency: "INR" | "USD" | "GBP"): string {
   if (value == null || !Number.isFinite(value)) return "—";
   if (currency === "INR") {
+    if (value >= INR_LAKH_CRORE) {
+      const l = value / INR_LAKH_CRORE;
+      return `₹${l.toLocaleString("en-IN", { maximumFractionDigits: 2, minimumFractionDigits: 0 })} L Cr`;
+    }
     return `₹${value.toLocaleString("en-IN", { maximumFractionDigits: value >= 100 ? 0 : 2 })} Cr`;
   }
   const sym = currency === "GBP" ? "£" : "$";

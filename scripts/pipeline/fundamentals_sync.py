@@ -142,22 +142,22 @@ def _get_facts_for_issuer(
 
 
 def _compute_market_cap(
-    db: Any, issuer_id: int, shares_outstanding_cr: Optional[float]
+    db: Any,
+    issuer_id: int,
+    paid_up_capital_crores: Optional[float],
+    face_value_override: Optional[float] = None,
 ) -> tuple[Optional[float], Optional[float], Optional[float]]:
     """
     Compute current market cap and 36m average from MarketPriceDaily.
 
-    shares_outstanding_cr: shares outstanding in Crores (NSE unit for paid-up capital)
+    paid_up_capital_crores: paid-up equity capital in **INR Crores** (NSE `re_pdup` × lakhs→crores).
+    face_value_override: ₹ face value per share from NSE facts when available (else ListingV2.face_value).
     Returns: (market_cap, avg_24m, avg_36m) all in INR Crores or None.
     """
     from app.models_v2 import ListingV2, MarketPriceDaily
 
-    if not shares_outstanding_cr or shares_outstanding_cr <= 0:
+    if not paid_up_capital_crores or paid_up_capital_crores <= 0:
         return None, None, None
-
-    # Convert paid-up equity capital (Crores of face-value) to shares count
-    # NSE's SHARES_OUTSTANDING metric = paid-up equity capital ÷ face value
-    # We just use it as a proportional scale factor; absolute MCap from bhavcopy is more accurate.
 
     primary_listing = (
         db.query(ListingV2)
@@ -187,21 +187,14 @@ def _compute_market_cap(
     if not prices:
         return None, None, None
 
-    # NSE SHARES_OUTSTANDING metric = paid-up equity capital in Crores.
-    # Face value is typically ₹1–₹10. Approximate shares from paid-up capital:
-    #   shares = (paid_up_capital_crores × 1_crore) / face_value
-    # Since face_value is usually ₹1 or ₹2 or ₹10, and we store paid-up capital
-    # in crores (INR), we derive shares as paid_up_capital_crores * 1e7 / face_value.
-    # Use face_value from ListingV2 if available, else default to ₹10.
-    face_value = float(primary_listing.face_value) if primary_listing.face_value else 10.0
+    face_value = float(face_value_override) if face_value_override and face_value_override > 0 else (
+        float(primary_listing.face_value) if primary_listing.face_value else 10.0
+    )
     if face_value <= 0:
         face_value = 10.0
 
-    # shares_outstanding_cr is in Crores of paid-up equity capital (INR).
-    # paid_up_capital = shares * face_value => shares = paid_up_capital / face_value
-    # paid_up_capital in rupees = shares_outstanding_cr * 1e7 (since 1 Cr = 1e7 rupees for ₹10 fv)
-    # More precisely: shares = (shares_outstanding_cr * 1e7) / face_value
-    shares_count = (shares_outstanding_cr * 1_00_00_000) / face_value  # absolute share count
+    # paid_up_capital_crores: INR Crores of paid-up capital → rupees = × 1e7; shares = rupees / face_value
+    shares_count = (paid_up_capital_crores * 1_00_00_000) / face_value
 
     latest_close = float(prices[0].close_price)
     # Market cap in INR = shares × price; convert to Crores
@@ -375,6 +368,97 @@ def _write_back_to_stock(
 
 _INR_TO_CRORES = 1_00_00_000  # 1 Crore = 10 million rupees
 
+# When NSE results-comparision has P&L only, optionally pull balance-sheet lines from Yahoo once.
+_BS_GAP_ENV = os.getenv("FUNDAMENTALS_YF_BS_SUPPLEMENT", "1").lower() not in {"0", "false", "no"}
+
+
+def _listing_face_value_for_symbol(db: Any, symbol: str) -> float:
+    """NSE face value (₹ per share) from ListingV2 when available."""
+    from app.models import Stock
+    from app.models_v2 import Issuer, ListingV2
+
+    stock = db.query(Stock).filter(Stock.symbol == symbol, Stock.exchange == "NSE").one_or_none()
+    if not stock or not (stock.isin or "").strip():
+        return 10.0
+    isin = (stock.isin or "").strip()[:12]
+    listing = (
+        db.query(ListingV2)
+        .join(Issuer, ListingV2.issuer_id == Issuer.id)
+        .filter(
+            Issuer.canonical_isin == isin,
+            ListingV2.exchange_code == "NSE",
+            ListingV2.current_is_primary == True,  # noqa: E712
+        )
+        .first()
+    )
+    if listing and listing.face_value and float(listing.face_value) > 0:
+        return float(listing.face_value)
+    return 10.0
+
+
+def _supplement_balance_sheet_from_yfinance(
+    db: Any, symbol: str, facts: dict[str, float]
+) -> dict[str, float]:
+    """
+    NSE Reg 33 comparison JSON often omits balance-sheet totals. Merge missing BS metrics
+    from Yahoo (converted to INR Crores) without replacing NSE P&L fields.
+    """
+    if not _BS_GAP_ENV:
+        return facts
+
+    bs_keys = (
+        "TOTAL_DEBT",
+        "TOTAL_ASSETS",
+        "ACCOUNTS_RECEIVABLE",
+        "FIXED_ASSETS",
+        "CASH_AND_EQUIVALENTS",
+        "SHORT_TERM_INVESTMENTS",
+    )
+    if not any(k not in facts or facts.get(k) is None for k in bs_keys):
+        return facts
+
+    try:
+        import yfinance as yf
+    except ImportError:
+        return facts
+
+    try:
+        ticker = yf.Ticker(f"{symbol.upper()}.NS")
+        info = ticker.info or {}
+    except Exception as exc:
+        logger.debug("BS supplement: yfinance failed for %s: %s", symbol, exc)
+        return facts
+
+    if not info:
+        return facts
+
+    def _cr(val: Any) -> float | None:
+        if val is None:
+            return None
+        try:
+            f = float(val)
+            if f != f:
+                return None
+            return round(f / _INR_TO_CRORES, 4)
+        except (TypeError, ValueError):
+            return None
+
+    merged = {**facts}
+    mapping = {
+        "TOTAL_DEBT": _cr(info.get("totalDebt")),
+        "TOTAL_ASSETS": _cr(info.get("totalAssets")),
+        "ACCOUNTS_RECEIVABLE": _cr(info.get("accountsReceivable") or info.get("netReceivables")),
+        "FIXED_ASSETS": _cr(info.get("propertyPlantEquipmentNet") or info.get("netPPE")),
+        "CASH_AND_EQUIVALENTS": _cr(info.get("totalCash")),
+        "SHORT_TERM_INVESTMENTS": _cr(info.get("shortTermInvestments")),
+    }
+    for k, v in mapping.items():
+        if v is not None and (k not in merged or merged.get(k) is None):
+            merged[k] = v
+    if merged != facts:
+        logger.info("fundamentals_sync: balance-sheet gap-fill from yfinance for %s", symbol)
+    return merged
+
 
 def _fallback_yfinance(symbol: str, db: Any) -> dict[str, float]:
     """
@@ -474,8 +558,10 @@ def _fallback_yfinance(symbol: str, db: Any) -> dict[str, float]:
 
     shares = _raw(info.get("sharesOutstanding") or info.get("impliedSharesOutstanding"))
     if shares:
-        # Convert absolute share count to "Crores of shares" for consistency with NSE XBRL
-        facts["SHARES_OUTSTANDING"] = shares / _INR_TO_CRORES
+        fv = _listing_face_value_for_symbol(db, symbol)
+        # Same convention as NSE: SHARES_OUTSTANDING = paid-up capital in INR Crores
+        facts["SHARES_OUTSTANDING"] = round((shares * fv) / _INR_TO_CRORES, 4)
+        facts["FACE_VALUE_RUPEES"] = round(fv, 4)
 
     mcap_cr = _cr(info.get("marketCap"))
 
@@ -673,9 +759,15 @@ def run(
                     metrics["empty"] += 1
                     continue
 
+                if data_source == "nse_xbrl":
+                    facts = _supplement_balance_sheet_from_yfinance(db, symbol, facts)
+
                 # Step 4: Compute market cap from bhavcopy
-                shares_cr = facts.get("SHARES_OUTSTANDING")
-                market_cap, avg_24m, avg_36m = _compute_market_cap(db, issuer.id, shares_cr)
+                paid_up_cr = facts.get("SHARES_OUTSTANDING")
+                fv_fact = facts.get("FACE_VALUE_RUPEES")
+                market_cap, avg_24m, avg_36m = _compute_market_cap(
+                    db, issuer.id, paid_up_cr, face_value_override=fv_fact
+                )
 
                 if dry_run:
                     logger.info(
