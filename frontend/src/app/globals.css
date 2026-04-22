@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* ── Performance hints ── */
@@ -54,9 +53,9 @@
   --purple-bg: #f5f3ff;
   --purple-border: #c4b5fd;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* Product UI uses one typeface for clarity */
-  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Status colors: Halal = green, Doubtful = yellow/amber, Haram = red (accessible on card backgrounds) */
   --status-halal-fg: #047857;
