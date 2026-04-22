@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -15,11 +16,18 @@ import { NavProgress } from "@/components/nav-progress";
 import { MarketTicker } from "@/components/market-ticker";
 import { Logo } from "@/components/logo";
 import { SiteHeader } from "@/components/layout/site-header";
-import { TopbarAuth } from "@/components/topbar-auth";
+import { TopbarAuthDeferred } from "@/components/topbar-auth-deferred";
 import { ScreeningProvider } from "@/contexts/screening-context";
 import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
 import "./globals.css";
 import "./shell.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://barakfi.in"),
@@ -260,8 +268,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
+        <link rel="preconnect" href="https://img.logo.dev" crossOrigin="" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -294,7 +303,7 @@ export default function RootLayout({
 
               <MobileDrawer />
 
-              <TopbarAuth />
+              <TopbarAuthDeferred />
             </SiteHeader>
             <ToastProvider>
               <ScreeningProvider>

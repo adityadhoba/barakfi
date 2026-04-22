@@ -1,0 +1,5 @@
+# Modern targets to avoid shipping unnecessary legacy polyfills (Next/SWC).
+last 2 Chrome versions
+last 2 Safari versions
+last 2 Firefox versions
+iOS >= 15

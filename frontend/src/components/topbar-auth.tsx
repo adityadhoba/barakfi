@@ -2,40 +2,9 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { TopbarLink } from "@/components/topbar-link";
-import { TopbarDropdown } from "@/components/topbar-dropdown";
+import { TopbarPrimaryNav } from "@/components/topbar-primary-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AdminLink } from "@/components/admin-link";
-
-function PrimaryNav() {
-  return (
-    <nav className="topbarNav" aria-label="Primary navigation">
-      <TopbarLink href="/screener" label="Screener" />
-      <TopbarDropdown
-        label="Explore"
-        basePath="/collections"
-        items={[
-          { href: "/collections", label: "Collections" },
-          { href: "/halal-stocks", label: "Halal stocks" },
-          { href: "/learn", label: "Learn" },
-          { href: "/super-investors", label: "Super Investors" },
-          { href: "/academy", label: "Academy" },
-        ]}
-      />
-      <TopbarDropdown
-        label="Tools"
-        basePath="/tools"
-        items={[
-          { href: "/tools/purification", label: "Purification Calculator" },
-          { href: "/tools/zakat", label: "Zakat Calculator" },
-          { href: "/compare", label: "Compare Stocks" },
-          { href: "/request-coverage", label: "Request Coverage" },
-        ]}
-      />
-      <TopbarLink href="/watchlist" label="Watchlist" className="ghostLink topbarWatchlistLink" />
-    </nav>
-  );
-}
 
 /**
  * Client-only top bar auth so the root layout does not call auth() on the server.
@@ -48,12 +17,12 @@ export function TopbarAuth() {
     <div className="topbarActions">
       {!isLoaded ? (
         <>
-          <PrimaryNav />
+          <TopbarPrimaryNav />
           <ThemeToggle />
         </>
       ) : !userId ? (
         <>
-          <PrimaryNav />
+          <TopbarPrimaryNav />
           <Link className="ghostButtonLink" href="/sign-in">
             Log in
           </Link>
@@ -64,7 +33,7 @@ export function TopbarAuth() {
         </>
       ) : (
         <>
-          <PrimaryNav />
+          <TopbarPrimaryNav />
           <AdminLink />
           <UserButton
             appearance={{

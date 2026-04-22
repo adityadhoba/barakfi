@@ -156,22 +156,29 @@ function googleS2FaviconFromDomain(domain: string): string {
   return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
 }
 
-function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
+/** logo.dev `size` param: retina-friendly without always fetching 256px for small avatars */
+function logoDevPixelSize(displaySize: number): number {
+  return Math.min(128, Math.max(48, Math.round(displaySize * 2)));
+}
+
+function getTickerLogoUrl(symbol: string, displaySize: number, exchange?: string): string | null {
   if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
   const rawForYahoo = symbol.replace(/\.(NS|BO|L|IN)$/i, "").trim().toUpperCase();
   const yahooBase = yahooFinanceBaseCandidates(rawForYahoo)[0] ?? clean;
   const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
   const ticker = `${yahooBase}${suffix}`;
-  return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
+  const px = logoDevPixelSize(displaySize);
+  return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=${px}&format=webp&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
-function getDomainLogoUrl(symbol: string): string | null {
+function getDomainLogoUrl(symbol: string, displaySize: number): string | null {
   if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
   const domain = SYMBOL_TO_DOMAIN[clean];
   if (!domain) return null;
-  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
+  const px = logoDevPixelSize(displaySize);
+  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=${px}&format=webp&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
 function getFaviconUrl(symbol: string): string | null {
@@ -203,8 +210,8 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   const hasCuratedDomain = Boolean(SYMBOL_TO_DOMAIN[cleanSym]);
   const domainForFallback = SYMBOL_TO_DOMAIN[cleanSym];
 
-  const tickerUrl = getTickerLogoUrl(symbol, exchange);
-  const domainLogoUrl = getDomainLogoUrl(symbol);
+  const tickerUrl = getTickerLogoUrl(symbol, size, exchange);
+  const domainLogoUrl = getDomainLogoUrl(symbol, size);
   const faviconUrl = getFaviconUrl(symbol);
   const googleS2Url = domainForFallback ? googleS2FaviconFromDomain(domainForFallback) : null;
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
