@@ -5,7 +5,10 @@ import { yahooFinanceBaseCandidates } from "@/lib/yahoo-symbol-aliases";
 
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
-/** Bump when forcing clients to bypass stale/wrong img.logo.dev CDN responses (e.g. bad ticker→brand match). */
+/**
+ * Bump `NEXT_PUBLIC_LOGO_DEV_CACHE_BUST` when bypassing stale img.logo.dev CDN responses.
+ * Stock logos use **only** `https://img.logo.dev/*` (domain + ticker); no favicon CDNs.
+ */
 const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-23";
 
 const EXCHANGE_SUFFIX: Record<string, string> = {
@@ -168,11 +171,6 @@ function normalizeSymbol(symbol: string): string {
     .toUpperCase();
 }
 
-/** Works without logo.dev; used when CDN returns 403/empty. */
-function googleS2FaviconFromDomain(domain: string): string {
-  return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`;
-}
-
 function uniqueUrls(urls: Array<string | null | undefined>): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
@@ -209,13 +207,6 @@ function getDomainLogoUrl(symbol: string, displaySize: number): string | null {
   return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=${px}&format=webp&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
-function getFaviconUrl(symbol: string): string | null {
-  const clean = normalizeSymbol(symbol);
-  const domain = SYMBOL_TO_DOMAIN[clean];
-  if (!domain) return null;
-  return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
-}
-
 function getAvatarColor(status?: string): string {
   if (status === "HALAL" || status === "COMPLIANT") return "var(--emerald)";
   if (status === "CAUTIOUS") return "var(--gold)";
@@ -236,21 +227,17 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
 
   const cleanSym = normalizeSymbol(symbol);
   const hasCuratedDomain = Boolean(SYMBOL_TO_DOMAIN[cleanSym]);
-  const domainForFallback = SYMBOL_TO_DOMAIN[cleanSym];
 
   const tickerUrl = getTickerLogoUrl(symbol, size, exchange);
   const domainLogoUrl = getDomainLogoUrl(symbol, size);
-  const faviconUrl = getFaviconUrl(symbol);
-  const googleS2Url = domainForFallback ? googleS2FaviconFromDomain(domainForFallback) : null;
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  // Curated symbols: Google s2 + gstatic favicons resolve the *real* site icon first.
-  // logo.dev ticker/domain lookups often mis-associate Indian bank tickers (e.g. wrong institute logos).
+  // logo.dev only: domain endpoint first when curated (better brand match), then ticker.
   const sources = LOGO_DEV_TOKEN
     ? hasCuratedDomain && domainLogoUrl && tickerUrl
-      ? uniqueUrls([googleS2Url, domainLogoUrl, tickerUrl, faviconUrl])
-      : uniqueUrls([tickerUrl, domainLogoUrl, googleS2Url, faviconUrl])
-    : uniqueUrls([googleS2Url, faviconUrl]);
+      ? uniqueUrls([domainLogoUrl, tickerUrl])
+      : uniqueUrls([tickerUrl, domainLogoUrl])
+    : [];
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
