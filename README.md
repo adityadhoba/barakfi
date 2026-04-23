@@ -127,6 +127,8 @@ PYTHONPATH=. python3 scripts/pipeline/fundamentals_sync.py --force
 PYTHONPATH=. python3 scripts/pipeline/screening_recompute.py
 ```
 
+`fundamentals_sync` clears per-symbol **screening HTTP cache** keys when `REDIS_URL` is set (shared `screening_cache`). Without Redis, each API worker keeps its own in-memory cache for up to an hour after a run; either set `REDIS_URL` or trigger a fresh `/screen/{symbol}` after TTL, or restart workers after large backfills.
+
 Refresh **Nifty 500 industry → `stocks.sector`** for existing rows:
 
 ```bash

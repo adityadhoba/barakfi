@@ -152,3 +152,25 @@ SCREENING_CACHE_TTL_SECONDS = 3600.0  # 1 hour — screening data changes rarely
 def screening_cache_key(symbol: str, exchange: str | None) -> str:
     ex = (exchange or "").strip().upper() or "_"
     return f"screen:{symbol.strip().upper()}:{ex}"
+
+
+def screening_cache_keys_for_symbol(symbol: str, exchange: str | None = None) -> list[str]:
+    """
+    All screening-related cache keys for a listing (must match routes.py patterns).
+
+    Call invalidate_screening_for_stock after Stock fundamentals change so public
+    GET /screen/{symbol} and /screen/{symbol}/multi recompute from the DB row.
+    """
+    sym = symbol.strip().upper()
+    ex = (exchange or "NSE").strip().upper() or "_"
+    return [
+        screening_cache_key(sym, ex),
+        f"multi:{sym}:{ex}",
+        f"check:{sym}:{ex}",
+    ]
+
+
+def invalidate_screening_for_stock(symbol: str, exchange: str | None = None) -> None:
+    """Drop cached screening payloads for this symbol so the next request recomputes."""
+    for key in screening_cache_keys_for_symbol(symbol, exchange):
+        screening_cache.delete(key)
