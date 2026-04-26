@@ -276,6 +276,11 @@ export type ScreeningResult = {
   confidence_bullets?: ConfidenceBullet[];
 };
 
+export type ScreenerSnapshotEntry = {
+  stock: Stock;
+  screening: ScreeningResult;
+};
+
 /** GET /api/check-stock — product-level halal check */
 export type CheckStockResponse = {
   name: string;
@@ -828,6 +833,17 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
   } catch {
     return [];
   }
+}
+
+/**
+ * Fast screener snapshot endpoint.
+ * Returns [] when the backend snapshot route is unavailable, so callers can
+ * transparently fall back to legacy /stocks + /screen/bulk flow.
+ */
+export function getScreenerSnapshot() {
+  return apiFetch<ScreenerSnapshotEntry[]>("/screener/snapshot", [], {
+    revalidateSeconds: 600,
+  });
 }
 
 /**
