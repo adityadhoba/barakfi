@@ -76,6 +76,11 @@ class Stock(Base):
     canonical_symbol = Column(String, nullable=True, index=True)
     successor_symbol = Column(String, nullable=True, index=True)
     screening_blocked_reason = Column(Text, nullable=True)
+    confidence_score = Column(Float, nullable=True)
+    confidence_tier = Column(String, nullable=True)
+    source_date = Column(DateTime(timezone=True), nullable=True)
+    source_exchange = Column(String, nullable=True)
+    metric_availability = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     fundamentals_updated_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -194,6 +199,110 @@ class SymbolResolutionIssue(Base):
     resolution_note = Column(Text, nullable=False, default="")
     detected_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class RawFiling(Base):
+    """Raw filing catalog row from NSE/BSE sources with parsed payload metadata."""
+
+    __tablename__ = "raw_filings"
+    __table_args__ = (
+        Index("ix_raw_filings_company_period", "company_id", "period", "filing_date"),
+        Index("ix_raw_filings_source_type", "source", "filing_type"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    source = Column(String, nullable=False, default="NSE")
+    filing_type = Column(String, nullable=False, default="financial_results")
+    period = Column(String, nullable=False, default="")
+    filing_date = Column(DateTime(timezone=True), nullable=True)
+    url = Column(Text, nullable=False, default="")
+    file_path = Column(Text, nullable=False, default="")
+    raw_json = Column(Text, nullable=True)
+    checksum = Column(String, nullable=True, index=True)
+    extraction_method = Column(String, nullable=False, default="api_json")
+    confidence_score = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    company = relationship("Stock")
+
+
+class FinancialStatement(Base):
+    """Normalized statement header derived from raw filings."""
+
+    __tablename__ = "financial_statements"
+    __table_args__ = (
+        Index("ix_financial_statements_company_latest", "company_id", "is_latest"),
+        Index("ix_financial_statements_period", "fiscal_year", "quarter", "period_end_date"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    period_type = Column(String, nullable=False, default="annual")
+    fiscal_year = Column(Integer, nullable=True)
+    quarter = Column(String, nullable=True)
+    period_end_date = Column(DateTime(timezone=True), nullable=True)
+    standalone_or_consolidated = Column(String, nullable=False, default="standalone")
+    source_filing_id = Column(Integer, ForeignKey("raw_filings.id"), nullable=True, index=True)
+    is_latest = Column(Boolean, nullable=False, default=False)
+    source_exchange = Column(String, nullable=False, default="NSE")
+    confidence_score = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    company = relationship("Stock")
+    source_filing = relationship("RawFiling")
+
+
+class FinancialLineItem(Base):
+    """Normalized line-item values mapped from statements."""
+
+    __tablename__ = "financial_line_items"
+    __table_args__ = (
+        Index("ix_financial_line_items_statement_metric", "statement_id", "normalized_metric"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    statement_id = Column(Integer, ForeignKey("financial_statements.id"), nullable=False, index=True)
+    original_label = Column(String, nullable=False, default="")
+    normalized_metric = Column(String, nullable=False, index=True)
+    value = Column(Float, nullable=True)
+    currency = Column(String, nullable=False, default="INR")
+    unit = Column(String, nullable=False, default="crore")
+    confidence_score = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    statement = relationship("FinancialStatement")
+
+
+class ScreeningMetrics(Base):
+    """Computed screening metrics snapshot tied to a normalized statement."""
+
+    __tablename__ = "screening_metrics"
+    __table_args__ = (
+        Index("ix_screening_metrics_company_created", "company_id", "created_at"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    statement_id = Column(Integer, ForeignKey("financial_statements.id"), nullable=True, index=True)
+    total_debt = Column(Float, nullable=True)
+    total_assets = Column(Float, nullable=True)
+    cash = Column(Float, nullable=True)
+    interest_income = Column(Float, nullable=True)
+    revenue = Column(Float, nullable=True)
+    market_cap = Column(Float, nullable=True)
+    debt_to_assets = Column(Float, nullable=True)
+    debt_to_market_cap = Column(Float, nullable=True)
+    cash_to_market_cap = Column(Float, nullable=True)
+    interest_income_to_revenue = Column(Float, nullable=True)
+    status = Column(String, nullable=False, default="REQUIRES_REVIEW")
+    confidence_score = Column(Float, nullable=True)
+    source_exchange = Column(String, nullable=False, default="NSE")
+    source_date = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    company = relationship("Stock")
+    statement = relationship("FinancialStatement")
 
 
 class ComplianceRuleVersion(Base):

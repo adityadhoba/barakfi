@@ -77,6 +77,14 @@ class StockRead(StockBase):
     is_etf: bool = False
     latest_corporate_event: StockCorporateEventSummaryRead | None = None
     index_memberships: list[str] = Field(default_factory=list)
+    confidence_score: float | None = None
+    confidence_tier: Literal["95", "80", "60", "40"] | None = None
+    source_date: datetime | None = None
+    source_exchange: str | None = None
+    metric_availability: dict[str, str] | None = Field(
+        default=None,
+        description="Per-metric availability status: available | reported_zero | unavailable.",
+    )
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -272,6 +280,41 @@ class DataStackStatusResponse(BaseModel):
     fundamentals_freshness: FundamentalsFreshnessSummaryResponse
     ready_for_scaled_screening: bool
     readiness_gaps: list[str]
+
+
+class FilingIngestionStatusResponse(BaseModel):
+    total_filings: int = 0
+    nse_filings: int = 0
+    bse_filings: int = 0
+    latest_filing_at: datetime | None = None
+    extraction_methods: dict[str, int] = Field(default_factory=dict)
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
+
+
+class MetricQualitySummaryResponse(BaseModel):
+    companies_total: int = 0
+    companies_with_metrics: int = 0
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
+    missing_metric_counts: dict[str, int] = Field(default_factory=dict)
+    low_confidence_symbols_preview: list[str] = Field(default_factory=list)
+
+
+class SymbolEvidenceTraceResponse(BaseModel):
+    symbol: str
+    source_exchange: str | None = None
+    source_date: datetime | None = None
+    confidence_score: float | None = None
+    confidence_tier: Literal["95", "80", "60", "40"] | None = None
+    metric_availability: dict[str, str] = Field(default_factory=dict)
+    filing_refs: list[dict[str, str | None]] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class DataQualityDashboardResponse(BaseModel):
+    filings: FilingIngestionStatusResponse
+    metric_quality: MetricQualitySummaryResponse
+    unresolved_symbol_issues: int = 0
+    blocked_symbols: int = 0
 
 
 class SymbolResolutionIssueRead(BaseModel):

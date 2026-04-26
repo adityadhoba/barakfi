@@ -32,6 +32,7 @@ import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { StockLogo } from "@/components/stock-logo";
 import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
+import { ScreeningExplainerCards } from "@/components/screening-explainer-cards";
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
@@ -1063,6 +1064,17 @@ export default async function StockDetailPage({
               </div>
             </div>
 
+            <ScreeningExplainerCards
+              breakdown={b}
+              debtValue={stock.debt}
+              debtDenominator={stock.average_market_cap_36m}
+              cashIbValue={stock.cash_and_equivalents + stock.short_term_investments}
+              cashIbDenominator={stock.total_assets}
+              nonPermValue={stock.non_permissible_income}
+              nonPermDenominator={stock.total_business_income || stock.revenue}
+              methodologyRows={methodologyRowsForCollapsible}
+            />
+
             <StockDetailTablesCollapsible
               ratioRows={ratioRowsForCollapsible}
               methodologyCaption={methodologyCaptionForCollapsible}
@@ -1175,6 +1187,16 @@ export default async function StockDetailPage({
                   <tr>
                     <td>Data source</td>
                     <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
+                  </tr>
+                  <tr>
+                    <td>Source exchange</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.source_exchange ?? stock.exchange}</td>
+                  </tr>
+                  <tr>
+                    <td>Confidence tier</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>
+                      {stock.confidence_tier ? `${stock.confidence_tier}%` : "—"}
+                    </td>
                   </tr>
                   <tr>
                     <td>Fundamentals last updated</td>

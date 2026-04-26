@@ -86,6 +86,8 @@ from app.schemas import (
     ComplianceRuleVersionRead,
     GovernanceOverviewResponse,
     DataStackStatusResponse,
+    DataQualityDashboardResponse,
+    FilingIngestionStatusResponse,
     FundamentalsStatusResponse,
     StockCorporateEventCreate,
     StockCorporateEventRead,
@@ -99,6 +101,7 @@ from app.schemas import (
     EquityQuoteResponse,
     MarketDataStatusResponse,
     MarketPricesSyncResponse,
+    MetricQualitySummaryResponse,
     PortfolioRead,
     PublicReviewCaseRead,
     RulebookResponse,
@@ -107,6 +110,7 @@ from app.schemas import (
     ScreeningLogRead,
     ScreeningResult,
     CheckStockResponse,
+    SymbolEvidenceTraceResponse,
     StockRead,
     TrackSymbolRequest,
     UserSettingsRead,
@@ -145,6 +149,13 @@ from app.services.quote_sync_service import PUBLIC_MARKET_PROVIDERS, sync_all_st
 from app.services.provider_sync_service import preview_market_universe
 from app.services.auth_service import get_current_auth_claims, get_current_auth_claims_or_internal, require_auth
 from app.services.stock_data_quality import fundamentals_completeness_payload
+from app.services.filings_service import (
+    compute_metric_availability,
+    estimate_confidence,
+    filing_ingestion_status,
+    metrics_quality_summary,
+    symbol_evidence_trace,
+)
 from app.services.corporate_action_service import (
     apply_corporate_action_events,
     summarize_latest_events_by_symbols,
@@ -210,6 +221,7 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     dq, missing = fundamentals_completeness_payload(stock)
     latest_event = summarize_latest_events_by_symbols(db, [stock.symbol]).get(stock.symbol.upper())
     alias_map = _search_aliases_by_symbol(db, [stock.symbol])
+    confidence_score, confidence_tier = estimate_confidence(stock, db)
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
@@ -217,6 +229,11 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
             "fundamentals_fields_missing": missing,
             "latest_corporate_event": latest_event,
             "search_aliases": alias_map.get(stock.symbol.upper(), []),
+            "confidence_score": confidence_score,
+            "confidence_tier": confidence_tier,
+            "source_date": stock.source_date or stock.fundamentals_updated_at,
+            "source_exchange": stock.source_exchange or stock.exchange,
+            "metric_availability": compute_metric_availability(stock),
         }
     )
 
@@ -229,6 +246,7 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     out: list[StockRead] = []
     for s in stocks:
         dq, missing = fundamentals_completeness_payload(s)
+        confidence_score, confidence_tier = estimate_confidence(s, None)
         out.append(
             StockRead.model_validate(s).model_copy(
                 update={
@@ -237,6 +255,11 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
                     "fundamentals_fields_missing": missing,
                     "latest_corporate_event": event_map.get(s.symbol.upper()),
                     "search_aliases": alias_map.get(s.symbol.upper(), []),
+                    "confidence_score": confidence_score,
+                    "confidence_tier": confidence_tier,
+                    "source_date": s.source_date or s.fundamentals_updated_at,
+                    "source_exchange": s.source_exchange or s.exchange,
+                    "metric_availability": compute_metric_availability(s),
                 }
             )
         )
@@ -524,6 +547,35 @@ def data_stack_status(db: Session = Depends(get_db)):
     return get_data_stack_status(stock_count, db=db)
 
 
+@router.get("/filings/status", response_model=FilingIngestionStatusResponse)
+def filings_status(db: Session = Depends(get_db)):
+    """Normalized filing-ingestion status (NSE primary, BSE fallback)."""
+    return filing_ingestion_status(db)
+
+
+@router.get("/metrics/quality-summary", response_model=MetricQualitySummaryResponse)
+def metrics_quality(db: Session = Depends(get_db)):
+    """Aggregate metric completeness + confidence distribution."""
+    return metrics_quality_summary(db)
+
+
+@router.get("/admin/data-quality/summary", response_model=DataQualityDashboardResponse)
+def admin_data_quality_summary(
+    claims: dict = Depends(get_current_auth_claims_or_internal),
+    db: Session = Depends(get_db),
+):
+    helpers.require_admin(db, claims)
+    health = symbol_health_summary(db)
+    return {
+        "filings": filing_ingestion_status(db),
+        "metric_quality": metrics_quality_summary(db),
+        "unresolved_symbol_issues": int(health.get("symbol_isin_conflicts", 0))
+        + int(health.get("isin_multi_symbol_conflicts", 0))
+        + int(health.get("missing_isin_overdue", 0)),
+        "blocked_symbols": int(health.get("blocked_from_screening_count", 0)),
+    }
+
+
 @router.get("/stocks", response_model=list[StockRead])
 def list_stocks(
     halal_only: bool = Query(default=False),
@@ -600,6 +652,19 @@ def get_stock(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return _stock_read_enriched(db, stock)
+
+
+@router.get("/stocks/{symbol}/evidence-trace", response_model=SymbolEvidenceTraceResponse)
+def get_stock_evidence_trace(
+    symbol: str,
+    exchange: str | None = Query(default=None, description="Disambiguate when the same ticker exists on multiple venues"),
+    db: Session = Depends(get_db),
+):
+    """Per-symbol provenance and confidence trace for explainability."""
+    stock = resolve_stock(db, symbol, exchange, active_only=True, require_indian_listing=True)
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return symbol_evidence_trace(db, stock)
 
 
 @router.get("/check-stock")
@@ -3105,6 +3170,9 @@ def daily_refresh(
         db.rollback()
         logger.exception("[daily-refresh] symbol integrity checks failed: %s", exc)
 
+    filing_status = filing_ingestion_status(db)
+    metric_quality = metrics_quality_summary(db)
+
     symbols = _active_screenable_symbols(db)
     expected = len(symbols)
     screen_chunks = 0
@@ -3286,6 +3354,13 @@ def daily_refresh(
         )
         | {
             "failed_symbols_preview": ", ".join((price_result.get("failed_symbols") or [])[:10]) or "none",
+            "filings_total": filing_status.get("total_filings", 0),
+            "filings_nse": filing_status.get("nse_filings", 0),
+            "filings_bse": filing_status.get("bse_filings", 0),
+            "metric_confidence_95": (metric_quality.get("confidence_distribution") or {}).get("95", 0),
+            "metric_confidence_80": (metric_quality.get("confidence_distribution") or {}).get("80", 0),
+            "metric_confidence_60": (metric_quality.get("confidence_distribution") or {}).get("60", 0),
+            "metric_confidence_40": (metric_quality.get("confidence_distribution") or {}).get("40", 0),
         },
     )
 
@@ -3327,6 +3402,8 @@ def daily_refresh(
             "unresolved_actions": symbol_master.get("unresolved_actions", 0),
             "run_at": symbol_master.get("run_at").isoformat() if symbol_master.get("run_at") else None,
         },
+        "filings": filing_status,
+        "metric_quality": metric_quality,
         "fundamentals": {
             "latest_fundamentals_updated_at": fundamentals_latest.isoformat() if fundamentals_latest else None,
             "stale": stale,

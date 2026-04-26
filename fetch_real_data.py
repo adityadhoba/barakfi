@@ -54,8 +54,7 @@ import requests
 try:
     import yfinance as yf
 except ImportError:
-    print("ERROR: yfinance is required. Install it with: pip install yfinance")
-    sys.exit(1)
+    yf = None
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -815,6 +814,10 @@ def fetch_stock_data(symbol, exchange="NSE"):
 
     Returns a dict matching the Stock model fields, or None on failure.
     """
+    if yf is None:
+        log.error("FAILED: %s - yfinance is not installed. Install with: pip install yfinance", symbol)
+        return None
+
     ticker_str = _build_ticker_str(symbol, exchange)
     canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
     resolved_symbol = symbol
@@ -1168,7 +1171,12 @@ def write_to_database(stocks):
         now = datetime.now(timezone.utc)
         db_columns = {column.name for column in Stock.__table__.columns}
         for raw in stocks:
-            payload = {**raw, "fundamentals_updated_at": now}
+            payload = {
+                **raw,
+                "fundamentals_updated_at": now,
+                "source_date": now,
+                "source_exchange": (raw.get("exchange") or "NSE"),
+            }
             filtered_payload = _filter_stock_payload_for_model(payload, db_columns)
             existing = (
                 db.query(Stock)

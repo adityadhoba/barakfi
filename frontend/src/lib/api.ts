@@ -139,6 +139,11 @@ export type Stock = {
   data_quality?: "high" | "medium" | "low" | null;
   /** Field keys that were zero or missing when computing screening ratios */
   fundamentals_fields_missing?: string[];
+  confidence_score?: number | null;
+  confidence_tier?: "95" | "80" | "60" | "40" | null;
+  source_date?: string | null;
+  source_exchange?: string | null;
+  metric_availability?: Record<string, "available" | "reported_zero" | "unavailable">;
 };
 
 export type Holding = {
