@@ -9,6 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_AUTH_SUBJECTS, ADMIN_EMAILS, INTERNAL_SERVICE_TOKEN, OWNER_AUTH_SUBJECTS, OWNER_EMAILS
+from app.services.rbac import normalize_user_role
 from app.services.auth_service import get_current_auth_claims as verify_clerk_token  # noqa: F401
 from app.models import (
     ComplianceOverride,
@@ -75,7 +76,7 @@ def require_admin(db: Session, claims: dict) -> str:
     current_user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
 
     if current_user:
-        if current_user.role in {"owner", "admin"}:
+        if normalize_user_role(current_user.role) in {"owner", "admin"}:
             return auth_subject
         if current_user.email.lower() in OWNER_EMAILS:
             return auth_subject

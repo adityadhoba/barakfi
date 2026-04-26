@@ -28,7 +28,10 @@ export function AdminLink() {
         }
 
         const user = await response.json();
-        setCanViewAdmin(user.role === "admin" || user.role === "owner");
+        const r = String(user.role ?? "")
+          .trim()
+          .toLowerCase();
+        setCanViewAdmin(r === "admin" || r === "owner");
       } catch (error) {
         console.error("Failed to check admin status:", error);
         setCanViewAdmin(false);

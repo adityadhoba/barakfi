@@ -794,6 +794,21 @@ def run(
                     metrics["stock_written"] += 1
                 db.commit()
 
+                # Drop API screening cache for this symbol so GET /screen/* recomputes from
+                # the updated Stock row (otherwise TTL=1h stale zeros vs fresh /stocks/*).
+                # Effective when REDIS_URL backs screening_cache; in-memory cron is a no-op for web.
+                if not dry_run:
+                    try:
+                        from app.services.cache_service import invalidate_screening_for_stock
+
+                        invalidate_screening_for_stock(
+                            symbol, getattr(listing, "exchange_code", None) or "NSE"
+                        )
+                    except Exception as exc:
+                        logger.debug(
+                            "fundamentals_sync: screening cache invalidate %s: %s", symbol, exc
+                        )
+
             except Exception as exc:
                 logger.exception("fundamentals_sync: error for %s: %s", symbol, exc)
                 db.rollback()

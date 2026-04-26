@@ -94,7 +94,8 @@ export function MobileDrawerBody({ pathname, onNavigate }: Props) {
         {DRAWER_LINKS.map((link) => {
           if (link.auth && !userId) return null;
 
-          if (link.adminOnly && (loadingRole || (userRole !== "admin" && userRole !== "owner"))) {
+          const r = (userRole ?? "").trim().toLowerCase();
+          if (link.adminOnly && (loadingRole || (r !== "admin" && r !== "owner"))) {
             return null;
           }
 

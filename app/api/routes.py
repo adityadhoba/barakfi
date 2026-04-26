@@ -36,6 +36,7 @@ from app.services.rbac import (
     ROLE_DESCRIPTIONS,
     ROLE_HIERARCHY,
     VALID_ROLES,
+    normalize_user_role,
 )
 from app.database import get_db
 from app.api import helpers
@@ -1921,8 +1922,19 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         except Exception:
             db.rollback()
 
+    # Canonical DB role (e.g. "Admin" -> "admin") so /me and Admin nav match RBAC.
+    effective_role = normalize_user_role(user.role)
+    raw_sl = str(getattr(user, "role", "") or "").strip().lower()
+    if raw_sl in VALID_ROLES and (user.role or "") != raw_sl:
+        user.role = raw_sl
+        effective_role = raw_sl
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+
     # Auto-promote to owner/admin based on configured identities.
-    effective_role = getattr(user, "role", "user") or "user"
     db_email = (user.email or "").strip().lower()
     owner_match = (
         (db_email and db_email in OWNER_EMAILS)
