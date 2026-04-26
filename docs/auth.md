@@ -60,3 +60,14 @@ This avoids guessing the Clerk frontend URL format in code.
 - auth must remain separate from compliance decisions
 - only minimum scopes should be requested
 - do not request extra Google data unless a product feature truly needs it
+
+## Admin link / RBAC troubleshooting
+
+The **Admin** top-bar link appears only when `GET /api/me` returns `role` **`admin`** or **`owner`**. The API also grants admin API access when `ADMIN_EMAILS` / `ADMIN_AUTH_SUBJECTS` (or owner lists) match.
+
+If you promoted a user in Postgres but still see no Admin link:
+
+1. **Use the row for the signed-in Clerk user** — update `users.auth_subject` to the current JWT `sub` (Clerk user id). A new Google account or duplicate user row often leaves `role=admin` on an old `auth_subject` while the session uses a different id.
+2. **Use exact role values** — `reviewer` and `developer` do **not** show the Admin nav (they can still access role-gated APIs where allowed).
+3. **Same database as production API** — local DB edits do not affect `https://api.barakfi.in` until deployed or migrated.
+4. **Env-based bootstrap** — set `ADMIN_EMAILS` (comma-separated, lowercased emails) on the API host; the next `GET /me` auto-promotes matching users to `admin` in the DB.

@@ -18,6 +18,25 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
+          // Public JSON/API — keep out of the index; crawlers should not burn budget here.
+          "/api/",
+          "/workspace",
+          "/account",
+          "/governance",
+          "/admin",
+          "/onboarding",
+          "/sign-in",
+          "/sign-up",
+          "/notifications",
+          "/watchlist",
+        ],
+      },
+      // Google may execute fetches for the home ticker ribbon; allow this read-only route only.
+      // /api/quota stays disallowed (session/anon limits — "blocked" in GSC for that URL is expected).
+      {
+        userAgent: "Googlebot",
+        allow: ["/api/quotes"],
+        disallow: [
           "/api/",
           "/workspace",
           "/account",

@@ -110,9 +110,6 @@ export default function SignInPage() {
               footer: {
                 "& > *:last-child": { display: "none" },
               },
-              internal: {
-                display: "none",
-              },
               badge: {
                 display: "none",
               },
