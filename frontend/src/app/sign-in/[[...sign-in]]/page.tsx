@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default function SignInPage() {
+  const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
   return (
     <div className="authPage">
       <div className="authSidebar authSidebarGradient">
@@ -62,69 +64,20 @@ export default function SignInPage() {
             Secure sign-in to continue your screening workflow and synced watchlist.
           </p>
         </div>
-        <SignIn
-          appearance={{
-            layout: {
-              logoImageUrl: "/brand/barakfi-logo-mark.svg",
-              logoPlacement: "inside",
-            },
-            elements: {
-              rootBox: { width: "100%", maxWidth: "440px" },
-              card: {
-                borderRadius: "20px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
-              },
-              headerTitle: {
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-              },
-              headerSubtitle: {
-                color: "var(--text-secondary)",
-              },
-              logoImage: {
-                width: "52px",
-                height: "52px",
-              },
-              formFieldInput: {
-                borderRadius: "10px",
-                background: "var(--bg-soft)",
-                fontSize: "0.9rem",
-              },
-              formButtonPrimary: {
-                background: "var(--emerald)",
-                borderRadius: "10px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "12px 0",
-                transition: "all 150ms ease",
-              },
-              footerActionLink: {
-                color: "var(--emerald)",
-              },
-              footerActionText: {
-                color: "var(--text-tertiary)",
-              },
-              footer: {
-                "& > *:last-child": { display: "none" },
-              },
-              badge: {
-                display: "none",
-              },
-              dividerLine: {
-                background: "var(--line)",
-              },
-              socialButtonsBlockButton: {
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-                background: "var(--bg-soft)",
-                transition: "all 150ms ease",
-              },
-            },
-          }}
-        />
+        {clerkEnabled ? (
+          <div className="authClerkMount">
+            <SignIn
+              path="/sign-in"
+              routing="path"
+              signUpUrl="/sign-up"
+            />
+          </div>
+        ) : (
+          <div className="authUnavailableCard">
+            <h3>Sign-in is temporarily unavailable</h3>
+            <p>Authentication config is missing in this environment. Please add Clerk publishable key and retry.</p>
+          </div>
+        )}
       </div>
     </div>
   );

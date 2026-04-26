@@ -1325,6 +1325,38 @@ textarea:focus::placeholder {
   padding: 24px;
 }
 
+.authClerkMount {
+  width: 100%;
+  max-width: 460px;
+  min-height: 560px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authUnavailableCard {
+  width: 100%;
+  max-width: 460px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  padding: 18px;
+  color: var(--text);
+}
+
+.authUnavailableCard h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.authUnavailableCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
 .authMobileIntro {
   display: none;
 }
