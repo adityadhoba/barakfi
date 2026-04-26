@@ -308,6 +308,9 @@ export type AuthStrategy = {
   backend_ready: boolean;
   frontend_ready: boolean;
   clerk_js_ready: boolean;
+  clerk_js_url?: string | null;
+  clerk_js_version?: string | null;
+  role_resolution_mode?: string | null;
   notes: string[];
 };
 

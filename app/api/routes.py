@@ -20,6 +20,7 @@ from app.config import (
     AUTH_GOOGLE_ENABLED,
     AUTH_PROVIDER,
     CLERK_JS_URL,
+    CLERK_JS_VERSION,
     CLERK_JWKS_URL,
     CLERK_PUBLISHABLE_KEY,
     CLERK_SECRET_KEY,
@@ -167,8 +168,7 @@ logger = logging.getLogger("barakfi")
 
 
 def _is_owner_user(user: User) -> bool:
-    email = (user.email or "").strip().lower()
-    return user.role == "owner" or email in OWNER_EMAILS or user.auth_subject in OWNER_AUTH_SUBJECTS
+    return user.role == "owner" or user.auth_subject in OWNER_AUTH_SUBJECTS
 
 
 def _index_codes_by_stock_id(db: Session, stock_ids: list[int]) -> dict[int, list[str]]:
@@ -325,12 +325,17 @@ def auth_strategy():
     Returns:
         AuthStrategyResponse with provider name, google_enabled flag, and readiness flags.
     """
+    effective_clerk_js_url = CLERK_JS_URL or "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js"
+    effective_clerk_js_version = CLERK_JS_VERSION or "6"
     return {
         "provider": AUTH_PROVIDER,
         "google_enabled": AUTH_GOOGLE_ENABLED,
         "backend_ready": bool(CLERK_SECRET_KEY and CLERK_JWKS_URL),
         "frontend_ready": bool(CLERK_PUBLISHABLE_KEY),
-        "clerk_js_ready": bool(CLERK_JS_URL),
+        "clerk_js_ready": bool(effective_clerk_js_url),
+        "clerk_js_url": effective_clerk_js_url,
+        "clerk_js_version": effective_clerk_js_version,
+        "role_resolution_mode": "db_subject_first_with_bootstrap_fallback",
         "notes": [
             "Clerk is the recommended auth layer for this app's current stage.",
             "Google sign-in should be enabled as a social connection inside Clerk.",
@@ -1778,7 +1783,7 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         except Exception:
             db.rollback()
 
-    # Auto-promote to owner/admin based on configured identities.
+    # Bootstrap promotion for configured identities; DB role remains the primary source.
     effective_role = getattr(user, "role", "user") or "user"
     db_email = (user.email or "").strip().lower()
     owner_match = (
@@ -1791,14 +1796,14 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         or (claim_email and claim_email in ADMIN_EMAILS)
         or (auth_subject in ADMIN_AUTH_SUBJECTS)
     )
-    if owner_match and effective_role != "owner":
+    if owner_match and effective_role in {"", "user"}:
         effective_role = "owner"
         try:
             user.role = "owner"
             db.commit()
         except Exception:
             db.rollback()
-    elif admin_match and effective_role not in {"owner", "admin"}:
+    elif admin_match and effective_role in {"", "user"}:
         effective_role = "admin"
         try:
             user.role = "admin"

@@ -378,6 +378,104 @@
   color: var(--text-secondary);
 }
 
+.screeningExplainerGauge {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  background: var(--panel);
+}
+
+.screeningExplainerGaugeArc {
+  position: relative;
+  height: 58px;
+  border-radius: 58px 58px 0 0;
+  overflow: hidden;
+  background: var(--bg-soft);
+}
+
+.screeningExplainerGaugeGood,
+.screeningExplainerGaugeWarn,
+.screeningExplainerGaugeBad {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.screeningExplainerGaugeGood {
+  left: 0;
+  width: 50%;
+  background: color-mix(in srgb, var(--emerald) 32%, transparent);
+}
+
+.screeningExplainerGaugeWarn {
+  left: 50%;
+  width: 20%;
+  background: color-mix(in srgb, var(--gold) 40%, transparent);
+}
+
+.screeningExplainerGaugeBad {
+  left: 70%;
+  width: 30%;
+  background: color-mix(in srgb, var(--red) 35%, transparent);
+}
+
+.screeningExplainerGaugeNeedle {
+  position: absolute;
+  bottom: -2px;
+  width: 2px;
+  height: 64px;
+  background: var(--text);
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--bg) 65%, transparent);
+}
+
+.screeningExplainerGaugeValue {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.screeningExplainerGaugeLegend {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+}
+
+.screeningExplainerGaugeLegend span,
+.screeningExplainerGaugeLegend strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.screeningExplainerGaugeLegend strong {
+  justify-content: flex-end;
+  color: var(--text);
+  font-size: 0.76rem;
+}
+
+.screeningExplainerLegendDotGood,
+.screeningExplainerLegendDotWarn,
+.screeningExplainerLegendDotBad {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.screeningExplainerLegendDotGood { background: var(--emerald); }
+.screeningExplainerLegendDotWarn { background: var(--gold); }
+.screeningExplainerLegendDotBad { background: var(--red); }
+
 .screeningExplainerMethodology h4 {
   margin: 0 0 6px;
   font-size: 1rem;
@@ -401,6 +499,12 @@
 @media (max-width: 680px) {
   .screeningExplainerMetricList {
     grid-template-columns: 1fr;
+  }
+  .screeningExplainerGaugeLegend {
+    grid-template-columns: 1fr 1fr;
+  }
+  .screeningExplainerGaugeLegend strong {
+    justify-content: flex-start;
   }
 }
 
@@ -1712,6 +1816,7 @@
 .keyMetricCard {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -1742,6 +1847,8 @@
   color: var(--text);
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
 .keyMetricSubvalue {
   font-size: 0.72rem;

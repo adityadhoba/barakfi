@@ -66,21 +66,25 @@ def require_admin(db: Session, claims: dict) -> str:
     if not auth_subject:
         raise HTTPException(status_code=401, detail="Token subject missing")
 
+    current_user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
+
+    if current_user:
+        if current_user.role in {"owner", "admin"}:
+            return auth_subject
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    # Bootstrap fallback only when DB user row doesn't exist yet.
     if auth_subject in OWNER_AUTH_SUBJECTS:
         return auth_subject
 
     if auth_subject in ADMIN_AUTH_SUBJECTS:
         return auth_subject
 
-    current_user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
-
-    if current_user:
-        if current_user.role in {"owner", "admin"}:
-            return auth_subject
-        if current_user.email.lower() in OWNER_EMAILS:
-            return auth_subject
-        if current_user.email.lower() in ADMIN_EMAILS:
-            return auth_subject
+    token_email = (claims.get("email") or "").strip().lower()
+    if token_email and token_email in OWNER_EMAILS:
+        return auth_subject
+    if token_email and token_email in ADMIN_EMAILS:
+        return auth_subject
 
     raise HTTPException(status_code=403, detail="Admin access required")
 

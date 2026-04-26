@@ -12,17 +12,6 @@ type Breakdown = {
   cash_and_interest_bearing_to_assets_ratio: number;
 };
 
-type MethodologyRow = {
-  methodology: string;
-  statusLabel: string;
-  debt: string;
-  nonPermIncome: string;
-  interestIncome: string;
-  receivables: string;
-  cashIb: string;
-  sector: string;
-};
-
 type Props = {
   breakdown: Breakdown;
   debtValue: number;
@@ -31,7 +20,6 @@ type Props = {
   cashIbDenominator: number;
   nonPermValue: number;
   nonPermDenominator: number;
-  methodologyRows: MethodologyRow[] | null;
 };
 
 type ExplainerKey = "business_activity" | "interest_assets" | "interest_debt";
@@ -51,6 +39,11 @@ function cardStatus(value: number, limit: number): "pass" | "review" | "fail" {
   return "fail";
 }
 
+function clampPct(v: number): number {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(100, v));
+}
+
 export function ScreeningExplainerCards({
   breakdown,
   debtValue,
@@ -59,7 +52,6 @@ export function ScreeningExplainerCards({
   cashIbDenominator,
   nonPermValue,
   nonPermDenominator,
-  methodologyRows,
 }: Props) {
   const [active, setActive] = useState<ExplainerKey>("business_activity");
 
@@ -92,6 +84,9 @@ export function ScreeningExplainerCards({
 
   const activeCard = cards.find((c) => c.key === active) ?? cards[0];
   const status = cardStatus(activeCard.value, activeCard.limit);
+  const limitPct = activeCard.limit * 100;
+  const valuePct = activeCard.value * 100;
+  const normalizedOnGauge = clampPct((valuePct / (activeCard.limit * 2)) * 100);
 
   return (
     <section className={styles.screeningExplainerWrap} aria-label="Screening explainer">
@@ -182,44 +177,36 @@ export function ScreeningExplainerCards({
             </p>
           </div>
         )}
-      </div>
 
-      {methodologyRows && methodologyRows.length > 0 && (
-        <div className={styles.screeningExplainerMethodology}>
-          <h4>Methodology comparison</h4>
-          <p>Primary and alternate methodology outcomes are visible here by default.</p>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Methodology</th>
-                  <th>Status</th>
-                  <th>Debt</th>
-                  <th>Non-perm.</th>
-                  <th>Interest</th>
-                  <th>Receivables</th>
-                  <th>Cash & IB</th>
-                  <th>Sector</th>
-                </tr>
-              </thead>
-              <tbody>
-                {methodologyRows.map((row) => (
-                  <tr key={row.methodology}>
-                    <td>{row.methodology}</td>
-                    <td>{row.statusLabel}</td>
-                    <td>{row.debt}</td>
-                    <td>{row.nonPermIncome}</td>
-                    <td>{row.interestIncome}</td>
-                    <td>{row.receivables}</td>
-                    <td>{row.cashIb}</td>
-                    <td>{row.sector}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className={styles.screeningExplainerGauge} aria-label="AAOIFI threshold gauge">
+          <div className={styles.screeningExplainerGaugeArc}>
+            <div className={styles.screeningExplainerGaugeGood} />
+            <div className={styles.screeningExplainerGaugeWarn} />
+            <div className={styles.screeningExplainerGaugeBad} />
+            <div
+              className={styles.screeningExplainerGaugeNeedle}
+              style={{ left: `${normalizedOnGauge}%` }}
+            />
+            <div className={styles.screeningExplainerGaugeValue}>{pct(activeCard.value)}</div>
+          </div>
+          <div className={styles.screeningExplainerGaugeLegend}>
+            <span>
+              <em className={styles.screeningExplainerLegendDotGood} />
+              AAOIFI preferred range
+            </span>
+            <span>
+              <em className={styles.screeningExplainerLegendDotWarn} />
+              Near threshold
+            </span>
+            <span>
+              <em className={styles.screeningExplainerLegendDotBad} />
+              Over threshold
+            </span>
+            <strong>Limit: {limitPct.toFixed(2)}%</strong>
           </div>
         </div>
-      )}
+      </div>
+
     </section>
   );
 }

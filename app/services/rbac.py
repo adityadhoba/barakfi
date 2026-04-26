@@ -53,50 +53,35 @@ def get_user_by_claims(db: Session, claims: dict) -> User:
 
 def is_admin(db: Session, claims: dict) -> bool:
     """
-    Check if the current user is an admin.
-    Returns True if:
-    - User has role="admin" in database, OR
-    - User's auth_subject is in ADMIN_AUTH_SUBJECTS, OR
-    - User's email is in ADMIN_EMAILS
+    DB-backed admin check with bootstrap fallback.
+    Priority:
+    1) Active DB user role (owner/admin)
+    2) Configured bootstrap identities (subject/email)
     """
     auth_subject = claims.get("sub")
     email = claims.get("email", "").lower()
 
-    # Check legacy auth subject and email lists
-    if auth_subject in OWNER_AUTH_SUBJECTS:
-        return True
-
-    if email in OWNER_EMAILS:
-        return True
-
-    if auth_subject in ADMIN_AUTH_SUBJECTS:
-        return True
-
-    if email in ADMIN_EMAILS:
-        return True
-
-    # Check database role
     try:
         user = get_user_by_claims(db, claims)
         return user.role in {"owner", "admin"}
     except HTTPException:
-        return False
+        return (
+            auth_subject in OWNER_AUTH_SUBJECTS
+            or email in OWNER_EMAILS
+            or auth_subject in ADMIN_AUTH_SUBJECTS
+            or email in ADMIN_EMAILS
+        )
 
 
 def is_owner(db: Session, claims: dict) -> bool:
     auth_subject = claims.get("sub")
     email = claims.get("email", "").lower()
 
-    if auth_subject in OWNER_AUTH_SUBJECTS:
-        return True
-    if email in OWNER_EMAILS:
-        return True
-
     try:
         user = get_user_by_claims(db, claims)
         return user.role == "owner"
     except HTTPException:
-        return False
+        return auth_subject in OWNER_AUTH_SUBJECTS or email in OWNER_EMAILS
 
 
 def has_role(user: User, required_role: str) -> bool:

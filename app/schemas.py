@@ -191,6 +191,9 @@ class AuthStrategyResponse(BaseModel):
     backend_ready: bool
     frontend_ready: bool
     clerk_js_ready: bool
+    clerk_js_url: str | None = None
+    clerk_js_version: str | None = None
+    role_resolution_mode: str | None = None
     notes: list[str]
 
 

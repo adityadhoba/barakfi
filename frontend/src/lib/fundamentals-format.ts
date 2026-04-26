@@ -29,6 +29,26 @@ export function formatFundamentalAmount(value: number, currency: string = "INR")
 }
 
 /**
+ * Compact display used in dense stock-detail metric cards.
+ * For INR values stored in crores:
+ * - >= 1,00,000 Cr shown as L Cr (lakh crore)
+ * - otherwise shown as Cr
+ */
+export function formatFundamentalAmountCompact(value: number, currency: string = "INR"): string {
+  const c = (currency || "INR").toUpperCase();
+  if (!Number.isFinite(value)) return "—";
+  if (c !== "INR") return formatFundamentalAmount(value, c);
+  if (Math.abs(value) >= 100_000) {
+    const lakhCrore = value / 100_000;
+    return `₹${lakhCrore.toLocaleString("en-IN", {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+    })} L Cr`;
+  }
+  return formatInrCrores(value);
+}
+
+/**
  * Cap tier from DB market_cap using India crores (NSE/BSE).
  * Approximate retail buckets; not a regulatory classification.
  */
