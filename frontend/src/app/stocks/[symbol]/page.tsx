@@ -46,6 +46,7 @@ import { displayCountryForStock } from "@/lib/stock-display";
 import {
   capTierLabel,
   formatFundamentalAmount,
+  formatFundamentalAmountCompact,
   formatFundamentalsAsOfLine,
   formatFundamentalsLastUpdatedIst,
   fundamentalsUnitNote,
@@ -1031,16 +1032,16 @@ export default async function StockDetailPage({
             <div className={styles.keyMetricsStrip}>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Market Cap</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.market_cap, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.market_cap, cur)}</span>
                 <span className={styles.keyMetricSubvalue}>{marketCapTier}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Revenue</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.revenue, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.revenue, cur)}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Total Debt</span>
-                <span className={styles.keyMetricValue}>{formatFundamentalAmount(stock.debt, cur)}</span>
+                <span className={styles.keyMetricValue}>{formatFundamentalAmountCompact(stock.debt, cur)}</span>
               </div>
               <div className={styles.keyMetricCard}>
                 <span className={styles.keyMetricLabel}>Debt / Mcap</span>

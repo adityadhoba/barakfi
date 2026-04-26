@@ -389,6 +389,55 @@
   font-size: 0.78rem;
 }
 
+.screeningExplainerTableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+}
+
+.screeningExplainerTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.screeningExplainerTable th,
+.screeningExplainerTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--text);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.screeningExplainerTable th {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--bg-soft);
+}
+
+.screeningExplainerTable th:first-child,
+.screeningExplainerTable td:first-child {
+  min-width: 12rem;
+  white-space: normal;
+}
+
+.screeningExplainerTable th:last-child,
+.screeningExplainerTable td:last-child {
+  min-width: 8rem;
+}
+
+.screeningExplainerTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
 @media (max-width: 1024px) {
   .screeningExplainerGrid {
     grid-template-columns: 1fr;
@@ -1737,11 +1786,16 @@
   letter-spacing: 0.04em;
 }
 .keyMetricValue {
+  display: block;
+  max-width: 100%;
   font-size: 0.92rem;
   font-weight: 700;
   color: var(--text);
   font-family: var(--font-display);
   font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .keyMetricSubvalue {
   font-size: 0.72rem;

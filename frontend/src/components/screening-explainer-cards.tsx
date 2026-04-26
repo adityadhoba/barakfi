@@ -188,8 +188,8 @@ export function ScreeningExplainerCards({
         <div className={styles.screeningExplainerMethodology}>
           <h4>Methodology comparison</h4>
           <p>Primary and alternate methodology outcomes are visible here by default.</p>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={styles.screeningExplainerTableWrap}>
+            <table className={styles.screeningExplainerTable}>
               <thead>
                 <tr>
                   <th>Methodology</th>
