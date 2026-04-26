@@ -1354,16 +1354,12 @@ textarea:focus::placeholder {
   }
 }
 
-/* Hide Clerk development-mode banner and "Secured by Clerk" branding */
-.cl-internal-b3fm6y,
-.cl-internal-1hp0wcp,
-[data-clerk-development-mode-badge],
-.cl-footerAction__usePasskey + div,
-.cl-internal-1dauvpw,
-a[href*="clerk.com"] {
+/* Keep auth UI visible; only hide explicit Clerk dev badge. */
+[data-clerk-development-mode-badge] {
   display: none !important;
 }
 
+/* Avoid broad internal-class hiding. Internal class names are not stable. */
 .cl-footer {
   opacity: 0.6;
 }
@@ -1513,4 +1509,3 @@ a[href*="clerk.com"] {
   white-space: nowrap;
   border-width: 0;
 }
-
