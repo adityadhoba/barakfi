@@ -1,17 +1,9 @@
-import math
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 CorporateEventType = Literal["merge", "demerge", "delisted", "renamed", "acquired"]
-
-
-def _clean_float(v: object) -> float:
-    """Replace NaN / ±Infinity with 0.0 so JSON serialisation never raises."""
-    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
-        return 0.0
-    return float(v) if v is not None else 0.0
 
 
 class StockCorporateEventSummaryRead(BaseModel):
@@ -28,30 +20,19 @@ class StockBase(BaseModel):
     name: str
     sector: str
     exchange: str = "NSE"
-    market_cap: float = 0.0
-    average_market_cap_36m: float = 0.0
-    debt: float = 0.0
-    revenue: float = 0.0
-    total_business_income: float = 0.0
-    interest_income: float = 0.0
-    non_permissible_income: float = 0.0
-    accounts_receivable: float = 0.0
-    cash_and_equivalents: float = 0.0
-    short_term_investments: float = 0.0
-    fixed_assets: float = 0.0
-    total_assets: float = 0.0
-    price: float = 0.0
-
-    @field_validator(
-        "market_cap", "average_market_cap_36m", "debt", "revenue",
-        "total_business_income", "interest_income", "non_permissible_income",
-        "accounts_receivable", "cash_and_equivalents", "short_term_investments",
-        "fixed_assets", "total_assets", "price",
-        mode="before",
-    )
-    @classmethod
-    def sanitise_float(cls, v: object) -> float:
-        return _clean_float(v)
+    market_cap: float = Field(ge=0)
+    average_market_cap_36m: float = Field(ge=0)
+    debt: float = Field(ge=0)
+    revenue: float = Field(ge=0)
+    total_business_income: float = Field(ge=0)
+    interest_income: float = Field(ge=0)
+    non_permissible_income: float = Field(ge=0)
+    accounts_receivable: float = Field(ge=0)
+    cash_and_equivalents: float = Field(ge=0, default=0)
+    short_term_investments: float = Field(ge=0, default=0)
+    fixed_assets: float = Field(ge=0)
+    total_assets: float = Field(ge=0)
+    price: float = Field(ge=0)
     currency: str = "INR"
     country: str = "India"
     data_source: str = "internal_seed"
@@ -96,6 +77,14 @@ class StockRead(StockBase):
     is_etf: bool = False
     latest_corporate_event: StockCorporateEventSummaryRead | None = None
     index_memberships: list[str] = Field(default_factory=list)
+    confidence_score: float | None = None
+    confidence_tier: Literal["95", "80", "60", "40"] | None = None
+    source_date: datetime | None = None
+    source_exchange: str | None = None
+    metric_availability: dict[str, str] | None = Field(
+        default=None,
+        description="Per-metric availability status: available | reported_zero | unavailable.",
+    )
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -291,6 +280,41 @@ class DataStackStatusResponse(BaseModel):
     fundamentals_freshness: FundamentalsFreshnessSummaryResponse
     ready_for_scaled_screening: bool
     readiness_gaps: list[str]
+
+
+class FilingIngestionStatusResponse(BaseModel):
+    total_filings: int = 0
+    nse_filings: int = 0
+    bse_filings: int = 0
+    latest_filing_at: datetime | None = None
+    extraction_methods: dict[str, int] = Field(default_factory=dict)
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
+
+
+class MetricQualitySummaryResponse(BaseModel):
+    companies_total: int = 0
+    companies_with_metrics: int = 0
+    confidence_distribution: dict[str, int] = Field(default_factory=dict)
+    missing_metric_counts: dict[str, int] = Field(default_factory=dict)
+    low_confidence_symbols_preview: list[str] = Field(default_factory=list)
+
+
+class SymbolEvidenceTraceResponse(BaseModel):
+    symbol: str
+    source_exchange: str | None = None
+    source_date: datetime | None = None
+    confidence_score: float | None = None
+    confidence_tier: Literal["95", "80", "60", "40"] | None = None
+    metric_availability: dict[str, str] = Field(default_factory=dict)
+    filing_refs: list[dict[str, str | None]] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
+class DataQualityDashboardResponse(BaseModel):
+    filings: FilingIngestionStatusResponse
+    metric_quality: MetricQualitySummaryResponse
+    unresolved_symbol_issues: int = 0
+    blocked_symbols: int = 0
 
 
 class SymbolResolutionIssueRead(BaseModel):

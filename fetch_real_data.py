@@ -24,14 +24,13 @@ Every week, add ~10 new pre-screened stocks with the following steps:
 
 2. ADD LOGO MAPPINGS: For each new symbol, add a domain mapping to
    frontend/src/components/stock-logo.tsx in the SYMBOL_TO_DOMAIN dict.
-   If the Yahoo ticker differs from the BarakFi symbol, also add alternates in
-   app/services/vendor_symbol_aliases.py (mirrored in frontend/src/lib/yahoo-symbol-aliases.ts).
+   Find the company's website domain (e.g., SUZLON -> "suzlon.com").
 
 3. FETCH DATA: Run this script to pull financial data:
    python fetch_real_data.py
 
 4. VERIFY: Check the output for any FAILED symbols.
-   Fix alternate tickers in app/services/vendor_symbol_aliases.py if needed.
+   Fix alternate tickers in TICKER_ALTERNATES if needed.
 
 5. DEPLOY: Push changes and redeploy backend (Render auto-deploys from main).
    Frontend will pick up new stocks automatically via API.
@@ -45,7 +44,6 @@ No cron jobs needed. This is a manual weekly process.
 import argparse
 import logging
 import os
-import random
 import sys
 import time
 from collections import defaultdict
@@ -56,10 +54,7 @@ import requests
 try:
     import yfinance as yf
 except ImportError:
-    print("ERROR: yfinance is required. Install it with: pip install yfinance")
-    sys.exit(1)
-
-from app.services.vendor_symbol_aliases import CANONICAL_NSE_SYMBOLS, TICKER_ALTERNATES
+    yf = None
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -67,33 +62,7 @@ from app.services.vendor_symbol_aliases import CANONICAL_NSE_SYMBOLS, TICKER_ALT
 
 CRORE = 1e7  # 1 Crore = 10,000,000
 
-
-def _env_float(name: str, default: float) -> float:
-    raw = (os.getenv(name) or "").strip()
-    if raw == "":
-        return default
-    try:
-        return float(raw)
-    except ValueError:
-        return default
-
-
-def _env_int(name: str, default: int) -> int:
-    raw = (os.getenv(name) or "").strip()
-    if raw == "":
-        return default
-    try:
-        return int(raw)
-    except ValueError:
-        return default
-
-
-RATE_LIMIT_SECONDS = max(0.1, _env_float("YF_RATE_LIMIT_SECONDS", 1.2))
-YF_MAX_RETRIES = max(0, _env_int("YF_MAX_RETRIES", 4))
-YF_RETRY_BASE_SECONDS = max(1.0, _env_float("YF_RETRY_BASE_SECONDS", 12.0))
-YF_RETRY_MAX_SECONDS = max(YF_RETRY_BASE_SECONDS, _env_float("YF_RETRY_MAX_SECONDS", 120.0))
-YF_COOLDOWN_TRIGGER_CONSECUTIVE = max(1, _env_int("YF_COOLDOWN_TRIGGER_CONSECUTIVE", 5))
-YF_COOLDOWN_SECONDS = max(5.0, _env_float("YF_COOLDOWN_SECONDS", 180.0))
+RATE_LIMIT_SECONDS = 0.5
 
 OUTPUT_FILE = Path(__file__).parent / "real_stock_data.py"
 PRODUCTION_ENV_VALUES = {"production", "prod"}
@@ -109,9 +78,6 @@ NSE_HEADERS = {
     "Accept": "application/json",
     "Accept-Language": "en-US,en;q=0.9",
 }
-
-# Set by fetch_stock_data so the main loop can react to bursts of Yahoo throttling.
-_LAST_FETCH_RATE_LIMITED = False
 
 # Sector mapping: yfinance sector names can be inconsistent for Indian stocks.
 # We keep a manual fallback map keyed by NSE symbol.
@@ -580,6 +546,33 @@ def _to_crores(value):
     return round(value / CRORE, 2)
 
 
+# Some NSE symbols need alternate Yahoo Finance tickers.
+# Primary is tried first; if it fails, alternates are attempted.
+TICKER_ALTERNATES = {
+    "TATAMOTORS": ["TATAMOTORS.NS"],
+    "MCDOWELL-N": ["MCDOWELL-N.NS", "UNITDSPR.NS"],
+    "PEL": ["PEL.NS"],
+    "ZOMATO": ["ETERNAL.NS", "ZOMATO.NS", "ZOMATO.BO"],
+    "ADANITRANS": ["ADANIENSOL.NS", "ADANITRANS.NS"],
+    "INDIANHOTELS": ["INDHOTEL.NS", "INDIANHOTELS.NS"],
+    "MAZAGON": ["MAZDOCK.NS", "MAZAGON.NS"],
+    "GARDENREACH": ["GRSE.NS", "GARDENREACH.NS"],
+    "ZENSAR": ["ZENSARTECH.NS", "ZENSAR.NS"],
+    "TV18BRDCST": ["TV18BRDCST.NS"],
+    "CENTURYTEX": ["CENTURYTEX.NS", "ABREL.NS"],
+}
+
+# Canonical symbol mapping for renamed or legacy NSE symbols.
+CANONICAL_NSE_SYMBOLS = {
+    "ZOMATO": "ETERNAL",
+    "ADANITRANS": "ADANIENSOL",
+    "INDIANHOTELS": "INDHOTEL",
+    "MAZAGON": "MAZDOCK",
+    "GARDENREACH": "GRSE",
+    "ZENSAR": "ZENSARTECH",
+    "TV18BRDCST": "NETWORK18",
+}
+
 # Alternates that require strict ISIN match proof before accepting.
 ISIN_VERIFIED_ALTERNATE_REQUIRED = {
     "MCDOWELL-N",
@@ -810,18 +803,7 @@ def _get_currency(exchange):
     return "INR"
 
 
-def _is_yf_rate_limited_error(exc: Exception) -> bool:
-    name = exc.__class__.__name__.lower()
-    msg = str(exc).lower()
-    return (
-        "ratelimit" in name
-        or "too many requests" in msg
-        or "rate limited" in msg
-        or "429" in msg
-    )
-
-
-def fetch_stock_data(symbol, exchange="NSE", _retry=0):
+def fetch_stock_data(symbol, exchange="NSE"):
     """
     Fetch financial data for a single stock via yfinance.
 
@@ -832,8 +814,9 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
 
     Returns a dict matching the Stock model fields, or None on failure.
     """
-    global _LAST_FETCH_RATE_LIMITED
-    _LAST_FETCH_RATE_LIMITED = False
+    if yf is None:
+        log.error("FAILED: %s - yfinance is not installed. Install with: pip install yfinance", symbol)
+        return None
 
     ticker_str = _build_ticker_str(symbol, exchange)
     canonical_symbol = CANONICAL_NSE_SYMBOLS.get(symbol, symbol) if exchange == "NSE" else symbol
@@ -901,17 +884,9 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
         price = info.get("currentPrice") or info.get("regularMarketPrice") or 0.0
 
         # -- Market Cap (spot + 36m historical average) --
-        # Prefer price × shares from the same `info` snapshot. Yahoo's `marketCap`
-        # field can lag `regularMarketPrice` between sessions, which made DB mcap
-        # disagree with NSE/Yahoo summary until the next fundamentals job.
-        shares_out = float(info.get("sharesOutstanding") or 0.0)
-        yahoo_mcap_raw = float(info.get("marketCap") or 0.0)
-        implied_raw = float(price) * shares_out if price and shares_out > 0 else 0.0
-        if implied_raw > 0:
-            market_cap_raw = implied_raw
-        else:
-            market_cap_raw = yahoo_mcap_raw
+        market_cap_raw = info.get("marketCap") or 0.0
         market_cap = _convert_value(market_cap_raw, exchange)
+        shares_out = info.get("sharesOutstanding") or 0.0
         average_market_cap_36m = _compute_average_market_cap_36m(
             ticker,
             symbol=symbol,
@@ -1101,22 +1076,6 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
         return stock_data
 
     except Exception as exc:
-        if _is_yf_rate_limited_error(exc) and _retry < YF_MAX_RETRIES:
-            sleep_for = min(YF_RETRY_BASE_SECONDS * (2 ** _retry), YF_RETRY_MAX_SECONDS)
-            jitter = random.uniform(0, max(0.1, sleep_for * 0.2))
-            total_sleep = sleep_for + jitter
-            log.warning(
-                "Rate limited for %s (%s). Retry %d/%d in %.1fs",
-                symbol,
-                ticker_str,
-                _retry + 1,
-                YF_MAX_RETRIES,
-                total_sleep,
-            )
-            time.sleep(total_sleep)
-            return fetch_stock_data(symbol, exchange, _retry=_retry + 1)
-        if _is_yf_rate_limited_error(exc):
-            _LAST_FETCH_RATE_LIMITED = True
         log.error("FAILED: %s - %s: %s", symbol, type(exc).__name__, exc)
         return None
 
@@ -1208,13 +1167,16 @@ def write_to_database(stocks):
     updated = 0
     touched_ids: set[int] = set()
 
-    compliance_history_error: str | None = None
-
     try:
         now = datetime.now(timezone.utc)
         db_columns = {column.name for column in Stock.__table__.columns}
         for raw in stocks:
-            payload = {**raw, "fundamentals_updated_at": now}
+            payload = {
+                **raw,
+                "fundamentals_updated_at": now,
+                "source_date": now,
+                "source_exchange": (raw.get("exchange") or "NSE"),
+            }
             filtered_payload = _filter_stock_payload_for_model(payload, db_columns)
             existing = (
                 db.query(Stock)
@@ -1238,30 +1200,18 @@ def write_to_database(stocks):
                 touched_ids.add(row.id)
                 created += 1
 
-        # Persist stock/fundamentals updates first so history-table schema drift
-        # never blocks critical data freshness updates.
+        from app.api import helpers
+        from app.services.compliance_history_service import record_compliance_change_if_needed
+        from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock
+
+        for sid in touched_ids:
+            stock = db.query(Stock).filter(Stock.id == sid).first()
+            if not stock:
+                continue
+            r = evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)
+            record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
+
         db.commit()
-
-        try:
-            from app.api import helpers
-            from app.services.compliance_history_service import record_compliance_change_if_needed
-            from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock
-
-            for sid in touched_ids:
-                stock = db.query(Stock).filter(Stock.id == sid).first()
-                if not stock:
-                    continue
-                r = evaluate_stock(helpers.stock_to_dict(stock), profile=PRIMARY_PROFILE)
-                record_compliance_change_if_needed(db, stock, r["status"], r.get("compliance_rating"))
-            db.commit()
-        except Exception as exc:
-            db.rollback()
-            compliance_history_error = str(exc)
-            log.warning(
-                "Compliance history update skipped (stock fundamentals already committed): %s",
-                exc,
-            )
-
         rows_with_timestamp = int(
             db.query(func.count(Stock.id))
             .filter(
@@ -1286,7 +1236,6 @@ def write_to_database(stocks):
             "updated": updated,
             "rows_with_timestamp": rows_with_timestamp,
             "rows_missing_timestamp": rows_missing_timestamp,
-            "compliance_history_error": compliance_history_error,
         }
     except Exception as exc:
         db.rollback()
@@ -1378,15 +1327,6 @@ def main() -> int:
     log.info("Fetching real financial data for %d stocks across %d exchanges", total_symbols, len(exchanges))
     log.info("  NSE: %d stocks", len(STOCK_SYMBOLS))
     log.info("Data source: Yahoo Finance (yfinance)")
-    log.info(
-        "yfinance throttling: base_delay=%ss max_retries=%d retry_base=%ss retry_max=%ss cooldown_trigger=%d cooldown=%ss",
-        RATE_LIMIT_SECONDS,
-        YF_MAX_RETRIES,
-        YF_RETRY_BASE_SECONDS,
-        YF_RETRY_MAX_SECONDS,
-        YF_COOLDOWN_TRIGGER_CONSECUTIVE,
-        YF_COOLDOWN_SECONDS,
-    )
     log.info("Mode: %s", "DRY RUN" if args.dry_run else "LIVE (will write to DB)")
     log.info("=" * 70)
 
@@ -1399,7 +1339,6 @@ def main() -> int:
         log.info("Fetching %s stocks (%d symbols) ...", exchange, len(symbols))
         log.info("─" * 50)
 
-        consecutive_rate_limits = 0
         for i, symbol in enumerate(symbols):
             stock_data = fetch_stock_data(symbol, exchange)
 
@@ -1407,20 +1346,6 @@ def main() -> int:
                 successful.append(stock_data)
             else:
                 failed.append(f"{symbol} ({exchange})")
-
-            global _LAST_FETCH_RATE_LIMITED
-            if _LAST_FETCH_RATE_LIMITED:
-                consecutive_rate_limits += 1
-                if consecutive_rate_limits >= YF_COOLDOWN_TRIGGER_CONSECUTIVE:
-                    log.warning(
-                        "Detected %d consecutive Yahoo rate-limit failures. Cooling down for %.1fs before continuing...",
-                        consecutive_rate_limits,
-                        YF_COOLDOWN_SECONDS,
-                    )
-                    time.sleep(YF_COOLDOWN_SECONDS)
-                    consecutive_rate_limits = 0
-            else:
-                consecutive_rate_limits = 0
 
             # Rate limiting between API calls
             if i < len(symbols) - 1:
