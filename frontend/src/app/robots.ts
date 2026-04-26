@@ -31,11 +31,26 @@ export default function robots(): MetadataRoute.Robots {
           "/watchlist",
         ],
       },
-      // Google may execute fetches for the home ticker ribbon; allow this read-only route only.
-      // /api/quota stays disallowed (session/anon limits — "blocked" in GSC for that URL is expected).
+      // Google may fetch these JSON routes when rendering (ticker + anon quota). More specific Allow wins over Disallow /api/.
       {
         userAgent: "Googlebot",
-        allow: ["/api/quotes"],
+        allow: ["/api/quotes", "/api/quota"],
+        disallow: [
+          "/api/",
+          "/workspace",
+          "/account",
+          "/governance",
+          "/admin",
+          "/onboarding",
+          "/sign-in",
+          "/sign-up",
+          "/notifications",
+          "/watchlist",
+        ],
+      },
+      {
+        userAgent: "Google-InspectionTool",
+        allow: ["/api/quotes", "/api/quota"],
         disallow: [
           "/api/",
           "/workspace",

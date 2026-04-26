@@ -4,26 +4,29 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { TopbarLink } from "@/components/topbar-link";
 
-export function AdminLink() {
+/** Single fetch for /api/me role — shared by the top bar link and Clerk UserButton menu. */
+export function useBarakfiAdminAccess(): { showAdmin: boolean; ready: boolean } {
   const { userId } = useAuth();
-  const [canViewAdmin, setCanViewAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkAdmin = async () => {
       if (!userId) {
-        setCanViewAdmin(false);
-        setLoading(false);
+        if (!cancelled) {
+          setShowAdmin(false);
+          setReady(true);
+        }
         return;
       }
 
       try {
-        // Call Next.js proxy route (server-side) — avoids CORS / direct backend issues
         const response = await fetch("/api/me", { cache: "no-store" });
 
         if (!response.ok) {
-          setCanViewAdmin(false);
-          setLoading(false);
+          if (!cancelled) setShowAdmin(false);
           return;
         }
 
@@ -31,19 +34,28 @@ export function AdminLink() {
         const r = String(user.role ?? "")
           .trim()
           .toLowerCase();
-        setCanViewAdmin(r === "admin" || r === "owner");
+        if (!cancelled) setShowAdmin(r === "admin" || r === "owner");
       } catch (error) {
         console.error("Failed to check admin status:", error);
-        setCanViewAdmin(false);
+        if (!cancelled) setShowAdmin(false);
       } finally {
-        setLoading(false);
+        if (!cancelled) setReady(true);
       }
     };
 
-    checkAdmin();
+    void checkAdmin();
+    return () => {
+      cancelled = true;
+    };
   }, [userId]);
 
-  if (loading || !canViewAdmin) {
+  return { showAdmin, ready };
+}
+
+export function AdminLink() {
+  const { showAdmin, ready } = useBarakfiAdminAccess();
+
+  if (!ready || !showAdmin) {
     return null;
   }
 
