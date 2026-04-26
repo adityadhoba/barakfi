@@ -153,6 +153,7 @@
 @media (max-width: 480px) {
   .hero { min-height: 75vh; }
   .heroProof { gap: 12px; }
+  .stockGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 }
 
 
@@ -268,12 +269,14 @@
 }
 
 .beliefCard {
+  gap: 12px;
+  min-width: 0;
   padding: 40px 28px;
+  overflow: hidden;
+  border-right: 1px solid #e8e0d8;
   background: #fafaf9;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  border-right: 1px solid #e8e0d8;
   transition: background 0.2s ease;
 }
 
@@ -729,4 +732,411 @@
   .heroBadgeDot {
     animation: none !important;
   }
+}
+
+.trendingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.trendingCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 150ms, transform 150ms;
+}
+.trendingCard:hover {
+  border-color: var(--emerald);
+  transform: translateX(2px);
+}
+.trendingRank {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.trendingBody {
+  flex: 1;
+  min-width: 0;
+}
+.trendingSymbol {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+.trendingName {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.trendingExchange {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   Collections Preview
+   ══════════════════════════════════════════ */
+.collectionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.collectionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 200ms, transform 150ms;
+}
+.collectionCard:hover {
+  border-color: var(--emerald);
+  transform: translateY(-2px);
+}
+.collectionIcon {
+  font-size: 1.5rem;
+}
+.collectionName {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.collectionCount {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--emerald);
+}
+
+/* ══════════════════════════════════════════
+   Investors Preview
+   ══════════════════════════════════════════ */
+.investorsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.investorCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  text-decoration: none;
+  transition: border-color 200ms, transform 150ms;
+}
+.investorCard:hover {
+  border-color: var(--emerald);
+  transform: translateY(-1px);
+}
+.investorAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gradient-emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+.investorBody {
+  flex: 1;
+  min-width: 0;
+}
+.investorName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+.investorTitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  display: block;
+}
+.investorCountry {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-soft);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   ETFs Preview
+   ══════════════════════════════════════════ */
+.etfsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.etfCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  transition: border-color 200ms;
+}
+.etfCard:hover {
+  border-color: var(--emerald-border);
+}
+.etfSymbol {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--emerald);
+  font-family: var(--font-display);
+}
+.etfName {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.etfExchange {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
+
+/* ══════════════════════════════════════════
+   Small Mobile Overrides (< 390px)
+   ══════════════════════════════════════════ */
+@media (max-width: 390px) {
+  .home { padding: 0 12px 80px; }
+  .hero { padding: 24px 0 20px; }
+  .heroTitle { font-size: 1.5rem; }
+  .heroSub { font-size: 0.85rem; margin-bottom: 20px; }
+  .heroCtas { flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .heroCtaPrimary, .heroCtaSecondary { width: 100%; justify-content: center; }
+  .statsGrid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .statCard { padding: 12px; gap: 8px; }
+  .statIcon { width: 30px; height: 30px; font-size: 0.75rem; }
+  .statValue { font-size: 1.1rem; }
+  .pulse { padding: 14px 16px; gap: 12px; }
+  .stockGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .stockItem { padding: 12px; }
+  .stockPrice { font-size: 0.85rem; }
+}
+
+.collectionIconSvg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
+  color: var(--emerald);
+  flex-shrink: 0;
+}
+.collectionIconSvg svg {
+  display: block;
+}
+.investorAvatarImg {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+}
+
+
+/* ══════════════════════════════════════════
+   Clean Hero — Google-like simplicity
+   ══════════════════════════════════════════ */
+.heroClean {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 80px 0 48px;
+  position: relative;
+}
+
+.heroClean::before {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 350px;
+  background:
+    radial-gradient(ellipse at 40% 50%, var(--emerald-glow, rgba(16, 185, 129, 0.06)) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 30%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.heroKicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--emerald, #10b981);
+  margin-bottom: 12px;
+}
+
+.heroHeadline {
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  color: var(--text);
+  position: relative;
+  z-index: 1;
+}
+
+.heroSub {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 620px;
+  margin: 0 0 28px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .heroClean { padding: 48px 0 32px; }
+  .heroHeadline { font-size: 1.6rem; }
+  .heroSub { font-size: 0.95rem; }
+}
+
+
+/* ══════════════════════════════════════════
+   Popular Stocks grid
+   ══════════════════════════════════════════ */
+.popularGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.popularCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--panel, #111827);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.popularCard:hover {
+  border-color: var(--accent, #10b981);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+.popularTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popularSymbol {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary, #fff);
+}
+
+.popularSector {
+  font-size: 0.7rem;
+  color: var(--text-tertiary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.popularName {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #aaa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ══════════════════════════════════════════
+   Trust grid
+   ══════════════════════════════════════════ */
+.trustGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.trustIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--emerald);
+  background: var(--emerald-bg);
+  border: 1px solid var(--emerald-border);
+  flex-shrink: 0;
+}
+
+.trustLabel {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.methodologyCardWrap {
+  margin-top: 1.75rem;
+  max-width: 42rem;
 }

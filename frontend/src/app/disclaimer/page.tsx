@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Risk Disclaimer — Barakfi",
   description:
     "Important risk disclaimers for Barakfi. Not SEBI registered. Screening results are not investment advice or certified Shariah opinions.",
+  alternates: { canonical: "https://barakfi.in/disclaimer" },
 };
 
 export default function DisclaimerPage() {

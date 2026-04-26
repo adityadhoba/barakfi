@@ -37,6 +37,7 @@ from app.services.rbac import (
     ROLE_DESCRIPTIONS,
     ROLE_HIERARCHY,
     VALID_ROLES,
+    normalize_user_role,
 )
 from app.database import get_db
 from app.api import helpers
@@ -245,24 +246,27 @@ def _stocks_read_enriched(db: Session, stocks: list[Stock]) -> list[StockRead]:
     alias_map = _search_aliases_by_symbol(db, [s.symbol for s in stocks])
     out: list[StockRead] = []
     for s in stocks:
-        dq, missing = fundamentals_completeness_payload(s)
-        confidence_score, confidence_tier = estimate_confidence(s, None)
-        out.append(
-            StockRead.model_validate(s).model_copy(
-                update={
-                    "index_memberships": code_map.get(s.id, []),
-                    "data_quality": dq,
-                    "fundamentals_fields_missing": missing,
-                    "latest_corporate_event": event_map.get(s.symbol.upper()),
-                    "search_aliases": alias_map.get(s.symbol.upper(), []),
-                    "confidence_score": confidence_score,
-                    "confidence_tier": confidence_tier,
-                    "source_date": s.source_date or s.fundamentals_updated_at,
-                    "source_exchange": s.source_exchange or s.exchange,
-                    "metric_availability": compute_metric_availability(s),
-                }
+        try:
+            dq, missing = fundamentals_completeness_payload(s)
+            confidence_score, confidence_tier = estimate_confidence(s, None)
+            out.append(
+                StockRead.model_validate(s).model_copy(
+                    update={
+                        "index_memberships": code_map.get(s.id, []),
+                        "data_quality": dq,
+                        "fundamentals_fields_missing": missing,
+                        "latest_corporate_event": event_map.get(s.symbol.upper()),
+                        "search_aliases": alias_map.get(s.symbol.upper(), []),
+                        "confidence_score": confidence_score,
+                        "confidence_tier": confidence_tier,
+                        "source_date": s.source_date or s.fundamentals_updated_at,
+                        "source_exchange": s.source_exchange or s.exchange,
+                        "metric_availability": compute_metric_availability(s),
+                    }
+                )
             )
-        )
+        except Exception as exc:
+            logger.warning("[_stocks_read_enriched] skipping %s — validation error: %s", s.symbol, exc)
     return out
 
 
@@ -586,24 +590,28 @@ def list_stocks(
     halal_only: bool = Query(default=False),
     search: str | None = Query(default=None),
     limit: int | None = Query(default=None, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     order_by: str = Query(default="symbol", pattern="^(symbol|market_cap_desc)$"),
     db: Session = Depends(get_db),
 ):
     """
-    Get all active stocks with fundamental data.
+    Get active stocks with fundamental data.
 
     Auth: None (public endpoint)
 
     Query Params:
-        halal_only: If True, filter to only HALAL-compliant stocks (expensive, done in Python)
+        halal_only: Filter to HALAL-compliant stocks only (expensive, done in Python)
         search: Search by symbol or name (case insensitive, substring match)
+        limit: Max rows to return (1-1000). Omit for all.
+        offset: Row offset for pagination (use with limit for infinite scroll).
+        order_by: Sort order — 'symbol' (default) or 'market_cap_desc'
 
     Returns:
         List of StockRead with symbol, name, sector, market cap, fundamentals
 
     Performance:
-        ~50-500 stocks typically. halal_only=true filters in Python (slow for 500+).
-        Consider using bulk screening endpoint for large universes.
+        500 stocks at ~1 KB each = ~500 KB. Use limit+offset for paginated loads.
+        halal_only=true filters in Python — avoid for large limits.
     """
     query = db.query(Stock).filter(
         Stock.is_active.is_(True),
@@ -618,6 +626,9 @@ def list_stocks(
         query = query.order_by(Stock.market_cap.desc(), Stock.symbol.asc())
     else:
         query = query.order_by(Stock.symbol.asc())
+
+    if offset > 0:
+        query = query.offset(offset)
     if limit is not None:
         query = query.limit(limit)
     stocks = query.all()
@@ -670,6 +681,94 @@ def get_stock_evidence_trace(
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
     return symbol_evidence_trace(db, stock)
+@router.get("/stocks/{symbol}/chart")
+def get_stock_chart(
+    symbol: str,
+    range: str = Query(default="6mo", pattern="^(1mo|3mo|6mo|1y|5y)$"),
+    exchange: str = Query(default="NSE", pattern="^(NSE|BSE)$"),
+    db: Session = Depends(get_db),
+):
+    """
+    Return OHLC candle data for a stock sourced from NSE Bhavcopy (MarketPriceDaily).
+
+    Auth: None (public endpoint, cached at CDN level)
+
+    Returns:
+        {symbol, exchange, range, candles: [{time, open, high, low, close}]}
+
+    Falls back to empty candles if no bhavcopy data yet exists for this symbol.
+    """
+    from datetime import date, timedelta
+    import calendar
+
+    try:
+        from app.models_v2 import ListingV2, MarketPriceDaily
+    except ImportError:
+        return JSONResponse({"symbol": symbol, "exchange": exchange, "range": range, "candles": []})
+
+    sym_upper = symbol.strip().upper()
+    exch_upper = exchange.strip().upper()
+
+    listing = (
+        db.query(ListingV2)
+        .filter(ListingV2.symbol == sym_upper, ListingV2.exchange_code == exch_upper)
+        .first()
+    )
+    if not listing:
+        # Try BSE as fallback if NSE not found
+        listing = (
+            db.query(ListingV2)
+            .filter(ListingV2.symbol == sym_upper)
+            .first()
+        )
+    if not listing:
+        return JSONResponse(
+            {"symbol": symbol, "exchange": exchange, "range": range, "candles": []},
+            headers={"Cache-Control": "public, max-age=60"},
+        )
+
+    today = date.today()
+    range_map = {
+        "1mo": today - timedelta(days=31),
+        "3mo": today - timedelta(days=92),
+        "6mo": today - timedelta(days=183),
+        "1y": today - timedelta(days=366),
+        "5y": today - timedelta(days=5 * 366),
+    }
+    cutoff = range_map.get(range, today - timedelta(days=183))
+
+    rows = (
+        db.query(MarketPriceDaily)
+        .filter(
+            MarketPriceDaily.listing_id == listing.id,
+            MarketPriceDaily.trade_date >= cutoff,
+        )
+        .order_by(MarketPriceDaily.trade_date.asc())
+        .all()
+    )
+
+    candles = []
+    for r in rows:
+        if r.close_price is None:
+            continue
+        # Unix timestamp for midnight IST (use date as-is; lightweight-charts handles dates)
+        import time as _time
+        import datetime as _dt
+        dt = _dt.datetime.combine(r.trade_date, _dt.time.min)
+        unix_ts = int(dt.timestamp())
+        candles.append({
+            "time": unix_ts,
+            "open": float(r.open_price) if r.open_price else float(r.close_price),
+            "high": float(r.high_price) if r.high_price else float(r.close_price),
+            "low": float(r.low_price) if r.low_price else float(r.close_price),
+            "close": float(r.close_price),
+        })
+
+    # Cache for 5 min — same as the old Yahoo Finance proxy cache
+    return JSONResponse(
+        {"symbol": sym_upper, "exchange": exch_upper, "range": range, "candles": candles},
+        headers={"Cache-Control": "public, max-age=300"},
+    )
 
 
 @router.get("/check-stock")
@@ -775,7 +874,14 @@ def screen_stock(
 
 
 def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
-    """Shared bulk screening; populates per-symbol cache; throttled between rows."""
+    """Shared bulk screening; reads per-symbol cache first, computes only on misses.
+
+    Performance contract:
+    - Cache hit  (warm):  O(1) dict lookup, no DB writes, no sleep  → <10ms total
+    - Cache miss (cold):  full evaluation + DB reads, 15ms throttle  → ~50ms/symbol
+    The cache is warmed by the screening pipeline and by individual /screen/{symbol}
+    calls, so bulk requests after pipeline run are effectively instant.
+    """
     upper_symbols = [s.upper() for s in symbols[:500]]
     stocks = (
         db.query(Stock)
@@ -801,10 +907,21 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
         stock = _pick(sym)
         if not stock:
             continue
+
+        # ── Cache hit: return immediately, skip all DB work and sleep ──────
+        ck = screening_cache_key(stock.symbol, stock.exchange)
+        cached = screening_cache.get(ck)
+        if cached is not None:
+            results.append(cached)
+            continue
+
+        # ── Cache miss: compute, write to cache, then throttle ───────────
         stock_data = helpers.stock_to_dict(stock)
         result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
         result = helpers.apply_compliance_override(db, stock, result)
-        helpers.record_screening_log(db, stock, result)
+        # record_screening_log intentionally omitted from the bulk path —
+        # it does one INSERT per symbol and is only meaningful for quota-
+        # tracked individual user screenings, not ISR background calls.
         active_review_case = helpers.get_public_review_case_for_stock(db, stock.id)
         recent_review_cases = helpers.get_recent_public_review_cases_for_stock(db, stock.id)
         out = {
@@ -815,9 +932,9 @@ def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
             **result,
         }
         if not _stock_has_compliance_override(db, stock.id):
-            screening_cache.set(screening_cache_key(stock.symbol, stock.exchange), out, SCREENING_CACHE_TTL_SECONDS)
+            screening_cache.set(ck, out, SCREENING_CACHE_TTL_SECONDS)
         results.append(out)
-        time.sleep(0.015)
+        time.sleep(0.015)   # only throttle actual computation, not cache hits
     return results
 
 
@@ -894,6 +1011,95 @@ def _daily_refresh_alert_details(
         "failure_reason": failure_reason,
         "recovery_hint": "Run Job A (fetch_real_data.py) then Job B (run_daily_refresh.py)",
     }
+
+
+@router.get("/screener/snapshot")
+def screener_snapshot(db: Session = Depends(get_db)):
+    """Pre-computed screener snapshot for Vercel ISR.
+
+    Unlike POST /screen/bulk this is a GET so Next.js Data Cache can cache it.
+    The response carries Cache-Control: s-maxage=300, stale-while-revalidate=300
+    so the CDN and Next.js cache will serve it without hitting this server for
+    up to 5 minutes between pipeline runs.
+
+    Returns all active NSE stocks that have a warm screening cache entry.
+    Returns 503 if the cache is cold (forces Next.js ISR to not persist an
+    empty page — it will retry on the next request instead).
+
+    Auth: None (public, read-only)
+    """
+    snapshot_cache_key = "screener:snapshot:nse:v1"
+    snapshot_ttl_seconds = 300.0
+    response_headers = {
+        "Cache-Control": "s-maxage=300, stale-while-revalidate=300",
+        "Vary": "Accept-Encoding",
+    }
+
+    try:
+        # Fast path: cached assembled snapshot (single Redis read).
+        cached_snapshot = screening_cache.get(snapshot_cache_key)
+        if (
+            isinstance(cached_snapshot, dict)
+            and isinstance(cached_snapshot.get("stocks"), list)
+            and isinstance(cached_snapshot.get("count"), int)
+        ):
+            return JSONResponse(content=cached_snapshot, headers=response_headers)
+
+        stocks = (
+            db.query(Stock)
+            .filter(
+                Stock.is_active.is_(True),
+                Stock.exchange == "NSE",
+                Stock.screening_blocked_reason.is_(None),
+            )
+            # nulls_last() is the SQLAlchemy 2.x method (nullslast() was 1.x)
+            .order_by(Stock.market_cap.desc().nulls_last())
+            .limit(1000)
+            .all()
+        )
+
+        # Fetch all index memberships in one query (avoids N+1 lazy loads)
+        index_map = _index_codes_by_stock_id(db, [s.id for s in stocks])
+
+        cache_keys = [screening_cache_key(stock.symbol, stock.exchange) for stock in stocks]
+        cached_screenings = screening_cache.get_many(cache_keys)
+
+        results = []
+        for stock, cached in zip(stocks, cached_screenings):
+            if cached is not None:
+                results.append({
+                    "stock": {
+                        **helpers.stock_to_dict(stock),
+                        "exchange": stock.exchange,
+                        "currency": stock.currency or "INR",
+                        "isin": stock.isin,
+                        "index_memberships": index_map.get(stock.id, []),
+                    },
+                    "screening": cached,
+                })
+
+        if not results and stocks:
+            # Cache is cold (backend restarted, pipeline not yet run).
+            # 503 tells Next.js ISR to skip caching so users see the skeleton
+            # rather than a stale "0 of 0" page.
+            raise HTTPException(
+                status_code=503,
+                detail="Screening cache is warming up — retry in a moment",
+            )
+
+        payload = {"stocks": results, "count": len(results)}
+        if results:
+            screening_cache.set(snapshot_cache_key, payload, snapshot_ttl_seconds)
+
+        return JSONResponse(
+            content=payload,
+            headers=response_headers,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("[screener/snapshot] unexpected error: %s", exc)
+        raise HTTPException(status_code=503, detail="Screener snapshot temporarily unavailable")
 
 
 @router.post("/screen/bulk", response_model=list[ScreeningResult])
@@ -1373,6 +1579,7 @@ def admin_governance_overview(
         "users": users,
         "review_cases": review_cases,
         "review_events": review_events,
+        "feature_flags": [],
     }
 
 
@@ -1783,8 +1990,19 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
         except Exception:
             db.rollback()
 
+    # Canonical DB role (e.g. "Admin" -> "admin") so /me and Admin nav match RBAC.
+    effective_role = normalize_user_role(user.role)
+    raw_sl = str(getattr(user, "role", "") or "").strip().lower()
+    if raw_sl in VALID_ROLES and (user.role or "") != raw_sl:
+        user.role = raw_sl
+        effective_role = raw_sl
+        try:
+            db.commit()
+            db.refresh(user)
+        except Exception:
+            db.rollback()
+
     # Bootstrap promotion for configured identities; DB role remains the primary source.
-    effective_role = getattr(user, "role", "user") or "user"
     db_email = (user.email or "").strip().lower()
     owner_match = (
         (db_email and db_email in OWNER_EMAILS)
@@ -2110,13 +2328,18 @@ def delete_current_watchlist_entry(
     if not user:
         raise HTTPException(status_code=404, detail="User not provisioned")
 
-    stock = resolve_stock(db, symbol, None, active_only=True, require_indian_listing=True)
-    if not stock:
-        raise HTTPException(status_code=404, detail="Stock not found")
-
+    # Look up the watchlist entry directly by symbol so non-Indian stocks
+    # (e.g. AAPL, META) that were saved before the India-only policy can still
+    # be removed.  We do NOT use require_indian_listing=True here because the
+    # user must be able to clean up their own watchlist regardless of origin.
+    normalised_symbol = symbol.strip().upper()
     entry = (
         db.query(WatchlistEntry)
-        .filter(WatchlistEntry.user_id == user.id, WatchlistEntry.stock_id == stock.id)
+        .join(Stock, Stock.id == WatchlistEntry.stock_id)
+        .filter(
+            WatchlistEntry.user_id == user.id,
+            Stock.symbol == normalised_symbol,
+        )
         .first()
     )
     if not entry:

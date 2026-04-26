@@ -78,6 +78,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .drawer[data-theme="dark"] {
@@ -298,6 +300,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 68px));
   border-top: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -313,6 +316,24 @@
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+/* Tighten user section on narrow phones */
+@media (max-width: 400px) {
+  .userSection {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .userAvatar {
+    width: 34px;
+    height: 34px;
+  }
+  .userName {
+    font-size: 0.83rem;
+  }
+  .userEmail {
+    font-size: 0.7rem;
+  }
 }
 
 /* Responsive - hide on desktop */

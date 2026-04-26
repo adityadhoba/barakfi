@@ -31,6 +31,17 @@ ROLE_DESCRIPTIONS = {
 }
 
 
+def normalize_user_role(role: object) -> str:
+    """
+    Canonical role string for RBAC and /me responses.
+    Strips whitespace, lowercases, and maps unknown values to ``user``.
+    """
+    if role is None:
+        return "user"
+    s = str(role).strip().lower()
+    return s if s in VALID_ROLES else "user"
+
+
 def get_user_by_claims(db: Session, claims: dict) -> User:
     """
     Fetch the current user from the database based on JWT claims.
@@ -63,7 +74,7 @@ def is_admin(db: Session, claims: dict) -> bool:
 
     try:
         user = get_user_by_claims(db, claims)
-        return user.role in {"owner", "admin"}
+        return normalize_user_role(user.role) in {"owner", "admin"}
     except HTTPException:
         return (
             auth_subject in OWNER_AUTH_SUBJECTS
@@ -79,7 +90,7 @@ def is_owner(db: Session, claims: dict) -> bool:
 
     try:
         user = get_user_by_claims(db, claims)
-        return user.role == "owner"
+        return normalize_user_role(user.role) == "owner"
     except HTTPException:
         return auth_subject in OWNER_AUTH_SUBJECTS or email in OWNER_EMAILS
 
@@ -88,7 +99,7 @@ def has_role(user: User, required_role: str) -> bool:
     """
     Check if user has the specified role or higher in the hierarchy.
     """
-    user_level = ROLE_HIERARCHY.get(user.role, 0)
+    user_level = ROLE_HIERARCHY.get(normalize_user_role(user.role), 0)
     required_level = ROLE_HIERARCHY.get(required_role, 0)
     return user_level >= required_level
 
@@ -108,7 +119,7 @@ def require_role(*allowed_roles: str) -> Callable:
 
         user = get_user_by_claims(db, claims)
 
-        if user.role not in allowed_roles:
+        if normalize_user_role(user.role) not in allowed_roles:
             raise HTTPException(
                 status_code=403,
                 detail=f"This action requires one of these roles: {', '.join(allowed_roles)}"

@@ -135,16 +135,28 @@ export function WatchlistDashboard({ entries }: Props) {
     [entries],
   );
   const [pruningForeign, setPruningForeign] = useState(false);
+  const [pruneError, setPruneError] = useState<string | null>(null);
 
   async function removeNonIndiaSymbols() {
     if (nonIndiaEntries.length === 0) return;
     setPruningForeign(true);
+    setPruneError(null);
     try {
-      for (const e of nonIndiaEntries) {
-        const sym = encodeURIComponent(e.stock.symbol);
-        await fetch(`/api/watchlist/${sym}`, { method: "DELETE", credentials: "same-origin" });
+      const results = await Promise.all(
+        nonIndiaEntries.map((e) =>
+          fetch(`/api/watchlist/${encodeURIComponent(e.stock.symbol)}`, {
+            method: "DELETE",
+            credentials: "same-origin",
+          }).then((r) => ({ symbol: e.stock.symbol, ok: r.ok, status: r.status }))
+        )
+      );
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length > 0) {
+        setPruneError(`Could not remove: ${failed.map((r) => r.symbol).join(", ")}. Try again.`);
       }
       router.refresh();
+    } catch {
+      setPruneError("Network error — please try again.");
     } finally {
       setPruningForeign(false);
     }
@@ -166,6 +178,11 @@ export function WatchlistDashboard({ entries }: Props) {
           >
             {pruningForeign ? "Removing…" : "Remove all non-India symbols"}
           </button>
+          {pruneError && (
+            <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "var(--red)" }}>
+              {pruneError}
+            </p>
+          )}
         </div>
       ) : null}
 

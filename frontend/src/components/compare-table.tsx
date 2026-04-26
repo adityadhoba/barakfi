@@ -464,8 +464,9 @@ export function CompareTable({
     const queryString = selectedSymbols.join(",");
 
     if (!userId) {
-      const redirectPath = `/compare/results?symbols=${queryString}`;
-      router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+      router.push(
+        `/sign-in?redirect_url=${encodeURIComponent(`/compare/results?symbols=${selectedSymbols.join(",")}`)}`,
+      );
       return;
     }
 
@@ -762,6 +763,7 @@ export function CompareTable({
         {compareLimitState ? (
           <CompareLimitReachedState limitState={compareLimitState} />
         ) : null}
+
       </div>
     );
   }

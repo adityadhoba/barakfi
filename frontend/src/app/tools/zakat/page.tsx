@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     "Nisab calculator",
     "zakat on gold India",
   ],
+  alternates: { canonical: "https://barakfi.in/tools/zakat" },
 };
 
 export default function ZakatPage() {

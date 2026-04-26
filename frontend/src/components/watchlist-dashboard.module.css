@@ -374,6 +374,38 @@
   }
 }
 
+@media (max-width: 480px) {
+  .complianceSummary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .summaryItem {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 6px;
+  }
+
+  .summaryBadge {
+    width: 32px;
+    height: 32px;
+  }
+
+  .summaryIcon {
+    font-size: 1rem;
+  }
+
+  .summaryLabel {
+    font-size: 0.65rem;
+  }
+
+  .summaryValue {
+    font-size: 1.1rem;
+  }
+}
+
 
 .marketBadge {
   display: inline-flex;

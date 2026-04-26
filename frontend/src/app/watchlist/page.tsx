@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import styles from "@/app/screener.module.css";
 import {
   getAuthenticatedWatchlist,
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "Watchlist — Barakfi",
   description:
     "Private watchlist for signed-in BarakFi users: track NSE and BSE names, refresh Shariah-style compliance labels when fundamentals update, and jump back to the screener or stock pages. Not intended for public search — sign in to manage your list.",
-  robots: { index: false, follow: true },
+  robots: { index: true, follow: true },
 };
 
 export default async function WatchlistPage() {
@@ -24,7 +24,7 @@ export default async function WatchlistPage() {
   const token = await authState.getToken();
 
   if (!clerkUser || !token) {
-    redirect("/sign-in");
+    redirect("/sign-in?redirect_url=%2Fwatchlist");
   }
 
   const actor = {

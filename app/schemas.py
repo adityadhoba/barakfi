@@ -1,9 +1,17 @@
+import math
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 CorporateEventType = Literal["merge", "demerge", "delisted", "renamed", "acquired"]
+
+
+def _clean_float(v: object) -> float:
+    """Replace NaN / ±Infinity with 0.0 so JSON serialisation never raises."""
+    if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+        return 0.0
+    return float(v) if v is not None else 0.0
 
 
 class StockCorporateEventSummaryRead(BaseModel):
@@ -20,19 +28,30 @@ class StockBase(BaseModel):
     name: str
     sector: str
     exchange: str = "NSE"
-    market_cap: float = Field(ge=0)
-    average_market_cap_36m: float = Field(ge=0)
-    debt: float = Field(ge=0)
-    revenue: float = Field(ge=0)
-    total_business_income: float = Field(ge=0)
-    interest_income: float = Field(ge=0)
-    non_permissible_income: float = Field(ge=0)
-    accounts_receivable: float = Field(ge=0)
-    cash_and_equivalents: float = Field(ge=0, default=0)
-    short_term_investments: float = Field(ge=0, default=0)
-    fixed_assets: float = Field(ge=0)
-    total_assets: float = Field(ge=0)
-    price: float = Field(ge=0)
+    market_cap: float = 0.0
+    average_market_cap_36m: float = 0.0
+    debt: float = 0.0
+    revenue: float = 0.0
+    total_business_income: float = 0.0
+    interest_income: float = 0.0
+    non_permissible_income: float = 0.0
+    accounts_receivable: float = 0.0
+    cash_and_equivalents: float = 0.0
+    short_term_investments: float = 0.0
+    fixed_assets: float = 0.0
+    total_assets: float = 0.0
+    price: float = 0.0
+
+    @field_validator(
+        "market_cap", "average_market_cap_36m", "debt", "revenue",
+        "total_business_income", "interest_income", "non_permissible_income",
+        "accounts_receivable", "cash_and_equivalents", "short_term_investments",
+        "fixed_assets", "total_assets", "price",
+        mode="before",
+    )
+    @classmethod
+    def sanitise_float(cls, v: object) -> float:
+        return _clean_float(v)
     currency: str = "INR"
     country: str = "India"
     data_source: str = "internal_seed"

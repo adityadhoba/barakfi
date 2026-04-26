@@ -38,22 +38,26 @@ services:
       - key: OPS_ALERT_QUIET_WINDOW_SECONDS
         value: "1800"
 
-  # Job A: fundamentals refresh (weekday)
-  # 04:30 PM IST Mon–Fri => 11:00 UTC
+  # ============================================================================
+  # V2 Pipeline Jobs — Official-Source Architecture
+  # ============================================================================
+
+  # Job C: Universe sync — Nifty 500 constituent list + NSE securities master
+  # 08:30 IST Mon–Fri => 03:00 UTC  (before market open)
+  # NOTE: This job uses only official NSE public downloads. No paid API required.
+  # When a paid data provider is purchased, add it as secondary enrichment here.
   - type: cron
-    name: barakfi-daily-fundamentals
+    name: barakfi-universe-sync
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: PYTHONPATH=. python3 fetch_real_data.py
-    schedule: "0 11 * * 1-5"
+    startCommand: PYTHONPATH=. python3 scripts/pipeline/universe_sync.py
+    schedule: "0 3 * * 1-5"
     region: singapore
     branch: main
     plan: starter
     envVars:
       - key: DATABASE_URL
         sync: false
-      # Job A sends Slack alerts directly from fetch_real_data.py,
-      # so it needs the webhook in *this* cron job environment too.
       - key: OPS_SLACK_WEBHOOK_URL
         sync: false
       - key: APP_ENV
@@ -61,33 +65,88 @@ services:
       - key: OPS_ALERT_FAILURES_ENABLED
         value: "true"
       - key: OPS_ALERT_SUCCESSES_ENABLED
-        value: "true"
-      # Send success alerts from Job A too (so we can verify healthy runs).
-      - key: OPS_ALERT_JOB_A_SUCCESSES_ENABLED
-        value: "true"
+        value: "false"
       - key: PYTHONUNBUFFERED
         value: "1"
+      # Set to 1 in Render dashboard to bypass the "already ran today" guard,
+      # trigger the run, then set back to 0.
+      - key: PIPELINE_FORCE_RUN
+        value: "1"
 
-  # Job B: run internal daily refresh pipeline after fundamentals update
-  # 05:45 PM IST Mon–Fri => 12:15 UTC
+  # Job D-pre: Fundamentals sync — NSE Financial Results API (official Reg 33 source)
+  # 05:00 PM IST Mon–Fri => 11:30 UTC  (after market close, before screening recompute)
+  # Primary: NSE financial results JSON API (quarterly/annual XBRL-backed filings)
+  # Fallback: yfinance (internal research only, not published as truth)
+  # Writes: DataFinancialFact → FundamentalsSnapshot → Stock (legacy API write-back)
   - type: cron
-    name: barakfi-daily-refresh
+    name: barakfi-fundamentals-sync
     runtime: python
-    buildCommand: pip install httpx
-    startCommand: PYTHONPATH=. python3 scripts/run_daily_refresh.py
-    schedule: "15 12 * * 1-5"
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/pipeline/fundamentals_sync.py --period Annual
+    schedule: "0 14 * * 1-5"
     region: singapore
     branch: main
     plan: starter
     envVars:
-      - key: API_BASE_URL
-        fromService:
-          name: barakfi-api
-          type: web
-          property: hostport
-      - key: INTERNAL_SERVICE_TOKEN
+      - key: DATABASE_URL
         sync: false
-      # Job B sends Slack alerts directly from scripts/run_daily_refresh.py
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "false"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PIPELINE_FORCE_RUN
+        value: "1"
+
+  # Job D: EOD price sync — NSE bhavcopy (official end-of-day prices)
+  # 07:00 PM IST Mon–Fri => 13:30 UTC  (bhavcopy published ~5:30–6:00 PM IST; 1h buffer)
+  # Must run BEFORE fundamentals_sync (14:00 UTC) so market caps are fresh.
+  # Source: NSE bhavcopy archive (official) — no paid API required.
+  - type: cron
+    name: barakfi-eod-price-sync
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/pipeline/eod_price_sync.py
+    schedule: "30 13 * * 1-5"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: OPS_SLACK_WEBHOOK_URL
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: OPS_ALERT_FAILURES_ENABLED
+        value: "true"
+      - key: OPS_ALERT_SUCCESSES_ENABLED
+        value: "false"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PIPELINE_FORCE_RUN
+        value: "1"
+
+  # Job E: Screening recompute — runs after fundamentals_sync (14:00 UTC)
+  # 08:30 PM IST Mon–Fri => 15:00 UTC
+  # Reads from official-source truth tables; no external API calls.
+  - type: cron
+    name: barakfi-screening-recompute
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=. python3 scripts/pipeline/screening_recompute.py
+    schedule: "0 15 * * 1-5"
+    region: singapore
+    branch: main
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
       - key: OPS_SLACK_WEBHOOK_URL
         sync: false
       - key: APP_ENV
@@ -98,3 +157,6 @@ services:
         value: "true"
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: PIPELINE_FORCE_RUN
+        value: "1"
+

@@ -745,6 +745,25 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
             f"Cash & interest-bearing securities are {cash_to_assets:.1%} of total assets, exceeding the {t['cash_ib_ratio']:.0%} limit under {p['short']}."
         )
 
+    # --- Sanity-check: detect implausible debt ratios caused by market-cap data errors ---
+    # If market cap is available but the debt ratio is > 10x (1000%), the market cap is almost
+    # certainly wrong (e.g. 10× underestimated due to incorrect face-value in NSE XBRL data).
+    # In this case we demote the hard FAIL to a REQUIRES_REVIEW flag and suppress the reason.
+    _RATIO_SANITY_THRESHOLD = 10.0  # 1000%
+    debt_denom_val = _get_denominator_value(stock, d["debt"])
+    debt_current_denom_val = _get_denominator_value(stock, d["debt_current"])
+    debt_ratio_implausible = (
+        debt_denom_val > 0 and stock.get("debt", 0) > 0
+        and (debt_ratio > _RATIO_SANITY_THRESHOLD or debt_current_ratio > _RATIO_SANITY_THRESHOLD)
+    )
+    if debt_ratio_implausible:
+        manual_review_flags.append(
+            "Debt ratio is implausibly high — market cap data may be incorrect (data pipeline issue). "
+            "Manual verification required before relying on this screening result."
+        )
+        # Remove debt-related hard-fail reasons; they are unreliable
+        reasons = [r for r in reasons if "Debt is" not in r]
+
     # --- Soft rules ---
     critical_fields = ["market_cap", "debt", "total_business_income", "total_assets"]
     if d["debt"] == "market_cap_36m":

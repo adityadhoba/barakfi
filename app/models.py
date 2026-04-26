@@ -46,7 +46,10 @@ class Stock(Base):
     - (1) stock -> (N) index_memberships
     """
     __tablename__ = "stocks"
-    __table_args__ = (UniqueConstraint("exchange", "symbol", name="uq_stocks_exchange_symbol"),)
+    __table_args__ = (
+        UniqueConstraint("exchange", "symbol", name="uq_stocks_exchange_symbol"),
+        Index("ix_stocks_exchange_active", "exchange", "is_active"),
+    )
 
     id = Column(Integer, primary_key=True)
     symbol = Column(String, index=True, nullable=False)
@@ -593,6 +596,12 @@ class ComplianceHistory(Base):
 
     id = Column(Integer, primary_key=True)
     stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+    # Newer production schemas persist before/after status and rating deltas.
+    old_status = Column(String, nullable=True)
+    new_status = Column(String, nullable=True)
+    old_compliance_rating = Column(Float, nullable=True)
+    new_compliance_rating = Column(Float, nullable=True)
+    change_reason = Column(Text, nullable=True)
     status = Column(String, nullable=False)
     profile_code = Column(String, nullable=False, default="sp_shariah")
     recorded_at = Column(DateTime, nullable=False, default=utc_now)

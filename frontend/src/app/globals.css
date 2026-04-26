@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
 
 /* ── Performance hints ── */
 
@@ -53,9 +53,9 @@
   --purple-bg: #f5f3ff;
   --purple-border: #c4b5fd;
 
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* Product UI uses one typeface for clarity */
-  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
   /* Status colors: Halal = green, Doubtful = yellow/amber, Haram = red (accessible on card backgrounds) */
   --status-halal-fg: #047857;
@@ -232,6 +232,10 @@ body {
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+@keyframes screener-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 /* Scroll-triggered animation */
@@ -882,7 +886,7 @@ body[data-hide-topbar-search] .topbarSearchSlot {
   .topbarSearch { max-width: none; }
   .topbarSearchKbd { display: none; }
   .ghostLink { padding: 6px 8px; font-size: 0.8rem; }
-  body { padding-bottom: 68px; }
+  body { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .bottomNav { display: flex; }
 }
 
@@ -1509,3 +1513,4 @@ a[href*="clerk.com"] {
   white-space: nowrap;
   border-width: 0;
 }
+

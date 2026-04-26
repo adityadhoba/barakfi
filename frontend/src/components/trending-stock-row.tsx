@@ -11,10 +11,9 @@ type Props = {
   name: string;
   exchange: string;
   priceLabel: string;
-  mcapLabel: string;
 };
 
-export function TrendingStockRow({ href, rank, symbol, name, exchange, priceLabel, mcapLabel }: Props) {
+export function TrendingStockRow({ href, rank, symbol, name, exchange, priceLabel }: Props) {
   return (
     <Link href={href} className={styles.card}>
       <div className={styles.cardRank}>{rank}</div>
@@ -25,7 +24,6 @@ export function TrendingStockRow({ href, rank, symbol, name, exchange, priceLabe
       </div>
       <div className={styles.cardRight}>
         <div className={styles.cardPrice}>{priceLabel}</div>
-        <div className={styles.cardMcap}>{mcapLabel}</div>
       </div>
       <span className={styles.cardExchange}>{exchange}</span>
     </Link>

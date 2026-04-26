@@ -9,6 +9,8 @@ type QuoteMap = Record<string, {
 }>;
 
 const DEFAULT_REFRESH_MS = 60_000;
+const BATCH_SIZE = 20;
+const MAX_PARALLEL_BATCHES = 4;
 
 /**
  * Batch quotes for symbols. Pass optional exchange per symbol (NSE, US, LSE, …) for correct FX.
@@ -30,14 +32,14 @@ export function useBatchQuotes(
 
     async function fetchBatch() {
       const batches: string[][] = [];
-      for (let i = 0; i < symbols.length; i += 20) {
-        batches.push(symbols.slice(i, i + 20));
+      for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+        batches.push(symbols.slice(i, i + BATCH_SIZE));
       }
 
       const allQuotes: QuoteMap = {};
 
-      for (const batch of batches) {
-        if (cancelled) break;
+      const fetchOneBatch = async (batch: string[]) => {
+        if (cancelled) return;
         try {
           const pairs = batch
             .map((sym) => {
@@ -46,7 +48,7 @@ export function useBatchQuotes(
             })
             .join(",");
           const res = await fetch(`/api/quotes?pairs=${encodeURIComponent(pairs)}`, { cache: "no-store" });
-          if (!res.ok) continue;
+          if (!res.ok) return;
           const data = await res.json();
           for (const q of data.quotes || []) {
             allQuotes[q.symbol] = {
@@ -58,6 +60,24 @@ export function useBatchQuotes(
         } catch {
           // Skip failed batches
         }
+      };
+
+      // Run quote batches in parallel with a small cap to avoid flooding backend/serverless.
+      let cursor = 0;
+      const workers = Array.from(
+        { length: Math.min(MAX_PARALLEL_BATCHES, batches.length) },
+        async () => {
+          while (!cancelled) {
+            const idx = cursor++;
+            if (idx >= batches.length) return;
+            await fetchOneBatch(batches[idx]);
+          }
+        },
+      );
+
+      await Promise.allSettled(workers);
+      if (cancelled) {
+        return;
       }
 
       if (!cancelled && Object.keys(allQuotes).length > 0) {

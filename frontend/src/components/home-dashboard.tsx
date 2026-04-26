@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { getStocks, getTrending } from "@/lib/api";
 import { HomeHeroSearch } from "@/components/home-hero-search";
 import { HomeTopStocksLive } from "@/components/home-top-stocks-live";
+import { MethodologyTrustCard } from "@/components/methodology-trust-card";
 import { SCREENING_LEGAL_DISCLAIMER } from "@/lib/screening-status";
 import styles from "./home-dashboard.module.css";
 
@@ -20,84 +21,19 @@ export async function HomeDashboard() {
 
   return (
     <div className={styles.home}>
-
-      {/* ── Hero ── */}
-      <section className={styles.hero}>
-        <div className={styles.heroInner}>
-          <div className={styles.heroBadge}>
-            <span className={styles.heroBadgeDot} />
-            NSE &amp; BSE · Shariah Compliant Screening
-          </div>
-          <h1 className={styles.heroHeadline}>
-            Invest with<br />
-            <span className={styles.heroAccent}>Intention.</span>
-          </h1>
-          <p className={styles.heroSub}>
-            India&apos;s most transparent halal stock screener — 6 core Shariah
-            checks, live financials, and full ratio disclosure for every listed
-            company on NSE and BSE.
-          </p>
-          <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
-          <div className={styles.heroProof}>
-            <span className={styles.heroProofItem}><strong>2,000+</strong> stocks screened</span>
-            <span className={styles.heroProofDivider} />
-            <span className={styles.heroProofItem}><strong>6</strong> Shariah checks</span>
-            <span className={styles.heroProofDivider} />
-            <span className={styles.heroProofItem}><strong>Free</strong> to use</span>
-          </div>
-        </div>
-        <div className={styles.heroGlow} aria-hidden />
-      </section>
-
-      {/* ── Big Quote ── */}
-      <section className={styles.quoteSection}>
-        <div className={styles.quoteInner}>
-          <p className={styles.quoteText}>
-            &ldquo;Wealth built on principles that honour your faith.&rdquo;
-          </p>
-          <span className={styles.quoteAttrib}>— The Barakfi Promise</span>
-        </div>
-      </section>
-
-      {/* ── Beliefs ── */}
-      <section className={styles.beliefsSection}>
-        <div className={styles.beliefsHeader}>
-          <span className={styles.sectionEyebrow}>Our Principles</span>
-          <h2 className={styles.beliefsTitle}>What we believe</h2>
-        </div>
-        <div className={styles.beliefsGrid}>
-          <div className={styles.beliefCard}>
-            <span className={styles.beliefIcon} aria-hidden>☽</span>
-            <h3 className={styles.beliefName}>Shariah First</h3>
-            <p className={styles.beliefDesc}>
-              Every screening decision is grounded in AAOIFI, S&amp;P, and FTSE
-              Maxis Shariah methodologies — no shortcuts, no guesswork.
-            </p>
-          </div>
-          <div className={styles.beliefCard}>
-            <span className={styles.beliefIcon} aria-hidden>◎</span>
-            <h3 className={styles.beliefName}>Full Transparency</h3>
-            <p className={styles.beliefDesc}>
-              We show every ratio, threshold, and data source on screen. You
-              always know exactly why a stock passed or failed.
-            </p>
-          </div>
-          <div className={styles.beliefCard}>
-            <span className={styles.beliefIcon} aria-hidden>⬡</span>
-            <h3 className={styles.beliefName}>Knowledge Over Fear</h3>
-            <p className={styles.beliefDesc}>
-              Halal investing should feel empowering, not restrictive. We give
-              you the tools to invest confidently in India&apos;s markets.
-            </p>
-          </div>
-          <div className={styles.beliefCard}>
-            <span className={styles.beliefIcon} aria-hidden>✦</span>
-            <h3 className={styles.beliefName}>Built for Muslim India</h3>
-            <p className={styles.beliefDesc}>
-              NSE and BSE coverage purpose-built for Indian Muslim investors —
-              in the language and context you understand.
-            </p>
-          </div>
+      {/* ── Hero: one action ── */}
+      <section className={styles.heroClean}>
+        <span className={styles.heroKicker}>Financially Grounded Screening</span>
+        <h1 className={styles.heroHeadline}>
+          Screen Indian stocks with transparent Shariah compliance checks
+        </h1>
+        <p className={styles.heroSub}>
+          Built for NSE and BSE investors who want evidence-first outcomes across debt, income purity,
+          interest exposure, receivables, and balance-sheet quality.
+        </p>
+        <HomeHeroSearch trendingSymbols={trendingChips.map((s) => s.symbol)} />
+        <div className={styles.methodologyCardWrap}>
+          <MethodologyTrustCard />
         </div>
       </section>
 

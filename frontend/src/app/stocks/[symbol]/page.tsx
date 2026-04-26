@@ -1,6 +1,22 @@
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+// ISR: revalidate every hour. generateStaticParams pre-builds all 500 stock
+// pages at deploy time so they are served from CDN edge, not on-demand.
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  try {
+    const { getStocks } = await import("@/lib/api");
+    const stocks = await getStocks({ orderBy: "market_cap_desc" });
+    return stocks
+      .filter((s) => s.symbol && s.exchange === "NSE")
+      .map((s) => ({ symbol: s.symbol }));
+  } catch {
+    // If the API is not reachable at build time, fall back to an empty list
+    // — pages will be rendered on-demand and then cached.
+    return [];
+  }
+}
 
 import pageStyles from "@/app/page.module.css";
 import styles from "@/app/screener.module.css";
@@ -34,12 +50,15 @@ import { ScreeningExplainerCards } from "@/components/screening-explainer-cards"
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
+import { PeopleAlsoChecked } from "@/components/people-also-checked";
 import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import { displayCountryForStock } from "@/lib/stock-display";
+import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
 import {
   capTierLabel,
   formatFundamentalAmount,
   formatFundamentalAmountCompact,
+  isFundamentalsEmpty,
   formatFundamentalsAsOfLine,
   formatFundamentalsLastUpdatedIst,
   fundamentalsUnitNote,
@@ -167,6 +186,8 @@ function formatVolumeShorthand(volume: number, currency: string) {
 }
 
 function formatRatio(value: number) {
+  // Cap at 999% — values above this signal a data pipeline error (e.g. wrong market cap unit)
+  if (!Number.isFinite(value) || value > 9.99) return "—";
   return `${(value * 100).toFixed(2)}%`;
 }
 
@@ -302,13 +323,16 @@ export default async function StockDetailPage({
   const b = screening.breakdown;
   const takeaway = buildTakeaway(screening.status, screening.reasons, screening.manual_review_flags);
 
+  // Sanitize ratio values: cap at 9.99 (999%) to prevent data pipeline errors from
+  // skewing the UI (e.g. wrong market cap unit causing 48420223% debt ratio).
+  const _sanitizeRatio = (v: number) => (!Number.isFinite(v) || v > 9.99 ? 0 : v);
   const ratios = [
-    { label: "Debt level", value: b.debt_to_36m_avg_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "How much debt the company carries. Must be under 33%." },
-    { label: "Current debt", value: b.debt_to_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "Debt compared to current company value." },
-    { label: "Income purity", value: b.non_permissible_income_ratio, threshold: 0.05, max: 0.1, desc: "How much income comes from non-halal sources. Must be under 5%." },
-    { label: "Interest earned", value: b.interest_income_ratio, threshold: 0.05, max: 0.1, desc: "Interest income as portion of total revenue." },
-    { label: "Money owed to company", value: b.receivables_to_market_cap_ratio, threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%." },
-    { label: "Cash & interest-bearing", value: b.cash_and_interest_bearing_to_assets_ratio, threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%." },
+    { label: "Debt level", value: _sanitizeRatio(b.debt_to_36m_avg_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "How much debt the company carries. Must be under 33%.", raw: b.debt_to_36m_avg_market_cap_ratio },
+    { label: "Current debt", value: _sanitizeRatio(b.debt_to_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "Debt compared to current company value.", raw: b.debt_to_market_cap_ratio },
+    { label: "Income purity", value: _sanitizeRatio(b.non_permissible_income_ratio), threshold: 0.05, max: 0.1, desc: "How much income comes from non-halal sources. Must be under 5%.", raw: b.non_permissible_income_ratio },
+    { label: "Interest earned", value: _sanitizeRatio(b.interest_income_ratio), threshold: 0.05, max: 0.1, desc: "Interest income as portion of total revenue.", raw: b.interest_income_ratio },
+    { label: "Money owed to company", value: _sanitizeRatio(b.receivables_to_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%.", raw: b.receivables_to_market_cap_ratio },
+    { label: "Cash & interest-bearing", value: _sanitizeRatio(b.cash_and_interest_bearing_to_assets_ratio), threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%.", raw: b.cash_and_interest_bearing_to_assets_ratio },
   ];
 
   const cur = stock.currency || "INR";
@@ -324,16 +348,16 @@ export default async function StockDetailPage({
         ? "Medium Risk"
         : "Higher Risk";
   const financials = [
-    { label: "Market Cap", value: formatFundamentalAmount(stock.market_cap, cur) },
-    { label: "36M Avg Market Cap", value: formatFundamentalAmount(stock.average_market_cap_36m, cur) },
-    { label: "Revenue", value: formatCurrency(stock.revenue, cur) },
-    { label: "Total Business Income", value: formatCurrency(stock.total_business_income, cur) },
-    { label: "Interest Income", value: formatCurrency(stock.interest_income, cur) },
-    { label: "Non-permissible Income", value: formatCurrency(stock.non_permissible_income, cur) },
-    { label: "Total Debt", value: formatCurrency(stock.debt, cur) },
-    { label: "Accounts Receivable", value: formatCurrency(stock.accounts_receivable, cur) },
-    { label: "Fixed Assets", value: formatCurrency(stock.fixed_assets, cur) },
-    { label: "Total Assets", value: formatCurrency(stock.total_assets, cur) },
+    { label: "Market Cap", value: formatFundamentalAmountCompact(stock.market_cap, cur) },
+    { label: "36M Avg Market Cap", value: formatFundamentalAmountCompact(stock.average_market_cap_36m, cur) },
+    { label: "Revenue", value: formatFundamentalAmountCompact(stock.revenue, cur) },
+    { label: "Total Business Income", value: formatFundamentalAmountCompact(stock.total_business_income, cur) },
+    { label: "Interest Income", value: formatFundamentalAmountCompact(stock.interest_income, cur) },
+    { label: "Non-permissible Income", value: formatFundamentalAmountCompact(stock.non_permissible_income, cur) },
+    { label: "Total Debt", value: formatFundamentalAmountCompact(stock.debt, cur) },
+    { label: "Accounts Receivable", value: formatFundamentalAmountCompact(stock.accounts_receivable, cur) },
+    { label: "Fixed Assets", value: formatFundamentalAmountCompact(stock.fixed_assets, cur) },
+    { label: "Total Assets", value: formatFundamentalAmountCompact(stock.total_assets, cur) },
   ];
 
   // Similar stocks from the same sector (excluding current)
@@ -683,6 +707,32 @@ export default async function StockDetailPage({
           <span className={styles.breadcrumbSep} aria-hidden>/</span>
           <span className={styles.breadcrumbCurrent} aria-current="page">{stock.symbol}</span>
         </nav>
+
+        {/* Data Pending banner — shown when the stock was seeded from NSE master
+            but fundamentals have not yet been populated by the XBRL sync job. */}
+        {isFundamentalsEmpty(stock) && (
+          <div
+            role="status"
+            style={{
+              margin: "12px 0 8px",
+              padding: "10px 16px",
+              borderRadius: "var(--radius-lg)",
+              background: "var(--bg-soft)",
+              border: "1px solid var(--line)",
+              fontSize: "0.82rem",
+              color: "var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: "1rem" }}>⏳</span>
+            <span>
+              Financial data for <strong>{stock.symbol}</strong> is being sourced from NSE filings.
+              Ratios and compliance scores will update within 24 hours after the next sync.
+            </span>
+          </div>
+        )}
 
         {/* Hero */}
         <div className={styles.complianceHero}>
@@ -1035,12 +1085,15 @@ export default async function StockDetailPage({
               {ratios.map((r) => {
                 const pct = Math.min((r.value / r.max) * 100, 100);
                 const thresholdPct = (r.threshold / r.max) * 100;
+                const dataError = r.raw > 9.99 || !Number.isFinite(r.raw);
                 return (
                   <div className={styles.financialCard} key={r.label}>
                     <div className={styles.financialCardHeader}>
                       <span className={styles.financialCardLabel}>{r.label}</span>
                     </div>
-                    <span className={styles.financialCardValue}>{formatRatio(r.value)}</span>
+                    <span className={styles.financialCardValue} title={dataError ? "Data pipeline error — value could not be verified" : undefined}>
+                      {dataError ? <span style={{ color: "var(--color-amber, #f59e0b)", fontSize: "0.8em" }}>Data pending</span> : formatRatio(r.value)}
+                    </span>
                     <div className={styles.financialCardGauge} role="meter" aria-label={r.label} aria-valuenow={Math.round(r.value * 100)} aria-valuemin={0} aria-valuemax={Math.round(r.max * 100)}>
                       <div
                         className={`${styles.financialCardGaugeFill} ${ratioBarColor(r.value, r.threshold)}`}
@@ -1095,6 +1148,13 @@ export default async function StockDetailPage({
                 View methodology
               </Link>
             </div>
+            <p className={styles.seoProse} style={{ marginTop: 16 }}>
+              <strong>Transparency:</strong> Verdicts here are{" "}
+              <strong>likely compliant / needs review / likely non-compliant under BarakFi methodology v
+              {PRIMARY_METHODOLOGY_VERSION}</strong> based on the latest data we could source — not a fatwa
+              or certification. When filings are incomplete or ambiguous, we bias toward review rather than
+              a false &quot;pass&quot;.
+            </p>
           </div>
 
           {/* Tab 2: Financials */}
@@ -1199,41 +1259,7 @@ export default async function StockDetailPage({
             )}
 
             {peopleAlsoChecked.length > 0 && (
-              <section className={styles.peopleAlsoSection} aria-labelledby="people-also-heading">
-                <h2 id="people-also-heading" className={styles.peopleAlsoTitle}>
-                  People also checked
-                </h2>
-                <div className={styles.peopleAlsoGrid}>
-                  {peopleAlsoChecked.map((item) => (
-                    <Link
-                      key={item.symbol}
-                      href={`/screening/${encodeURIComponent(item.symbol)}`}
-                      className={styles.peopleAlsoCard}
-                    >
-                      <div className={styles.peopleAlsoCardTop}>
-                        <StockLogo symbol={item.symbol} size={36} status={item.status} />
-                        <div className={styles.peopleAlsoIdentity}>
-                          <span className={styles.peopleAlsoName}>{item.name}</span>
-                          <span className={styles.peopleAlsoSymbol}>{item.symbol}</span>
-                        </div>
-                      </div>
-                      <div className={styles.peopleAlsoMeta}>
-                        <LockedVerdict symbol={item.symbol} compact>
-                          <div className={styles.peopleAlsoScoreWrap}>
-                            <span className={styles.peopleAlsoScore}>{item.score}</span>
-                            <span className={styles.peopleAlsoScoreSuffix}>/100</span>
-                          </div>
-                          <span
-                            className={`${styles.badge} ${styles[STATUS_BADGE[item.status] || "badgeReview"]}`}
-                          >
-                            {screeningUiLabel(item.status)}
-                          </span>
-                        </LockedVerdict>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
+              <PeopleAlsoChecked items={peopleAlsoChecked} />
             )}
 
             {/* Moved to end of detail flow, with Read more nested inside */}

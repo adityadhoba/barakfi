@@ -116,8 +116,9 @@ export async function GovernanceShell() {
     );
   }
 
-  const activeFlags = overview.feature_flags.filter((f) => f.enabled).length;
-  const inactiveUsers = overview.users.filter((u) => !u.is_active).length;
+  const featureFlags = overview.feature_flags ?? [];
+  const activeFlags = featureFlags.filter((f) => f.enabled).length;
+  const inactiveUsers = (overview.users ?? []).filter((u) => !u.is_active).length;
 
   return (
     <main className="shellPage">
@@ -154,7 +155,7 @@ export async function GovernanceShell() {
           </article>
           <article className={styles.metricCard}>
             <span className={styles.cardEyebrow}>Users</span>
-            <strong>{overview.users.length}</strong>
+            <strong>{(overview.users ?? []).length}</strong>
             <p>{inactiveUsers > 0 ? `${inactiveUsers} paused` : "All active"}</p>
           </article>
           <article className={styles.metricCard}>
@@ -188,7 +189,7 @@ export async function GovernanceShell() {
             </div>
           </div>
           <GovernanceFeatureFlagForm
-            flags={overview.feature_flags.map((f) => ({
+            flags={featureFlags.map((f) => ({
               code: f.code,
               name: f.name,
               enabled: f.enabled,
@@ -401,7 +402,7 @@ export async function GovernanceShell() {
             </div>
           </div>
           <div className={styles.simpleList}>
-            {overview.feature_flags.map((item) => (
+            {featureFlags.map((item) => (
               <div className={styles.simpleRow} key={item.id}>
                 <div>
                   <strong>{item.name}</strong>

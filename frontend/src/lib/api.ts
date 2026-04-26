@@ -584,6 +584,7 @@ async function apiFetch<T>(path: string, fallback: T, options: ApiFetchOptions =
  */
 export type GetStocksOptions = {
   limit?: number;
+  offset?: number;
   orderBy?: "symbol" | "market_cap_desc";
   revalidateSeconds?: number;
 };
@@ -592,6 +593,9 @@ export function getStocks(options: GetStocksOptions = {}) {
   const params = new URLSearchParams();
   if (typeof options.limit === "number") {
     params.set("limit", String(options.limit));
+  }
+  if (typeof options.offset === "number" && options.offset > 0) {
+    params.set("offset", String(options.offset));
   }
   if (options.orderBy) {
     params.set("order_by", options.orderBy);
@@ -814,23 +818,55 @@ export async function getBulkScreeningResults(symbols: string[]): Promise<Screen
     chunks.push(symbols.slice(i, i + CHUNK_SIZE));
   }
 
-  try {
-    const results = await Promise.all(
-      chunks.map(async (chunk) => {
-        const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(chunk),
-          next: { revalidate: 60 },
-        });
-        if (!response.ok) return [];
-        return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
-      })
-    );
-    return results.flat();
-  } catch {
-    return [];
+  // NOTE: POST requests are not cached by Next.js Data Cache. Do not pass
+  // `next: { revalidate }` here — it has no effect on POST fetches and gives
+  // a false impression of caching. The screener page's segment-level
+  // `export const revalidate = 300` controls re-rendering frequency instead.
+  const results = await Promise.all(
+    chunks.map(async (chunk) => {
+      const response = await fetch(`${apiBaseUrl}/screen/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(chunk),
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        throw new Error(`/screen/bulk returned ${response.status}`);
+      }
+      return unwrapBackendEnvelope<ScreeningResult[]>(await response.json());
+    })
+  );
+  return results.flat();
+}
+
+export type ScreenerSnapshotEntry = {
+  stock: Stock & { index_memberships: string[] };
+  screening: ScreeningResult;
+};
+
+/**
+ * Fetch the pre-computed screener snapshot from the backend.
+ *
+ * Unlike getBulkScreeningResults (POST, uncacheable), this is a GET so
+ * Next.js Data Cache can cache it. The backend sets Cache-Control:
+ * s-maxage=300, stale-while-revalidate=300 so the response is served from
+ * cache between pipeline runs.
+ *
+ * Throws on non-2xx so ISR never caches an empty/broken screener page.
+ */
+export async function getScreenerSnapshot(): Promise<ScreenerSnapshotEntry[]> {
+  const response = await fetch(`${apiBaseUrl}/screener/snapshot`, {
+    next: { revalidate: 600 },
+  });
+  if (!response.ok) {
+    throw new Error(`/screener/snapshot returned ${response.status}`);
   }
+  const body = (await response.json()) as { stocks?: ScreenerSnapshotEntry[] };
+  const entries = body?.stocks ?? [];
+  if (entries.length === 0) {
+    throw new Error("/screener/snapshot returned 0 entries — skipping ISR cache");
+  }
+  return entries;
 }
 
 /**
@@ -1341,7 +1377,7 @@ export async function getTrending(category: string = "popular", exchange?: strin
 }
 
 export async function getCollections(): Promise<Collection[]> {
-  return apiFetch("/collections", []);
+  return apiFetch("/collections", [], { revalidateSeconds: 3600 });
 }
 
 export async function getCollection(slug: string): Promise<CollectionDetail | null> {
@@ -1349,7 +1385,7 @@ export async function getCollection(slug: string): Promise<CollectionDetail | nu
 }
 
 export async function getSuperInvestors(): Promise<SuperInvestorSummary[]> {
-  return apiFetch("/super-investors", []);
+  return apiFetch("/super-investors", [], { revalidateSeconds: 3600 });
 }
 
 export async function getSuperInvestor(slug: string): Promise<SuperInvestorDetail | null> {

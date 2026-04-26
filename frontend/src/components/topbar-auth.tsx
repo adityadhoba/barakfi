@@ -2,38 +2,16 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { TopbarLink } from "@/components/topbar-link";
-import { TopbarDropdown } from "@/components/topbar-dropdown";
+import { TopbarPrimaryNav } from "@/components/topbar-primary-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AdminLink } from "@/components/admin-link";
+import { useBarakfiAdminAccess } from "@/components/admin-link";
+import { TopbarLink } from "@/components/topbar-link";
 
-function PrimaryNav() {
+function AdminMenuIcon() {
   return (
-    <nav className="topbarNav" aria-label="Primary navigation">
-      <TopbarLink href="/screener" label="Screener" />
-      <TopbarDropdown
-        label="Explore"
-        basePath="/collections"
-        items={[
-          { href: "/collections", label: "Collections" },
-          { href: "/halal-stocks", label: "Halal stocks" },
-          { href: "/learn", label: "Learn" },
-          { href: "/super-investors", label: "Super Investors" },
-          { href: "/academy", label: "Academy" },
-        ]}
-      />
-      <TopbarDropdown
-        label="Tools"
-        basePath="/tools"
-        items={[
-          { href: "/tools/purification", label: "Purification Calculator" },
-          { href: "/tools/zakat", label: "Zakat Calculator" },
-          { href: "/compare", label: "Compare Stocks" },
-          { href: "/request-coverage", label: "Request Coverage" },
-        ]}
-      />
-      <TopbarLink href="/watchlist" label="Watchlist" className="ghostLink topbarWatchlistLink" />
-    </nav>
+    <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+    </svg>
   );
 }
 
@@ -43,17 +21,18 @@ function PrimaryNav() {
  */
 export function TopbarAuth() {
   const { isLoaded, userId } = useAuth();
+  const { showAdmin, ready: adminReady } = useBarakfiAdminAccess();
 
   return (
     <div className="topbarActions">
       {!isLoaded ? (
         <>
-          <PrimaryNav />
+          <TopbarPrimaryNav />
           <ThemeToggle />
         </>
       ) : !userId ? (
         <>
-          <PrimaryNav />
+          <TopbarPrimaryNav />
           <Link className="ghostButtonLink" href="/sign-in">
             Log in
           </Link>
@@ -64,15 +43,21 @@ export function TopbarAuth() {
         </>
       ) : (
         <>
-          <PrimaryNav />
-          <AdminLink />
+          <TopbarPrimaryNav />
+          {adminReady && showAdmin ? <TopbarLink href="/admin" label="Admin" /> : null}
           <UserButton
             appearance={{
               elements: {
                 avatarBox: { width: 30, height: 30 },
               },
             }}
-          />
+          >
+            {adminReady && showAdmin ? (
+              <UserButton.MenuItems>
+                <UserButton.Link label="Admin" labelIcon={<AdminMenuIcon />} href="/admin" />
+              </UserButton.MenuItems>
+            ) : null}
+          </UserButton>
           <ThemeToggle />
         </>
       )}

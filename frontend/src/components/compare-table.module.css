@@ -511,6 +511,10 @@
   color: var(--text-tertiary);
   min-width: 160px;
   width: 180px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-soft);
+  z-index: 3;
 }
 
 .stockCol { min-width: 200px; }
@@ -592,6 +596,10 @@
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card, var(--panel));
+  z-index: 1;
 }
 
 .valueCell {
@@ -669,25 +677,33 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .labelCol { min-width: 120px; width: 120px; }
-  .stockCol { min-width: 160px; }
+  .labelCol { min-width: 110px; width: 110px; }
+  .stockCol { min-width: 150px; }
   .table td, .table thead th { padding: 8px 12px; }
   .pickerWrap { max-width: 100%; }
   .emptyState { padding: 32px 16px; }
   .ratioBarTrack { width: 40px; }
   .selectionPanel { padding: 16px; }
   .selectedGrid { grid-template-columns: 1fr; }
-  .tableWrap { max-height: 62vh; }
+  .tableWrap { max-height: 65vh; }
   .limitCard {
     flex-direction: column;
   }
 }
 
+@media (max-width: 480px) {
+  .labelCol { min-width: 90px; width: 90px; font-size: 0.66rem; }
+  .stockCol { min-width: 130px; }
+  .table td, .table thead th { padding: 7px 8px; font-size: 0.76rem; }
+  .ratioBarTrack { width: 32px; }
+  .tableWrap { max-height: 60vh; }
+}
+
 @media (max-width: 390px) {
-  .labelCol { min-width: 100px; width: 100px; font-size: 0.72rem; }
-  .stockCol { min-width: 140px; }
-  .table td, .table thead th { padding: 6px 8px; font-size: 0.78rem; }
-  .stockSymbol { font-size: 0.8rem; }
+  .labelCol { min-width: 80px; width: 80px; font-size: 0.64rem; }
+  .stockCol { min-width: 110px; }
+  .table td, .table thead th { padding: 6px 7px; font-size: 0.74rem; }
+  .stockSymbol { font-size: 0.78rem; }
   .removeBtn { width: 20px; height: 20px; font-size: 0.8rem; }
   .ratioBarTrack { display: none; }
 }

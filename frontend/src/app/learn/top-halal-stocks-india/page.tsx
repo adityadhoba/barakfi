@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description:
     "A tour of widely held NSE and BSE large-caps Muslim investors frequently check first — IT, pharma, FMCG, and banks (often excluded) — with internal links to BarakFi stock pages and the halal screener. Educational context only; not a buy list or fatwa.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://barakfi.in/learn/top-halal-stocks-india" },
 };
 
 export default function TopHalalStocksIndiaPage() {

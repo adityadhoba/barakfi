@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { yahooFinanceBaseCandidates } from "@/lib/yahoo-symbol-aliases";
 
 const LOGO_DEV_TOKEN = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN || "";
 
-/** Bump when forcing clients to bypass stale/wrong img.logo.dev CDN responses (e.g. bad ticker→brand match). */
-const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-17";
+/**
+ * Bump `NEXT_PUBLIC_LOGO_DEV_CACHE_BUST` when bypassing stale img.logo.dev CDN responses.
+ * Stock logos use **only** `https://img.logo.dev/*` (domain + ticker); no favicon CDNs.
+ */
+const LOGO_DEV_CACHE_BUST = process.env.NEXT_PUBLIC_LOGO_DEV_CACHE_BUST || "2026-04-23";
 
 const EXCHANGE_SUFFIX: Record<string, string> = {
   NSE: ".NS",
@@ -133,36 +137,74 @@ const SYMBOL_TO_DOMAIN: Record<string, string> = {
   IOC: "iocl.com",
   BPCL: "bharatpetroleum.in",
   GAIL: "gailonline.com",
+  GARDENREACH: "grse.in",
+  MAZAGON: "mazdock.in",
+  ZENSAR: "zensar.com",
+  AUBANK: "aubank.in",
+  FEDERALBNK: "federalbank.co.in",
+  INDUSINDBK: "indusind.com",
+  POWERMECH: "powermechprojects.com",
+  IDFCFIRSTB: "idfcfirstbank.com",
+  BANDHANBNK: "bandhanbank.com",
+  UNIONBANK: "unionbankofindia.co.in",
+  BANKINDIA: "bankofindia.co.in",
+  INDIANB: "indianbank.in",
+  CENTRALBK: "centralbankofindia.co.in",
+  RBLBANK: "rblbank.com",
+  YESBANK: "yesbank.in",
+  CSBBANK: "csb.co.in",
+  KARURVYSYA: "kvb.co.in",
+  SOUTHBANK: "southindianbank.com",
+  IOB: "iob.in",
+  DCBBANK: "dcbbank.com",
+  JKBANK: "jkbank.com",
+  MAHABANK: "bankofmaharashtra.in",
+  EQUITASBNK: "equitasbank.com",
+  UJJIVANSFB: "ujjivansfb.in",
 };
 
 function normalizeSymbol(symbol: string): string {
   return symbol
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(/\.(NS|BO|L|IN)$/i, "")
     .replace(/-/g, "")
     .toUpperCase();
 }
 
-function getTickerLogoUrl(symbol: string, exchange?: string): string | null {
+function uniqueUrls(urls: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const u of urls) {
+    if (!u || seen.has(u)) continue;
+    seen.add(u);
+    out.push(u);
+  }
+  return out;
+}
+
+/** logo.dev `size` param: retina-friendly without always fetching 256px for small avatars */
+function logoDevPixelSize(displaySize: number): number {
+  return Math.min(128, Math.max(48, Math.round(displaySize * 2)));
+}
+
+function getTickerLogoUrl(symbol: string, displaySize: number, exchange?: string): string | null {
   if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
+  const rawForYahoo = symbol.replace(/\.(NS|BO|L|IN)$/i, "").trim().toUpperCase();
+  const yahooBase = yahooFinanceBaseCandidates(rawForYahoo)[0] ?? clean;
   const suffix = EXCHANGE_SUFFIX[(exchange || "NSE").toUpperCase()] ?? ".NS";
-  const ticker = `${clean}${suffix}`;
-  return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
+  const ticker = `${yahooBase}${suffix}`;
+  const px = logoDevPixelSize(displaySize);
+  return `https://img.logo.dev/ticker/${encodeURIComponent(ticker)}?token=${LOGO_DEV_TOKEN}&size=${px}&format=webp&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
-function getDomainLogoUrl(symbol: string): string | null {
+function getDomainLogoUrl(symbol: string, displaySize: number): string | null {
   if (!LOGO_DEV_TOKEN) return null;
   const clean = normalizeSymbol(symbol);
   const domain = SYMBOL_TO_DOMAIN[clean];
   if (!domain) return null;
-  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=256&format=png&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
-}
-
-function getFaviconUrl(symbol: string): string | null {
-  const clean = normalizeSymbol(symbol);
-  const domain = SYMBOL_TO_DOMAIN[clean];
-  if (!domain) return null;
-  return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=64`;
+  const px = logoDevPixelSize(displaySize);
+  return `https://img.logo.dev/${encodeURIComponent(domain)}?token=${LOGO_DEV_TOKEN}&size=${px}&format=webp&cb=${encodeURIComponent(LOGO_DEV_CACHE_BUST)}`;
 }
 
 function getAvatarColor(status?: string): string {
@@ -186,17 +228,16 @@ export function StockLogo({ symbol, size = 32, status, exchange, className }: Pr
   const cleanSym = normalizeSymbol(symbol);
   const hasCuratedDomain = Boolean(SYMBOL_TO_DOMAIN[cleanSym]);
 
-  const tickerUrl = getTickerLogoUrl(symbol, exchange);
-  const domainLogoUrl = getDomainLogoUrl(symbol);
-  const faviconUrl = getFaviconUrl(symbol);
+  const tickerUrl = getTickerLogoUrl(symbol, size, exchange);
+  const domainLogoUrl = getDomainLogoUrl(symbol, size);
   const initials = symbol.replace(/\.(NS|BO|L|IN)$/i, "").replace(/-/g, "").slice(0, 2).toUpperCase();
 
-  // Prefer domain for symbols in SYMBOL_TO_DOMAIN: logo.dev ticker slugs (e.g. AXISBANK.NS) can map to the wrong brand.
+  // logo.dev only: domain endpoint first when curated (better brand match), then ticker.
   const sources = LOGO_DEV_TOKEN
     ? hasCuratedDomain && domainLogoUrl && tickerUrl
-      ? [domainLogoUrl, tickerUrl]
-      : ([tickerUrl, domainLogoUrl].filter(Boolean) as string[])
-    : ([faviconUrl].filter(Boolean) as string[]);
+      ? uniqueUrls([domainLogoUrl, tickerUrl])
+      : uniqueUrls([tickerUrl, domainLogoUrl])
+    : [];
   const currentSrc = srcLevel < sources.length ? sources[srcLevel] : null;
 
   if (!currentSrc) {
