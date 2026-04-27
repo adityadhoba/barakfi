@@ -4,11 +4,6 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
-  env: {
-    NEXT_PUBLIC_CLERK_JS_URL:
-      "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js",
-    NEXT_PUBLIC_CLERK_JS_VERSION: "6",
-  },
 
   async headers() {
     return [
@@ -31,11 +26,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://js.clerk.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.googleadservices.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.barakfi.in https://*.clerk.accounts.dev https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.googleadservices.com",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
               "img-src 'self' data: blob: https: https://img.logo.dev https://*.clerk.com https://img.clerk.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.in https://cdn.brandfetch.io https://t1.gstatic.com https://upload.wikimedia.org",
-              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://api.clerk.com https://clerk-telemetry.com https://*.clerk-telemetry.com https://api.barakfi.in https://barakfi.com https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://accounts.google.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://*.posthog.com",
+              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://clerk-telemetry.com https://*.clerk-telemetry.com https://api.barakfi.in https://barakfi.com https://*.onrender.com https://query1.finance.yahoo.com https://www.nseindia.com https://accounts.google.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://adservice.google.com https://*.posthog.com",
               "frame-src 'self' https://*.clerk.accounts.dev https://clerk.barakfi.in https://accounts.google.com https://challenges.cloudflare.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com",
               "worker-src 'self' blob:",
             ].join("; "),

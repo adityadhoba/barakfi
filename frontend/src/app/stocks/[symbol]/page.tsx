@@ -35,6 +35,7 @@ import {
   type WorkspaceBundle,
 } from "@/lib/api";
 import {
+  fetchMultiScreeningForPage,
   fetchStockAndScreenForPage,
   fetchStockMetadataBundle,
 } from "@/lib/stock-detail-fetch";
@@ -46,12 +47,17 @@ import { SimilarStocksQuotes } from "@/components/similar-stocks-quotes";
 import { ShareButton } from "@/components/share-button";
 import { StockTabs } from "@/components/stock-tabs";
 import { StockLogo } from "@/components/stock-logo";
-import { ScreeningExplainerCards } from "@/components/screening-explainer-cards";
+import { StockDetailTablesCollapsible } from "@/components/stock-detail-tables-collapsible";
 import { StockUpsellCard } from "@/components/stock-upsell-card";
 import { StockVerdictGate } from "@/components/stock-verdict-gate";
 import { LockedVerdict } from "@/components/locked-verdict";
 import { PeopleAlsoChecked } from "@/components/people-also-checked";
 import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
+import {
+  buildMethodologyTableRowsFromMulti,
+  buildPrimaryRatioTableRows,
+  methodologyTableCaption,
+} from "@/lib/stock-detail-screening-tables";
 import { displayCountryForStock } from "@/lib/stock-display";
 import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
 import {
@@ -122,6 +128,16 @@ const CONFIDENCE_ICONS: Record<string, string> = {
   error: "✖",
 };
 
+/** Order matches backend `ALL_PROFILE_CODES` (halal_service.PROFILES). */
+const METHODOLOGY_CODES = ["sp_shariah", "aaoifi", "ftse_maxis", "khatkhatay"] as const;
+
+const METHODOLOGY_LABEL: Record<(typeof METHODOLOGY_CODES)[number], string> = {
+  sp_shariah: "S&P Shariah",
+  aaoifi: "AAOIFI",
+  ftse_maxis: "FTSE Yasaar",
+  khatkhatay: "Khatkhatay norms",
+};
+
 /** Curated “popular” tickers for “People also checked” (merged with live screening when available). */
 const PEOPLE_ALSO_SYMBOLS = [
   "RELIANCE",
@@ -189,15 +205,6 @@ function formatRatio(value: number) {
   // Cap at 999% — values above this signal a data pipeline error (e.g. wrong market cap unit)
   if (!Number.isFinite(value) || value > 9.99) return "—";
   return `${(value * 100).toFixed(2)}%`;
-}
-
-function displayDataSourceLabel(source: string | null | undefined): string {
-  const raw = (source || "").trim().toLowerCase();
-  if (!raw) return "Normalized filings and market feeds";
-  if (raw.includes("yahoo")) return "Public market feed";
-  if (raw.includes("nse")) return "NSE filings and market feed";
-  if (raw.includes("bse")) return "BSE filing backup";
-  return "Normalized filings and market feeds";
 }
 
 function ratioBarColor(value: number, threshold: number): string {
@@ -275,10 +282,11 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [detail, watchlist, allStocks] = await Promise.all([
+  const [detail, watchlist, allStocks, multiScreening] = await Promise.all([
     fetchStockAndScreenForPage(normalizedSymbol),
     token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     getStocks().catch(() => []),
+    fetchMultiScreeningForPage(normalizedSymbol),
   ]);
 
   let workspace: WorkspaceBundle | null = null;
@@ -334,6 +342,14 @@ export default async function StockDetailPage({
     { label: "Money owed to company", value: _sanitizeRatio(b.receivables_to_market_cap_ratio), threshold: 0.33, max: 0.5, desc: "Outstanding receivables compared to company value. Must be under 33%.", raw: b.receivables_to_market_cap_ratio },
     { label: "Cash & interest-bearing", value: _sanitizeRatio(b.cash_and_interest_bearing_to_assets_ratio), threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%.", raw: b.cash_and_interest_bearing_to_assets_ratio },
   ];
+
+  const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
+  const methodologyRowsForCollapsible = multiScreening
+    ? buildMethodologyTableRowsFromMulti(multiScreening)
+    : null;
+  const methodologyCaptionForCollapsible = multiScreening
+    ? methodologyTableCaption(multiScreening)
+    : null;
 
   const cur = stock.currency || "INR";
   const quoteCur = liveQuote?.currency?.trim() || cur;
@@ -444,6 +460,21 @@ export default async function StockDetailPage({
 
   const confidenceBullets = screening.confidence_bullets ?? [];
 
+  const consensusSummary = multiScreening?.summary;
+  const methodologyIcons =
+    consensusSummary && multiScreening?.methodologies
+      ? METHODOLOGY_CODES.map((code) => {
+          const st = multiScreening.methodologies[code]?.status;
+          const passed = st === "HALAL";
+          return {
+            code,
+            label: METHODOLOGY_LABEL[code],
+            passed,
+            status: st ?? "—",
+          };
+        })
+      : null;
+
   // Count status breakdown for donut chart
   let passCount = 0,
     warnCount = 0,
@@ -487,7 +518,7 @@ export default async function StockDetailPage({
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
     name: `${stock.name} (${stock.symbol})`,
-    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningUiLabel(screening.status)}. Uses AAOIFI-focused financial ratio checks.`,
+    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningUiLabel(screening.status)}. Uses financial ratios and methodology checks.`,
     url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
     brand: { "@type": "Brand", name: "BarakFi" },
     provider: {
@@ -545,7 +576,7 @@ export default async function StockDetailPage({
         name: `Why is ${stock.symbol} considered ${statusDiscoveryWord}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `${reasons.join(" ")} See key ratios and calculation detail on this page.`,
+          text: `${reasons.join(" ")} See key ratios and methodology on this page.`,
         },
       },
       {
@@ -571,9 +602,10 @@ export default async function StockDetailPage({
               Why is this stock {statusUiWord}?
             </h2>
             <p className={styles.seoProse}>
-              {takeaway} BarakFi applies transparent AAOIFI-focused financial tests for debt,
-              non-permissible income, interest-linked income, and receivables. Sector activity is
-              also checked for obvious non-permissible business lines. This page shows the outcome for{" "}
+              {takeaway} BarakFi applies transparent financial tests inspired by widely cited
+              Shariah equity standards (for example S&amp;P Shariah-style debt and income screens,
+              AAOIFI-style balance-sheet tests, and related ratio work). Sector activity is also
+              checked for obvious non-permissible business lines. This page shows the outcome for{" "}
               <strong>{stock.name}</strong> ({stock.symbol}) on <strong>{stock.exchange}</strong>{" "}
               using numbers stored in our database — use this as a research input alongside
               qualified guidance.
@@ -586,8 +618,8 @@ export default async function StockDetailPage({
                   : stock.data_quality === "medium"
                     ? "Medium"
                     : "Low"}
-                — indicates how complete the fundamentals are for ratio screening. Source:
-                normalized filings and market data feeds.
+                — indicates how complete the fundamentals are for ratio screening. Live quote
+                source: {stock.data_source}.
                 {stock.fundamentals_fields_missing &&
                 stock.fundamentals_fields_missing.length > 0 ? (
                   <>
@@ -607,8 +639,9 @@ export default async function StockDetailPage({
             </h2>
             <p className={styles.seoProse}>
               The strip below summarizes debt versus market cap, non-permissible income,
-              interest-related income, cash and interest-bearing balances, and receivables. Expand
-              the detailed tables for exact numerators and denominators used for this listing.
+              interest-related income, cash and interest-bearing balances, and receivables — the
+              same families of ratios many Islamic index providers use in different forms. Expand
+              the detailed tables for exact numerators and denominators used on this listing.
             </p>
           </section>
 
@@ -617,9 +650,10 @@ export default async function StockDetailPage({
               Shariah screening breakdown
             </h2>
             <p className={styles.seoProse}>
-              Use the <strong>Compliance</strong> tab for per-ratio gauges, and the{" "}
-              <strong>Financials</strong> tab for raw inputs and formula-level explanations used in
-              this AAOIFI-focused view. If you are new to these concepts, start with our{" "}
+              Use the <strong>Compliance</strong> tab for per-ratio gauges, the{" "}
+              <strong>Financials</strong> tab for raw inputs, and the methodology comparison (where
+              available) to see how {stock.name} performs across multiple reference styles. If you
+              are new to these concepts, start with our{" "}
               <Link href="/learn/what-is-halal-investing">guide to halal stock screening concepts</Link> or{" "}
               <Link href="/learn/halal-stocks-india">halal stocks in India</Link> guide.
             </p>
@@ -788,7 +822,7 @@ export default async function StockDetailPage({
                 )}
                 {" · "}
                 <span title={liveQuote.disclaimer}>
-                {liveQuote.source === "nse_india_public" ? "NSE (public)" : "Public market feed"}
+                  {liveQuote.source === "nse_india_public" ? "NSE (public)" : "Yahoo chart"}
                 </span>
               </p>
             )}
@@ -881,9 +915,26 @@ export default async function StockDetailPage({
                 <p className={styles.verdictText}>{takeaway}</p>
               </div>
             </div>
-            <div className={styles.verdictConsensus} role="status">
-              <span>AAOIFI screening profile is shown as the default methodology in this phase.</span>
-            </div>
+            {consensusSummary && (
+              <div className={styles.verdictConsensus} role="status">
+                <span>
+                  Consensus: {consensusSummary.halal_count} of {consensusSummary.total} standards passed
+                </span>
+                {methodologyIcons && methodologyIcons.length > 0 && (
+                  <span className={styles.verdictConsensusIcons} aria-hidden="true">
+                    {methodologyIcons.map(({ code, label, passed, status }) => (
+                      <span
+                        key={code}
+                        className={styles.verdictConsensusIcon}
+                        title={`${label}: ${status}`}
+                      >
+                        {passed ? "✔" : "✖"}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+            )}
             {confidenceBullets.length > 0 && (
               <ul className={styles.confidenceBullets} aria-label="Why this screening result">
                 {confidenceBullets.map((bullet, idx) => (
@@ -1050,7 +1101,7 @@ export default async function StockDetailPage({
                 }`}>{formatRatio(b.debt_to_36m_avg_market_cap_ratio)}</span>
               </div>
               <div className={styles.keyMetricCard}>
-                <span className={styles.keyMetricLabel}>Non-permissible Income</span>
+                <span className={styles.keyMetricLabel}>Non-halal Income</span>
                 <span className={`${styles.keyMetricValue} ${
                   b.non_permissible_income_ratio <= 0.05 * 0.7 ? styles.keyMetricGood
                   : b.non_permissible_income_ratio <= 0.05 ? styles.keyMetricWarn
@@ -1063,14 +1114,10 @@ export default async function StockDetailPage({
               </div>
             </div>
 
-            <ScreeningExplainerCards
-              breakdown={b}
-              debtValue={stock.debt}
-              debtDenominator={stock.average_market_cap_36m}
-              cashIbValue={stock.cash_and_equivalents + stock.short_term_investments}
-              cashIbDenominator={stock.total_assets}
-              nonPermValue={stock.non_permissible_income}
-              nonPermDenominator={stock.total_business_income || stock.revenue}
+            <StockDetailTablesCollapsible
+              ratioRows={ratioRowsForCollapsible}
+              methodologyCaption={methodologyCaptionForCollapsible}
+              methodologyRows={methodologyRowsForCollapsible}
             />
 
             {/* Tabbed Content: Compliance | Financials | Actions */}
@@ -1187,20 +1234,12 @@ export default async function StockDetailPage({
                     </td>
                   </tr>
                   <tr>
-                    <td>Data source</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>
-                      {displayDataSourceLabel(stock.data_source)}
-                    </td>
+                    <td>Live quote source</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
                   </tr>
                   <tr>
-                    <td>Source exchange</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.source_exchange ?? stock.exchange}</td>
-                  </tr>
-                  <tr>
-                    <td>Confidence tier</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>
-                      {stock.confidence_tier ? `${stock.confidence_tier}%` : "—"}
-                    </td>
+                    <td>Fundamentals source</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>Yahoo Finance (yfinance)</td>
                   </tr>
                   <tr>
                     <td>Fundamentals last updated</td>
