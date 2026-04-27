@@ -1359,8 +1359,7 @@ textarea:focus::placeholder {
 .cl-internal-1hp0wcp,
 [data-clerk-development-mode-badge],
 .cl-footerAction__usePasskey + div,
-.cl-internal-1dauvpw,
-a[href*="clerk.com"] {
+.cl-internal-1dauvpw {
   display: none !important;
 }
 
@@ -1513,4 +1512,3 @@ a[href*="clerk.com"] {
   white-space: nowrap;
   border-width: 0;
 }
-
