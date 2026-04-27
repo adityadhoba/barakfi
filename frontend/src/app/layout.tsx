@@ -29,6 +29,13 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const CLERK_JS_CDN_FALLBACK = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js";
+const configuredClerkJsUrl = process.env.NEXT_PUBLIC_CLERK_JS_URL;
+const clerkJsUrl =
+  configuredClerkJsUrl && !configuredClerkJsUrl.includes("clerk.barakfi.in")
+    ? configuredClerkJsUrl
+    : CLERK_JS_CDN_FALLBACK;
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://barakfi.in"),
   title: {
@@ -282,7 +289,7 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </head>
       <body suppressHydrationWarning>
-        <ClerkProvider>
+        <ClerkProvider clerkJSUrl={clerkJsUrl} clerkJSVersion="6">
           <ThemeProvider>
             <MobileNavProvider>
             <Suspense fallback={null}>
