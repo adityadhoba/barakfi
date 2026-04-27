@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SignIn } from "@clerk/nextjs";
+import { ClerkLoaded, ClerkLoading, SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 
@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default function SignInPage() {
+  const hasPublishableKey = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+
   return (
     <div className="authPage">
       <div className="authSidebar authSidebarGradient">
@@ -62,69 +64,87 @@ export default function SignInPage() {
             Secure sign-in to continue your screening workflow and synced watchlist.
           </p>
         </div>
-        <SignIn
-          appearance={{
-            layout: {
-              logoImageUrl: "/brand/barakfi-logo-mark.svg",
-              logoPlacement: "inside",
-            },
-            elements: {
-              rootBox: { width: "100%", maxWidth: "440px" },
-              card: {
-                borderRadius: "20px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
-              },
-              headerTitle: {
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-              },
-              headerSubtitle: {
-                color: "var(--text-secondary)",
-              },
-              logoImage: {
-                width: "52px",
-                height: "52px",
-              },
-              formFieldInput: {
-                borderRadius: "10px",
-                background: "var(--bg-soft)",
-                fontSize: "0.9rem",
-              },
-              formButtonPrimary: {
-                background: "var(--emerald)",
-                borderRadius: "10px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "12px 0",
-                transition: "all 150ms ease",
-              },
-              footerActionLink: {
-                color: "var(--emerald)",
-              },
-              footerActionText: {
-                color: "var(--text-tertiary)",
-              },
-              footer: {
-                "& > *:last-child": { display: "none" },
-              },
-              badge: {
-                display: "none",
-              },
-              dividerLine: {
-                background: "var(--line)",
-              },
-              socialButtonsBlockButton: {
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-                background: "var(--bg-soft)",
-                transition: "all 150ms ease",
-              },
-            },
-          }}
-        />
+        {!hasPublishableKey ? (
+          <div style={{ width: "100%", maxWidth: "440px", border: "1px solid var(--line)", borderRadius: "16px", padding: "18px", background: "var(--panel)" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 700 }}>Sign-in is temporarily unavailable</h3>
+            <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              Clerk publishable key is missing in this deployment. Please add <code>NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code> in Vercel and redeploy.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ClerkLoading>
+              <div style={{ width: "100%", maxWidth: "440px", border: "1px solid var(--line)", borderRadius: "16px", padding: "18px", background: "var(--panel)" }}>
+                <p style={{ margin: 0, color: "var(--text-secondary)" }}>Loading secure sign-in…</p>
+              </div>
+            </ClerkLoading>
+            <ClerkLoaded>
+              <SignIn
+                appearance={{
+                  layout: {
+                    logoImageUrl: "/brand/barakfi-logo-mark.svg",
+                    logoPlacement: "inside",
+                  },
+                  elements: {
+                    rootBox: { width: "100%", maxWidth: "440px" },
+                    card: {
+                      borderRadius: "20px",
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                      border: "1px solid var(--line)",
+                      background: "var(--panel)",
+                    },
+                    headerTitle: {
+                      fontFamily: "var(--font-display)",
+                      fontWeight: 800,
+                      letterSpacing: "-0.02em",
+                    },
+                    headerSubtitle: {
+                      color: "var(--text-secondary)",
+                    },
+                    logoImage: {
+                      width: "52px",
+                      height: "52px",
+                    },
+                    formFieldInput: {
+                      borderRadius: "10px",
+                      background: "var(--bg-soft)",
+                      fontSize: "0.9rem",
+                    },
+                    formButtonPrimary: {
+                      background: "var(--emerald)",
+                      borderRadius: "10px",
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      padding: "12px 0",
+                      transition: "all 150ms ease",
+                    },
+                    footerActionLink: {
+                      color: "var(--emerald)",
+                    },
+                    footerActionText: {
+                      color: "var(--text-tertiary)",
+                    },
+                    footer: {
+                      "& > *:last-child": { display: "none" },
+                    },
+                    badge: {
+                      display: "none",
+                    },
+                    dividerLine: {
+                      background: "var(--line)",
+                    },
+                    socialButtonsBlockButton: {
+                      borderRadius: "10px",
+                      border: "1px solid var(--line)",
+                      background: "var(--bg-soft)",
+                      transition: "all 150ms ease",
+                    },
+                  },
+                }}
+              />
+            </ClerkLoaded>
+          </>
+        )}
       </div>
     </div>
   );
