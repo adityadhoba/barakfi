@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { TopbarPrimaryNav } from "@/components/topbar-primary-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -8,6 +9,12 @@ export function TopbarAuthFallback() {
   return (
     <div className="topbarActions">
       <TopbarPrimaryNav />
+      <Link className="ghostButtonLink" href="/sign-in">
+        Log in
+      </Link>
+      <Link className="solidButtonLink" href="/sign-up">
+        Get started
+      </Link>
       <ThemeToggle />
     </div>
   );
