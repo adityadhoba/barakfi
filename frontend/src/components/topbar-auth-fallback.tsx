@@ -2,12 +2,19 @@
 
 import { TopbarPrimaryNav } from "@/components/topbar-primary-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Link from "next/link";
 
 /** Shown while the Clerk-backed `TopbarAuth` chunk loads (desktop only in layout). */
 export function TopbarAuthFallback() {
   return (
     <div className="topbarActions">
       <TopbarPrimaryNav />
+      <Link className="ghostButtonLink" href="/sign-in">
+        Log in
+      </Link>
+      <Link className="solidButtonLink" href="/sign-up">
+        Get started
+      </Link>
       <ThemeToggle />
     </div>
   );

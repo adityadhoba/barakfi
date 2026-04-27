@@ -28,6 +28,12 @@ export function TopbarAuth() {
       {!isLoaded ? (
         <>
           <TopbarPrimaryNav />
+          <Link className="ghostButtonLink" href="/sign-in">
+            Log in
+          </Link>
+          <Link className="solidButtonLink" href="/sign-up">
+            Get started
+          </Link>
           <ThemeToggle />
         </>
       ) : !userId ? (
