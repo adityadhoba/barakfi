@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.barakfi.in https://*.clerk.accounts.dev https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.googleadservices.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.barakfi.in https://*.clerk.accounts.dev https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com https://adservice.google.com https://www.googleadservices.com",
               "style-src 'self' 'unsafe-inline'",
               "font-src 'self'",
               "img-src 'self' data: blob: https: https://img.logo.dev https://*.clerk.com https://img.clerk.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.google.com https://www.google.co.in https://cdn.brandfetch.io https://t1.gstatic.com https://upload.wikimedia.org",

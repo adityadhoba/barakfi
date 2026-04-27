@@ -80,6 +80,10 @@ npm run build
 - **PageSpeed / Lighthouse**: Test the **canonical** URL **`https://barakfi.in/`** in PageSpeed Insights so scores are not penalized by extra redirect hops (`http`→`https`, `www`→apex). In **Vercel → Domains**, prefer **`barakfi.in`** as the primary hostname so production traffic aligns with `metadataBase` and redirect chains stay minimal.
 - **Root directory**: In Vercel → Project → Settings → General, set **Root Directory** to `frontend` (the folder that contains `src/middleware.ts`). If this is wrong, `clerkMiddleware()` may not run and routes that use `auth()` can fail.
 - **Clerk env (Production and Preview)**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`. For preview deployments (`*.vercel.app`), add the host under **Clerk Dashboard → Domains** if sign-in fails on previews.
+- **If Google/Lighthouse shows Clerk script “Redirection error”** for `https://clerk.barakfi.in/npm/...`, set:
+  - `NEXT_PUBLIC_CLERK_JS_URL=https://cdn.jsdelivr.net/npm/@clerk/clerk-js@6/dist/clerk.browser.js`
+  - `NEXT_PUBLIC_CLERK_UI_URL=https://cdn.jsdelivr.net/npm/@clerk/ui@1/dist/ui.browser.js`
+  This keeps auth bundles on Clerk’s official CDN while still using your Clerk domain for auth/session endpoints.
 - **API URL**: `NEXT_PUBLIC_API_BASE_URL` must be the FastAPI base URL **including `/api`**, e.g. `https://api.barakfi.in/api`. **Do not** set this to `https://barakfi.in` (that is the Vercel frontend). If you do, the app now falls back to `https://api.barakfi.in/api` in production when it detects the marketing hostname.
 
 ## Daily refresh (frontend cron bridge)
