@@ -1145,7 +1145,7 @@ export default async function StockDetailPage({
               interestDebtRatioValue={Math.max(0, b.debt_to_36m_avg_market_cap_ratio)}
               interestDebtLimit="30.00%"
               interestDebtNumerator={formatFundamentalAmount(stock.debt, cur)}
-              interestDebtDenominator={formatFundamentalAmount(stock.market_cap_36m_avg, cur)}
+              interestDebtDenominator={formatFundamentalAmount(stock.average_market_cap_36m, cur)}
               methodologyRows={methodologyRowsForCollapsible}
             />
 

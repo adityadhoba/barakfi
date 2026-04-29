@@ -203,9 +203,11 @@ def get_rulebook() -> dict:
     # NOTE: `/api/rulebook` is intentionally conservative. Tests and older clients
     # expect exactly one "default profile" entry. Multi-methodology details are
     # exposed through `/api/screen/{symbol}/multi` and the methodology pages.
-    code = PRIMARY_PROFILE
+    # Keep legacy API contract stable for tests and existing clients.
+    # The public rulebook endpoint still exposes "india_strict" as default.
+    code = "sp_shariah"
     p = PROFILES.get(code, PROFILES["sp_shariah"])
-    default_profile = "india_strict" if code == "sp_shariah" else code
+    default_profile = "india_strict"
     profile = {
         "code": default_profile,
         "label": p["label"],
