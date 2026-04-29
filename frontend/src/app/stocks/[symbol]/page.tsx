@@ -629,7 +629,7 @@ export default async function StockDetailPage({
                     ? "Medium"
                     : "Low"}
                 — indicates how complete the fundamentals are for ratio screening. Live quote
-                source: {liveQuoteSourceLabel}. Fundamentals source: {fundamentalsSourceLabel}.
+                source: {liveSourceLabel}. Fundamentals source: {fundamentalsSourceLabel}.
                 {stock.fundamentals_fields_missing &&
                 stock.fundamentals_fields_missing.length > 0 ? (
                   <>
