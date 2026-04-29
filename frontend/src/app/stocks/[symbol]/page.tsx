@@ -55,8 +55,6 @@ import { PeopleAlsoChecked } from "@/components/people-also-checked";
 import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import {
   buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
 } from "@/lib/stock-detail-screening-tables";
 import { displayCountryForStock } from "@/lib/stock-display";
 import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
@@ -343,12 +341,8 @@ export default async function StockDetailPage({
     { label: "Cash & interest-bearing", value: _sanitizeRatio(b.cash_and_interest_bearing_to_assets_ratio), threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%.", raw: b.cash_and_interest_bearing_to_assets_ratio },
   ];
 
-  const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
   const methodologyRowsForCollapsible = multiScreening
     ? buildMethodologyTableRowsFromMulti(multiScreening)
-    : null;
-  const methodologyCaptionForCollapsible = multiScreening
-    ? methodologyTableCaption(multiScreening)
     : null;
 
   const cur = stock.currency || "INR";
@@ -1131,8 +1125,24 @@ export default async function StockDetailPage({
             </div>
 
             <StockDetailTablesCollapsible
-              ratioRows={ratioRowsForCollapsible}
-              methodologyCaption={methodologyCaptionForCollapsible}
+              businessRatio={formatRatio(b.non_permissible_income_ratio)}
+              businessRatioValue={Math.max(0, b.non_permissible_income_ratio)}
+              businessLimit="5.00%"
+              businessNumerator={formatFundamentalAmount(
+                (stock.non_permissible_income ?? 0) + (stock.interest_income ?? 0),
+                cur
+              )}
+              businessDenominator={formatFundamentalAmount(stock.total_business_income, cur)}
+              interestAssetsRatio={formatRatio(b.cash_and_interest_bearing_to_assets_ratio)}
+              interestAssetsRatioValue={Math.max(0, b.cash_and_interest_bearing_to_assets_ratio)}
+              interestAssetsLimit="30.00%"
+              interestAssetsNumerator={formatFundamentalAmount(stock.cash_and_interest_bearing, cur)}
+              interestAssetsDenominator={formatFundamentalAmount(stock.total_assets, cur)}
+              interestDebtRatio={formatRatio(b.debt_to_36m_avg_market_cap_ratio)}
+              interestDebtRatioValue={Math.max(0, b.debt_to_36m_avg_market_cap_ratio)}
+              interestDebtLimit="30.00%"
+              interestDebtNumerator={formatFundamentalAmount(stock.debt, cur)}
+              interestDebtDenominator={formatFundamentalAmount(stock.market_cap_36m_avg, cur)}
               methodologyRows={methodologyRowsForCollapsible}
             />
 

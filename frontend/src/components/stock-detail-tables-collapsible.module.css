@@ -1,100 +1,163 @@
-/* Collapsible financial + methodology tables on stock detail */
+/* AAOIFI-first screening details on stock detail */
 
 .wrap {
   margin-bottom: 28px;
 }
 
-.details {
+.body {
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
-  overflow: hidden;
-}
-
-.summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 16px;
-  cursor: pointer;
-  list-style: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text);
-  transition: background var(--transition-fast);
-}
-
-.summary::-webkit-details-marker {
-  display: none;
-}
-
-.summary:hover {
-  background: var(--bg-soft);
-}
-
-.summaryLeft {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  text-align: left;
-}
-
-.summaryTitle {
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.summaryHint {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--text-tertiary);
-}
-
-.chevron {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  color: var(--text-tertiary);
-  transition: transform 0.2s ease;
-}
-
-.details[open] .chevron {
-  transform: rotate(180deg);
-}
-
-.body {
-  padding: 0 16px 16px;
-  border-top: 1px solid var(--line);
-  background: var(--bg-soft);
 }
 
 .section {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .section:first-child {
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .sectionTitle {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
-  margin: 0 0 8px;
-}
-
-.caption {
-  font-size: 0.78rem;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
   margin: 0 0 10px;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.screeningCard {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 12px 12px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.screeningCard:hover {
+  border-color: var(--line-strong);
+}
+
+.screeningCardActive {
+  border-color: color-mix(in srgb, var(--emerald) 70%, var(--line));
+  background: color-mix(in srgb, var(--emerald) 10%, var(--bg-soft));
+}
+
+.cardBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--emerald);
+  background: color-mix(in srgb, var(--emerald) 18%, transparent);
+}
+
+.cardTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cardSub {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
   line-height: 1.45;
+}
+
+.detailTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.gaugeWrap {
+  margin-bottom: 12px;
+}
+
+.gaugeTrack {
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--line);
+  position: relative;
+  overflow: hidden;
+}
+
+.gaugeFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--emerald) 55%, transparent), var(--emerald));
+}
+
+.gaugeLimit {
+  position: absolute;
+  top: -3px;
+  left: 33%;
+  width: 2px;
+  height: 14px;
+  background: var(--gold);
+  border-radius: 2px;
+}
+
+.gaugeLegend {
+  margin-top: 7px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.kvGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.kvItem {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kvItem span {
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+}
+
+.kvItem strong {
+  font-size: 0.82rem;
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .tableWrap {
@@ -177,4 +240,11 @@
   font-size: 0.8rem;
   color: var(--text-tertiary);
   margin: 8px 0 0;
+}
+
+@media (max-width: 980px) {
+  .cardsGrid,
+  .kvGrid {
+    grid-template-columns: 1fr;
+  }
 }
