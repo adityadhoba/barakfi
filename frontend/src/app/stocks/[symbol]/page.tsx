@@ -1136,7 +1136,10 @@ export default async function StockDetailPage({
               interestAssetsRatio={formatRatio(b.cash_and_interest_bearing_to_assets_ratio)}
               interestAssetsRatioValue={Math.max(0, b.cash_and_interest_bearing_to_assets_ratio)}
               interestAssetsLimit="30.00%"
-              interestAssetsNumerator={formatFundamentalAmount(stock.cash_and_interest_bearing, cur)}
+              interestAssetsNumerator={formatFundamentalAmount(
+                (stock.cash_and_equivalents ?? 0) + (stock.short_term_investments ?? 0),
+                cur
+              )}
               interestAssetsDenominator={formatFundamentalAmount(stock.total_assets, cur)}
               interestDebtRatio={formatRatio(b.debt_to_36m_avg_market_cap_ratio)}
               interestDebtRatioValue={Math.max(0, b.debt_to_36m_avg_market_cap_ratio)}
