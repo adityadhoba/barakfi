@@ -31,7 +31,7 @@ Status Values (API / engine):
 Product UI labels: HALAL → Halal, CAUTIOUS → Doubtful, NON_COMPLIANT → Haram.
 """
 
-PRIMARY_PROFILE = "sp_shariah"
+PRIMARY_PROFILE = "aaoifi"
 PRIMARY_PROFILE_VERSION = "2026.04.2"
 
 SCREENING_DISCLAIMER = (
@@ -168,7 +168,10 @@ PROFILES = {
     },
 }
 
-ALL_PROFILE_CODES = list(PROFILES.keys())
+# Phase-1 product focus: expose AAOIFI as the active screening methodology.
+# Keep other profiles in PROFILES for internal analysis/backtesting, but do not
+# use them in public consensus payloads.
+ALL_PROFILE_CODES = [PRIMARY_PROFILE]
 
 FIXED_ASSETS_REVIEW_THRESHOLD = 0.25
 
@@ -662,7 +665,7 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
     - Missing or zero critical financial fields
     """
     if profile == "india_strict":
-        profile = "sp_shariah"
+        profile = PRIMARY_PROFILE
 
     if profile not in PROFILES:
         raise ValueError(f"Unsupported profile: {profile}")
@@ -842,12 +845,8 @@ def evaluate_stock(stock: dict, profile: str = PRIMARY_PROFILE) -> dict:
 
 def evaluate_stock_multi(stock: dict) -> dict:
     """
-    Evaluate a stock against all four methodologies and return a combined result.
-
-    Consensus rule (majority of 4):
-    - HALAL if 3+ methodologies pass
-    - NON_COMPLIANT if 3+ methodologies fail
-    - Otherwise uses 2+ threshold with NON_COMPLIANT taking precedence over ties
+    Evaluate a stock against active product methodology set.
+    In current product phase this is AAOIFI-only.
     """
     results = {}
     for code in ALL_PROFILE_CODES:
@@ -857,7 +856,9 @@ def evaluate_stock_multi(stock: dict) -> dict:
     halal_count = statuses.count("HALAL")
     fail_count = statuses.count("NON_COMPLIANT")
 
-    if halal_count >= 3:
+    if len(ALL_PROFILE_CODES) == 1:
+        consensus = statuses[0]
+    elif halal_count >= 3:
         consensus = "HALAL"
     elif fail_count >= 3:
         consensus = "NON_COMPLIANT"
@@ -869,7 +870,9 @@ def evaluate_stock_multi(stock: dict) -> dict:
         consensus = "CAUTIOUS"
 
     per_method_scores = [r["screening_score"] for r in results.values()]
-    if consensus == "CAUTIOUS":
+    if len(ALL_PROFILE_CODES) == 1:
+        consensus_score = per_method_scores[0]
+    elif consensus == "CAUTIOUS":
         consensus_score = int(round(sum(per_method_scores) / len(per_method_scores)))
     else:
         consensus_score = min(per_method_scores)
@@ -903,6 +906,13 @@ def _simple_summary_from_multi(multi: dict) -> str:
     cautious_count = tallies["cautious_count"]
     fail_count = tallies["non_compliant_count"]
     total = tallies["total"] or len(ALL_PROFILE_CODES)
+
+    if total == 1:
+        if consensus == "HALAL":
+            return "AAOIFI screen passes on the latest available filing inputs."
+        if consensus == "NON_COMPLIANT":
+            return "AAOIFI screen fails one or more ratio or sector checks."
+        return "AAOIFI screen requires review due to data gaps or borderline ratios."
 
     if consensus == "HALAL":
         return (
