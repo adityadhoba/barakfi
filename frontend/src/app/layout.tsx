@@ -275,9 +275,6 @@ export default function RootLayout({
     "/sign-up";
   const afterSignOutUrl =
     process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL || "/";
-  const unauthorizedUrl =
-    process.env.NEXT_PUBLIC_CLERK_UNAUTHORIZED_REDIRECT_URL ||
-    "/unauthorized-sign-in";
 
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
@@ -302,7 +299,6 @@ export default function RootLayout({
           signUpFallbackRedirectUrl="/onboarding"
           signInForceRedirectUrl="/workspace"
           signUpForceRedirectUrl="/onboarding"
-          unauthorizedUrl={unauthorizedUrl}
         >
           <ThemeProvider>
             <MobileNavProvider>
