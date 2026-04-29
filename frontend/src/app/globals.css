@@ -1378,17 +1378,9 @@ textarea:focus::placeholder {
   }
 }
 
-/* Hide Clerk development-mode banner and "Secured by Clerk" branding */
-.cl-internal-b3fm6y,
-.cl-internal-1hp0wcp,
-[data-clerk-development-mode-badge],
-.cl-footerAction__usePasskey + div,
-.cl-internal-1dauvpw {
+/* Hide only Clerk development-mode badge (avoid brittle internal class selectors) */
+[data-clerk-development-mode-badge] {
   display: none !important;
-}
-
-.cl-footer {
-  opacity: 0.6;
 }
 
 
