@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { AuthWidgetFallback } from "@/components/auth-widget-fallback";
 
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
@@ -62,69 +63,71 @@ export default function SignUpPage() {
             Create your account to unlock synced screening history and watchlist tracking.
           </p>
         </div>
-        <SignUp
-          appearance={{
-            layout: {
-              logoImageUrl: "/brand/barakfi-logo-mark.svg",
-              logoPlacement: "inside",
-            },
-            elements: {
-              rootBox: { width: "100%", maxWidth: "440px" },
-              card: {
-                borderRadius: "20px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
+        <AuthWidgetFallback mode="sign-up">
+          <SignUp
+            appearance={{
+              layout: {
+                logoImageUrl: "/brand/barakfi-logo-mark.svg",
+                logoPlacement: "inside",
               },
-              headerTitle: {
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
+              elements: {
+                rootBox: { width: "100%", maxWidth: "440px" },
+                card: {
+                  borderRadius: "20px",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                  border: "1px solid var(--line)",
+                  background: "var(--panel)",
+                },
+                headerTitle: {
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                },
+                headerSubtitle: {
+                  color: "var(--text-secondary)",
+                },
+                logoImage: {
+                  width: "52px",
+                  height: "52px",
+                },
+                formFieldInput: {
+                  borderRadius: "10px",
+                  background: "var(--bg-soft)",
+                  fontSize: "0.9rem",
+                },
+                formButtonPrimary: {
+                  background: "var(--emerald)",
+                  borderRadius: "10px",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                  padding: "12px 0",
+                  transition: "all 150ms ease",
+                },
+                footerActionLink: {
+                  color: "var(--emerald)",
+                },
+                footerActionText: {
+                  color: "var(--text-tertiary)",
+                },
+                footer: {
+                  "& > *:last-child": { display: "none" },
+                },
+                badge: {
+                  display: "none",
+                },
+                dividerLine: {
+                  background: "var(--line)",
+                },
+                socialButtonsBlockButton: {
+                  borderRadius: "10px",
+                  border: "1px solid var(--line)",
+                  background: "var(--bg-soft)",
+                  transition: "all 150ms ease",
+                },
               },
-              headerSubtitle: {
-                color: "var(--text-secondary)",
-              },
-              logoImage: {
-                width: "52px",
-                height: "52px",
-              },
-              formFieldInput: {
-                borderRadius: "10px",
-                background: "var(--bg-soft)",
-                fontSize: "0.9rem",
-              },
-              formButtonPrimary: {
-                background: "var(--emerald)",
-                borderRadius: "10px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "12px 0",
-                transition: "all 150ms ease",
-              },
-              footerActionLink: {
-                color: "var(--emerald)",
-              },
-              footerActionText: {
-                color: "var(--text-tertiary)",
-              },
-              footer: {
-                "& > *:last-child": { display: "none" },
-              },
-              badge: {
-                display: "none",
-              },
-              dividerLine: {
-                background: "var(--line)",
-              },
-              socialButtonsBlockButton: {
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-                background: "var(--bg-soft)",
-                transition: "all 150ms ease",
-              },
-            },
-          }}
-        />
+            }}
+          />
+        </AuthWidgetFallback>
       </div>
     </div>
   );

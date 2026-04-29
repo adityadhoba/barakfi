@@ -1336,6 +1336,30 @@ textarea:focus::placeholder {
   line-height: 1.5;
 }
 
+.authFallbackCard {
+  width: min(100%, 440px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  padding: 22px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+.authFallbackCard h3 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+.authFallbackCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.authFallbackActions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 860px) {
   .authMain {
     align-content: start;
