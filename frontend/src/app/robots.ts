@@ -29,6 +29,9 @@ export default function robots(): MetadataRoute.Robots {
           "/sign-up",
           "/notifications",
           "/watchlist",
+          "/etfs",
+          "/check",
+          "/screening",
         ],
       },
       // Google may fetch these JSON routes when rendering (ticker + anon quota). More specific Allow wins over Disallow /api/.
@@ -46,6 +49,9 @@ export default function robots(): MetadataRoute.Robots {
           "/sign-up",
           "/notifications",
           "/watchlist",
+          "/etfs",
+          "/check",
+          "/screening",
         ],
       },
       {
@@ -62,6 +68,9 @@ export default function robots(): MetadataRoute.Robots {
           "/sign-up",
           "/notifications",
           "/watchlist",
+          "/etfs",
+          "/check",
+          "/screening",
         ],
       },
       {
