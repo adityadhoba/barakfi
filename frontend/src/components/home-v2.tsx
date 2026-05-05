@@ -6,7 +6,7 @@ import {
   getScreenerSnapshot,
   getStocks,
   getTrending,
-  type Stock,
+  type TrendingStock,
 } from "@/lib/api";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { HomeV2Search } from "@/components/home-v2-search";
@@ -14,7 +14,7 @@ import styles from "./home-v2.module.css";
 
 const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
 
-type StockWithStatus = Stock & { status?: string };
+type HomeStockRow = TrendingStock & { status?: string };
 
 function formatMcap(v: number, currency: string = "INR") {
   if (!Number.isFinite(v) || v <= 0) return "—";
@@ -70,7 +70,7 @@ export async function HomeV2() {
   for (const row of featuredScreening) statusMap.set(row.symbol.toUpperCase(), row.status);
   for (const snap of snapshot) statusMap.set(snap.stock.symbol.toUpperCase(), snap.screening.status);
 
-  const featuredWithStatus: StockWithStatus[] = featured.map((s) => ({
+  const featuredWithStatus: HomeStockRow[] = featured.map((s) => ({
     ...s,
     status: statusMap.get(s.symbol.toUpperCase()),
   }));
