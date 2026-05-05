@@ -122,6 +122,49 @@ _RE_FIELD_MAP: dict[str, str] = {
     "re_int_earned": METRIC_INTEREST_INCOME,
 }
 
+# Some NSE records (especially financials/banks) vary field names by filing template.
+# Keep canonical mapping by trying alternative keys for the same metric.
+_RE_FIELD_CANDIDATES: dict[str, tuple[str, ...]] = {
+    METRIC_REVENUE: (
+        "re_net_sale",
+        "re_net_sales",
+        "re_income_frm_operations",
+        "re_inc_frm_operations",
+    ),
+    METRIC_TOTAL_BUSINESS_INCOME: (
+        "re_total_inc",
+        "re_tot_inc",
+        "re_total_income",
+    ),
+    METRIC_NON_OPERATING_INCOME: (
+        "re_oth_inc_new",
+        "re_oth_inc",
+        "re_other_income",
+        "re_non_operating_income",
+    ),
+    METRIC_INTEREST_INCOME: (
+        "re_int_earned",
+        "re_interest_earned",
+        "re_interest_income",
+        "re_int_inc",
+    ),
+    METRIC_TOTAL_ASSETS: (
+        "re_total_assets",
+        "re_tot_assets",
+        "re_tot_asset",
+    ),
+    METRIC_FIXED_ASSETS: (
+        "re_fixed_assets",
+        "re_net_fixed_assets",
+        "re_ppe",
+    ),
+    METRIC_ACCOUNTS_RECEIVABLE: (
+        "re_accounts_receivable",
+        "re_receivables",
+        "re_trade_receivables",
+    ),
+}
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -141,6 +184,15 @@ def _to_float_safe(v: Any) -> float | None:
         return float(s)
     except (ValueError, TypeError):
         return None
+
+
+def _first_numeric(rec: dict[str, Any], keys: tuple[str, ...]) -> float | None:
+    """Return first parseable numeric value from *rec* for any key in *keys*."""
+    for key in keys:
+        val = _to_float_safe(rec.get(key))
+        if val is not None:
+            return val
+    return None
 
 
 def _pick_rescmpdata_record(records: list[dict], period: str) -> dict[str, Any] | None:
@@ -209,6 +261,14 @@ def _extract_rescmpdata_metrics(
         val = _to_float_safe(rec.get(field))
         if val is not None:
             metrics[code] = round(val * _LAKHS_TO_CRORES, 4)
+
+    # Candidate-key mappings for template variants (especially banks/NBFCs)
+    for metric_code, candidates in _RE_FIELD_CANDIDATES.items():
+        if metric_code in metrics:
+            continue
+        val = _first_numeric(rec, candidates)
+        if val is not None:
+            metrics[metric_code] = round(val * _LAKHS_TO_CRORES, 4)
 
     # EBITDA-style sum: PAT + Tax + interest/finance line + D&A (all Lakhs → Crores).
     # re_int_new is often interest/finance cost (add-back for EBITDA), not "interest income".

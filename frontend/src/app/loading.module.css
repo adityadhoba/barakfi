@@ -133,3 +133,247 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Home V2-style loading skeleton */
+.homeV2Loading {
+  --deep: #08130f;
+  --mid: #0f251a;
+  --line: rgba(230, 226, 216, 0.12);
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 12px auto 28px;
+}
+
+.loadingTicker {
+  height: 34px;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 12px;
+}
+
+.loadingTickerTrack {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.loadingTickerItem {
+  composes: skeleton;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(126, 200, 160, 0.12);
+  border-color: rgba(126, 200, 160, 0.18);
+}
+
+.loadingHeroSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+}
+
+.loadingHeroLeft,
+.loadingHeroRight {
+  padding: clamp(20px, 5vw, 40px);
+}
+
+.loadingHeroLeft {
+  border-right: 1px solid var(--line);
+}
+
+.loadingPill {
+  composes: skeleton;
+  width: 220px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(126, 200, 160, 0.12);
+}
+
+.loadingTitleBlock {
+  composes: skeleton;
+  width: min(520px, 92%);
+  height: clamp(96px, 12vw, 140px);
+  border-radius: 10px;
+  margin-top: 16px;
+}
+
+.loadingCopyLine {
+  composes: skeleton;
+  width: min(560px, 96%);
+  height: 14px;
+  margin-top: 16px;
+}
+
+.loadingCopyLineShort {
+  composes: skeleton;
+  width: min(420px, 72%);
+  height: 14px;
+  margin-top: 10px;
+}
+
+.loadingCtaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.loadingBtnPrimary {
+  composes: skeleton;
+  width: 160px;
+  height: 40px;
+  border-radius: 8px;
+}
+
+.loadingBtnText {
+  composes: skeleton;
+  width: 140px;
+  height: 18px;
+  border-radius: 6px;
+}
+
+.loadingBigStat {
+  composes: skeleton;
+  width: 220px;
+  height: 86px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.loadingMetricGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.loadingMetricCell {
+  composes: skeleton;
+  height: 62px;
+  border-radius: 10px;
+}
+
+.loadingStatement {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+  background: var(--mid);
+}
+
+.loadingStatementLeft,
+.loadingStatementRight {
+  composes: skeleton;
+  height: 92px;
+  margin: 24px;
+  border-radius: 10px;
+}
+
+.loadingPillars {
+  background: var(--mid);
+  border-bottom: 1px solid var(--line);
+  padding: 0 20px;
+}
+
+.loadingPillarRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+
+.loadingPillarNum,
+.loadingPillarTitle,
+.loadingPillarBody {
+  composes: skeleton;
+  border-radius: 8px;
+}
+
+.loadingPillarNum { height: 18px; margin-top: 6px; }
+.loadingPillarTitle { height: 36px; }
+.loadingPillarBody { height: 44px; }
+
+.loadingTableSection {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding: 24px;
+}
+
+.loadingTableLeft,
+.loadingTableHead,
+.loadingTableRow {
+  composes: skeleton;
+  border-radius: 8px;
+}
+
+.loadingTableLeft { height: 180px; }
+.loadingTableHead { height: 18px; margin-bottom: 10px; }
+.loadingTableRow { height: 32px; margin-bottom: 8px; }
+
+.loadingClosing {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+  background: var(--mid);
+}
+
+.loadingClosingLeft,
+.loadingClosingRight {
+  composes: skeleton;
+  height: 110px;
+  margin: 24px;
+  border-radius: 10px;
+}
+
+.loadingFooter {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px 24px 24px;
+  background: var(--mid);
+}
+
+.loadingFooterBrand {
+  composes: skeleton;
+  height: 52px;
+  border-radius: 8px;
+}
+
+.loadingFooterCols {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.loadingFooterCol {
+  composes: skeleton;
+  height: 72px;
+  border-radius: 8px;
+}
+
+@media (max-width: 980px) {
+  .loadingHeroSplit,
+  .loadingStatement,
+  .loadingClosing,
+  .loadingFooter {
+    grid-template-columns: 1fr;
+  }
+
+  .loadingHeroLeft {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .loadingPillarRow {
+    grid-template-columns: 1fr;
+  }
+
+  .loadingTableSection {
+    grid-template-columns: 1fr;
+  }
+
+  .loadingFooterCols {
+    grid-template-columns: 1fr 1fr;
+  }
+}

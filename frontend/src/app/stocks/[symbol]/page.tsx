@@ -55,8 +55,6 @@ import { PeopleAlsoChecked } from "@/components/people-also-checked";
 import { RatioReadMoreDrawer } from "@/components/ratio-read-more-drawer";
 import {
   buildMethodologyTableRowsFromMulti,
-  buildPrimaryRatioTableRows,
-  methodologyTableCaption,
 } from "@/lib/stock-detail-screening-tables";
 import { displayCountryForStock } from "@/lib/stock-display";
 import { PRIMARY_METHODOLOGY_VERSION } from "@/lib/methodology-version";
@@ -343,12 +341,8 @@ export default async function StockDetailPage({
     { label: "Cash & interest-bearing", value: _sanitizeRatio(b.cash_and_interest_bearing_to_assets_ratio), threshold: 0.33, max: 0.5, desc: "Cash and interest-bearing securities as a portion of total assets. Must be under 33%.", raw: b.cash_and_interest_bearing_to_assets_ratio },
   ];
 
-  const ratioRowsForCollapsible = buildPrimaryRatioTableRows(screening);
   const methodologyRowsForCollapsible = multiScreening
     ? buildMethodologyTableRowsFromMulti(multiScreening)
-    : null;
-  const methodologyCaptionForCollapsible = multiScreening
-    ? methodologyTableCaption(multiScreening)
     : null;
 
   const cur = stock.currency || "INR";
@@ -357,6 +351,22 @@ export default async function StockDetailPage({
     formatFundamentalsLastUpdatedIst(stock.fundamentals_updated_at) ?? "Not synced yet";
   const displayCountry = displayCountryForStock(stock.exchange, stock.country);
   const marketCapTier = capTierLabel(stock.market_cap, cur);
+  const formatOptionalFundamental = (value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(value) || value <= 0) return "—";
+    return formatFundamentalAmountCompact(value, cur);
+  };
+  const liveSourceLabel =
+    liveQuote?.source === "nse_india_public"
+      ? "NSE (public)"
+      : liveQuote?.source === "nse_bhavcopy"
+        ? "NSE bhavcopy"
+        : "Market feed";
+  const fundamentalsSourceLabel = (() => {
+    const src = (stock.data_source || "").toLowerCase();
+    if (src.includes("nse")) return "NSE filings pipeline";
+    if (src.includes("fmp")) return "NSE-normalized pipeline";
+    return "BarakFi internal pipeline";
+  })();
   const riskLabel =
     b.debt_to_36m_avg_market_cap_ratio <= 0.15
       ? "Low Risk"
@@ -368,12 +378,12 @@ export default async function StockDetailPage({
     { label: "36M Avg Market Cap", value: formatFundamentalAmountCompact(stock.average_market_cap_36m, cur) },
     { label: "Revenue", value: formatFundamentalAmountCompact(stock.revenue, cur) },
     { label: "Total Business Income", value: formatFundamentalAmountCompact(stock.total_business_income, cur) },
-    { label: "Interest Income", value: formatFundamentalAmountCompact(stock.interest_income, cur) },
-    { label: "Non-permissible Income", value: formatFundamentalAmountCompact(stock.non_permissible_income, cur) },
+    { label: "Interest Income", value: formatOptionalFundamental(stock.interest_income) },
+    { label: "Non-permissible Income", value: formatOptionalFundamental(stock.non_permissible_income) },
     { label: "Total Debt", value: formatFundamentalAmountCompact(stock.debt, cur) },
-    { label: "Accounts Receivable", value: formatFundamentalAmountCompact(stock.accounts_receivable, cur) },
-    { label: "Fixed Assets", value: formatFundamentalAmountCompact(stock.fixed_assets, cur) },
-    { label: "Total Assets", value: formatFundamentalAmountCompact(stock.total_assets, cur) },
+    { label: "Accounts Receivable", value: formatOptionalFundamental(stock.accounts_receivable) },
+    { label: "Fixed Assets", value: formatOptionalFundamental(stock.fixed_assets) },
+    { label: "Total Assets", value: formatOptionalFundamental(stock.total_assets) },
   ];
 
   // Similar stocks from the same sector (excluding current)
@@ -619,7 +629,7 @@ export default async function StockDetailPage({
                     ? "Medium"
                     : "Low"}
                 — indicates how complete the fundamentals are for ratio screening. Live quote
-                source: {stock.data_source}.
+                source: {liveSourceLabel}. Fundamentals source: {fundamentalsSourceLabel}.
                 {stock.fundamentals_fields_missing &&
                 stock.fundamentals_fields_missing.length > 0 ? (
                   <>
@@ -678,7 +688,7 @@ export default async function StockDetailPage({
             <ul className={styles.seoLinkList}>
               <li>
                 <Link href="/learn/halal-stocks-india">
-                  Halal stocks in India — how screening works on NSE &amp; BSE
+                  Halal stocks in India — how screening works on NSE
                 </Link>
               </li>
               <li>
@@ -822,7 +832,7 @@ export default async function StockDetailPage({
                 )}
                 {" · "}
                 <span title={liveQuote.disclaimer}>
-                  {liveQuote.source === "nse_india_public" ? "NSE (public)" : "Yahoo chart"}
+                  {liveSourceLabel}
                 </span>
               </p>
             )}
@@ -1115,8 +1125,27 @@ export default async function StockDetailPage({
             </div>
 
             <StockDetailTablesCollapsible
-              ratioRows={ratioRowsForCollapsible}
-              methodologyCaption={methodologyCaptionForCollapsible}
+              businessRatio={formatRatio(b.non_permissible_income_ratio)}
+              businessRatioValue={Math.max(0, b.non_permissible_income_ratio)}
+              businessLimit="5.00%"
+              businessNumerator={formatFundamentalAmount(
+                (stock.non_permissible_income ?? 0) + (stock.interest_income ?? 0),
+                cur
+              )}
+              businessDenominator={formatFundamentalAmount(stock.total_business_income, cur)}
+              interestAssetsRatio={formatRatio(b.cash_and_interest_bearing_to_assets_ratio)}
+              interestAssetsRatioValue={Math.max(0, b.cash_and_interest_bearing_to_assets_ratio)}
+              interestAssetsLimit="30.00%"
+              interestAssetsNumerator={formatFundamentalAmount(
+                (stock.cash_and_equivalents ?? 0) + (stock.short_term_investments ?? 0),
+                cur
+              )}
+              interestAssetsDenominator={formatFundamentalAmount(stock.total_assets, cur)}
+              interestDebtRatio={formatRatio(b.debt_to_36m_avg_market_cap_ratio)}
+              interestDebtRatioValue={Math.max(0, b.debt_to_36m_avg_market_cap_ratio)}
+              interestDebtLimit="30.00%"
+              interestDebtNumerator={formatFundamentalAmount(stock.debt, cur)}
+              interestDebtDenominator={formatFundamentalAmount(stock.average_market_cap_36m, cur)}
               methodologyRows={methodologyRowsForCollapsible}
             />
 
@@ -1235,11 +1264,11 @@ export default async function StockDetailPage({
                   </tr>
                   <tr>
                     <td>Live quote source</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{stock.data_source}</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{liveSourceLabel}</td>
                   </tr>
                   <tr>
                     <td>Fundamentals source</td>
-                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>Yahoo Finance (yfinance)</td>
+                    <td style={{ textAlign: "right", color: "var(--text-muted)" }}>{fundamentalsSourceLabel}</td>
                   </tr>
                   <tr>
                     <td>Fundamentals last updated</td>
