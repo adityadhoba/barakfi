@@ -134,7 +134,7 @@ export async function HomeV2() {
 
       <nav className={styles.homeNav} aria-label="Homepage navigation">
         <Link className={styles.logoLink} href="/">
-          <Logo size={32} showText variant="light" />
+          <Logo size={32} showText variant="auto" />
         </Link>
         <div className={styles.navLinks}>
           <Link href="/screener">Screener</Link>

@@ -407,6 +407,7 @@
 .stkTable {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .stkTable th,
@@ -456,6 +457,15 @@
   width: 18%;
   text-align: center;
   white-space: nowrap;
+}
+
+.stkTable th.colMcap,
+.stkTable th.colPrice {
+  text-align: right;
+}
+
+.stkTable th.colStatus {
+  text-align: center;
 }
 
 .tk {
