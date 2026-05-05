@@ -384,6 +384,7 @@ export async function HomeV2() {
           <div>
             <div className={styles.footerColH}>Resources</div>
             <Link href="/halal-stocks">Halal Stocks India</Link>
+            <Link href="/about-us">About Us</Link>
             <Link href="/methodology">Methodology</Link>
             <Link href="/tools/purification">Purification</Link>
           </div>
