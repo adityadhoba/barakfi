@@ -2783,6 +2783,16 @@ details.dataNote[open] summary.dataNoteSummary {
 
 .contentHeaderRight { align-items: center; }
 
+.contentHeaderRight {
+  flex-wrap: nowrap;
+}
+
+.headerSearchStack {
+  flex: 0 0 340px;
+  max-width: 340px;
+  min-width: 280px;
+}
+
 .searchBox input {
   border-radius: 0;
   height: 38px;
@@ -3053,7 +3063,10 @@ details.dataNote[open] summary.dataNoteSummary {
 
   .contentHeader { gap: 10px; }
 
-  .contentHeaderRight { width: 100%; }
+  .contentHeaderRight {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 
   .headerSearchStack {
     max-width: 100%;

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 import { unstable_noStore } from "next/cache";
 import styles from "@/app/screener.module.css";
@@ -25,13 +24,6 @@ export const metadata: Metadata = {
 export default function ScreenerPage() {
   return (
     <main className={styles.screenerPage}>
-      <nav className={styles.screenerLearnLinks} aria-label="Learn and lists">
-        <Link href="/learn/halal-stocks-india">Halal stocks in India — guide</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/learn/what-is-halal-investing">What is halal investing?</Link>
-        <span aria-hidden="true">·</span>
-        <Link href="/halal-stocks">Curated halal list</Link>
-      </nav>
       <Suspense fallback={<ScreenerSkeleton />}>
         <ScreenerDataLayer />
       </Suspense>
