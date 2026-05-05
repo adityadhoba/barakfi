@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { HomeDashboard } from "@/components/home-dashboard";
+import { HomeV2 } from "@/components/home-v2";
 
 export const revalidate = 300;
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="shellPage">
-      <HomeDashboard />
+      <HomeV2 />
     </main>
   );
 }
