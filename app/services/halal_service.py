@@ -19,7 +19,7 @@ capitalisation) as the denominator for all financial ratios.
 Core Functions:
 - evaluate_stock(stock_dict, profile) -> screening result with status + screening_score
 - evaluate_stock_multi(stock_dict) -> consensus + per-methodology scores
-- get_simple_result(stock_dict) -> {status, score, summary} product language (wraps multi)
+- get_simple_result(stock_dict) -> {status, score, summary} fixed user-facing copy (wraps multi)
 - get_rulebook() -> active rules and profiles
 - calculate_purification_ratio(stock_dict) -> dividend purification percentage
 
@@ -896,28 +896,13 @@ def screening_summary_for_multi(multi: dict) -> str:
 
 
 def _simple_summary_from_multi(multi: dict) -> str:
-    """One-line product summary from evaluate_stock_multi output."""
+    """Fixed user-facing one-liner from evaluate_stock_multi consensus (no engine logic)."""
     consensus = multi["consensus_status"]
-    tallies = multi["summary"]
-    halal_count = tallies["halal_count"]
-    cautious_count = tallies["cautious_count"]
-    fail_count = tallies["non_compliant_count"]
-    total = tallies["total"] or len(ALL_PROFILE_CODES)
-
     if consensus == "HALAL":
-        return (
-            "Consensus pass across four Shariah methodologies — low structural risk "
-            "on debt, income purity, and sector rules in our automated screen."
-        )
+        return "Meets most Shariah compliance criteria"
     if consensus == "NON_COMPLIANT":
-        return (
-            "Consensus fail: sector exclusion or financial ratios exceed Shariah "
-            "thresholds on a majority of methodologies."
-        )
-    return (
-        f"{halal_count} of {total} methodologies pass; {cautious_count} need review and "
-        f"{fail_count} fail — verify with a scholar before investing."
-    )
+        return "Does not meet Shariah compliance standards"
+    return "Some financial ratios exceed recommended limits"
 
 
 def get_simple_result(stock: dict) -> dict:
@@ -927,7 +912,7 @@ def get_simple_result(stock: dict) -> dict:
     Returns:
         status: "Halal" | "Doubtful" | "Haram"
         score: 0–100 (consensus methodology score)
-        summary: one line
+        summary: short fixed explanation per consensus (see _simple_summary_from_multi)
     """
     multi = evaluate_stock_multi(stock)
     consensus = multi["consensus_status"]
