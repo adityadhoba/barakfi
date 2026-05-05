@@ -3,54 +3,74 @@ import s from "./loading.module.css";
 export default function HomeLoading() {
   return (
     <div className="shellPage">
-      {/* Hero skeleton */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, padding: "56px 0 44px" }}>
-        <div className={s.skeleton} style={{ width: 200, height: 26, borderRadius: 9999 }} />
-        <div className={s.skeleton} style={{ width: 380, height: 40, borderRadius: 8 }} />
-        <div className={s.skeleton} style={{ width: 320, height: 16, borderRadius: 6, marginTop: 4 }} />
-        <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-          <div className={s.skeleton} style={{ width: 150, height: 44, borderRadius: 10 }} />
-          <div className={s.skeleton} style={{ width: 130, height: 44, borderRadius: 10 }} />
+      <div className={s.homeV2Loading}>
+        <div className={s.loadingTicker}>
+          <div className={s.loadingTickerTrack}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className={s.loadingTickerItem} />
+            ))}
+          </div>
         </div>
-        {/* Social proof */}
-        <div style={{ display: "flex", gap: 24, marginTop: 20 }}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div className={s.skeleton} style={{ width: 50, height: 24, borderRadius: 6 }} />
-              <div className={s.skeleton} style={{ width: 70, height: 12, borderRadius: 4 }} />
+
+        <section className={s.loadingHeroSplit}>
+          <div className={s.loadingHeroLeft}>
+            <div className={s.loadingPill} />
+            <div className={s.loadingTitleBlock} />
+            <div className={s.loadingCopyLine} />
+            <div className={s.loadingCopyLineShort} />
+            <div className={s.loadingCtaRow}>
+              <div className={s.loadingBtnPrimary} />
+              <div className={s.loadingBtnText} />
+            </div>
+          </div>
+          <div className={s.loadingHeroRight}>
+            <div className={s.loadingBigStat} />
+            <div className={s.loadingMetricGrid}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className={s.loadingMetricCell} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={s.loadingStatement}>
+          <div className={s.loadingStatementLeft} />
+          <div className={s.loadingStatementRight} />
+        </section>
+
+        <section className={s.loadingPillars}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className={s.loadingPillarRow}>
+              <div className={s.loadingPillarNum} />
+              <div className={s.loadingPillarTitle} />
+              <div className={s.loadingPillarBody} />
             </div>
           ))}
-        </div>
-      </div>
+        </section>
 
-      {/* Market ticker skeleton */}
-      <div className={s.skeleton} style={{ height: 48, borderRadius: 12, marginBottom: 16 }} />
+        <section className={s.loadingTableSection}>
+          <div className={s.loadingTableLeft} />
+          <div className={s.loadingTableRight}>
+            <div className={s.loadingTableHead} />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={s.loadingTableRow} />
+            ))}
+          </div>
+        </section>
 
-      {/* Feature showcase skeleton */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32, padding: "32px 0" }}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className={s.skeleton} style={{ height: 160, borderRadius: 16 }} />
-        ))}
-      </div>
+        <section className={s.loadingClosing}>
+          <div className={s.loadingClosingLeft} />
+          <div className={s.loadingClosingRight} />
+        </section>
 
-      {/* Stats grid skeleton */}
-      <div className={s.loadingMetrics}>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className={s.loadingMetric} />
-        ))}
-      </div>
-
-      {/* Pulse skeleton */}
-      <div className={s.skeleton} style={{ height: 90, borderRadius: 16, margin: "24px 0 28px" }} />
-
-      {/* Section title */}
-      <div className={s.skeleton} style={{ width: 180, height: 20, borderRadius: 6, marginBottom: 14 }} />
-
-      {/* Stock grid skeleton */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className={s.skeleton} style={{ height: 140, borderRadius: 12 }} />
-        ))}
+        <section className={s.loadingFooter}>
+          <div className={s.loadingFooterBrand} />
+          <div className={s.loadingFooterCols}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className={s.loadingFooterCol} />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
