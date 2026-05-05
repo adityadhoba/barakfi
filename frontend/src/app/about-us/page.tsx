@@ -13,47 +13,6 @@ export const metadata: Metadata = {
 export default async function AboutUsPage() {
   return (
     <main className={styles.page}>
-      <section className={styles.ticker}>
-        <div className={styles.tTrack}>
-          {[
-            ["NIFTY 50", "23,842", "+0.54%", true],
-            ["SENSEX", "78,553", "+0.54%", true],
-            ["NIFTY BANK", "51,236", "−0.17%", false],
-            ["NIFTY IT", "33,156", "+0.75%", true],
-            ["NIFTY PHARMA", "19,872", "+0.28%", true],
-            ["INDIA VIX", "13.42", "−2.75%", false],
-            ["NIFTY AUTO", "23,145", "−0.48%", false],
-            ["NIFTY FMCG", "56,234", "+0.32%", true],
-          ]
-            .concat([
-              ["NIFTY 50", "23,842", "+0.54%", true],
-              ["SENSEX", "78,553", "+0.54%", true],
-              ["NIFTY BANK", "51,236", "−0.17%", false],
-              ["NIFTY IT", "33,156", "+0.75%", true],
-              ["NIFTY PHARMA", "19,872", "+0.28%", true],
-              ["INDIA VIX", "13.42", "−2.75%", false],
-              ["NIFTY AUTO", "23,145", "−0.48%", false],
-              ["NIFTY FMCG", "56,234", "+0.32%", true],
-            ])
-            .map((item, idx) => (
-              <span key={`${item[0]}-${idx}`} className={styles.ti}>
-                <b>{item[0]}</b> {item[1]}{" "}
-                <span className={item[3] ? styles.g : styles.r}>{item[2]}</span>
-              </span>
-            ))}
-        </div>
-      </section>
-
-      <nav className={styles.nav}>
-        <Link className={styles.logo} href="/">Barak<span>Fi</span></Link>
-        <div className={styles.nl}>
-          <Link href="/screener">Screener</Link>
-          <Link href="/watchlist">Watchlist</Link>
-          <Link href="/methodology">Methodology</Link>
-          <Link href="/screener" className={styles.nlCta}>Open Screener</Link>
-        </div>
-      </nav>
-
       <section className={styles.hero}>
         <div className={styles.heroL}>
           <div className={styles.eyebrow}>NSE &amp; BSE · 527 Stocks · AAOIFI Methodology</div>

@@ -113,7 +113,7 @@
 }
 
 .hero {
-  padding: 110px var(--w) 90px;
+  padding: 56px var(--w) 90px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
@@ -549,7 +549,7 @@
 
   .hero {
     grid-template-columns: 1fr;
-    padding: 64px 24px 52px;
+    padding: 40px 24px 52px;
     min-height: auto;
     gap: 52px;
   }
