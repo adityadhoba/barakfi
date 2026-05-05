@@ -12,9 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return (
-    <main className="shellPage">
-      <HomeV2 />
-    </main>
-  );
+  return <HomeV2 />;
 }
