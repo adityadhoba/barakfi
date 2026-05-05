@@ -335,6 +335,15 @@ body[data-hide-topbar-search] .topbarSearchSlot {
   display: none !important;
 }
 
+/* Homepage V2 provides its own ticker/nav; hide global ones on '/' */
+body[data-home-v2] .topbar {
+  display: none !important;
+}
+
+body[data-home-v2] .globalMarketTicker {
+  display: none !important;
+}
+
 .topbarSearchOpenBtn {
   display: none;
   align-items: center;
@@ -1513,4 +1522,3 @@ a[href*="clerk.com"] {
   white-space: nowrap;
   border-width: 0;
 }
-
