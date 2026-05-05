@@ -584,7 +584,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             >
               {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
-            <h1 className={styles.pageTitle}>Stock Screener</h1>
+            <h1 className={styles.pageTitle}>Shariah Stock Screener</h1>
             <p className={styles.resultSummary}>
               {sorted.length > 0 ? `${pageStart + 1}–${pageEnd}` : "0"} of {sorted.length} stocks
             </p>
@@ -636,6 +636,27 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
+        </div>
+
+        <div className={styles.quickFilters}>
+          <span className={styles.quickFiltersLabel}>Quick Filters</span>
+          {STATUS_OPTIONS.filter((opt) => opt.key !== "all").map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`${styles.quickFilterChip} ${statusFilter === opt.key ? styles.quickFilterChipActive : ""}`}
+              onClick={() => setStatusFilter(opt.key)}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`${styles.quickFilterChip} ${statusFilter === "all" ? styles.quickFilterChipActive : ""}`}
+            onClick={() => setStatusFilter("all")}
+          >
+            All Stocks
+          </button>
         </div>
 
         {/* Active filter chips */}
@@ -849,6 +870,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className={styles.pagination}>
+            <div className={styles.pageInfo}>
+              Page {currentPage} of {totalPages}
+            </div>
             <button
               type="button"
               className={styles.pageNavBtn}
