@@ -134,7 +134,7 @@ export async function HomeV2() {
 
       <nav className={styles.homeNav} aria-label="Homepage navigation">
         <Link className={styles.logoLink} href="/">
-          <Logo size={30} showText />
+          <Logo size={32} showText variant="light" />
         </Link>
         <div className={styles.navLinks}>
           <Link href="/screener">Screener</Link>
@@ -246,28 +246,28 @@ export async function HomeV2() {
           <table className={styles.stkTable}>
             <thead>
               <tr>
-                <th>#</th>
-                <th>Name</th>
-                <th>Sector</th>
-                <th>Market Cap</th>
-                <th>Price</th>
-                <th>Status</th>
+                <th className={styles.colNum}>#</th>
+                <th className={styles.colName}>Name</th>
+                <th className={styles.colSector}>Sector</th>
+                <th className={styles.colMcap}>Market Cap</th>
+                <th className={styles.colPrice}>Price</th>
+                <th className={styles.colStatus}>Status</th>
               </tr>
             </thead>
             <tbody>
               {featuredWithStatus.map((stock, idx) => (
                 <tr key={stock.symbol}>
-                  <td>{idx + 1}</td>
-                  <td>
+                  <td className={styles.colNum}>{idx + 1}</td>
+                  <td className={styles.colName}>
                     <Link href={`/screening/${encodeURIComponent(stock.symbol)}`} className={styles.nameLink}>
                       <div className={styles.tk}>{stock.symbol}</div>
                       <div className={styles.co}>{stock.name}</div>
                     </Link>
                   </td>
-                  <td><span className={styles.sect}>{stock.sector}</span></td>
-                  <td>{formatMcap(stock.market_cap, stock.currency)}</td>
-                  <td>{formatPrice(stock.price, stock.currency)}</td>
-                  <td><span className={`${styles.badge} ${statusClass(stock.status)}`}>{statusLabel(stock.status)}</span></td>
+                  <td className={styles.colSector}><span className={styles.sect}>{stock.sector}</span></td>
+                  <td className={styles.colMcap}>{formatMcap(stock.market_cap, stock.currency)}</td>
+                  <td className={styles.colPrice}>{formatPrice(stock.price, stock.currency)}</td>
+                  <td className={styles.colStatus}><span className={`${styles.badge} ${statusClass(stock.status)}`}>{statusLabel(stock.status)}</span></td>
                 </tr>
               ))}
             </tbody>

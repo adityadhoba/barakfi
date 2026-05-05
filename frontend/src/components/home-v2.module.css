@@ -67,6 +67,7 @@
   display: inline-flex;
   align-items: center;
   text-decoration: none;
+  transform: translateY(1px);
 }
 
 .navLinks {
@@ -421,11 +422,41 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink2);
-  text-align: right;
+  text-align: left;
 }
 
-.stkTable th:nth-child(2),
-.stkTable td:nth-child(2) { text-align: left; }
+.colNum {
+  width: 54px;
+  text-align: left;
+}
+
+.colName {
+  width: 28%;
+  text-align: left;
+}
+
+.colSector {
+  width: 22%;
+  text-align: left;
+}
+
+.colMcap {
+  width: 14%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.colPrice {
+  width: 14%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.colStatus {
+  width: 18%;
+  text-align: center;
+  white-space: nowrap;
+}
 
 .tk {
   font-weight: 600;
