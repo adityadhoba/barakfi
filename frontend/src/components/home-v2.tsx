@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DM_Serif_Display } from "next/font/google";
+import { Logo } from "@/components/logo";
 import {
   getBulkScreeningResults,
   getMarketIndices,
@@ -130,6 +131,20 @@ export async function HomeV2() {
           ))}
         </div>
       </section>
+
+      <nav className={styles.homeNav} aria-label="Homepage navigation">
+        <Link className={styles.logoLink} href="/">
+          <Logo size={30} showText />
+        </Link>
+        <div className={styles.navLinks}>
+          <Link href="/screener">Screener</Link>
+          <Link href="/collections">Explore</Link>
+          <Link href="/tools">Tools</Link>
+          <Link href="/watchlist">Watchlist</Link>
+          <Link href="/sign-in" className={styles.navLogin}>Log in</Link>
+          <Link href="/sign-up" className={styles.navCta}>Get started</Link>
+        </div>
+      </nav>
 
       <section className={styles.hero}>
         <div className={styles.heroTop}>

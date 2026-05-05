@@ -91,7 +91,7 @@ export function MarketTicker() {
   const displayIndices = [...indices, ...indices];
 
   return (
-    <div className={styles.tickerRibbon}>
+    <div className={`globalMarketTicker ${styles.tickerRibbon}`}>
       <div className={styles.tickerContainer}>
         <div className={styles.liveDot} />
         <span className={styles.liveLabel}>{isLive ? "LIVE" : "MARKET"}</span>
