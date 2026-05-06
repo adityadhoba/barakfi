@@ -1,0 +1,309 @@
+.pageTabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 0 32px;
+  background: #0d2118;
+  border-bottom: 1px solid rgba(230, 226, 216, 0.12);
+  scrollbar-width: none;
+}
+.pageTabs::-webkit-scrollbar { display: none; }
+
+.pageTab {
+  padding: 14px 20px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: rgba(230, 226, 216, 0.68);
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pageTabActive {
+  color: #d2b07a;
+  border-bottom-color: #d2b07a;
+}
+
+.pageWrap {
+  padding: 28px 32px 48px;
+}
+
+.pageSection { display: grid; gap: 24px; }
+
+.hero { max-width: 760px; }
+.eyebrow {
+  margin: 0 0 12px;
+  color: #8dcaa6;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.heroTitle {
+  margin: 0 0 14px;
+  color: #f1eadf;
+  font-family: var(--font-display);
+  font-size: clamp(42px, 6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+.heroDesc {
+  margin: 0;
+  max-width: 660px;
+  color: rgba(230, 226, 216, 0.74);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid rgba(230, 226, 216, 0.1);
+}
+.statCell {
+  padding: 18px 20px;
+  background: rgba(16, 41, 29, 0.45);
+  border-right: 1px solid rgba(230, 226, 216, 0.08);
+  display: grid;
+  gap: 6px;
+}
+.statCell:last-child { border-right: 0; }
+.statNum {
+  color: #f5efe4;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+}
+.statLabel {
+  color: rgba(230, 226, 216, 0.62);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.collectionGrid,
+.learnGrid,
+.investorGrid,
+.academyGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.collectionCard,
+.learnCard,
+.investorCard,
+.academyCard {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+  border: 1px solid rgba(230, 226, 216, 0.1);
+  background: rgba(11, 30, 22, 0.6);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+.collectionCard:hover,
+.learnCard:hover,
+.investorCard:hover,
+.academyCard:hover {
+  transform: translateY(-1px);
+  border-color: rgba(126, 200, 160, 0.28);
+  background: rgba(14, 36, 26, 0.8);
+}
+.collectionIcon { width: 42px; height: 42px; }
+.collectionTag,
+.learnCategory,
+.academyLevel {
+  color: #8dcaa6;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.collectionTitle,
+.learnTitle,
+.academyTitle,
+.investorName {
+  margin: 0;
+  color: #f3ede4;
+  font-size: 26px;
+  line-height: 1.08;
+  font-family: var(--font-display);
+}
+.collectionDesc,
+.learnDesc,
+.academyDesc,
+.investorTitle,
+.investorStyle {
+  margin: 0;
+  color: rgba(230, 226, 216, 0.68);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.collectionFooter,
+.learnFooter,
+.investorFooter,
+.academyFooter,
+.linkBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(230, 226, 216, 0.68);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.linkBar a { color: #8dcaa6; text-decoration: none; }
+.linkBar a:hover { color: #a9ddbe; }
+
+.sectorGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sectorPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(230, 226, 216, 0.1);
+  color: rgba(230, 226, 216, 0.78);
+  text-decoration: none;
+  font-size: 13px;
+}
+.sectorCount {
+  color: #8dcaa6;
+  font-size: 11px;
+}
+
+.stockTable {
+  display: grid;
+  border-top: 1px solid rgba(230, 226, 216, 0.1);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+}
+.stockRow {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(180px, 1.2fr) 160px 160px 210px;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid rgba(230, 226, 216, 0.08);
+}
+.stockRow:first-child { border-top: 0; }
+.stockNameCell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stockTicker {
+  color: #f3ede4;
+  font-size: 20px;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+.stockName,
+.stockSector {
+  color: rgba(230, 226, 216, 0.68);
+  font-size: 14px;
+}
+.stockMetric {
+  color: #f3ede4;
+  font-size: 15px;
+  font-family: var(--font-display);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid currentColor;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  width: fit-content;
+}
+.badgeCompliant { color: #5fd18f; }
+.badgeReview { color: #d2a15f; }
+.badgeFail { color: #e17a7a; }
+
+.learnCardFeatured {
+  grid-column: span 2;
+}
+.investorAvatar,
+.investorAvatarFallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+.investorAvatarFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(126, 200, 160, 0.16);
+  color: #f3ede4;
+  font-size: 24px;
+  font-family: var(--font-display);
+}
+.investorFooter span:last-child { color: #8dcaa6; }
+.academyTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.academyNum {
+  color: rgba(230, 226, 216, 0.48);
+  font-size: 14px;
+  letter-spacing: 0.18em;
+}
+
+.disclaimer {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(230, 226, 216, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  color: rgba(230, 226, 216, 0.54);
+  font-size: 12px;
+}
+.disclaimerLinks {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.disclaimerLinks a {
+  color: #8dcaa6;
+  text-decoration: none;
+}
+
+@media (max-width: 1100px) {
+  .collectionGrid,
+  .learnGrid,
+  .investorGrid,
+  .academyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stockRow { grid-template-columns: minmax(240px, 2fr) minmax(140px, 1fr) 130px 130px 180px; }
+}
+
+@media (max-width: 768px) {
+  .pageTabs { padding: 0 16px; }
+  .pageWrap { padding: 20px 16px 36px; }
+  .heroTitle { font-size: 42px; }
+  .heroDesc { font-size: 15px; }
+  .statStrip { grid-template-columns: 1fr; }
+  .collectionGrid,
+  .learnGrid,
+  .investorGrid,
+  .academyGrid { grid-template-columns: 1fr; }
+  .learnCardFeatured { grid-column: auto; }
+  .stockTable { overflow-x: auto; }
+  .stockRow { min-width: 940px; }
+  .disclaimer { flex-direction: column; align-items: flex-start; }
+}

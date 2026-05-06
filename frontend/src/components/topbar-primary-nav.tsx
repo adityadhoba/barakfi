@@ -10,7 +10,7 @@ export function TopbarPrimaryNav() {
       <TopbarLink href="/screener" label="Screener" />
       <TopbarDropdown
         label="Explore"
-        basePath="/collections"
+        basePath="/explore"
         items={[
           { href: "/collections", label: "Collections" },
           { href: "/halal-stocks", label: "Halal stocks" },
