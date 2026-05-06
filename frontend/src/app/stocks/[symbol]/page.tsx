@@ -16,6 +16,7 @@ import {
 } from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
 import { StockPageHtml } from "@/components/stock-page-html";
+import { StockPageRouteShell } from "@/components/stock-page-route-shell";
 import { screeningUiLabel } from "@/lib/screening-status";
 
 const dmSerif = DM_Serif_Display({
@@ -143,15 +144,22 @@ export default async function StockDetailPage({
   }
   if (detail.kind === "legacy_blocked") {
     return (
-      <StockDetailError
-        message={`${detail.stock.name} (${detail.stock.symbol}) is no longer an active screening symbol. ${detail.message}${
-          detail.stock.canonical_symbol ? ` Use ${detail.stock.canonical_symbol} for the current listing.` : ""
-        }`}
-      />
+      <StockPageRouteShell breadcrumbSymbol={detail.stock.symbol}>
+        <StockDetailError
+          symbol={detail.stock.symbol}
+          message={`${detail.stock.name} (${detail.stock.symbol}) is no longer an active screening symbol. ${detail.message}${
+            detail.stock.canonical_symbol ? ` Use ${detail.stock.canonical_symbol} for the current listing.` : ""
+          }`}
+        />
+      </StockPageRouteShell>
     );
   }
   if (detail.kind === "error") {
-    return <StockDetailError message={detail.message} />;
+    return (
+      <StockPageRouteShell breadcrumbSymbol={normalizedSymbol}>
+        <StockDetailError symbol={normalizedSymbol} message={detail.message} />
+      </StockPageRouteShell>
+    );
   }
 
   const { stock, screening } = detail;

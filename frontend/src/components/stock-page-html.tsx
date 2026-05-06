@@ -9,7 +9,7 @@ import { displayCountryForStock } from "@/lib/stock-display";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { StockLogo } from "@/components/stock-logo";
 import { StockPageActionButtons } from "@/components/stock-page-action-buttons";
-import { RouteLocalAuth } from "@/components/route-local-auth";
+import { StockPageRouteShell } from "@/components/stock-page-route-shell";
 import type { EquityQuote, IndexQuote, ScreeningResult, Stock } from "@/lib/api";
 import styles from "@/app/stock-page-html.module.css";
 
@@ -39,17 +39,6 @@ type RatioRow = {
 };
 
 type RailIconName = "compliance" | "market" | "about" | "similar" | "watchlist" | "share";
-
-const FALLBACK_TICKER = [
-  { name: "NIFTY 50", value: 23842.75, change_percent: 0.54 },
-  { name: "SENSEX", value: 78553.2, change_percent: 0.54 },
-  { name: "NIFTY BANK", value: 51236.8, change_percent: -0.17 },
-  { name: "NIFTY IT", value: 33156.4, change_percent: 0.75 },
-  { name: "NIFTY PHARMA", value: 19872.35, change_percent: 0.28 },
-  { name: "NIFTY AUTO", value: 23145.9, change_percent: -0.48 },
-  { name: "NIFTY FMCG", value: 56234.15, change_percent: 0.32 },
-  { name: "INDIA VIX", value: 13.42, change_percent: -2.75 },
-] as const;
 
 const STATUS_META: Record<string, { label: string; dotClass: string; badgeClass: string; shortLabel: string }> = {
   HALAL: {
@@ -86,10 +75,6 @@ function formatPrice(value: number, currency: string = "INR") {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);
-}
-
-function formatTickerValue(value: number) {
-  return value.toLocaleString("en-IN", { maximumFractionDigits: value >= 100 ? 2 : 2 });
 }
 
 function formatPercent(value: number | null | undefined) {
@@ -276,7 +261,6 @@ function RailIcon({ kind }: { kind: RailIconName }) {
 }
 
 export function StockPageHtml({ stock, screening, liveQuote, indices, similarStocks, isInWatchlist }: Props) {
-  const tickerItems = indices.length > 0 ? indices : FALLBACK_TICKER;
   const quoteCurrency = liveQuote?.currency?.trim() || stock.currency || "INR";
   const displayPrice = liveQuote?.last_price ?? stock.price;
   const status = statusMeta(screening.status);
@@ -295,52 +279,7 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
       : "—";
 
   return (
-    <main className={styles.stockPage}>
-      <div className={styles.localTicker} aria-label="Market ticker">
-        <div className={styles.localTickerTrack}>
-          {[...tickerItems, ...tickerItems].map((item, index) => {
-            const change = item.change_percent ?? 0;
-            return (
-              <span className={styles.localTickerItem} key={`${item.name}-${index}`}>
-                <b>{item.name}</b>
-                {formatTickerValue(item.value)}
-                <span className={change >= 0 ? styles.tickerUp : styles.tickerDown}>{formatPercent(change)}</span>
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
-      <nav className={styles.localNav} aria-label="Stock page navigation">
-        <Link className={styles.localLogo} href="/">
-          Barak<span className={styles.localLogoAccent}>Fi</span>
-        </Link>
-        <div className={styles.localNavRight}>
-          <div className={styles.localNavLinks}>
-            <Link className={styles.localNavLink} href="/screener">Screener</Link>
-            <Link className={styles.localNavLink} href="/watchlist">Watchlist</Link>
-            <Link className={styles.localNavLink} href="/methodology">Methodology</Link>
-            <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">Open Screener</Link>
-          </div>
-          <RouteLocalAuth
-            className={styles.localNavAuth}
-            ghostClassName={`${styles.localNavLink} ${styles.localNavAuthGhost}`}
-            primaryClassName={`${styles.localNavLink} ${styles.localNavAuthPrimary}`}
-            userClassName={styles.localNavUser}
-          />
-        </div>
-      </nav>
-
-      <div className={styles.breadcrumb} aria-label="Breadcrumb">
-        <Link href="/">Home</Link>
-        <span>›</span>
-        <Link href="/screener">Screener</Link>
-        <span>›</span>
-        <Link href={sectorLink}>{stock.sector}</Link>
-        <span>›</span>
-        <span className={styles.breadcrumbCurrent}>{stock.symbol}</span>
-      </div>
-
+    <StockPageRouteShell breadcrumbSymbol={stock.symbol}>
       <section className={styles.stockHero}>
         <div className={styles.stockHeroTop}>
           <div>
@@ -585,6 +524,6 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
         <span>© 2026 BarakFi · Educational screening · Not a religious ruling or financial advice</span>
         <span>Made in India</span>
       </div>
-    </main>
+    </StockPageRouteShell>
   );
 }
