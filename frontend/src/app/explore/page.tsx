@@ -1,8 +1,21 @@
 import type { Metadata } from "next";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import { getBulkScreeningResults, getCollections, getStocks, getSuperInvestors, type Collection, type Stock, type SuperInvestorSummary } from "@/lib/api";
 import { ExplorePageClient, type ExploreFeaturedStock, type ExploreLearnCard, type ExploreAcademyCard } from "./explore-page-client";
 
 export const dynamic = "force-dynamic";
+
+const exploreSans = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--explore-font-sans",
+});
+
+const exploreDisplay = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--explore-font-display",
+});
 
 export const metadata: Metadata = {
   title: "Explore — Collections, Halal Stocks, Learn & Academy | Barakfi",
@@ -145,7 +158,8 @@ export default async function ExplorePage() {
   const sectorCount = new Set(halalStocks.map((stock) => stock.sector)).size;
 
   return (
-    <ExplorePageClient
+    <div className={`${exploreSans.variable} ${exploreDisplay.variable}`}>
+      <ExplorePageClient
       collections={featuredCollections}
       collectionsTotal={collections.length}
       compliantCount={halalStocks.length}
@@ -157,6 +171,7 @@ export default async function ExplorePage() {
       learnCards={LEARN_CARDS}
       investors={featuredInvestors}
       academyCards={ACADEMY_CARDS}
-    />
+      />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 .pageRoot {
   background: #091410;
   color: #e6e2d8;
-  font-family: var(--font-sans, Inter, sans-serif);
+  font-family: var(--explore-font-sans), sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
@@ -61,7 +61,7 @@
 
 .logo,
 .footerBrand {
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   font-size: 19px;
   color: #e6e2d8;
   text-decoration: none;
@@ -160,7 +160,7 @@
 }
 
 .pageHeroTitle {
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   font-size: clamp(32px, 4vw, 52px);
   font-weight: 400;
   color: #e6e2d8;
@@ -202,7 +202,7 @@
 .btnPrimary,
 .btnOutline {
   display: inline-block;
-  font-family: var(--font-sans, Inter, sans-serif);
+  font-family: var(--explore-font-sans), sans-serif;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -265,7 +265,7 @@
 
 .collectionsStatNumber,
 .hsNumber {
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   color: #e6e2d8;
   line-height: 1;
 }
@@ -336,7 +336,7 @@
 .siName,
 .ahTitle,
 .acTitle {
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   font-weight: 400;
   color: #e6e2d8;
 }
@@ -572,7 +572,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   font-size: 20px;
   color: #7ec8a0;
 }
@@ -646,7 +646,7 @@
 .ahDesc { line-height: 1.65; }
 
 .acNumber {
-  font-family: var(--font-display);
+  font-family: var(--explore-font-display), serif;
   font-size: 48px;
   color: rgba(230, 226, 216, 0.1);
   position: absolute;
