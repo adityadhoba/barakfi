@@ -457,27 +457,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       {/* ── Left Sidebar ── */}
       <aside className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed}`}>
 
-        {/* Status */}
-        <div className={styles.filterSection}>
-          <h4 className={styles.filterLabel}>Shariah Status</h4>
-          <div className={styles.filterOptions}>
-            {STATUS_OPTIONS.map((opt) => (
-              <label key={opt.key} className={styles.filterRadio}>
-                <input
-                  type="radio"
-                  name="status"
-                  checked={statusFilter === opt.key}
-                  onChange={() => setStatusFilter(opt.key)}
-                />
-                <span>{opt.label}</span>
-              </label>
-            ))}
-          </div>
-          {hasActiveFilters && (
-            <button type="button" className={styles.sidebarReset} onClick={resetAllFilters}>Reset all filters</button>
-          )}
-        </div>
-
         {/* Sector */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>Sector</h4>
@@ -592,7 +571,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                   ref={searchInputRef}
                   type="search"
                   className={styles.stockSearchField}
-                  placeholder="Search stocks..."
+                  placeholder="Search — RELIANCE, TCS, Infosys..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   aria-label="Search stocks"
@@ -612,8 +591,8 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               </div>
             </div>
             <button type="button" className={styles.headerBtn} onClick={() => { exportToCsv(sorted); toast(`Exported ${sorted.length} stocks`, "success"); }}>&#x2913; Export</button>
-            <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>Save</button>
             <Link href="/compare" className={styles.headerBtn}>Compare</Link>
+            <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>Save</button>
             <button type="button" className={styles.sidebarToggleMobile} onClick={() => setSidebarOpen((o) => !o)}>
               <SlidersHorizontal size={14} />
               Filters {filterCount > 0 && <span className={styles.filterBadge}>{filterCount}</span>}
@@ -630,6 +609,23 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
+        </div>
+
+        <div className={styles.quickFilters}>
+          <span className={styles.quickFiltersLabel}>Status</span>
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`${styles.quickFilterChip} ${statusFilter === opt.key ? styles.quickFilterChipActive : ""}`}
+              onClick={() => setStatusFilter(opt.key)}
+            >
+              {opt.key === "HALAL" && <span className={`${styles.statusDot} ${styles.statusDotHalal}`} />}
+              {opt.key === "CAUTIOUS" && <span className={`${styles.statusDot} ${styles.statusDotReview}`} />}
+              {opt.key === "NON_COMPLIANT" && <span className={`${styles.statusDot} ${styles.statusDotFail}`} />}
+              {opt.key === "all" ? "All" : opt.label.replace("Shariah ", "")}
+            </button>
+          ))}
         </div>
 
         {/* Active filter chips */}
