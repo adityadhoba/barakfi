@@ -34,7 +34,7 @@ export type ExploreAcademyCard = {
   lessons: number;
 };
 
-type ExploreTab = "collections" | "halal" | "learn" | "superinvestors" | "academy";
+export type ExploreTab = "collections" | "halal" | "learn" | "superinvestors" | "academy";
 
 const TAB_LABELS: Array<{ id: ExploreTab; label: string }> = [
   { id: "collections", label: "Collections" },
@@ -79,6 +79,7 @@ export function ExplorePageClient({
   learnCards,
   investors,
   academyCards,
+  initialTab,
 }: {
   collections: Collection[];
   collectionsTotal: number;
@@ -91,8 +92,9 @@ export function ExplorePageClient({
   learnCards: ExploreLearnCard[];
   investors: SuperInvestorSummary[];
   academyCards: ExploreAcademyCard[];
+  initialTab?: ExploreTab;
 }) {
-  const [activeTab, setActiveTab] = useState<ExploreTab>("collections");
+  const [activeTab, setActiveTab] = useState<ExploreTab>(initialTab ?? "collections");
   const featuredLearn = learnCards[0] ?? null;
   const remainingLearn = learnCards.slice(1);
   const sampleInvestorHoldings = featuredStocks.slice(0, 5);

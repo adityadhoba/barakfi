@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Inter } from "next/font/google";
 import { getBulkScreeningResults, getCollections, getStocks, getSuperInvestors, type Collection, type Stock, type SuperInvestorSummary } from "@/lib/api";
-import { ExplorePageClient, type ExploreFeaturedStock, type ExploreLearnCard, type ExploreAcademyCard } from "./explore-page-client";
+import { ExplorePageClient, type ExploreFeaturedStock, type ExploreLearnCard, type ExploreAcademyCard, type ExploreTab } from "./explore-page-client";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,19 @@ export const metadata: Metadata = {
     "Explore curated stock collections, compliant Indian stocks, learning guides, super investors, and academy resources in one Barakfi discovery hub.",
   alternates: { canonical: "https://barakfi.in/explore" },
 };
+
+function resolveInitialTab(rawTab: string | undefined): ExploreTab {
+  switch (rawTab) {
+    case "halal":
+    case "learn":
+    case "superinvestors":
+    case "academy":
+    case "collections":
+      return rawTab;
+    default:
+      return "collections";
+  }
+}
 
 const LEARN_CARDS: ExploreLearnCard[] = [
   {
@@ -124,7 +137,13 @@ function buildFeaturedStocks(stocks: Stock[], screening: Awaited<ReturnType<type
   }));
 }
 
-export default async function ExplorePage() {
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }> | { tab?: string };
+}) {
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams;
+  const initialTab = resolveInitialTab(resolvedSearchParams?.tab);
   const [collections, investors, stocks] = await Promise.all([
     getCollections().catch(() => [] as Collection[]),
     getSuperInvestors().catch(() => [] as SuperInvestorSummary[]),
@@ -171,6 +190,7 @@ export default async function ExplorePage() {
       learnCards={LEARN_CARDS}
       investors={featuredInvestors}
       academyCards={ACADEMY_CARDS}
+      initialTab={initialTab}
       />
     </div>
   );
