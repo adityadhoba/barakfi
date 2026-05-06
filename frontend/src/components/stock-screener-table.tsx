@@ -456,14 +456,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
       )}
       {/* ── Left Sidebar ── */}
       <aside className={`${styles.sidebar} ${sidebarOpen ? "" : styles.sidebarCollapsed}`}>
-        <div className={styles.sidebarHeader}>
-          <span className={styles.sidebarTitle}>
-            {filterCount > 0 ? `${filterCount} filter${filterCount > 1 ? "s" : ""} applied` : "No filters applied"}
-          </span>
-          {hasActiveFilters && (
-            <button type="button" className={styles.sidebarReset} onClick={resetAllFilters}>Reset all</button>
-          )}
-        </div>
 
         {/* Status */}
         <div className={styles.filterSection}>
@@ -481,6 +473,9 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               </label>
             ))}
           </div>
+          {hasActiveFilters && (
+            <button type="button" className={styles.sidebarReset} onClick={resetAllFilters}>Reset all filters</button>
+          )}
         </div>
 
         {/* Sector */}
