@@ -386,6 +386,21 @@ body[data-about-v2] .bottomNav {
   display: none !important;
 }
 
+body[data-explore-v2] .globalMarketTicker,
+body[data-tools-v2] .globalMarketTicker {
+  display: none !important;
+}
+
+body[data-explore-v2] .topbar,
+body[data-tools-v2] .topbar {
+  display: none !important;
+}
+
+body[data-explore-v2] .bottomNav,
+body[data-tools-v2] .bottomNav {
+  display: none !important;
+}
+
 body[data-screener-v2] .topbarActions {
   gap: 8px;
 }

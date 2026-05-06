@@ -1,0 +1,170 @@
+.pageShell {
+  min-height: 100vh;
+  background: #091410;
+  color: #e6e2d8;
+}
+
+.localNav {
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  height: 56px;
+  padding: 0 48px;
+  background: rgba(9, 20, 16, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+}
+
+.localLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #e6e2d8;
+  text-decoration: none;
+}
+
+.logoBadge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #11c58a 0%, #0a8f67 100%);
+  color: #f7f8f3;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.logoBadge::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f7b640;
+  box-shadow: 0 0 0 2px rgba(7, 21, 15, 0.2);
+}
+
+.localLogoWordmark {
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.localLogoAccent {
+  color: #f7f8f3;
+}
+
+.localNavRight {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.localNavLinks,
+.localNavAuth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.localNavLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: rgba(230, 226, 216, 0.68);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+  white-space: nowrap;
+}
+
+.localNavLink:hover {
+  color: #e6e2d8;
+}
+
+.localNavLinkActive {
+  color: #7ec8a0;
+  background: rgba(126, 200, 160, 0.12);
+}
+
+.localNavAuthGhost {
+  border-color: rgba(230, 226, 216, 0.16);
+}
+
+.localNavAuthPrimary {
+  background: #9ad4ae;
+  color: #091410;
+  font-weight: 600;
+}
+
+.localNavAuthPrimary:hover {
+  background: #abdcbc;
+  color: #091410;
+}
+
+.localNavUser {
+  display: inline-flex;
+  align-items: center;
+}
+
+@media (max-width: 1024px) {
+  .localNav {
+    padding: 0 20px;
+  }
+
+  .localNavLinks,
+  .localNavAuth {
+    gap: 8px;
+  }
+
+  .localNavLink {
+    padding: 0 12px;
+    letter-spacing: 0.1em;
+  }
+}
+
+@media (max-width: 768px) {
+  .localNav {
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+
+  .localNavRight {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .localNavLinks,
+  .localNavAuth {
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .localNavLink {
+    min-height: 36px;
+    font-size: 10px;
+  }
+}
