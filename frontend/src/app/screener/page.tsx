@@ -1,11 +1,30 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
+import { DM_Serif_Display } from "next/font/google";
 import { unstable_noStore } from "next/cache";
-import styles from "@/app/screener.module.css";
+import styles from "@/app/screener-html.module.css";
 import { getScreenerSnapshot, getStocks, getBulkScreeningResults } from "@/lib/api";
-import { StockScreenerTable } from "@/components/stock-screener-table";
+import { StockScreenerTableHtml } from "@/components/stock-screener-table-html";
 import { ScreenerSkeleton } from "@/components/screener-skeleton";
 import { ScreenerWarmingUp } from "@/components/screener-warming-up";
+
+const dmSerif = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-screener-serif",
+});
+
+const TICKER_ITEMS = [
+  { name: "NIFTY 50", value: "23,842.75", change: "+0.54%", positive: true },
+  { name: "SENSEX", value: "78,553.20", change: "+0.54%", positive: true },
+  { name: "NIFTY BANK", value: "51,236.80", change: "-0.17%", positive: false },
+  { name: "NIFTY IT", value: "33,156.40", change: "+0.75%", positive: true },
+  { name: "NIFTY PHARMA", value: "19,872.35", change: "+0.28%", positive: true },
+  { name: "NIFTY AUTO", value: "23,145.90", change: "-0.48%", positive: false },
+  { name: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
+  { name: "INDIA VIX", value: "13.42", change: "-2.75%", positive: false },
+] as const;
 
 // ISR: revalidate every 10 minutes. Next.js serves the cached page instantly
 // from the CDN edge; a background re-render is triggered after 600 s.
@@ -23,7 +42,39 @@ export const metadata: Metadata = {
 
 export default function ScreenerPage() {
   return (
-    <main className={styles.screenerPage}>
+    <main className={`${styles.screenerPage} ${dmSerif.variable}`}>
+      <div className={styles.localTicker} aria-label="Market ticker">
+        <div className={styles.localTickerTrack}>
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
+            <span className={styles.localTickerItem} key={`${item.name}-${index}`}>
+              <b>{item.name}</b>
+              {item.value}
+              <span className={item.positive ? styles.tickerUp : styles.tickerDown}>{item.change}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <nav className={styles.localNav} aria-label="Screener navigation">
+        <Link className={styles.localLogo} href="/">
+          Barak<span className={styles.localLogoAccent}>Fi</span>
+        </Link>
+        <div className={styles.localNavLinks}>
+          <Link className={`${styles.localNavLink} ${styles.localNavLinkActive}`} href="/screener">
+            Screener
+          </Link>
+          <Link className={styles.localNavLink} href="/watchlist">
+            Watchlist
+          </Link>
+          <Link className={styles.localNavLink} href="/methodology">
+            Methodology
+          </Link>
+          <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">
+            Open Screener
+          </Link>
+        </div>
+      </nav>
+
       <Suspense fallback={<ScreenerSkeleton />}>
         <ScreenerDataLayer />
       </Suspense>
@@ -45,7 +96,7 @@ async function ScreenerDataLayer() {
     unstable_noStore();
     return <ScreenerWarmingUp />;
   }
-  return <StockScreenerTable screenedStocks={validStocks} />;
+  return <StockScreenerTableHtml screenedStocks={validStocks} />;
 }
 
 async function loadScreenerStocks() {
