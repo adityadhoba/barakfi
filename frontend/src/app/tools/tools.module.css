@@ -1,10 +1,73 @@
+.pageRoot {
+  background: #091410;
+  color: #e6e2d8;
+  font-family: var(--tools-font-sans), sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 64px;
+  height: 64px;
+  background: rgba(9, 20, 16, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+}
+
+.logo {
+  font-family: var(--tools-font-display), serif;
+  font-size: 19px;
+  color: #e6e2d8;
+  text-decoration: none;
+}
+
+.logoAccent {
+  font-style: normal;
+  color: #7ec8a0;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.navLinks a {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.55);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.navLinks a:hover { color: #e6e2d8; }
+
+.navCta {
+  border: 1px solid #e6e2d8;
+  padding: 6px 16px;
+  color: #e6e2d8 !important;
+}
+
+.navCta:hover {
+  background: #e6e2d8;
+  color: #091410 !important;
+}
+
 .pageTabs {
   display: flex;
   align-items: center;
   gap: 0;
   border-bottom: 1px solid rgba(230, 226, 216, 0.1);
   background: #112318;
-  padding: 0 48px;
+  padding: 0 64px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -29,7 +92,7 @@
 }
 
 .pageWrap {
-  padding: 52px 48px 0;
+  padding: 80px 64px 0;
 }
 
 .toolHeader {
@@ -46,7 +109,7 @@
 
 .toolTitle {
   margin: 0 0 14px;
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: clamp(32px, 4vw, 52px);
   font-weight: 400;
   color: #e6e2d8;
@@ -222,7 +285,7 @@
 }
 .resultRow:last-of-type { border-bottom: none; }
 .resultRow strong {
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: 24px;
   color: #e6e2d8;
   font-weight: 400;
@@ -243,7 +306,7 @@
 }
 .infoTitle {
   margin: 0 0 18px;
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: 20px;
   color: #e6e2d8;
   line-height: 1.2;
@@ -534,7 +597,7 @@
   border: 1px solid rgba(230, 226, 216, 0.1);
 }
 .compareEmptyTitle {
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: 24px;
   color: #e6e2d8;
   margin-bottom: 12px;
@@ -581,7 +644,7 @@
   padding: 32px 24px;
 }
 .rsNum {
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: 36px;
   color: #e6e2d8;
   line-height: 1;
@@ -663,7 +726,7 @@
   gap: 16px;
 }
 .footerBrand {
-  font-family: var(--font-display);
+  font-family: var(--tools-font-display), serif;
   font-size: 18px;
   color: #e6e2d8;
 }
@@ -700,6 +763,14 @@
   .siteFooter {
     padding-left: 20px;
     padding-right: 20px;
+  }
+
+  .nav {
+    padding: 0 20px;
+  }
+
+  .navLinks a:not(.navCta) {
+    display: none;
   }
 
   .fieldRow,

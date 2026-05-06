@@ -3,14 +3,13 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useMemo, useState } from "react";
-import { HubRouteShell } from "@/components/hub-route-shell";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { screeningUiLabel } from "@/lib/screening-status";
 import type { ScreeningResult, Stock } from "@/lib/api";
 import { formatMcapShort, formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "./tools.module.css";
 
-type ToolTab = "purification" | "zakat" | "compare" | "request";
+export type ToolTab = "purification" | "zakat" | "compare" | "request";
 
 const TAB_LABELS: Array<{ id: ToolTab; label: string }> = [
   { id: "purification", label: "Purification Calculator" },
@@ -615,11 +614,25 @@ function RequestPanel() {
   );
 }
 
-export function ToolsPageClient({ stocks }: { stocks: Stock[] }) {
-  const [activeTab, setActiveTab] = useState<ToolTab>("purification");
+export function ToolsPageClient({ stocks, initialTab }: { stocks: Stock[]; initialTab?: ToolTab }) {
+  const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
-    <HubRouteShell>
+    <main className={styles.pageRoot}>
+      <nav className={styles.nav} aria-label="Tools navigation">
+        <Link className={styles.logo} href="/">
+          Barak<span className={styles.logoAccent}>Fi</span>
+        </Link>
+        <div className={styles.navLinks}>
+          <Link href="/screener">Screener</Link>
+          <Link href="/watchlist">Watchlist</Link>
+          <Link href="/methodology">Methodology</Link>
+          <Link href="/screener" className={styles.navCta}>
+            Open Screener
+          </Link>
+        </div>
+      </nav>
+
       <div className={styles.pageTabs}>
         {TAB_LABELS.map((tab) => (
           <button
@@ -646,6 +659,6 @@ export function ToolsPageClient({ stocks }: { stocks: Stock[] }) {
       </div>
 
       <ToolsFooter />
-    </HubRouteShell>
+    </main>
   );
 }
