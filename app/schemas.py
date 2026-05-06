@@ -83,6 +83,7 @@ class StockRead(StockBase):
     exchange_code: str | None = None
     isin: str | None = None
     screening_blocked_reason: str | None = None
+    company_summary: str | None = None
     beta: float | None = None
     dividend_yield: float | None = None
     pe_ratio: float | None = None

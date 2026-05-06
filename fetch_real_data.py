@@ -42,6 +42,7 @@ using the screening engine in app/services/halal_service.py.
 No cron jobs needed. This is a manual weekly process.
 """
 
+import math
 import argparse
 import logging
 import os
@@ -629,6 +630,18 @@ def _load_db_isin_map() -> dict[str, str]:
     return _DB_ISIN_BY_SYMBOL
 
 
+def _clean_optional_float(value):
+    if value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(numeric) or math.isinf(numeric):
+        return None
+    return numeric
+
+
 def _load_db_alias_map() -> dict[str, str]:
     global _DB_ALIAS_BY_OLD_SYMBOL
     if _DB_ALIAS_BY_OLD_SYMBOL is not None:
@@ -1027,22 +1040,25 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
             sector = UK_SECTOR_MAP.get(symbol) or info.get("sector") or "Unknown"
             name = info.get("longName") or info.get("shortName") or symbol
 
-        beta_val = info.get("beta")
-        div_yield = info.get("dividendYield")
-        if div_yield and div_yield > 0:
-            div_yield = round(div_yield * 100, 2)
-        else:
-            div_yield = None
-        pe_val = info.get("trailingPE") or info.get("forwardPE")
-        eps_val = info.get("trailingEps")
-        w52_high = info.get("fiftyTwoWeekHigh")
-        w52_low = info.get("fiftyTwoWeekLow")
-        avg_vol = info.get("averageVolume")
-        shares_out = info.get("sharesOutstanding")
+        beta_val = _clean_optional_float(info.get("beta"))
+        div_yield_raw = _clean_optional_float(info.get("dividendYield"))
+        div_yield = round(div_yield_raw * 100, 2) if div_yield_raw is not None and div_yield_raw > 0 else None
+        pe_val = _clean_optional_float(info.get("trailingPE"))
+        if pe_val is None:
+            pe_val = _clean_optional_float(info.get("forwardPE"))
+        eps_val = _clean_optional_float(info.get("trailingEps"))
+        w52_high = _clean_optional_float(info.get("fiftyTwoWeekHigh"))
+        w52_low = _clean_optional_float(info.get("fiftyTwoWeekLow"))
+        avg_vol = _clean_optional_float(info.get("averageVolume"))
+        shares_out = _clean_optional_float(info.get("sharesOutstanding"))
         prev_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
         price_chg_pct = None
         if price and prev_close and prev_close > 0:
             price_chg_pct = round(((price - prev_close) / prev_close) * 100, 2)
+        company_summary = None
+        raw_summary = info.get("longBusinessSummary")
+        if isinstance(raw_summary, str):
+            company_summary = raw_summary.strip() or None
 
         country = EXCHANGE_COUNTRY.get(exchange, "India")
 
@@ -1080,14 +1096,15 @@ def fetch_stock_data(symbol, exchange="NSE", _retry=0):
             "total_assets": total_assets,
             "price": round(price, 2),
             "data_source": "yahoo_finance",
-            "beta": round(beta_val, 4) if beta_val else None,
+            "company_summary": company_summary,
+            "beta": round(beta_val, 4) if beta_val is not None else None,
             "dividend_yield": div_yield,
-            "pe_ratio": round(pe_val, 2) if pe_val else None,
-            "eps": round(eps_val, 2) if eps_val else None,
-            "week_52_high": round(w52_high, 2) if w52_high else None,
-            "week_52_low": round(w52_low, 2) if w52_low else None,
-            "avg_volume": float(avg_vol) if avg_vol else None,
-            "shares_outstanding": float(shares_out) if shares_out else None,
+            "pe_ratio": round(pe_val, 2) if pe_val is not None else None,
+            "eps": round(eps_val, 2) if eps_val is not None else None,
+            "week_52_high": round(w52_high, 2) if w52_high is not None else None,
+            "week_52_low": round(w52_low, 2) if w52_low is not None else None,
+            "avg_volume": avg_vol,
+            "shares_outstanding": shares_out,
             "price_change_pct": price_chg_pct,
             "is_etf": is_etf,
             "isin": str(isin_value).strip().upper() if isin_value else None,

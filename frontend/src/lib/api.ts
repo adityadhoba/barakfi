@@ -113,6 +113,7 @@ export type Stock = {
   canonical_symbol?: string | null;
   successor_symbol?: string | null;
   screening_blocked_reason?: string | null;
+  company_summary?: string | null;
   latest_corporate_event?: {
     event_type: "merge" | "demerge" | "delisted" | "renamed" | "acquired";
     label: string;

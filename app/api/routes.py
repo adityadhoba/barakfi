@@ -211,6 +211,43 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
     dq, missing = fundamentals_completeness_payload(stock)
     latest_event = summarize_latest_events_by_symbols(db, [stock.symbol]).get(stock.symbol.upper())
     alias_map = _search_aliases_by_symbol(db, [stock.symbol])
+    company_summary = None
+    raw_summary = getattr(stock, "company_summary", None)
+    if isinstance(raw_summary, str) and raw_summary.strip():
+        company_summary = raw_summary.strip()
+    elif getattr(stock, "isin", None) or getattr(stock, "symbol", None):
+        try:
+            from app.models_v2 import BusinessActivityReview, Issuer, ListingV2
+
+            review_query = (
+                db.query(BusinessActivityReview.primary_business_summary)
+                .join(Issuer, Issuer.id == BusinessActivityReview.issuer_id)
+            )
+            if stock.isin:
+                review_query = review_query.filter(Issuer.canonical_isin == stock.isin)
+            else:
+                review_query = (
+                    review_query
+                    .join(ListingV2, ListingV2.issuer_id == Issuer.id)
+                    .filter(
+                        ListingV2.symbol == stock.symbol,
+                        ListingV2.exchange_code == stock.exchange,
+                    )
+                )
+            row = (
+                review_query
+                .filter(BusinessActivityReview.effective_to.is_(None))
+                .order_by(BusinessActivityReview.effective_from.desc())
+                .first()
+            )
+            if row is None:
+                row = review_query.order_by(BusinessActivityReview.effective_from.desc()).first()
+            if row and row[0]:
+                company_summary = str(row[0]).strip() or None
+        except SQLAlchemyError:
+            company_summary = None
+        except Exception:
+            company_summary = None
     return StockRead.model_validate(stock).model_copy(
         update={
             "index_memberships": codes,
@@ -218,6 +255,7 @@ def _stock_read_enriched(db: Session, stock: Stock) -> StockRead:
             "fundamentals_fields_missing": missing,
             "latest_corporate_event": latest_event,
             "search_aliases": alias_map.get(stock.symbol.upper(), []),
+            "company_summary": company_summary,
         }
     )
 

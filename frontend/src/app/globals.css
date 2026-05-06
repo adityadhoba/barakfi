@@ -357,6 +357,35 @@ body[data-screener-v2] .bottomNav {
   display: none !important;
 }
 
+body[data-stock-v2] .globalMarketTicker {
+  display: none !important;
+}
+
+body[data-stock-v2] .topbar {
+  display: none !important;
+}
+
+body[data-stock-v2] .bottomNav {
+  display: none !important;
+}
+
+body[data-about-v2] .globalMarketTicker {
+  display: none !important;
+}
+
+body[data-about-v2] .topbar {
+  background: rgba(9, 20, 16, 0.96) !important;
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1) !important;
+}
+
+body[data-about-v2] .topbarSearchSlot {
+  display: none !important;
+}
+
+body[data-about-v2] .bottomNav {
+  display: none !important;
+}
+
 body[data-screener-v2] .topbarActions {
   gap: 8px;
 }
