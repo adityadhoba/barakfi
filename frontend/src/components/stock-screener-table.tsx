@@ -460,50 +460,67 @@ export function StockScreenerTable({ screenedStocks }: Props) {
         {/* Sector */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>Sector</h4>
-          <select
-            className={styles.filterSelect}
-            value={sectorFilter}
-            onChange={(e) => setSectorFilter(e.target.value)}
-          >
-            {sectors.map((sec) => (
-              <option key={sec} value={sec}>
-                {sec === "All" ? "All Sectors" : sec} ({sectorCounts[sec] || 0})
-              </option>
-            ))}
-          </select>
+          <div className={styles.filterList} role="listbox" aria-label="Sector filter">
+            {sectors.map((sec) => {
+              const active = sectorFilter === sec;
+              return (
+                <button
+                  key={sec}
+                  type="button"
+                  className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
+                  onClick={() => setSectorFilter(sec)}
+                  aria-selected={active}
+                >
+                  <span className={styles.filterListDot} aria-hidden />
+                  <span>{sec === "All" ? "All Sectors" : sec}</span>
+                  <span className={styles.filterListCount}>{sectorCounts[sec] || 0}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Market Cap */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>Market Cap</h4>
-          <div className={styles.filterPills}>
-            {MCAP_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`${styles.filterPill} ${mcapFilter === opt.key ? styles.filterPillActive : ""}`}
-                onClick={() => setMcapFilter(opt.key)}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className={styles.filterList} role="listbox" aria-label="Market cap filter">
+            {MCAP_OPTIONS.map((opt) => {
+              const active = mcapFilter === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
+                  onClick={() => setMcapFilter(opt.key)}
+                  aria-selected={active}
+                >
+                  <span className={styles.filterListDot} aria-hidden />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Stock Universe */}
         <div className={styles.filterSection}>
           <h4 className={styles.filterLabel}>Stock Universe</h4>
-          <div className={styles.filterPills}>
-            {INDEX_OPTIONS.map((opt) => (
-              <button
-                key={opt.key}
-                type="button"
-                className={`${styles.filterPill} ${indexFilter === opt.key ? styles.filterPillActive : ""}`}
-                onClick={() => setIndexFilter(opt.key)}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className={styles.filterList} role="listbox" aria-label="Stock universe filter">
+            {INDEX_OPTIONS.map((opt) => {
+              const active = indexFilter === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
+                  onClick={() => setIndexFilter(opt.key)}
+                  aria-selected={active}
+                >
+                  <span className={styles.filterListDot} aria-hidden />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -557,7 +574,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
             >
               {sidebarOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
             </button>
-            <h1 className={styles.pageTitle}>Shariah Stock Screener</h1>
+            <h1 className={styles.pageTitle}>Stock Screener</h1>
             <p className={styles.resultSummary}>
               {sorted.length > 0 ? `${pageStart + 1}–${pageEnd}` : "0"} of {sorted.length} stocks
             </p>
