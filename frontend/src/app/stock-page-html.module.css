@@ -325,8 +325,7 @@
 .verdictBadgeRow,
 .verdictButtonRow { margin-top: 8px; }
 
-.verdictBadge,
-.similarBadge {
+.verdictBadge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -336,6 +335,24 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.similarBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+}
+
+.similarBadge.statusCompliant,
+.similarBadge.statusReview,
+.similarBadge.statusFail {
+  background: transparent;
 }
 
 .verdictDot {
@@ -437,6 +454,16 @@
   border-color: var(--gold);
   background: rgba(126, 200, 160, 0.08);
   color: var(--gold);
+}
+
+.railIcon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .railTooltip {
@@ -640,8 +667,8 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  font-size: 14px;
-  line-height: 1.85;
+  font-size: 13.5px;
+  line-height: 1.8;
   color: var(--inkMuted);
 }
 
@@ -669,7 +696,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 14px 0;
+  padding: 16px 0;
   border-bottom: 1px solid var(--inkLine);
   color: inherit;
   text-decoration: none;

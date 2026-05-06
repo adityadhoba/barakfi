@@ -37,6 +37,8 @@ type RatioRow = {
   fillPct?: number;
 };
 
+type RailIconName = "compliance" | "market" | "about" | "similar" | "watchlist" | "share";
+
 const FALLBACK_TICKER = [
   { name: "NIFTY 50", value: 23842.75, change_percent: 0.54 },
   { name: "SENSEX", value: 78553.2, change_percent: 0.54 },
@@ -57,7 +59,7 @@ const STATUS_META: Record<string, { label: string; dotClass: string; badgeClass:
   },
   CAUTIOUS: {
     label: "Requires Review",
-    shortLabel: "Req. Review",
+    shortLabel: "Requires Review",
     dotClass: styles.verdictDotReview,
     badgeClass: styles.statusReview,
   },
@@ -220,6 +222,30 @@ function buildAboutParagraphs(stock: Stock) {
   ];
 }
 
+function buildAboutContent(stock: Stock) {
+  const summary = stock.company_summary?.trim();
+  if (!summary) return buildAboutParagraphs(stock);
+
+  const summaryParagraphs = summary
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  if (summaryParagraphs.length === 0) {
+    return buildAboutParagraphs(stock);
+  }
+
+  const indexLine = stock.index_memberships && stock.index_memberships.length > 0
+    ? stock.index_memberships.slice(0, 3).join(" · ")
+    : "Broad market universe";
+
+  return [
+    ...summaryParagraphs,
+    "BarakFi combines that company context with filing-driven screening ratios, market-cap evidence, and live quote snapshots so you can review the stock through a Shariah-screening lens without losing the underlying business picture.",
+    `Index and universe context: ${indexLine}. Data source: ${stock.data_source || "BarakFi pipeline"}.`,
+  ];
+}
+
 function statusMeta(status: string) {
   return STATUS_META[status] ?? STATUS_META.CAUTIOUS;
 }
@@ -229,19 +255,43 @@ function sidebarMetricValue(stock: Stock, screening: ScreeningResult, ratioKey: 
   return rows.find((row) => row.key === ratioKey)?.valueLabel ?? "—";
 }
 
+function RailIcon({ kind }: { kind: RailIconName }) {
+  if (kind === "compliance") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" /></svg>;
+  }
+  if (kind === "market") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>;
+  }
+  if (kind === "about") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>;
+  }
+  if (kind === "similar") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></svg>;
+  }
+  if (kind === "watchlist") {
+    return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z" /></svg>;
+  }
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
+}
+
 export function StockPageHtml({ stock, screening, liveQuote, indices, similarStocks, isInWatchlist }: Props) {
   const tickerItems = indices.length > 0 ? indices : FALLBACK_TICKER;
   const quoteCurrency = liveQuote?.currency?.trim() || stock.currency || "INR";
   const displayPrice = liveQuote?.last_price ?? stock.price;
   const status = statusMeta(screening.status);
   const ratioRows = buildRatioRows(stock, screening);
-  const aboutParagraphs = buildAboutParagraphs(stock);
+  const aboutParagraphs = buildAboutContent(stock);
   const lastScreened = formatFundamentalsLastUpdatedIst(stock.fundamentals_updated_at) ?? "Awaiting synced fundamentals";
   const shareUrl = `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`;
   const sectorLink = `/screener?sector=${encodeURIComponent(stock.sector)}`;
   const marketCapLabel = formatFundamentalAmountCompact(stock.market_cap, stock.currency);
   const averageMarketCapLabel = formatFundamentalAmountCompact(stock.average_market_cap_36m, stock.currency);
   const toneClass = toneClassName(screening.status);
+  const displayPeRatio = stock.pe_ratio != null && Number.isFinite(stock.pe_ratio)
+    ? `${stock.pe_ratio.toFixed(1)}×`
+    : stock.eps != null && Number.isFinite(stock.eps) && displayPrice > 0
+      ? `${(displayPrice / stock.eps).toFixed(1)}×`
+      : "—";
 
   return (
     <main className={styles.stockPage}>
@@ -362,12 +412,13 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
             <div className={styles.railTooltip}>{status.label}</div>
           </div>
           <div className={styles.railDivider} />
-          <a className={styles.railIcon} href="#compliance-breakdown"><span>✓</span><div className={styles.railTooltip}>Compliance</div></a>
-          <a className={styles.railIcon} href="#market-data"><span>~</span><div className={styles.railTooltip}>Market Data</div></a>
-          <a className={styles.railIcon} href="#about-company"><span>i</span><div className={styles.railTooltip}>About</div></a>
-          <a className={styles.railIcon} href="#similar-stocks"><span>▦</span><div className={styles.railTooltip}>Similar Stocks</div></a>
+          <a className={styles.railIcon} href="#compliance-breakdown"><RailIcon kind="compliance" /><div className={styles.railTooltip}>Compliance</div></a>
+          <a className={styles.railIcon} href="#market-data"><RailIcon kind="market" /><div className={styles.railTooltip}>Market Data</div></a>
+          <a className={styles.railIcon} href="#about-company"><RailIcon kind="about" /><div className={styles.railTooltip}>About</div></a>
+          <a className={styles.railIcon} href="#similar-stocks"><RailIcon kind="similar" /><div className={styles.railTooltip}>Similar Stocks</div></a>
           <div className={styles.railDivider} />
-          <a className={styles.railIcon} href="#watchlist-cta"><span>★</span><div className={styles.railTooltip}>Watchlist</div></a>
+          <Link className={styles.railIcon} href="/watchlist"><RailIcon kind="watchlist" /><div className={styles.railTooltip}>Add to Watchlist</div></Link>
+          <a className={styles.railIcon} href={shareUrl}><RailIcon kind="share" /><div className={styles.railTooltip}>Share</div></a>
         </aside>
 
         <div className={styles.contentMain}>
@@ -407,7 +458,7 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
               <div className={styles.priceStatCell}><div className={styles.priceStatLabel}>52-Week Range</div><div className={`${styles.priceStatValue} ${styles.priceStatValueSmall}`}>{formatRange(liveQuote?.week_52_low ?? stock.week_52_low, liveQuote?.week_52_high ?? stock.week_52_high, quoteCurrency)}</div></div>
               <div className={styles.priceStatCell}><div className={styles.priceStatLabel}>Volume</div><div className={styles.priceStatValue}>{formatVolume(liveQuote?.volume ?? stock.avg_volume, quoteCurrency)}</div></div>
               <div className={styles.priceStatCell}><div className={styles.priceStatLabel}>Market Cap</div><div className={styles.priceStatValue}>{marketCapLabel}</div></div>
-              <div className={styles.priceStatCell}><div className={styles.priceStatLabel}>P/E Ratio</div><div className={styles.priceStatValue}>{stock.pe_ratio && Number.isFinite(stock.pe_ratio) ? `${stock.pe_ratio.toFixed(1)}×` : "—"}</div></div>
+              <div className={styles.priceStatCell}><div className={styles.priceStatLabel}>P/E Ratio</div><div className={styles.priceStatValue}>{displayPeRatio}</div></div>
             </div>
           </section>
 
