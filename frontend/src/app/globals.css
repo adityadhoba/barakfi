@@ -349,6 +349,69 @@ body[data-screener-v2] .globalMarketTicker {
   display: none !important;
 }
 
+/* Screener V2 topbar skin: keep options, match new green UI */
+body[data-screener-v2] .topbar {
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+  background: rgba(9, 20, 16, 0.96);
+}
+
+body[data-screener-v2] .wordmark {
+  font-family: "DM Serif Display", serif;
+  font-weight: 400;
+  color: #e6e2d8;
+}
+
+body[data-screener-v2] .ghostLink {
+  color: rgba(230, 226, 216, 0.72);
+  letter-spacing: 0.04em;
+}
+
+body[data-screener-v2] .ghostLink:hover {
+  color: #e6e2d8;
+  background: rgba(126, 200, 160, 0.08);
+}
+
+body[data-screener-v2] .ghostLinkActive {
+  color: #7ec8a0 !important;
+  background: rgba(126, 200, 160, 0.12);
+}
+
+body[data-screener-v2] .ghostButtonLink {
+  border-color: rgba(230, 226, 216, 0.18);
+  color: #e6e2d8;
+  background: transparent;
+}
+
+body[data-screener-v2] .ghostButtonLink:hover {
+  border-color: rgba(126, 200, 160, 0.45);
+  color: #7ec8a0;
+  background: rgba(126, 200, 160, 0.08);
+}
+
+body[data-screener-v2] .solidButton {
+  background: #6ec9a1;
+  color: #102118;
+  font-weight: 700;
+}
+
+body[data-screener-v2] .solidButton:hover {
+  background: #7ed4ae;
+}
+
+body[data-screener-v2] .topbarSearchInput {
+  border-color: rgba(230, 226, 216, 0.14);
+  background: rgba(13, 30, 21, 0.92);
+  color: #e6e2d8;
+}
+
+body[data-screener-v2] .topbarSearchInput::placeholder {
+  color: rgba(230, 226, 216, 0.42);
+}
+
+body[data-screener-v2] .topbarSearchInput:focus {
+  border-color: rgba(126, 200, 160, 0.45);
+}
+
 .topbarSearchOpenBtn {
   display: none;
   align-items: center;
