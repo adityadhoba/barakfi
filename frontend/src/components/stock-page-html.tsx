@@ -260,7 +260,7 @@ function RailIcon({ kind }: { kind: RailIconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
 }
 
-export function StockPageHtml({ stock, screening, liveQuote, indices, similarStocks, isInWatchlist }: Props) {
+export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isInWatchlist }: Props) {
   const quoteCurrency = liveQuote?.currency?.trim() || stock.currency || "INR";
   const displayPrice = liveQuote?.last_price ?? stock.price;
   const status = statusMeta(screening.status);
@@ -268,7 +268,6 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
   const aboutParagraphs = buildAboutContent(stock);
   const lastScreened = formatFundamentalsLastUpdatedIst(stock.fundamentals_updated_at) ?? "Awaiting synced fundamentals";
   const shareUrl = `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`;
-  const sectorLink = `/screener?sector=${encodeURIComponent(stock.sector)}`;
   const marketCapLabel = formatFundamentalAmountCompact(stock.market_cap, stock.currency);
   const averageMarketCapLabel = formatFundamentalAmountCompact(stock.average_market_cap_36m, stock.currency);
   const toneClass = toneClassName(screening.status);

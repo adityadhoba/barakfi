@@ -8,7 +8,7 @@ export default function StockDetailLoading() {
         <div className={styles.stockFallbackCard}>
           <div className={styles.stockFallbackEyebrow}>Loading stock detail</div>
           <h1 className={styles.stockFallbackTitle}>Preparing the latest stock view…</h1>
-          <p className={styles.stockFallbackBody}>We're pulling the screening verdict, quote snapshot, and company context now.</p>
+          <p className={styles.stockFallbackBody}>We&apos;re pulling the screening verdict, quote snapshot, and company context now.</p>
         </div>
       </section>
     </StockPageRouteShell>

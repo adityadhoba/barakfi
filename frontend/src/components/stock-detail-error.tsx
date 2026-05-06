@@ -11,7 +11,7 @@ export function StockDetailError({ message, symbol }: { message: string; symbol?
     <section className={styles.stockFallbackWrap}>
       <div className={styles.stockFallbackCard}>
         <div className={styles.stockFallbackEyebrow}>Stock detail unavailable</div>
-        <h1 className={styles.stockFallbackTitle}>We couldn't load this stock right now.</h1>
+        <h1 className={styles.stockFallbackTitle}>We couldn&apos;t load this stock right now.</h1>
         <p className={styles.stockFallbackBody}>{message}</p>
         {symbol ? <div className={styles.stockFallbackSymbol}>{symbol}</div> : null}
         <div className={styles.stockFallbackActions}>
