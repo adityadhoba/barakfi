@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { StockLogo } from "@/components/stock-logo";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 import { formatMcapShort, formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 import type { Collection, SuperInvestorSummary } from "@/lib/api";
 import styles from "./explore.module.css";
@@ -117,13 +118,19 @@ export function ExplorePageClient({
         <Link className={styles.logo} href="/">
           Barak<span className={styles.logoAccent}>Fi</span>
         </Link>
-        <div className={styles.navLinks}>
-          <Link href="/screener">Screener</Link>
-          <Link href="/watchlist">Watchlist</Link>
-          <Link href="/methodology">Methodology</Link>
-          <Link href="/screener" className={styles.navCta}>
-            Open Screener
-          </Link>
+        <div className={styles.navRight}>
+          <div className={styles.navLinks}>
+            <Link href="/screener">Screener</Link>
+            <Link href="/explore">Explore</Link>
+            <Link href="/tools">Tools</Link>
+            <Link href="/watchlist">Watchlist</Link>
+          </div>
+          <RouteLocalAuth
+            className={styles.navAuth}
+            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
+            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
+            userClassName={styles.navUser}
+          />
         </div>
       </nav>
 

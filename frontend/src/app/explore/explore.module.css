@@ -69,12 +69,19 @@
 
 .logoAccent { color: #7ec8a0; }
 
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
 .navLinks {
   display: flex;
   align-items: center;
   gap: 24px;
 }
 
+.navLink,
 .navLinks a,
 .footerLinks a {
   font-size: 11px;
@@ -86,7 +93,54 @@
 }
 
 .navLinks a:hover,
+.navLink:hover,
 .footerLinks a:hover { color: #e6e2d8; }
+
+.navAuth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navAuthGhost {
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  padding: 7px 16px;
+  color: #e6e2d8 !important;
+}
+
+.navAuthGhost:hover {
+  border-color: #e6e2d8;
+  color: #e6e2d8 !important;
+}
+
+.navAuthPrimary {
+  border: 1px solid #a4dfb8;
+  background: #a4dfb8;
+  color: #091410 !important;
+  padding: 7px 16px;
+}
+
+.navAuthPrimary:hover {
+  filter: brightness(1.03);
+  color: #091410 !important;
+}
+
+.navUser {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navUser :global(.cl-userButtonTrigger) {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  background: transparent;
+}
+
+.navUser :global(.cl-userButtonTrigger):hover {
+  border-color: #e6e2d8;
+}
 
 .navCta {
   border: 1px solid #e6e2d8;
@@ -707,7 +761,9 @@
 
 @media (max-width: 900px) {
   .nav { padding: 0 16px; }
-  .navLinks a:not(.navCta) { display: none; }
+  .navRight { gap: 14px; }
+  .navLinks { gap: 14px; }
+  .navLinks a:not(:first-child):not(:nth-child(2)) { display: none; }
   .pageTabs { padding: 0 16px; }
   .pageHero,
   .pageContent,

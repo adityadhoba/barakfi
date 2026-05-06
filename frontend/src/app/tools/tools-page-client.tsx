@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useMemo, useState } from "react";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { screeningUiLabel } from "@/lib/screening-status";
 import type { ScreeningResult, Stock } from "@/lib/api";
@@ -623,13 +624,19 @@ export function ToolsPageClient({ stocks, initialTab }: { stocks: Stock[]; initi
         <Link className={styles.logo} href="/">
           Barak<span className={styles.logoAccent}>Fi</span>
         </Link>
-        <div className={styles.navLinks}>
-          <Link href="/screener">Screener</Link>
-          <Link href="/watchlist">Watchlist</Link>
-          <Link href="/methodology">Methodology</Link>
-          <Link href="/screener" className={styles.navCta}>
-            Open Screener
-          </Link>
+        <div className={styles.navRight}>
+          <div className={styles.navLinks}>
+            <Link href="/screener">Screener</Link>
+            <Link href="/explore">Explore</Link>
+            <Link href="/tools">Tools</Link>
+            <Link href="/watchlist">Watchlist</Link>
+          </div>
+          <RouteLocalAuth
+            className={styles.navAuth}
+            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
+            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
+            userClassName={styles.navUser}
+          />
         </div>
       </nav>
 
