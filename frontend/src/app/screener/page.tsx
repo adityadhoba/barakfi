@@ -8,6 +8,7 @@ import { getScreenerSnapshot, getStocks, getBulkScreeningResults } from "@/lib/a
 import { StockScreenerTableHtml } from "@/components/stock-screener-table-html";
 import { ScreenerSkeleton } from "@/components/screener-skeleton";
 import { ScreenerWarmingUp } from "@/components/screener-warming-up";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 
 const dmSerif = DM_Serif_Display({
   subsets: ["latin"],
@@ -59,19 +60,27 @@ export default function ScreenerPage() {
         <Link className={styles.localLogo} href="/">
           Barak<span className={styles.localLogoAccent}>Fi</span>
         </Link>
-        <div className={styles.localNavLinks}>
-          <Link className={`${styles.localNavLink} ${styles.localNavLinkActive}`} href="/screener">
-            Screener
-          </Link>
-          <Link className={styles.localNavLink} href="/watchlist">
-            Watchlist
-          </Link>
-          <Link className={styles.localNavLink} href="/methodology">
-            Methodology
-          </Link>
-          <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">
-            Open Screener
-          </Link>
+        <div className={styles.localNavRight}>
+          <div className={styles.localNavLinks}>
+            <Link className={`${styles.localNavLink} ${styles.localNavLinkActive}`} href="/screener">
+              Screener
+            </Link>
+            <Link className={styles.localNavLink} href="/watchlist">
+              Watchlist
+            </Link>
+            <Link className={styles.localNavLink} href="/methodology">
+              Methodology
+            </Link>
+            <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">
+              Open Screener
+            </Link>
+          </div>
+          <RouteLocalAuth
+            className={styles.localNavAuth}
+            ghostClassName={`${styles.localNavLink} ${styles.localNavAuthGhost}`}
+            primaryClassName={`${styles.localNavLink} ${styles.localNavAuthPrimary}`}
+            userClassName={styles.localNavUser}
+          />
         </div>
       </nav>
 

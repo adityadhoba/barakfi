@@ -9,6 +9,7 @@ import { displayCountryForStock } from "@/lib/stock-display";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { StockLogo } from "@/components/stock-logo";
 import { StockPageActionButtons } from "@/components/stock-page-action-buttons";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 import type { EquityQuote, IndexQuote, ScreeningResult, Stock } from "@/lib/api";
 import styles from "@/app/stock-page-html.module.css";
 
@@ -314,11 +315,19 @@ export function StockPageHtml({ stock, screening, liveQuote, indices, similarSto
         <Link className={styles.localLogo} href="/">
           Barak<span className={styles.localLogoAccent}>Fi</span>
         </Link>
-        <div className={styles.localNavLinks}>
-          <Link className={styles.localNavLink} href="/screener">Screener</Link>
-          <Link className={styles.localNavLink} href="/watchlist">Watchlist</Link>
-          <Link className={styles.localNavLink} href="/methodology">Methodology</Link>
-          <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">Open Screener</Link>
+        <div className={styles.localNavRight}>
+          <div className={styles.localNavLinks}>
+            <Link className={styles.localNavLink} href="/screener">Screener</Link>
+            <Link className={styles.localNavLink} href="/watchlist">Watchlist</Link>
+            <Link className={styles.localNavLink} href="/methodology">Methodology</Link>
+            <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">Open Screener</Link>
+          </div>
+          <RouteLocalAuth
+            className={styles.localNavAuth}
+            ghostClassName={`${styles.localNavLink} ${styles.localNavAuthGhost}`}
+            primaryClassName={`${styles.localNavLink} ${styles.localNavAuthPrimary}`}
+            userClassName={styles.localNavUser}
+          />
         </div>
       </nav>
 

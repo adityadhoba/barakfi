@@ -85,6 +85,12 @@
 
 .localLogoAccent { color: var(--gold); }
 
+.localNavRight {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
 .localNavLinks {
   display: flex;
   align-items: center;
@@ -106,6 +112,52 @@
   border: 1px solid var(--ink);
   padding: 7px 18px;
   color: var(--ink);
+}
+
+.localNavAuth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.localNavAuthGhost {
+  border: 1px solid var(--inkLine);
+  padding: 7px 16px;
+  color: var(--ink) !important;
+}
+
+.localNavAuthGhost:hover {
+  border-color: var(--ink);
+  color: var(--ink) !important;
+}
+
+.localNavAuthPrimary {
+  border: 1px solid var(--gold);
+  background: var(--gold);
+  color: var(--dark) !important;
+  padding: 7px 16px;
+}
+
+.localNavAuthPrimary:hover {
+  filter: brightness(1.03);
+  color: var(--dark) !important;
+}
+
+.localNavUser {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.localNavUser :global(.cl-userButtonTrigger) {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--inkLine);
+  background: transparent;
+}
+
+.localNavUser :global(.cl-userButtonTrigger):hover {
+  border-color: var(--ink);
 }
 
 .localNavCta:hover {
@@ -880,6 +932,20 @@
 }
 
 @media (max-width: 1024px) {
+  .localNavRight {
+    gap: 14px;
+  }
+
+  .localNavAuth {
+    gap: 10px;
+  }
+
+  .localNavAuthGhost,
+  .localNavAuthPrimary {
+    padding: 6px 12px;
+  }
+
+
   .contentGrid {
     grid-template-columns: 1fr;
   }
