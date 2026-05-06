@@ -1,82 +1,47 @@
 .pageShell {
   min-height: 100vh;
-  background: #07150f;
+  background: #091410;
   color: #e6e2d8;
 }
 
-.localTicker {
-  height: 32px;
-  overflow: hidden;
-  border-bottom: 1px solid rgba(230, 226, 216, 0.08);
-  background: #0f1726;
-}
-
-.localTickerTrack {
-  display: flex;
-  width: max-content;
-  animation: hubTickerMove 34s linear infinite;
-}
-
-.localTicker:hover .localTickerTrack {
-  animation-play-state: paused;
-}
-
-.localTickerItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-  height: 32px;
-  color: rgba(230, 226, 216, 0.8);
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
-
-.localTickerItem b {
-  color: #f5f1e8;
-  font-weight: 600;
-}
-
-.tickerUp { color: #58d29a; }
-.tickerDown { color: #ff7b7b; }
-
 .localNav {
-  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 300;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 0 36px;
-  background: #07150f;
-  border-bottom: 1px solid rgba(230, 226, 216, 0.12);
+  height: 56px;
+  padding: 0 48px;
+  background: rgba(9, 20, 16, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
 }
 
 .localLogo {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: #f4f0e8;
+  color: #e6e2d8;
   text-decoration: none;
-  font-family: var(--font-sans, Inter, sans-serif);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
 }
 
 .logoBadge {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(180deg, #11c58a 0%, #0a8f67 100%);
   color: #f7f8f3;
-  font-size: 27px;
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 28px;
   font-weight: 800;
   line-height: 1;
   position: relative;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .logoBadge::after {
@@ -91,7 +56,16 @@
   box-shadow: 0 0 0 2px rgba(7, 21, 15, 0.2);
 }
 
-.localLogoAccent { color: #7ec8a0; }
+.localLogoWordmark {
+  font-family: var(--font-sans, Inter, sans-serif);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.localLogoAccent {
+  color: #f7f8f3;
+}
 
 .localNavRight {
   display: flex;
@@ -110,41 +84,42 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid transparent;
   border-radius: 999px;
-  color: rgba(230, 226, 216, 0.72);
+  color: rgba(230, 226, 216, 0.68);
   text-decoration: none;
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
+  font-weight: 400;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
-  border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .localNavLink:hover {
-  color: #f4f0e8;
+  color: #e6e2d8;
 }
 
 .localNavLinkActive {
-  color: #9ad4ae;
+  color: #7ec8a0;
   background: rgba(126, 200, 160, 0.12);
 }
 
 .localNavAuthGhost {
-  border-color: rgba(230, 226, 216, 0.15);
+  border-color: rgba(230, 226, 216, 0.16);
 }
 
 .localNavAuthPrimary {
-  color: #07150f;
   background: #9ad4ae;
-  font-weight: 700;
+  color: #091410;
+  font-weight: 600;
 }
 
 .localNavAuthPrimary:hover {
-  color: #07150f;
-  background: #a6ddba;
+  background: #abdcbc;
+  color: #091410;
 }
 
 .localNavUser {
@@ -152,23 +127,19 @@
   align-items: center;
 }
 
-@keyframes hubTickerMove {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
 @media (max-width: 1024px) {
   .localNav {
     padding: 0 20px;
   }
 
-  .localNavLinks {
-    gap: 6px;
+  .localNavLinks,
+  .localNavAuth {
+    gap: 8px;
   }
 
   .localNavLink {
-    padding: 0 10px;
-    letter-spacing: 0.12em;
+    padding: 0 12px;
+    letter-spacing: 0.1em;
   }
 }
 
