@@ -112,11 +112,10 @@ function SectorCell({ sector }: { sector: string }) {
 function getSortValue(
   s: ScreenedStock,
   key: SortKey,
-  livePrice?: number | null,
 ): number | string {
   switch (key) {
     case "symbol": return s.symbol;
-    case "price": return livePrice ?? s.price;
+    case "price": return s.price;
     case "market_cap": return s.market_cap;
     case "status": return STATUS_ORDER[s.screening.status] ?? 9;
     case "debt_ratio": return s.screening.breakdown.debt_to_36m_avg_market_cap_ratio;
@@ -194,7 +193,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const [isSavingFilter, setIsSavingFilter] = useState(false);
   const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
 
-  const allSymbols = useMemo(() => screenedStocks.map((s) => s.symbol), [screenedStocks]);
   const exchangeBySymbol = useMemo(() => {
     const m: Record<string, string> = {};
     for (const s of screenedStocks) {
@@ -202,8 +200,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
     }
     return m;
   }, [screenedStocks]);
-  const quotes = useBatchQuotes(allSymbols, exchangeBySymbol);
-
+  const quoteRefreshMs = 3 * 60_000;
   const [initialized, setInitialized] = useState(false);
   useEffect(() => {
     const st = searchParams.get("status");
@@ -284,18 +281,20 @@ export function StockScreenerTable({ screenedStocks }: Props) {
   const sorted = useMemo(() => {
     const arr = [...filtered];
     arr.sort((a, b) => {
-      const va = getSortValue(a, sortKey, quotes[a.symbol]?.last_price);
-      const vb = getSortValue(b, sortKey, quotes[b.symbol]?.last_price);
+      const va = getSortValue(a, sortKey);
+      const vb = getSortValue(b, sortKey);
       if (typeof va === "number" && typeof vb === "number") return sortDir === "asc" ? va - vb : vb - va;
       return sortDir === "asc" ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
     return arr;
-  }, [filtered, sortKey, sortDir, quotes]);
+  }, [filtered, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
   const pageEnd = Math.min(pageStart + PAGE_SIZE, sorted.length);
   const pageItems = sorted.slice(pageStart, pageEnd);
+  const quoteSymbols = useMemo(() => pageItems.map((s) => s.symbol), [pageItems]);
+  const quotes = useBatchQuotes(quoteSymbols, exchangeBySymbol, quoteRefreshMs);
 
   useEffect(() => { setCurrentPage(1); setFocusedIdx(-1); }, [sorted.length]);
 

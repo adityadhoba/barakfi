@@ -11,6 +11,7 @@ type QuoteMap = Record<string, {
 const DEFAULT_REFRESH_MS = 60_000;
 const BATCH_SIZE = 20;
 const MAX_PARALLEL_BATCHES = 4;
+const LIVE_QUOTES_ENABLED = process.env.NEXT_PUBLIC_ENABLE_LIVE_QUOTES === "true";
 
 /**
  * Batch quotes for symbols. Pass optional exchange per symbol (NSE, US, LSE, …) for correct FX.
@@ -26,6 +27,10 @@ export function useBatchQuotes(
   exchangeRef.current = exchangeBySymbol;
 
   useEffect(() => {
+    if (!LIVE_QUOTES_ENABLED) {
+      setQuotes({});
+      return;
+    }
     if (symbols.length === 0) return;
 
     let cancelled = false;
