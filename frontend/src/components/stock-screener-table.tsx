@@ -637,27 +637,6 @@ export function StockScreenerTable({ screenedStocks }: Props) {
           </Link>
         </div>
 
-        <div className={styles.quickFilters}>
-          <span className={styles.quickFiltersLabel}>Quick Filters</span>
-          {STATUS_OPTIONS.filter((opt) => opt.key !== "all").map((opt) => (
-            <button
-              key={opt.key}
-              type="button"
-              className={`${styles.quickFilterChip} ${statusFilter === opt.key ? styles.quickFilterChipActive : ""}`}
-              onClick={() => setStatusFilter(opt.key)}
-            >
-              {opt.label}
-            </button>
-          ))}
-          <button
-            type="button"
-            className={`${styles.quickFilterChip} ${statusFilter === "all" ? styles.quickFilterChipActive : ""}`}
-            onClick={() => setStatusFilter("all")}
-          >
-            All Stocks
-          </button>
-        </div>
-
         {/* Active filter chips */}
         {hasActiveFilters && (
           <div className={styles.activeFiltersBar}>
