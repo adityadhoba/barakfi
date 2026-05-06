@@ -344,6 +344,15 @@ body[data-home-v2] .globalMarketTicker {
   display: none !important;
 }
 
+/* Screener V2 owns its full top section; hide global shell chrome on /screener */
+body[data-screener-v2] .topbar {
+  display: none !important;
+}
+
+body[data-screener-v2] .globalMarketTicker {
+  display: none !important;
+}
+
 .topbarSearchOpenBtn {
   display: none;
   align-items: center;

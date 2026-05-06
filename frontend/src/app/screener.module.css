@@ -979,6 +979,27 @@
   .sidebarToggleMobile { display: inline-flex; }
 }
 
+/* When /screener runs in dedicated mode (global ticker/topbar hidden), remove legacy offsets */
+:global(body[data-screener-v2]) .screenerPage {
+  min-height: 100vh;
+}
+
+:global(body[data-screener-v2]) .screenerLayout {
+  min-height: 100vh;
+}
+
+:global(body[data-screener-v2]) .sidebar {
+  top: 0;
+  max-height: 100vh;
+}
+
+@media (max-width: 960px) {
+  :global(body[data-screener-v2]) .sidebar {
+    top: 0;
+    max-height: 100vh;
+  }
+}
+
 @media (max-width: 600px) {
   .mainContent { padding: 12px 12px 64px; }
   .contentHeader { flex-direction: column; gap: 10px; }
