@@ -989,14 +989,14 @@
 }
 
 :global(body[data-screener-v2]) .sidebar {
-  top: 0;
-  max-height: 100vh;
+  top: 56px;
+  max-height: calc(100vh - 56px);
 }
 
 @media (max-width: 960px) {
   :global(body[data-screener-v2]) .sidebar {
-    top: 0;
-    max-height: 100vh;
+    top: 56px;
+    max-height: calc(100vh - 56px);
   }
 }
 

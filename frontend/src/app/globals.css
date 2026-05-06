@@ -344,11 +344,7 @@ body[data-home-v2] .globalMarketTicker {
   display: none !important;
 }
 
-/* Screener V2 owns its full top section; hide global shell chrome on /screener */
-body[data-screener-v2] .topbar {
-  display: none !important;
-}
-
+/* Screener V2: keep topbar nav options, hide only ticker strip */
 body[data-screener-v2] .globalMarketTicker {
   display: none !important;
 }
