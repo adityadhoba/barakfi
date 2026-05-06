@@ -38,6 +38,12 @@
   animation: dropdownFadeIn 150ms ease-out;
 }
 
+:global(body[data-screener-v2]) .menu {
+  background: #0f1f17;
+  border-color: rgba(230, 226, 216, 0.12);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+}
+
 [data-theme="dark"] .menu {
   background: var(--bg-elevated);
   border-color: var(--line-strong);
@@ -58,9 +64,20 @@
   cursor: pointer;
 }
 
+:global(body[data-screener-v2]) .item {
+  color: #e6e2d8;
+  font-family: Inter, sans-serif;
+  font-weight: 500;
+}
+
 .item:hover {
   background: var(--emerald-bg);
   color: var(--emerald);
+}
+
+:global(body[data-screener-v2]) .item:hover {
+  background: rgba(126, 200, 160, 0.1);
+  color: #7ec8a0;
 }
 
 .itemActive {
@@ -81,8 +98,16 @@
   font-size: 0.9rem;
 }
 
+:global(body[data-screener-v2]) .itemIcon {
+  background: rgba(230, 226, 216, 0.06);
+}
+
 .item:hover .itemIcon {
   background: var(--emerald-dim);
+}
+
+:global(body[data-screener-v2]) .item:hover .itemIcon {
+  background: rgba(126, 200, 160, 0.14);
 }
 
 .itemLabel {

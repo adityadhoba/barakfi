@@ -10,17 +10,18 @@ export function ScreenerSkeleton() {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "240px 1fr",
+        gridTemplateColumns: "260px 1fr",
         flex: 1,
         minHeight: 0,
         overflow: "hidden",
+        background: "#091410",
       }}
     >
       {/* Sidebar skeleton */}
       <aside
         style={{
-          borderRight: "1px solid var(--line)",
-          background: "var(--panel)",
+          borderRight: "1px solid rgba(230,226,216,0.1)",
+          background: "#112318",
           padding: "20px 16px",
           display: "flex",
           flexDirection: "column",
@@ -29,12 +30,12 @@ export function ScreenerSkeleton() {
       >
         {/* Header row */}
         <div style={{ paddingBottom: 14, borderBottom: "1px solid var(--line)" }}>
-          <Shimmer width="60%" height={12} />
+          <Shimmer width="60%" height={10} />
         </div>
         {/* 4 filter sections */}
         {[80, 100, 72, 96].map((w, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <Shimmer width={`${w * 0.55}%`} height={10} />
+            <Shimmer width={`${w * 0.55}%`} height={8} />
             <Shimmer width="100%" height={30} radius={6} />
           </div>
         ))}
@@ -56,19 +57,28 @@ export function ScreenerSkeleton() {
             justifyContent: "space-between",
             alignItems: "center",
             padding: "14px 20px",
-            borderBottom: "1px solid var(--line)",
+            borderBottom: "1px solid rgba(230,226,216,0.1)",
             gap: 12,
             flexShrink: 0,
+            background: "#112318",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <Shimmer width={160} height={18} />
+            <Shimmer width={220} height={22} />
             <Shimmer width={100} height={11} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Shimmer width={220} height={34} radius={6} />
+            <Shimmer width={280} height={38} radius={0} />
             <Shimmer width={72} height={34} radius={6} />
             <Shimmer width={56} height={34} radius={6} />
+          </div>
+        </div>
+
+        <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(230,226,216,0.1)" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Shimmer width={120} height={26} radius={0} />
+            <Shimmer width={130} height={26} radius={0} />
+            <Shimmer width={140} height={26} radius={0} />
           </div>
         </div>
 
@@ -80,8 +90,9 @@ export function ScreenerSkeleton() {
               display: "grid",
               gridTemplateColumns: "40px 1fr 120px 110px 110px 130px 110px 90px",
               padding: "10px 20px",
-              borderBottom: "1px solid var(--line)",
+              borderBottom: "1px solid rgba(230,226,216,0.1)",
               gap: 8,
+              background: "#112318",
             }}
           >
             {[20, 80, 60, 60, 60, 80, 60, 50].map((w, i) => (
@@ -105,7 +116,7 @@ function SkeletonRow({ opacity }: { opacity: number }) {
         display: "grid",
         gridTemplateColumns: "40px 1fr 120px 110px 110px 130px 110px 90px",
         padding: "13px 20px",
-        borderBottom: "1px solid var(--line)",
+        borderBottom: "1px solid rgba(230,226,216,0.1)",
         gap: 8,
         alignItems: "center",
         opacity,
@@ -146,7 +157,7 @@ function Shimmer({
         width: typeof width === "number" ? `${width}px` : width,
         height: `${height}px`,
         borderRadius: typeof radius === "number" ? `${radius}px` : (radius ?? "4px"),
-        background: "var(--bg-soft)",
+        background: "rgba(230,226,216,0.12)",
         animation: "screener-shimmer 1.4s ease-in-out infinite",
         flexShrink: 0,
       }}
