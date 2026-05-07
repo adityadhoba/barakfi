@@ -20,7 +20,7 @@ import {
   type WatchlistEntry,
 } from "@/lib/api";
 import styles from "@/app/account/account-page.module.css";
-import { RouteLocalAuth } from "@/components/route-local-auth";
+import { LocalMarketingNav } from "@/components/local-marketing-nav";
 
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600"] });
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -194,23 +194,7 @@ export function AccountShell() {
         </div>
       </div>
 
-      <nav className={styles.nav}>
-        <Link href="/" className={`${styles.logo} ${serif.className}`}>Barak<em>Fi</em></Link>
-        <div className={styles.navRight}>
-          <div className={styles.navLinks}>
-            <Link href="/screener">Screener</Link>
-            <Link href="/explore">Explore</Link>
-            <Link href="/tools">Tools</Link>
-            <Link href="/watchlist">Watchlist</Link>
-          </div>
-          <RouteLocalAuth
-            className={styles.navAuth}
-            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
-            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
-            userClassName={styles.navUserButton}
-          />
-        </div>
-      </nav>
+      <LocalMarketingNav />
 
       <div className={styles.pageWrap}>
         <aside className={styles.sidebar}>

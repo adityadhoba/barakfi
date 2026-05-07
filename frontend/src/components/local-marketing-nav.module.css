@@ -1,0 +1,145 @@
+.nav {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 56px;
+  height: 60px;
+  background: rgba(9, 20, 16, 0.96);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+}
+
+.logo {
+  font-size: 20px;
+  color: #e6e2d8;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  transform: translateY(1px);
+}
+
+.logoAccent {
+  color: #7ec8a0;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.navLinks a,
+.navLink {
+  font-family: Inter, sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.58);
+  text-decoration: none;
+  transition: color 0.16s ease;
+}
+
+.navLinks a:hover,
+.navLink:hover,
+.activeLink {
+  color: #e6e2d8;
+}
+
+.navAuth {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navAuthGhost,
+.navAuthPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 22px;
+  border-radius: 0;
+}
+
+.navAuthGhost {
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  color: #e6e2d8 !important;
+}
+
+.navAuthGhost:hover {
+  border-color: rgba(230, 226, 216, 0.34);
+  color: #e6e2d8 !important;
+}
+
+.navAuthPrimary {
+  border: 1px solid #a4dfb8;
+  background: #a4dfb8;
+  color: #091410 !important;
+  font-weight: 500;
+}
+
+.navAuthPrimary:hover {
+  filter: brightness(1.03);
+  color: #091410 !important;
+}
+
+.navUser {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navUser :global(.cl-userButtonTrigger) {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  border-radius: 0;
+  background: transparent;
+}
+
+.navUser :global(.cl-userButtonTrigger):hover {
+  border-color: rgba(230, 226, 216, 0.34);
+}
+
+@media (max-width: 980px) {
+  .nav {
+    padding: 0 20px;
+  }
+
+  .navRight {
+    gap: 12px;
+  }
+
+  .navLinks {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 760px) {
+  .nav {
+    height: auto;
+    padding: 16px 18px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .navRight {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .navLinks {
+    flex-wrap: wrap;
+    gap: 12px 14px;
+  }
+}

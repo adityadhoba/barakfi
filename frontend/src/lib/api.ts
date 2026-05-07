@@ -1386,8 +1386,9 @@ export async function getAuthenticatedWatchlist(token: string, actor?: BackendAc
 }
 
 export async function getAccountOverview(token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/account/overview`, {
-    headers: buildBackendHeaders({ token, actor }),
+  void token;
+  void actor;
+  const response = await fetch("/api/account/overview", {
     cache: "no-store",
   });
 
@@ -1400,9 +1401,10 @@ export async function getAccountOverview(token: string, actor?: BackendActor | n
 }
 
 export async function unlockScreeningReport(symbol: string, token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/reports/${encodeURIComponent(symbol)}/unlock`, {
+  void token;
+  void actor;
+  const response = await fetch(`/api/reports/${encodeURIComponent(symbol)}/unlock`, {
     method: "POST",
-    headers: buildBackendHeaders({ token, actor }),
     cache: "no-store",
   });
 
@@ -1415,8 +1417,9 @@ export async function unlockScreeningReport(symbol: string, token: string, actor
 }
 
 export async function getReportHistory(token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/reports/history`, {
-    headers: buildBackendHeaders({ token, actor }),
+  void token;
+  void actor;
+  const response = await fetch("/api/reports/history", {
     cache: "no-store",
   });
 
@@ -1464,9 +1467,11 @@ export async function deleteWatchlistItemV2(symbol: string, token: string, actor
 }
 
 export async function joinWaitlist(payload: WaitlistJoinPayload, token?: string | null, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/waitlist`, {
+  void token;
+  void actor;
+  const response = await fetch("/api/waitlist", {
     method: "POST",
-    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       feature_key: payload.featureKey,
       source: payload.source,
@@ -1510,9 +1515,10 @@ export async function createAnalyticsEvent(
 }
 
 export async function requestAccountExport(token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/account/export`, {
+  void token;
+  void actor;
+  const response = await fetch("/api/account/export", {
     method: "POST",
-    headers: buildBackendHeaders({ token, actor }),
     cache: "no-store",
   });
 
@@ -1525,9 +1531,11 @@ export async function requestAccountExport(token: string, actor?: BackendActor |
 }
 
 export async function requestAccountDeletion(reason: string | undefined, token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/account/delete-request`, {
+  void token;
+  void actor;
+  const response = await fetch("/api/account/delete-request", {
     method: "POST",
-    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
     cache: "no-store",
   });
