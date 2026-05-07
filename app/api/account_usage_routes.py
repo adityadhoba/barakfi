@@ -4,13 +4,14 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from hashlib import sha256
 
+import httpx
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from svix.webhooks import Webhook, WebhookVerificationError
 
 from app.api import helpers
-from app.config import CLERK_WEBHOOK_SECRET
+from app.config import CLERK_SECRET_KEY, CLERK_WEBHOOK_SECRET
 from app.database import get_db
 from app.models import (
     AccountDeletionRequest,
@@ -32,6 +33,7 @@ from app.schemas import (
     AccountDeletionRequestCreate,
     AccountDeletionRequestRead,
     AccountOverviewFeatures,
+    AccountProfileUpdateRequest,
     AccountOverviewResponse,
     AccountOverviewUsage,
     AccountOverviewUser,
@@ -175,8 +177,89 @@ def _ensure_user_settings(db: Session, user: User) -> None:
             risk_profile="moderate",
             notifications_enabled=True,
             theme="dark",
+            preferred_index="NIFTY 50",
+            default_screening_method="AAOIFI Aligned",
+            notification_preference="Email · Weekly digest",
         )
     )
+
+
+def _looks_placeholder_email(value: str | None) -> bool:
+    if not value:
+        return True
+    email = value.strip().lower()
+    return not email or email.endswith("@example.local")
+
+
+def _looks_placeholder_name(value: str | None, auth_subject: str, email: str | None = None) -> bool:
+    if not value:
+        return True
+    name = value.strip()
+    lower = name.lower()
+    if not lower:
+        return True
+    if lower == auth_subject.strip().lower():
+        return True
+    if lower.startswith("user_"):
+        return True
+    if email and lower == email.split("@")[0].lower():
+        return True
+    return False
+
+
+def _fetch_clerk_user_profile(clerk_user_id: str) -> tuple[str | None, str | None, str | None]:
+    if not CLERK_SECRET_KEY or not clerk_user_id:
+        return None, None, None
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            response = client.get(
+                f"https://api.clerk.com/v1/users/{clerk_user_id}",
+                headers={"Authorization": f"Bearer {CLERK_SECRET_KEY}"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+    except Exception:
+        return None, None, None
+
+    email = None
+    emails = payload.get("email_addresses") or []
+    if isinstance(emails, list):
+        for item in emails:
+            if isinstance(item, dict):
+                raw = item.get("email_address")
+                if isinstance(raw, str) and "@" in raw:
+                    email = raw.strip().lower()
+                    break
+
+    first = str(payload.get("first_name") or "").strip()
+    last = str(payload.get("last_name") or "").strip()
+    full_name = f"{first} {last}".strip() or None
+    image_url = str(payload.get("image_url") or "").strip() or None
+    return email, full_name, image_url
+
+
+def _repair_user_identity_from_clerk(user: User) -> bool:
+    placeholder_email = _looks_placeholder_email(user.email)
+    placeholder_name = _looks_placeholder_name(user.display_name, user.auth_subject, user.email)
+    missing_image = not (user.image_url or "").strip()
+    if not (placeholder_email or placeholder_name or missing_image):
+        return False
+
+    email, full_name, image_url = _fetch_clerk_user_profile(user.auth_subject)
+    changed = False
+    if email and placeholder_email:
+        user.email = email
+        changed = True
+    if full_name and placeholder_name:
+        user.display_name = full_name
+        changed = True
+    elif email and placeholder_name:
+        user.display_name = email.split("@")[0]
+        changed = True
+    if image_url and missing_image:
+        user.image_url = image_url
+        changed = True
+    return changed
 
 
 def _audit(db: Session, *, user_id: int | None, action: str, request: Request | None = None, metadata: dict | None = None) -> None:
@@ -231,7 +314,7 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
     if user:
         if email:
             user.email = email
-        if name:
+        if name and not _looks_placeholder_name(name, auth_subject, email):
             user.display_name = name
         user.auth_provider = "clerk"
         user.is_active = True
@@ -257,6 +340,7 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
         db.flush()
     _ensure_user_settings(db, user)
     _ensure_free_plan(db)
+    _repair_user_identity_from_clerk(user)
     db.flush()
     return user
 
@@ -383,6 +467,8 @@ def get_account_overview(
     db: Session = Depends(get_db),
 ):
     usage_month = _usage_month_for()
+    _repair_user_identity_from_clerk(user)
+    _ensure_user_settings(db, user)
     usage = _get_or_create_monthly_usage(db, user.id, usage_month)
     plan = _plan_for_user(db, user)
     watchlist_count = db.query(func.count(WatchlistEntry.id)).filter(WatchlistEntry.user_id == user.id).scalar() or 0
@@ -397,6 +483,10 @@ def get_account_overview(
             email=user.email,
             plan=plan.name,
             member_since=user.created_at,
+            image_url=user.image_url,
+            preferred_index=user.settings.preferred_index if user.settings else "NIFTY 50",
+            default_screening_method=user.settings.default_screening_method if user.settings else "AAOIFI Aligned",
+            notification_preference=user.settings.notification_preference if user.settings else "Email · Weekly digest",
         ),
         usage=AccountOverviewUsage(
             reports_used=usage.reports_used,
@@ -415,6 +505,36 @@ def get_account_overview(
             historical_tracking_allowed=plan.historical_tracking_allowed,
         ),
         waitlist=AccountOverviewWaitlist(joined_pro=joined_pro, joined_alerts=joined_alerts),
+    )
+
+
+@router.patch("/account/profile", response_model=AccountOverviewUser)
+def update_account_profile(
+    payload: AccountProfileUpdateRequest,
+    user: User = Depends(get_current_app_user),
+    db: Session = Depends(get_db),
+):
+    _ensure_user_settings(db, user)
+    _repair_user_identity_from_clerk(user)
+    if payload.display_name is not None and payload.display_name.strip():
+        user.display_name = payload.display_name.strip()
+    if payload.preferred_index is not None and user.settings:
+        user.settings.preferred_index = payload.preferred_index.strip() or "NIFTY 50"
+    if payload.default_screening_method is not None and user.settings:
+        user.settings.default_screening_method = payload.default_screening_method.strip() or "AAOIFI Aligned"
+    if payload.notification_preference is not None and user.settings:
+        user.settings.notification_preference = payload.notification_preference.strip() or "Email · Weekly digest"
+    db.commit()
+    db.refresh(user)
+    return AccountOverviewUser(
+        name=user.display_name,
+        email=user.email,
+        plan=_plan_for_user(db, user).name,
+        member_since=user.created_at,
+        image_url=user.image_url,
+        preferred_index=user.settings.preferred_index if user.settings else "NIFTY 50",
+        default_screening_method=user.settings.default_screening_method if user.settings else "AAOIFI Aligned",
+        notification_preference=user.settings.notification_preference if user.settings else "Email · Weekly digest",
     )
 
 
@@ -442,6 +562,14 @@ def unlock_report(
     usage = _get_or_create_monthly_usage(db, user.id, usage_month)
     remaining = max(plan.max_reports_per_month - usage.reports_used, 0)
     if existing:
+        _track_event(
+            db,
+            event_name="stock_page_viewed",
+            user_id=user.id,
+            request=request,
+            properties={"symbol": clean_symbol, "counted": False},
+            page_path=f"/stocks/{clean_symbol}",
+        )
         db.commit()
         return ReportUnlockResponse(
             allowed=True,
@@ -466,7 +594,7 @@ def unlock_report(
             allowed=False,
             counted=False,
             reason="MONTHLY_LIMIT_REACHED",
-            message="You have used all 50 detailed BarakFi screening reports this month.",
+            message="You’ve used all 50 BarakFi stock-page report credits for this month. Access resets next month. Join BarakFi Pro for more.",
             cta="JOIN_PRO_WAITLIST",
             reports_used=usage.reports_used,
             reports_limit=plan.max_reports_per_month,
@@ -506,6 +634,14 @@ def unlock_report(
     )
     db.add(event)
     db.add(history)
+    _track_event(
+        db,
+        event_name="stock_page_viewed",
+        user_id=user.id,
+        request=request,
+        properties={"symbol": clean_symbol, "counted": True},
+        page_path=f"/stocks/{clean_symbol}",
+    )
     _track_event(
         db,
         event_name="report_unlocked",

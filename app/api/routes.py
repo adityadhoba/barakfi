@@ -1776,6 +1776,9 @@ def provision_user(
                 risk_profile="moderate",
                 notifications_enabled=True,
                 theme="dark",
+                preferred_index="NIFTY 50",
+                default_screening_method="AAOIFI Aligned",
+                notification_preference="Email · Weekly digest",
             )
         )
 
@@ -1823,6 +1826,9 @@ def bootstrap_current_user(
                 risk_profile="moderate",
                 notifications_enabled=True,
                 theme="dark",
+                preferred_index="NIFTY 50",
+                default_screening_method="AAOIFI Aligned",
+                notification_preference="Email · Weekly digest",
             )
         )
 
@@ -1939,6 +1945,9 @@ def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal)
                         risk_profile="moderate",
                         notifications_enabled=True,
                         theme="dark",
+                        preferred_index="NIFTY 50",
+                        default_screening_method="AAOIFI Aligned",
+                        notification_preference="Email · Weekly digest",
                     )
                 )
             db.commit()
@@ -2023,6 +2032,9 @@ def update_current_user_settings(
             risk_profile="moderate",
             notifications_enabled=True,
             theme="dark",
+            preferred_index="NIFTY 50",
+            default_screening_method="AAOIFI Aligned",
+            notification_preference="Email · Weekly digest",
         )
         db.add(settings)
         db.flush()
@@ -2066,6 +2078,9 @@ def get_current_workspace(claims: dict = Depends(get_current_auth_claims_or_inte
                         risk_profile="moderate",
                         notifications_enabled=True,
                         theme="dark",
+                        preferred_index="NIFTY 50",
+                        default_screening_method="AAOIFI Aligned",
+                        notification_preference="Email · Weekly digest",
                     )
                 )
             db.commit()

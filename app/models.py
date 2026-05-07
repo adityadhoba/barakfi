@@ -302,6 +302,9 @@ class UserSettings(Base):
     risk_profile = Column(String, nullable=False, default="moderate")
     notifications_enabled = Column(Boolean, nullable=False, default=True)
     theme = Column(String, nullable=False, default="dark")
+    preferred_index = Column(String, nullable=False, default="NIFTY 50")
+    default_screening_method = Column(String, nullable=False, default="AAOIFI Aligned")
+    notification_preference = Column(String, nullable=False, default="Email · Weekly digest")
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     user = relationship("User", back_populates="settings")

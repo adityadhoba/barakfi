@@ -374,6 +374,13 @@
   color: var(--ink);
 }
 
+.verdictMetaNote {
+  margin-top: 8px;
+  color: var(--inkMuted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
 .verdictBadgeRow,
 .verdictButtonRow { margin-top: 8px; }
 
