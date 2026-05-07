@@ -682,6 +682,43 @@
   color: var(--inkMuted);
 }
 
+.reportGateCard {
+  border: 1px solid rgba(126, 200, 160, 0.25);
+  background: linear-gradient(180deg, rgba(17, 42, 28, 0.98), rgba(10, 27, 18, 0.98));
+  padding: 28px 30px;
+}
+
+.reportGateEyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.reportGateTitle {
+  margin: 0;
+  font-family: var(--font-stock-serif, Georgia, serif);
+  font-size: 34px;
+  line-height: 1.12;
+  color: var(--ink);
+}
+
+.reportGateBody {
+  margin: 18px 0 0;
+  max-width: 760px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: var(--inkMuted);
+}
+
+.reportGateActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
 .priceStats {
   display: grid;
   grid-template-columns: 1fr 1fr;

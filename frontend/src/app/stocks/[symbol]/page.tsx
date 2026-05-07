@@ -31,6 +31,12 @@ const dmSerif = DM_Serif_Display({
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type StockPageUsageState =
+  | { kind: "anonymous"; access: null }
+  | { kind: "allowed"; access: ReportUnlockResult | null }
+  | { kind: "limit_reached"; access: ReportUnlockResult }
+  | { kind: "soft_fail"; access: null; message: string };
+
 export async function generateStaticParams() {
   try {
     const stocks = await getStocks({ orderBy: "market_cap_desc" });
@@ -89,23 +95,45 @@ async function checkStockPageUsageAccess(
   symbol: string,
   token: string | null,
   actor: { authSubject: string; email: string | null } | null,
-): Promise<ReportUnlockResult | null> {
-  if (!token || !actor) return null;
+): Promise<StockPageUsageState> {
+  if (!token || !actor) return { kind: "anonymous", access: null };
 
   const apiBaseUrl = getPublicApiBaseUrl();
-  const response = await fetch(`${apiBaseUrl}/reports/${encodeURIComponent(symbol)}/unlock`, {
-    method: "POST",
-    headers: buildBackendHeaders({ token, actor, contentType: true }),
-    cache: "no-store",
-    body: JSON.stringify({ source: "stock_page_entry" }),
-  });
+  try {
+    const response = await fetch(`${apiBaseUrl}/reports/${encodeURIComponent(symbol)}/unlock`, {
+      method: "POST",
+      headers: buildBackendHeaders({ token, actor, contentType: true }),
+      cache: "no-store",
+      body: JSON.stringify({ source: "stock_page_entry" }),
+    });
 
-  if (!response.ok) {
-    throw new Error(await parseFastapiFetchError(response));
+    if (!response.ok) {
+      return {
+        kind: "soft_fail",
+        access: null,
+        message: await parseFastapiFetchError(response),
+      };
+    }
+
+    const body: unknown = await response.json();
+    const access = unwrapBackendEnvelope<ReportUnlockResult>(body);
+    if (!access || typeof access !== "object" || typeof access.allowed !== "boolean") {
+      return {
+        kind: "soft_fail",
+        access: null,
+        message: "Invalid usage response",
+      };
+    }
+
+    if (!access.allowed) {
+      return { kind: "limit_reached", access };
+    }
+
+    return { kind: "allowed", access };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Usage service unavailable";
+    return { kind: "soft_fail", access: null, message };
   }
-
-  const body: unknown = await response.json();
-  return unwrapBackendEnvelope<ReportUnlockResult>(body);
 }
 
 function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
@@ -191,17 +219,7 @@ export default async function StockDetailPage({
 
   const { stock, screening } = detail;
 
-  const access = await checkStockPageUsageAccess(stock.symbol, token, actor);
-  if (access && !access.allowed) {
-    return (
-      <StockPageRouteShell breadcrumbSymbol={stock.symbol}>
-        <StockDetailError
-          symbol={stock.symbol}
-          message={access.message || "You've used all 50 BarakFi stock-page report credits for this month. Access resets next month. Join the BarakFi Pro waitlist for more."}
-        />
-      </StockPageRouteShell>
-    );
-  }
+  const usageState = await checkStockPageUsageAccess(stock.symbol, token, actor);
 
   const [liveQuote, similarScreenings] = await Promise.all([
     getEquityQuote(stock.symbol, "auto_india", stock.exchange).then(sanitizeEquityQuote).catch(() => null),
@@ -277,7 +295,9 @@ export default async function StockDetailPage({
         indices={indices}
         similarStocks={similarStocks}
         isInWatchlist={isInWatchlist}
-        reportAccess={access}
+        reportAccess={usageState.access}
+        reportAccessState={usageState.kind}
+        reportAccessMessage={usageState.kind === "limit_reached" ? usageState.access.message ?? null : usageState.kind === "soft_fail" ? usageState.message : null}
       />
     </div>
   );
