@@ -356,6 +356,10 @@ class AccountOverviewUser(BaseModel):
     email: str
     plan: str
     member_since: datetime
+    image_url: str | None = None
+    preferred_index: str
+    default_screening_method: str
+    notification_preference: str
 
 
 class AccountOverviewUsage(BaseModel):
@@ -386,6 +390,13 @@ class AccountOverviewResponse(BaseModel):
     usage: AccountOverviewUsage
     features: AccountOverviewFeatures
     waitlist: AccountOverviewWaitlist
+
+
+class AccountProfileUpdateRequest(BaseModel):
+    display_name: str | None = None
+    preferred_index: str | None = None
+    default_screening_method: str | None = None
+    notification_preference: str | None = None
 
 
 class ReportUnlockResponse(BaseModel):
@@ -477,6 +488,9 @@ class UserSettingsRead(BaseModel):
     risk_profile: str
     notifications_enabled: bool
     theme: str
+    preferred_index: str
+    default_screening_method: str
+    notification_preference: str
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -485,6 +499,9 @@ class UserSettingsUpdateRequest(BaseModel):
     risk_profile: str | None = None
     notifications_enabled: bool | None = None
     theme: str | None = None
+    preferred_index: str | None = None
+    default_screening_method: str | None = None
+    notification_preference: str | None = None
 
 
 class UserRead(BaseModel):

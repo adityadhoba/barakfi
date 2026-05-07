@@ -80,6 +80,10 @@ export type AccountOverview = {
     email: string;
     plan: string;
     member_since: string;
+    image_url?: string | null;
+    preferred_index: string;
+    default_screening_method: string;
+    notification_preference: string;
   };
   usage: {
     reports_used: number;
@@ -112,6 +116,13 @@ export type ReportUnlockResult = {
   reports_used?: number | null;
   reports_limit?: number | null;
   reports_remaining?: number | null;
+};
+
+export type AccountProfileUpdatePayload = {
+  displayName?: string;
+  preferredIndex?: string;
+  defaultScreeningMethod?: string;
+  notificationPreference?: string;
 };
 
 export type ScreeningReportHistoryRow = {
@@ -1398,6 +1409,29 @@ export async function getAccountOverview(token: string, actor?: BackendActor | n
   }
 
   return await response.json() as AccountOverview;
+}
+
+export async function updateAccountProfile(payload: AccountProfileUpdatePayload, token: string, actor?: BackendActor | null) {
+  void token;
+  void actor;
+  const response = await fetch("/api/account/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      display_name: payload.displayName,
+      preferred_index: payload.preferredIndex,
+      default_screening_method: payload.defaultScreeningMethod,
+      notification_preference: payload.notificationPreference,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/account/profile");
+  }
+
+  return await response.json() as AccountOverview["user"];
 }
 
 export async function unlockScreeningReport(symbol: string, token: string, actor?: BackendActor | null) {

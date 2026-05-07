@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display } from "next/font/google";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { buildBackendHeaders } from "@/lib/backend-auth";
+import { getPublicApiBaseUrl, parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
 import { notFound, redirect } from "next/navigation";
 import {
   getAuthenticatedWatchlist,
@@ -9,6 +11,7 @@ import {
   getMarketIndices,
   getStocks,
   type EquityQuote,
+  type ReportUnlockResult,
 } from "@/lib/api";
 import {
   fetchStockAndScreenForPage,
@@ -25,7 +28,8 @@ const dmSerif = DM_Serif_Display({
   variable: "--font-stock-serif",
 });
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateStaticParams() {
   try {
@@ -79,6 +83,29 @@ export async function generateMetadata({
       description,
     },
   };
+}
+
+async function checkStockPageUsageAccess(
+  symbol: string,
+  token: string | null,
+  actor: { authSubject: string; email: string | null } | null,
+): Promise<ReportUnlockResult | null> {
+  if (!token || !actor) return null;
+
+  const apiBaseUrl = getPublicApiBaseUrl();
+  const response = await fetch(`${apiBaseUrl}/reports/${encodeURIComponent(symbol)}/unlock`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    cache: "no-store",
+    body: JSON.stringify({ source: "stock_page_entry" }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseFastapiFetchError(response));
+  }
+
+  const body: unknown = await response.json();
+  return unwrapBackendEnvelope<ReportUnlockResult>(body);
 }
 
 function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
@@ -164,6 +191,18 @@ export default async function StockDetailPage({
 
   const { stock, screening } = detail;
 
+  const access = await checkStockPageUsageAccess(stock.symbol, token, actor);
+  if (access && !access.allowed) {
+    return (
+      <StockPageRouteShell breadcrumbSymbol={stock.symbol}>
+        <StockDetailError
+          symbol={stock.symbol}
+          message={access.message || "You've used all 50 BarakFi stock-page report credits for this month. Access resets next month. Join the BarakFi Pro waitlist for more."}
+        />
+      </StockPageRouteShell>
+    );
+  }
+
   const [liveQuote, similarScreenings] = await Promise.all([
     getEquityQuote(stock.symbol, "auto_india", stock.exchange).then(sanitizeEquityQuote).catch(() => null),
     (async () => {
@@ -238,6 +277,7 @@ export default async function StockDetailPage({
         indices={indices}
         similarStocks={similarStocks}
         isInWatchlist={isInWatchlist}
+        reportAccess={access}
       />
     </div>
   );

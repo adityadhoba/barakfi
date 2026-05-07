@@ -302,6 +302,9 @@ class UserSettings(Base):
     risk_profile = Column(String, nullable=False, default="moderate")
     notifications_enabled = Column(Boolean, nullable=False, default=True)
     theme = Column(String, nullable=False, default="dark")
+    preferred_index = Column(String, nullable=False, default="NIFTY 50")
+    default_screening_method = Column(String, nullable=False, default="AAOIFI Aligned")
+    notification_preference = Column(String, nullable=False, default="Email · Weekly digest")
     created_at = Column(DateTime, nullable=False, default=utc_now)
 
     user = relationship("User", back_populates="settings")
@@ -813,7 +816,7 @@ class AuditLog(Base):
     action = Column(String, nullable=False, index=True)
     ip_hash = Column(String, nullable=True)
     user_agent = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=False, default=dict)
+    metadata_json = Column("metadata", JSON, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
 
     user = relationship("User", back_populates="audit_logs")

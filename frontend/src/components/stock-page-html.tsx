@@ -10,7 +10,7 @@ import { screeningUiLabel } from "@/lib/screening-status";
 import { StockLogo } from "@/components/stock-logo";
 import { StockPageActionButtons } from "@/components/stock-page-action-buttons";
 import { StockPageRouteShell } from "@/components/stock-page-route-shell";
-import type { EquityQuote, IndexQuote, ScreeningResult, Stock } from "@/lib/api";
+import type { EquityQuote, IndexQuote, ReportUnlockResult, ScreeningResult, Stock } from "@/lib/api";
 import styles from "@/app/stock-page-html.module.css";
 
 type SimilarStock = {
@@ -25,6 +25,7 @@ type Props = {
   indices: IndexQuote[];
   similarStocks: SimilarStock[];
   isInWatchlist: boolean;
+  reportAccess?: ReportUnlockResult | null;
 };
 
 type RatioRow = {
@@ -260,7 +261,7 @@ function RailIcon({ kind }: { kind: RailIconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
 }
 
-export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isInWatchlist }: Props) {
+export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isInWatchlist, reportAccess }: Props) {
   const quoteCurrency = liveQuote?.currency?.trim() || stock.currency || "INR";
   const displayPrice = liveQuote?.last_price ?? stock.price;
   const status = statusMeta(screening.status);
@@ -336,8 +337,11 @@ export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isIn
           </div>
           <div className={styles.verdictCell}>
             <div className={styles.verdictCellInner}>
-              <div className={styles.verdictLabel}>Last Screened</div>
-              <div className={styles.verdictValue}>{lastScreened}</div>
+              <div className={styles.verdictLabel}>Report Credit</div>
+              <div className={styles.verdictValue}>Opening this stock page uses 1 of your 50 monthly report credits.</div>
+              <div className={styles.verdictMetaNote}>
+                {reportAccess?.counted === false ? "Already counted today for this stock." : reportAccess?.reports_remaining != null ? `${reportAccess.reports_remaining} credits remaining this month after this open.` : `Last screened ${lastScreened}.`}
+              </div>
             </div>
           </div>
           <div className={`${styles.verdictCell} ${styles.verdictCellRight}`}>
