@@ -10,9 +10,10 @@ Key relationships:
 - Stock (1) -> (N) PortfolioHolding, WatchlistEntry, ScreeningLog, ComplianceOverride
 """
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from app.database import Base
 
@@ -22,6 +23,11 @@ UTC = timezone.utc
 def utc_now() -> datetime:
     """Return current UTC time for column defaults."""
     return datetime.now(UTC)
+
+
+def uuid_str() -> str:
+    """Return a UUID string for externally addressable rows."""
+    return str(uuid4())
 
 
 # ============================================================================
@@ -263,7 +269,13 @@ class User(Base):
     auth_subject = Column(String, unique=True, index=True, nullable=False)  # Clerk user ID
     is_active = Column(Boolean, nullable=False, default=True)
     role = Column(String, nullable=False, default="user")  # owner | admin | reviewer | developer | user
+    image_url = Column(Text, nullable=True)
+    plan_key = Column(String, nullable=False, default="free", index=True)
+    status = Column(String, nullable=False, default="active", index=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     settings = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
     portfolios = relationship("Portfolio", back_populates="user", cascade="all, delete-orphan")
@@ -271,6 +283,14 @@ class User(Base):
     saved_screeners = relationship("SavedScreener", back_populates="user", cascade="all, delete-orphan")
     research_notes = relationship("ResearchNote", back_populates="user", cascade="all, delete-orphan")
     support_notes = relationship("SupportNote", back_populates="user", cascade="all, delete-orphan")
+    monthly_usages = relationship("MonthlyUsage", back_populates="user", cascade="all, delete-orphan")
+    report_usage_events = relationship("ReportUsageEvent", back_populates="user", cascade="all, delete-orphan")
+    screening_report_history = relationship("ScreeningReportHistory", back_populates="user", cascade="all, delete-orphan")
+    feature_waitlist_entries = relationship("FeatureWaitlist", back_populates="user")
+    analytics_events = relationship("AnalyticsEvent", back_populates="user")
+    audit_logs = relationship("AuditLog", back_populates="user")
+    data_export_requests = relationship("DataExportRequest", back_populates="user", cascade="all, delete-orphan")
+    account_deletion_requests = relationship("AccountDeletionRequest", back_populates="user")
 
 
 class UserSettings(Base):
@@ -321,6 +341,9 @@ class PortfolioHolding(Base):
 
 class WatchlistEntry(Base):
     __tablename__ = "watchlist_entries"
+    __table_args__ = (
+        UniqueConstraint("user_id", "stock_id", name="uq_watchlist_user_stock"),
+    )
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
@@ -673,3 +696,153 @@ class ScreeningAccessLog(Base):
     __table_args__ = (
         Index("ix_screening_access_actor_symbol", "actor_key", "symbol"),
     )
+
+
+class Plan(Base):
+    __tablename__ = "plans"
+
+    key = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    max_reports_per_month = Column(Integer, nullable=False, default=50)
+    max_watchlist_items = Column(Integer, nullable=False, default=25)
+    alerts_allowed = Column(Boolean, nullable=False, default=False)
+    advanced_filters_allowed = Column(Boolean, nullable=False, default=False)
+    export_allowed = Column(Boolean, nullable=False, default=False)
+    compare_allowed = Column(Boolean, nullable=False, default=False)
+    portfolio_allowed = Column(Boolean, nullable=False, default=False)
+    historical_tracking_allowed = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+
+class MonthlyUsage(Base):
+    __tablename__ = "monthly_usage"
+    __table_args__ = (
+        UniqueConstraint("user_id", "usage_month", name="uq_monthly_usage_user_month"),
+    )
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    usage_month = Column(String, nullable=False, index=True)
+    reports_used = Column(Integer, nullable=False, default=0)
+    watchlist_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+    user = relationship("User", back_populates="monthly_usages")
+
+
+class ReportUsageEvent(Base):
+    __tablename__ = "report_usage_events"
+    __table_args__ = (
+        UniqueConstraint("user_id", "stock_symbol", "usage_date", name="uq_report_usage_user_symbol_date"),
+    )
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    stock_symbol = Column(String, nullable=False, index=True)
+    exchange = Column(String, nullable=False, default="NSE")
+    usage_date = Column(Date, nullable=False, index=True)
+    usage_month = Column(String, nullable=False, index=True)
+    counted = Column(Boolean, nullable=False, default=True)
+    reason = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    user = relationship("User", back_populates="report_usage_events")
+
+
+class ScreeningReportHistory(Base):
+    __tablename__ = "screening_report_history"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    stock_symbol = Column(String, nullable=False, index=True)
+    exchange = Column(String, nullable=False, default="NSE")
+    company_name = Column(String, nullable=True)
+    sector = Column(String, nullable=True)
+    screening_method = Column(String, nullable=False, default="AAOIFI_ALIGNED")
+    result_status = Column(String, nullable=True)
+    data_period = Column(String, nullable=True)
+    debt_ratio = Column(Numeric(10, 4), nullable=True)
+    interest_income_ratio = Column(Numeric(10, 4), nullable=True)
+    business_activity_status = Column(String, nullable=True)
+    receivables_ratio = Column(Numeric(10, 4), nullable=True)
+    report_version = Column(String, nullable=True)
+    opened_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    user = relationship("User", back_populates="screening_report_history")
+
+
+class FeatureWaitlist(Base):
+    __tablename__ = "feature_waitlist"
+    __table_args__ = (
+        UniqueConstraint("email", "feature_key", name="uq_feature_waitlist_email_feature"),
+    )
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    feature_key = Column(String, nullable=False, index=True)
+    source = Column(String, nullable=False)
+    message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
+
+    user = relationship("User", back_populates="feature_waitlist_entries")
+
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    anonymous_id = Column(String, nullable=True, index=True)
+    event_name = Column(String, nullable=False, index=True)
+    properties = Column(JSON, nullable=False, default=dict)
+    page_path = Column(String, nullable=True)
+    ip_hash = Column(String, nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    user = relationship("User", back_populates="analytics_events")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    action = Column(String, nullable=False, index=True)
+    ip_hash = Column(String, nullable=True)
+    user_agent = Column(Text, nullable=True)
+    metadata = Column(JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+
+    user = relationship("User", back_populates="audit_logs")
+
+
+class DataExportRequest(Base):
+    __tablename__ = "data_export_requests"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, nullable=False, default="requested")
+    file_url = Column(Text, nullable=True)
+    requested_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="data_export_requests")
+
+
+class AccountDeletionRequest(Base):
+    __tablename__ = "account_deletion_requests"
+
+    id = Column(String(36), primary_key=True, default=uuid_str)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    clerk_user_id = Column(String, nullable=False, index=True)
+    status = Column(String, nullable=False, default="requested")
+    reason = Column(Text, nullable=True)
+    requested_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
+    scheduled_delete_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="account_deletion_requests")

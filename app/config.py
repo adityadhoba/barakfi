@@ -26,6 +26,7 @@ AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "clerk")
 AUTH_GOOGLE_ENABLED = os.getenv("AUTH_GOOGLE_ENABLED", "false").lower() == "true"
 CLERK_PUBLISHABLE_KEY = os.getenv("CLERK_PUBLISHABLE_KEY", "")
 CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "")
+CLERK_WEBHOOK_SECRET = os.getenv("CLERK_WEBHOOK_SECRET", "")
 CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL", "https://api.clerk.com/v1/jwks")
 CLERK_JS_URL = os.getenv("CLERK_JS_URL", "")
 INTERNAL_SERVICE_TOKEN = os.getenv("INTERNAL_SERVICE_TOKEN", "")
@@ -93,3 +94,4 @@ UPSTOX_REDIRECT_URI = os.getenv("UPSTOX_REDIRECT_URI", "")
 
 # OAuth redirects (broker callbacks) — set in production to your Vercel URL
 FRONTEND_APP_URL = os.getenv("FRONTEND_APP_URL", "").strip() or (CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:3000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "").strip() or FRONTEND_APP_URL

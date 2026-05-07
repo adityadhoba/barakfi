@@ -59,12 +59,136 @@ export type User = {
   auth_provider: string;
   auth_subject: string;
   is_active: boolean;
+  image_url?: string | null;
+  plan_key?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_seen_at?: string | null;
+  deleted_at?: string | null;
   settings?: {
     preferred_currency: string;
     risk_profile: string;
     notifications_enabled: boolean;
     theme: string;
   } | null;
+};
+
+export type AccountOverview = {
+  user: {
+    name: string;
+    email: string;
+    plan: string;
+    member_since: string;
+  };
+  usage: {
+    reports_used: number;
+    reports_limit: number;
+    reports_remaining: number;
+    watchlist_count: number;
+    watchlist_limit: number;
+    reset_date: string;
+  };
+  features: {
+    alerts_allowed: boolean;
+    export_allowed: boolean;
+    compare_allowed: boolean;
+    advanced_filters_allowed: boolean;
+    portfolio_allowed: boolean;
+    historical_tracking_allowed: boolean;
+  };
+  waitlist: {
+    joined_pro: boolean;
+    joined_alerts: boolean;
+  };
+};
+
+export type ReportUnlockResult = {
+  allowed: boolean;
+  counted: boolean;
+  reason?: string | null;
+  message?: string | null;
+  cta?: string | null;
+  reports_used?: number | null;
+  reports_limit?: number | null;
+  reports_remaining?: number | null;
+};
+
+export type ScreeningReportHistoryRow = {
+  id: string;
+  stock_symbol: string;
+  exchange: string;
+  company_name?: string | null;
+  sector?: string | null;
+  screening_method: string;
+  result_status?: string | null;
+  data_period?: string | null;
+  debt_ratio?: number | null;
+  interest_income_ratio?: number | null;
+  business_activity_status?: string | null;
+  receivables_ratio?: number | null;
+  report_version?: string | null;
+  opened_at: string;
+};
+
+export type WatchlistMutationResult = {
+  ok: boolean;
+  already_exists: boolean;
+  blocked: boolean;
+  message: string;
+  watchlist_count?: number | null;
+  watchlist_limit?: number | null;
+  cta?: string | null;
+  item?: WatchlistEntry | null;
+};
+
+export type WaitlistJoinPayload = {
+  featureKey:
+    | "pro"
+    | "alerts"
+    | "advanced_filters"
+    | "export"
+    | "compare"
+    | "portfolio"
+    | "historical_tracking"
+    | "unlimited_reports"
+    | "unlimited_watchlist";
+  source:
+    | "account_page"
+    | "stock_page"
+    | "premium_filter_click"
+    | "export_click"
+    | "compare_click"
+    | "report_limit_reached"
+    | "watchlist_limit_reached"
+    | "alerts_section"
+    | "screener_save_click";
+  message?: string;
+  email?: string;
+};
+
+export type WaitlistJoinResult = {
+  ok: boolean;
+  already_joined: boolean;
+  feature_key: string;
+  email: string;
+};
+
+export type DataExportRequestRecord = {
+  id: string;
+  status: string;
+  requested_at: string;
+  completed_at?: string | null;
+  expires_at?: string | null;
+};
+
+export type AccountDeletionRequestRecord = {
+  id: string;
+  status: string;
+  reason?: string | null;
+  requested_at: string;
+  scheduled_delete_at?: string | null;
+  completed_at?: string | null;
 };
 
 export type EquityQuote = {
@@ -1259,6 +1383,161 @@ export async function getAuthenticatedWatchlist(token: string, actor?: BackendAc
   }
 
   return unwrapBackendEnvelope<WatchlistEntry[]>(await response.json());
+}
+
+export async function getAccountOverview(token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/account/overview`, {
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/account/overview");
+  }
+
+  return await response.json() as AccountOverview;
+}
+
+export async function unlockScreeningReport(symbol: string, token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/reports/${encodeURIComponent(symbol)}/unlock`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, `/reports/${symbol}/unlock`);
+  }
+
+  return await response.json() as ReportUnlockResult;
+}
+
+export async function getReportHistory(token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/reports/history`, {
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/reports/history");
+  }
+
+  return await response.json() as ScreeningReportHistoryRow[];
+}
+
+export async function addWatchlistItemV2(
+  token: string,
+  payload: { symbol: string; notes?: string },
+  actor?: BackendActor | null,
+) {
+  const response = await fetch(`${apiBaseUrl}/watchlist`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/watchlist");
+  }
+
+  return await response.json() as WatchlistMutationResult;
+}
+
+export async function deleteWatchlistItemV2(symbol: string, token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/watchlist/${encodeURIComponent(symbol)}`, {
+    method: "DELETE",
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, `/watchlist/${symbol}`);
+  }
+
+  return await response.json() as { ok: boolean; message: string };
+}
+
+export async function joinWaitlist(payload: WaitlistJoinPayload, token?: string | null, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/waitlist`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    body: JSON.stringify({
+      feature_key: payload.featureKey,
+      source: payload.source,
+      message: payload.message,
+      email: payload.email,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/waitlist");
+  }
+
+  return await response.json() as WaitlistJoinResult;
+}
+
+export async function createAnalyticsEvent(
+  payload: { eventName: string; properties?: Record<string, unknown>; pagePath?: string; anonymousId?: string },
+  token?: string | null,
+  actor?: BackendActor | null,
+) {
+  const response = await fetch(`${apiBaseUrl}/events`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    body: JSON.stringify({
+      event_name: payload.eventName,
+      properties: payload.properties ?? {},
+      page_path: payload.pagePath,
+      anonymous_id: payload.anonymousId,
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/events");
+  }
+
+  return await response.json() as { ok: boolean };
+}
+
+export async function requestAccountExport(token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/account/export`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/account/export");
+  }
+
+  return await response.json() as DataExportRequestRecord;
+}
+
+export async function requestAccountDeletion(reason: string | undefined, token: string, actor?: BackendActor | null) {
+  const response = await fetch(`${apiBaseUrl}/account/delete-request`, {
+    method: "POST",
+    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    body: JSON.stringify({ reason }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const detail = await parseErrorDetail(response);
+    throw new ApiError(response.status, detail, "/account/delete-request");
+  }
+
+  return await response.json() as AccountDeletionRequestRecord;
 }
 
 /**

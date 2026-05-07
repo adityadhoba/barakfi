@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { HomeV2Search } from "@/components/home-v2-search";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 import styles from "./home-v2.module.css";
 
 const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -136,14 +137,18 @@ export async function HomeV2() {
         <Link className={styles.logoLink} href="/">
           <Logo size={32} showText variant="auto" />
         </Link>
-        <div className={styles.navLinks}>
+        <div className={styles.navPrimary}>
           <Link href="/screener">Screener</Link>
-          <Link href="/collections">Explore</Link>
+          <Link href="/explore">Explore</Link>
           <Link href="/tools">Tools</Link>
           <Link href="/watchlist">Watchlist</Link>
-          <Link href="/sign-in" className={styles.navLogin}>Log in</Link>
-          <Link href="/sign-up" className={styles.navCta}>Get started</Link>
         </div>
+        <RouteLocalAuth
+          className={styles.navAuth}
+          ghostClassName={styles.navLogin}
+          primaryClassName={styles.navCta}
+          userClassName={styles.navUser}
+        />
       </nav>
 
       <section className={styles.hero}>

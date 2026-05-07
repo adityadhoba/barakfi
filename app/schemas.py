@@ -351,6 +351,127 @@ class AlertRead(BaseModel):
     message: str
 
 
+class AccountOverviewUser(BaseModel):
+    name: str
+    email: str
+    plan: str
+    member_since: datetime
+
+
+class AccountOverviewUsage(BaseModel):
+    reports_used: int
+    reports_limit: int
+    reports_remaining: int
+    watchlist_count: int
+    watchlist_limit: int
+    reset_date: str
+
+
+class AccountOverviewFeatures(BaseModel):
+    alerts_allowed: bool = False
+    export_allowed: bool = False
+    compare_allowed: bool = False
+    advanced_filters_allowed: bool = False
+    portfolio_allowed: bool = False
+    historical_tracking_allowed: bool = False
+
+
+class AccountOverviewWaitlist(BaseModel):
+    joined_pro: bool = False
+    joined_alerts: bool = False
+
+
+class AccountOverviewResponse(BaseModel):
+    user: AccountOverviewUser
+    usage: AccountOverviewUsage
+    features: AccountOverviewFeatures
+    waitlist: AccountOverviewWaitlist
+
+
+class ReportUnlockResponse(BaseModel):
+    allowed: bool
+    counted: bool
+    reason: str | None = None
+    message: str | None = None
+    cta: str | None = None
+    reports_used: int | None = None
+    reports_limit: int | None = None
+    reports_remaining: int | None = None
+
+
+class ScreeningReportHistoryRead(BaseModel):
+    id: str
+    stock_symbol: str
+    exchange: str
+    company_name: str | None = None
+    sector: str | None = None
+    screening_method: str
+    result_status: str | None = None
+    data_period: str | None = None
+    debt_ratio: float | None = None
+    interest_income_ratio: float | None = None
+    business_activity_status: str | None = None
+    receivables_ratio: float | None = None
+    report_version: str | None = None
+    opened_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WatchlistMutationResponse(BaseModel):
+    ok: bool = True
+    already_exists: bool = False
+    blocked: bool = False
+    message: str
+    watchlist_count: int | None = None
+    watchlist_limit: int | None = None
+    cta: str | None = None
+    item: "WatchlistEntryRead | None" = None
+
+
+class WaitlistJoinRequest(BaseModel):
+    feature_key: str
+    source: str
+    message: str | None = None
+    email: str | None = None
+
+
+class WaitlistJoinResponse(BaseModel):
+    ok: bool = True
+    already_joined: bool = False
+    feature_key: str
+    email: str
+
+
+class AnalyticsEventIngestRequest(BaseModel):
+    event_name: str
+    properties: dict = Field(default_factory=dict)
+    page_path: str | None = None
+    anonymous_id: str | None = None
+
+
+class DataExportRequestRead(BaseModel):
+    id: str
+    status: str
+    requested_at: datetime
+    completed_at: datetime | None = None
+    expires_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AccountDeletionRequestCreate(BaseModel):
+    reason: str | None = None
+
+
+class AccountDeletionRequestRead(BaseModel):
+    id: str
+    status: str
+    reason: str | None = None
+    requested_at: datetime
+    scheduled_delete_at: datetime | None = None
+    completed_at: datetime | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserSettingsRead(BaseModel):
     preferred_currency: str
     risk_profile: str
@@ -374,6 +495,13 @@ class UserRead(BaseModel):
     auth_subject: str
     is_active: bool
     role: str = "user"
+    image_url: str | None = None
+    plan_key: str = "free"
+    status: str = "active"
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    last_seen_at: datetime | None = None
+    deleted_at: datetime | None = None
     settings: UserSettingsRead | None = None
     model_config = ConfigDict(from_attributes=True)
 
@@ -713,4 +841,5 @@ class HealthResponse(BaseModel):
     database: str
 
 
+WatchlistMutationResponse.model_rebuild()
 WorkspaceResponse.model_rebuild()
