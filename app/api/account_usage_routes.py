@@ -305,7 +305,9 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
     email = _claims_email(claims)
     user = db.query(User).filter(User.auth_subject == auth_subject).first()
     if not user and email:
-        user = db.query(User).filter(User.email == email).first()
+        user = db.query(User).filter(func.lower(User.email) == email.lower()).first()
+        if user:
+            user.auth_subject = auth_subject
 
     now = _utc_now()
     name = _claims_name(claims)

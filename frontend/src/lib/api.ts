@@ -1383,17 +1383,18 @@ export async function getAuthenticatedUniversePreview(
  * });
  */
 export async function getAuthenticatedWatchlist(token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
-    headers: buildBackendHeaders({ token, actor }),
+  void token;
+  void actor;
+  const response = await fetch("/api/watchlist", {
     cache: "no-store",
   });
 
   if (!response.ok) {
     const detail = await parseErrorDetail(response);
-    throw new ApiError(response.status, detail, "/me/watchlist");
+    throw new ApiError(response.status, detail, "/watchlist");
   }
 
-  return unwrapBackendEnvelope<WatchlistEntry[]>(await response.json());
+  return await response.json() as WatchlistEntry[];
 }
 
 export async function getAccountOverview(token: string, actor?: BackendActor | null) {
@@ -1470,9 +1471,11 @@ export async function addWatchlistItemV2(
   payload: { symbol: string; notes?: string },
   actor?: BackendActor | null,
 ) {
-  const response = await fetch(`${apiBaseUrl}/watchlist`, {
+  void token;
+  void actor;
+  const response = await fetch(`/api/watchlist`, {
     method: "POST",
-    headers: buildBackendHeaders({ token, actor, contentType: true }),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
     cache: "no-store",
   });
@@ -1486,9 +1489,10 @@ export async function addWatchlistItemV2(
 }
 
 export async function deleteWatchlistItemV2(symbol: string, token: string, actor?: BackendActor | null) {
-  const response = await fetch(`${apiBaseUrl}/watchlist/${encodeURIComponent(symbol)}`, {
+  void token;
+  void actor;
+  const response = await fetch(`/api/watchlist/${encodeURIComponent(symbol)}`, {
     method: "DELETE",
-    headers: buildBackendHeaders({ token, actor }),
     cache: "no-store",
   });
 

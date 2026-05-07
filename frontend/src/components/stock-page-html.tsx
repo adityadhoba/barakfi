@@ -26,6 +26,8 @@ type Props = {
   similarStocks: SimilarStock[];
   isInWatchlist: boolean;
   reportAccess?: ReportUnlockResult | null;
+  reportAccessState?: "anonymous" | "allowed" | "limit_reached" | "soft_fail";
+  reportAccessMessage?: string | null;
 };
 
 type RatioRow = {
@@ -261,7 +263,16 @@ function RailIcon({ kind }: { kind: RailIconName }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
 }
 
-export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isInWatchlist, reportAccess }: Props) {
+export function StockPageHtml({
+  stock,
+  screening,
+  liveQuote,
+  similarStocks,
+  isInWatchlist,
+  reportAccess,
+  reportAccessState = "anonymous",
+  reportAccessMessage = null,
+}: Props) {
   const quoteCurrency = liveQuote?.currency?.trim() || stock.currency || "INR";
   const displayPrice = liveQuote?.last_price ?? stock.price;
   const status = statusMeta(screening.status);
@@ -272,6 +283,7 @@ export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isIn
   const marketCapLabel = formatFundamentalAmountCompact(stock.market_cap, stock.currency);
   const averageMarketCapLabel = formatFundamentalAmountCompact(stock.average_market_cap_36m, stock.currency);
   const toneClass = toneClassName(screening.status);
+  const reportGateActive = reportAccessState === "limit_reached";
   const displayPeRatio = stock.pe_ratio != null && Number.isFinite(stock.pe_ratio)
     ? `${stock.pe_ratio.toFixed(1)}×`
     : stock.eps != null && Number.isFinite(stock.eps) && displayPrice > 0
@@ -340,7 +352,15 @@ export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isIn
               <div className={styles.verdictLabel}>Report Credit</div>
               <div className={styles.verdictValue}>Opening this stock page uses 1 of your 50 monthly report credits.</div>
               <div className={styles.verdictMetaNote}>
-                {reportAccess?.counted === false ? "Already counted today for this stock." : reportAccess?.reports_remaining != null ? `${reportAccess.reports_remaining} credits remaining this month after this open.` : `Last screened ${lastScreened}.`}
+                {reportGateActive
+                  ? (reportAccessMessage || "You've used all 50 BarakFi stock-page report credits this month. Access resets next month.")
+                  : reportAccessState === "soft_fail"
+                    ? "Usage status is temporarily unavailable. Your stock page is still loading normally."
+                    : reportAccess?.counted === false
+                      ? "Already counted today for this stock."
+                      : reportAccess?.reports_remaining != null
+                        ? `${reportAccess.reports_remaining} credits remaining this month after this open.`
+                        : `Last screened ${lastScreened}.`}
               </div>
             </div>
           </div>
@@ -375,30 +395,46 @@ export function StockPageHtml({ stock, screening, liveQuote, similarStocks, isIn
         <div className={styles.contentMain}>
           <section id="compliance-breakdown" className={styles.sectionBlock}>
             <div className={styles.sectionHeader}>Shariah Compliance Breakdown</div>
-            <div className={styles.ratioGrid}>
-              {ratioRows.map((row) => (
-                <div key={row.key} className={styles.ratioRow}>
-                  <div>
-                    <div className={styles.ratioName}>{row.name}</div>
-                    <div className={styles.ratioDesc}>{row.desc}</div>
-                    {typeof row.fillPct === "number" ? (
-                      <div className={styles.ratioBarWrap}>
-                        <div className={styles.ratioBarTrack}>
-                          <div className={`${styles.ratioBarFill} ${row.tone === "pass" ? styles.ratioBarFillPass : row.tone === "warn" ? styles.ratioBarFillWarn : styles.ratioBarFillFail}`} style={{ width: `${row.fillPct}%` }} />
-                        </div>
-                        <span className={styles.ratioThreshold}>{row.thresholdLabel}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className={`${styles.ratioValue} ${row.tone === "pass" ? styles.ratioValuePass : row.tone === "warn" ? styles.ratioValueWarn : styles.ratioValueFail}`}>{row.valueLabel}</div>
-                  <div className={styles.ratioStatus}><span className={`${styles.ratioBadge} ${row.tone === "pass" ? styles.ratioBadgePass : row.tone === "warn" ? styles.ratioBadgeWarn : styles.ratioBadgeFail}`}>{row.badge}</span></div>
+            {reportGateActive ? (
+              <div className={styles.reportGateCard}>
+                <div className={styles.reportGateEyebrow}>Monthly report limit reached</div>
+                <h3 className={styles.reportGateTitle}>Basic stock details stay available. The full BarakFi breakdown unlocks again next month.</h3>
+                <p className={styles.reportGateBody}>
+                  {reportAccessMessage || "You've used all 50 detailed BarakFi stock-page report credits for this month. Your report credits reset automatically next month. Join the BarakFi Pro waitlist for more reports, alerts, advanced filters, and portfolio screening."}
+                </p>
+                <div className={styles.reportGateActions}>
+                  <Link className={styles.actionSolidButton} href="/account#plan-usage">Join Pro Waitlist</Link>
+                  <Link className={styles.actionGhostButton} href="/watchlist">Open Watchlist</Link>
                 </div>
-              ))}
-            </div>
-            <div className={`${styles.verdictExplain} ${toneClass}`}>
-              <div className={`${styles.verdictExplainTitle} ${toneClass}`}>Why {status.label}</div>
-              <div className={styles.verdictExplainBody}>{buildVerdictExplanation(stock, screening)}</div>
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className={styles.ratioGrid}>
+                  {ratioRows.map((row) => (
+                    <div key={row.key} className={styles.ratioRow}>
+                      <div>
+                        <div className={styles.ratioName}>{row.name}</div>
+                        <div className={styles.ratioDesc}>{row.desc}</div>
+                        {typeof row.fillPct === "number" ? (
+                          <div className={styles.ratioBarWrap}>
+                            <div className={styles.ratioBarTrack}>
+                              <div className={`${styles.ratioBarFill} ${row.tone === "pass" ? styles.ratioBarFillPass : row.tone === "warn" ? styles.ratioBarFillWarn : styles.ratioBarFillFail}`} style={{ width: `${row.fillPct}%` }} />
+                            </div>
+                            <span className={styles.ratioThreshold}>{row.thresholdLabel}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className={`${styles.ratioValue} ${row.tone === "pass" ? styles.ratioValuePass : row.tone === "warn" ? styles.ratioValueWarn : styles.ratioValueFail}`}>{row.valueLabel}</div>
+                      <div className={styles.ratioStatus}><span className={`${styles.ratioBadge} ${row.tone === "pass" ? styles.ratioBadgePass : row.tone === "warn" ? styles.ratioBadgeWarn : styles.ratioBadgeFail}`}>{row.badge}</span></div>
+                    </div>
+                  ))}
+                </div>
+                <div className={`${styles.verdictExplain} ${toneClass}`}>
+                  <div className={`${styles.verdictExplainTitle} ${toneClass}`}>Why {status.label}</div>
+                  <div className={styles.verdictExplainBody}>{buildVerdictExplanation(stock, screening)}</div>
+                </div>
+              </>
+            )}
           </section>
 
           <section id="market-data" className={styles.sectionBlock}>

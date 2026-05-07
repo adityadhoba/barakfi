@@ -5,6 +5,45 @@ import { getPublicApiBaseUrl, adaptBackendJsonForProxy } from "@/lib/api-base";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
+export async function GET() {
+  const authState = await auth();
+  const clerkUser = await currentUser();
+  const token = await authState.getToken();
+
+  if (!token || !clerkUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/watchlist`, {
+      method: "GET",
+      headers: buildBackendHeaders({
+        token,
+        actor: { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress },
+      }),
+      cache: "no-store",
+    });
+
+    const responseText = await response.text();
+    let responseBody: Record<string, unknown> | unknown[] | unknown;
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      console.error("[watchlist GET] Backend returned non-JSON:", response.status, responseText.slice(0, 500));
+      responseBody = { detail: responseText.slice(0, 200) || "Backend returned non-JSON" };
+    }
+
+    if (!response.ok) {
+      console.error("[watchlist GET] Backend error:", response.status, responseBody);
+    }
+
+    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), { status: response.status });
+  } catch (error) {
+    console.error("[watchlist GET] Proxy error:", error);
+    return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
+  }
+}
+
 export async function POST(request: Request) {
   const authState = await auth();
   const clerkUser = await currentUser();
@@ -16,7 +55,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
+    const response = await fetch(`${apiBaseUrl}/watchlist`, {
       method: "POST",
       headers: buildBackendHeaders({
         token,
