@@ -82,8 +82,10 @@ def _auto_migrate_columns():
     ALTER TABLE.  This lets us add new fields to models without needing a
     full Alembic migration setup — perfect for early-stage dev on SQLite.
     """
-    inspector = inspect(engine)
     with engine.begin() as conn:
+        if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+            conn.execute(text("SELECT pg_advisory_lock(42424243)"))
+        inspector = inspect(conn)
         dialect = engine.dialect.name.lower()
         is_postgres = dialect in {"postgresql", "postgres"}
         is_sqlite = dialect == "sqlite"
@@ -161,6 +163,10 @@ def _auto_migrate_columns():
                     sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
                     logger.info("[auto-migrate] %s", sql)
                     conn.execute(text(sql))
+                    existing.add(column.name)
+
+        if engine.dialect.name.lower() in {"postgresql", "postgres"}:
+            conn.execute(text("SELECT pg_advisory_unlock(42424243)"))
 
     logger.info("[auto-migrate] Schema check complete.")
 
