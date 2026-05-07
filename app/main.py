@@ -79,88 +79,98 @@ def _auto_migrate_columns():
     """
     Compare SQLAlchemy model columns against the live database schema.
     Any columns that exist in the models but NOT in the DB are added via
-    ALTER TABLE.  This lets us add new fields to models without needing a
-    full Alembic migration setup — perfect for early-stage dev on SQLite.
+    ALTER TABLE. This is a startup safety net, so we serialize Postgres
+    schema mutation to avoid multi-worker duplicate-column races.
     """
-    inspector = inspect(engine)
     with engine.begin() as conn:
         dialect = engine.dialect.name.lower()
         is_postgres = dialect in {"postgresql", "postgres"}
         is_sqlite = dialect == "sqlite"
-        for table in Base.metadata.sorted_tables:
-            if not inspector.has_table(table.name):
-                continue  # create_all() will handle brand-new tables
+        if is_postgres:
+            conn.execute(text("SELECT pg_advisory_lock(88442211)"))
+        try:
+            inspector = inspect(conn)
+            for table in Base.metadata.sorted_tables:
+                if not inspector.has_table(table.name):
+                    continue  # create_all() will handle brand-new tables
 
-            existing = {col["name"] for col in inspector.get_columns(table.name)}
-            for column in table.columns:
-                if column.name in existing:
-                    continue
+                existing = {col["name"] for col in inspector.get_columns(table.name)}
+                for column in table.columns:
+                    if column.name in existing:
+                        continue
 
-                # Build the ALTER TABLE statement
-                col_type = column.type.compile(dialect=engine.dialect)
-                default_clause = ""
-                if column.default is not None:
-                    default_val = column.default.arg
-                    if callable(default_val):
-                        default_val = default_val({})
-                    # SQLite cannot use unquoted datetime literals as defaults.
-                    # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()),
-                    # use CURRENT_TIMESTAMP across engines (Postgres/SQLite).
-                    try:
-                        if isinstance(default_val, datetime):
+                    # Build the ALTER TABLE statement
+                    col_type = column.type.compile(dialect=engine.dialect)
+                    default_clause = ""
+                    if column.default is not None:
+                        default_val = column.default.arg
+                        if callable(default_val):
+                            default_val = default_val({})
+                        # SQLite cannot use unquoted datetime literals as defaults.
+                        # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()),
+                        # use CURRENT_TIMESTAMP across engines (Postgres/SQLite).
+                        try:
+                            if isinstance(default_val, datetime):
+                                default_clause = " DEFAULT CURRENT_TIMESTAMP"
+                                default_val = None
+                        except Exception:
+                            pass
+                        # Postgres requires timestamp defaults to be quoted or expressions like CURRENT_TIMESTAMP.
+                        # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()), use CURRENT_TIMESTAMP.
+                        try:
+                            if is_postgres and "TIMESTAMP" in str(col_type).upper():
+                                default_clause = " DEFAULT CURRENT_TIMESTAMP"
+                                default_val = None
+                        except Exception:
+                            pass
+                        if isinstance(default_val, str):
+                            default_clause = f" DEFAULT '{default_val}'"
+                        elif isinstance(default_val, bool):
+                            # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
+                            if is_postgres:
+                                default_clause = f" DEFAULT {'TRUE' if default_val else 'FALSE'}"
+                            else:
+                                default_clause = f" DEFAULT {1 if default_val else 0}"
+                        elif default_val is not None:
+                            default_clause = f" DEFAULT {default_val}"
+
+                    nullable = "" if column.nullable else " NOT NULL"
+                    # SQLite can't add NOT NULL without a default, so force a default
+                    if not column.nullable and not default_clause:
+                        if "INT" in str(col_type).upper() or "FLOAT" in str(col_type).upper():
+                            default_clause = " DEFAULT 0"
+                        elif is_postgres and "TIMESTAMP" in str(col_type).upper():
                             default_clause = " DEFAULT CURRENT_TIMESTAMP"
-                            default_val = None
-                    except Exception:
-                        pass
-                    # Postgres requires timestamp defaults to be quoted or expressions like CURRENT_TIMESTAMP.
-                    # When SQLAlchemy defaults to a Python datetime (e.g. utc_now()), use CURRENT_TIMESTAMP.
-                    try:
-                        if is_postgres and "TIMESTAMP" in str(col_type).upper():
-                            default_clause = " DEFAULT CURRENT_TIMESTAMP"
-                            default_val = None
-                    except Exception:
-                        pass
-                    if isinstance(default_val, str):
-                        default_clause = f" DEFAULT '{default_val}'"
-                    elif isinstance(default_val, bool):
-                        # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
-                        if is_postgres:
-                            default_clause = f" DEFAULT {'TRUE' if default_val else 'FALSE'}"
+                        elif "BOOL" in str(col_type).upper():
+                            # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
+                            default_clause = " DEFAULT FALSE" if is_postgres else " DEFAULT 0"
                         else:
-                            default_clause = f" DEFAULT {1 if default_val else 0}"
-                    elif default_val is not None:
-                        default_clause = f" DEFAULT {default_val}"
+                            default_clause = " DEFAULT ''"
 
-                nullable = "" if column.nullable else " NOT NULL"
-                # SQLite can't add NOT NULL without a default, so force a default
-                if not column.nullable and not default_clause:
-                    if "INT" in str(col_type).upper() or "FLOAT" in str(col_type).upper():
-                        default_clause = " DEFAULT 0"
-                    elif is_postgres and "TIMESTAMP" in str(col_type).upper():
-                        default_clause = " DEFAULT CURRENT_TIMESTAMP"
-                    elif "BOOL" in str(col_type).upper():
-                        # Postgres boolean defaults must be TRUE/FALSE (not 1/0).
-                        default_clause = " DEFAULT FALSE" if is_postgres else " DEFAULT 0"
+                    # SQLite limitation: ALTER TABLE .. ADD COLUMN does not allow
+                    # non-constant defaults (e.g. CURRENT_TIMESTAMP). For timestamp
+                    # columns we add them as nullable, then backfill.
+                    if is_sqlite and "DATETIME" in str(col_type).upper() and "CURRENT_TIMESTAMP" in default_clause:
+                        sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
+                        logger.info("[auto-migrate] %s", sql)
+                        conn.execute(text(sql))
+                        existing.add(column.name)
+                        backfill = (
+                            f'UPDATE "{table.name}" SET "{column.name}" = CURRENT_TIMESTAMP '
+                            f'WHERE "{column.name}" IS NULL'
+                        )
+                        logger.info("[auto-migrate] %s", backfill)
+                        conn.execute(text(backfill))
+                        existing.add(column.name)
                     else:
-                        default_clause = " DEFAULT ''"
+                        sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
+                        logger.info("[auto-migrate] %s", sql)
+                        conn.execute(text(sql))
+                        existing.add(column.name)
 
-                # SQLite limitation: ALTER TABLE .. ADD COLUMN does not allow
-                # non-constant defaults (e.g. CURRENT_TIMESTAMP). For timestamp
-                # columns we add them as nullable, then backfill.
-                if is_sqlite and "DATETIME" in str(col_type).upper() and "CURRENT_TIMESTAMP" in default_clause:
-                    sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}'
-                    logger.info("[auto-migrate] %s", sql)
-                    conn.execute(text(sql))
-                    backfill = (
-                        f'UPDATE "{table.name}" SET "{column.name}" = CURRENT_TIMESTAMP '
-                        f'WHERE "{column.name}" IS NULL'
-                    )
-                    logger.info("[auto-migrate] %s", backfill)
-                    conn.execute(text(backfill))
-                else:
-                    sql = f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {col_type}{nullable}{default_clause}'
-                    logger.info("[auto-migrate] %s", sql)
-                    conn.execute(text(sql))
+        finally:
+            if is_postgres:
+                conn.execute(text("SELECT pg_advisory_unlock(88442211)"))
 
     logger.info("[auto-migrate] Schema check complete.")
 
