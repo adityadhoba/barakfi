@@ -10,7 +10,8 @@ export function HideTopbarSearchOnHome() {
   const isAccount = pathname === "/account";
   const isExplore = pathname === "/explore";
   const isTools = pathname === "/tools";
-  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isAccount || isExplore || isTools;
+  const isWatchlist = pathname === "/watchlist";
+  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isAccount || isExplore || isTools || isWatchlist;
   const isHome = pathname === "/";
   const isScreener = pathname === "/screener";
   const isStock = isStockPage;
@@ -64,6 +65,12 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-tools-v2");
     }
 
+    if (isWatchlist) {
+      document.body.setAttribute("data-watchlist-v2", "");
+    } else {
+      document.body.removeAttribute("data-watchlist-v2");
+    }
+
     return () => {
       document.body.removeAttribute("data-hide-topbar-search");
       document.body.removeAttribute("data-home-v2");
@@ -73,8 +80,9 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-account-v2");
       document.body.removeAttribute("data-explore-v2");
       document.body.removeAttribute("data-tools-v2");
+      document.body.removeAttribute("data-watchlist-v2");
     };
-  }, [isAbout, isAccount, isExplore, isHome, isScreener, isStock, isTools, shouldHideTopbarSearch]);
+  }, [isAbout, isAccount, isExplore, isHome, isScreener, isStock, isTools, isWatchlist, shouldHideTopbarSearch]);
 
   return null;
 }
