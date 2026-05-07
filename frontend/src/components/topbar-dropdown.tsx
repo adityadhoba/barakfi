@@ -20,7 +20,7 @@ type Props = {
 
 export function TopbarDropdown({ label, basePath, items }: Props) {
   const pathname = usePathname();
-  const isActive = pathname.startsWith(basePath);
+  const isActive = pathname === basePath || pathname.startsWith(`${basePath}/`);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
@@ -60,27 +60,35 @@ export function TopbarDropdown({ label, basePath, items }: Props) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button
-        type="button"
-        className={`ghostLink ${isActive ? "ghostLinkActive" : ""} ${styles.trigger}`}
-        onClick={(e) => {
-          e.preventDefault();
-          setOpen((p) => !p);
-        }}
-        aria-expanded={open}
-        aria-haspopup="true"
-      >
-        {label}
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}
+      <div className={styles.triggerRow}>
+        <Link
+          href={basePath}
+          className={`ghostLink ${isActive ? "ghostLinkActive" : ""} ${styles.triggerLink}`}
         >
-          <path d="M2.5 4L5 6.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+          {label}
+        </Link>
+        <button
+          type="button"
+          className={`ghostLink ${isActive ? "ghostLinkActive" : ""} ${styles.triggerCaret}`}
+          onClick={(e) => {
+            e.preventDefault();
+            setOpen((p) => !p);
+          }}
+          aria-expanded={open}
+          aria-haspopup="true"
+          aria-label={`${label} menu`}
+        >
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            fill="none"
+            className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`}
+          >
+            <path d="M2.5 4L5 6.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
       {open && (
         <div className={styles.menu} role="menu">
           {items.map((item) => (

@@ -2,14 +2,26 @@
   position: relative;
 }
 
-.trigger {
+.triggerRow {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
+}
+
+.triggerLink,
+.triggerCaret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.triggerCaret {
   cursor: pointer;
   background: none;
   border: none;
   font: inherit;
+  padding-left: 4px;
+  padding-right: 0;
 }
 
 .chevron {

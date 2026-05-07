@@ -20,6 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     { url: CANONICAL_DOMAIN, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
     { url: `${CANONICAL_DOMAIN}/screener`, lastModified: new Date(), changeFrequency: "daily", priority: 0.95 },
+    { url: `${CANONICAL_DOMAIN}/explore`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },
     { url: `${CANONICAL_DOMAIN}/halal-stocks`, lastModified: new Date(), changeFrequency: "daily", priority: 0.95 },
     { url: `${CANONICAL_DOMAIN}/learn`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.85 },
     { url: `${CANONICAL_DOMAIN}/learn/what-is-halal-investing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.82 },
