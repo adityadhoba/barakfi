@@ -19,7 +19,7 @@ export async function DELETE(
 
   try {
     const { symbol } = await context.params;
-    const response = await fetch(`${apiBaseUrl}/me/watchlist/${encodeURIComponent(symbol)}`, {
+    const response = await fetch(`${apiBaseUrl}/watchlist/${encodeURIComponent(symbol)}`, {
       method: "DELETE",
       headers: buildBackendHeaders({
         token,

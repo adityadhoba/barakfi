@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
+    const response = await fetch(`${apiBaseUrl}/watchlist`, {
       method: "POST",
       headers: buildBackendHeaders({
         token,
