@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LocalMarketingNav } from "@/components/local-marketing-nav";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default async function AboutUsPage() {
   return (
     <main className={styles.page}>
+      <LocalMarketingNav />
       <section className={styles.hero}>
         <div className={styles.heroL}>
           <div className={styles.eyebrow}>NSE &amp; BSE · 527 Stocks · AAOIFI Methodology</div>

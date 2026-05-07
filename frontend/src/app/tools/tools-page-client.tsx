@@ -484,7 +484,7 @@ function ComparePanel({ stocks }: { stocks: Stock[] }) {
               </tr>
             </tbody>
           </table>
-          <div className={styles.compareLinkRow}><Link className={styles.btnOutlineLink} href={`/compare?symbols=${selected.map((stock) => stock.symbol).join(",")}`}>Open full compare →</Link></div>
+          <div className={styles.compareLinkRow}><Link className={styles.btnOutlineLink} href={`/compare/results?symbols=${selected.map((stock) => stock.symbol).join(",")}`}>Open full compare →</Link></div>
         </div>
       ) : (
         <div className={styles.compareEmpty}>

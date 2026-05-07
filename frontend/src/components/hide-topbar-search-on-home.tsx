@@ -7,9 +7,10 @@ export function HideTopbarSearchOnHome() {
   const pathname = usePathname();
   const isStockPage = pathname.startsWith("/stocks/");
   const isAbout = pathname === "/about-us";
+  const isAccount = pathname === "/account";
   const isExplore = pathname === "/explore";
   const isTools = pathname === "/tools";
-  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isExplore || isTools;
+  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isAccount || isExplore || isTools;
   const isHome = pathname === "/";
   const isScreener = pathname === "/screener";
   const isStock = isStockPage;
@@ -45,6 +46,12 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-about-v2");
     }
 
+    if (isAccount) {
+      document.body.setAttribute("data-account-v2", "");
+    } else {
+      document.body.removeAttribute("data-account-v2");
+    }
+
     if (isExplore) {
       document.body.setAttribute("data-explore-v2", "");
     } else {
@@ -63,10 +70,11 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-screener-v2");
       document.body.removeAttribute("data-stock-v2");
       document.body.removeAttribute("data-about-v2");
+      document.body.removeAttribute("data-account-v2");
       document.body.removeAttribute("data-explore-v2");
       document.body.removeAttribute("data-tools-v2");
     };
-  }, [isAbout, isExplore, isHome, isScreener, isStock, isTools, shouldHideTopbarSearch]);
+  }, [isAbout, isAccount, isExplore, isHome, isScreener, isStock, isTools, shouldHideTopbarSearch]);
 
   return null;
 }

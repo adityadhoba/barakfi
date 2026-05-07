@@ -61,7 +61,7 @@ export function StockPageActionButtons({
         await navigator.share({ title: shareText, text: shareText, url: shareUrl });
         return;
       } catch {
-        // fall through to clipboard
+        // fallback to clipboard
       }
     }
 

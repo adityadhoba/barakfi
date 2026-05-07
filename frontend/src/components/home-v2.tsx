@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { DM_Serif_Display } from "next/font/google";
-import { Logo } from "@/components/logo";
 import {
   getBulkScreeningResults,
   getMarketIndices,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/api";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { HomeV2Search } from "@/components/home-v2-search";
+import { LocalMarketingNav } from "@/components/local-marketing-nav";
 import styles from "./home-v2.module.css";
 
 const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -132,19 +132,7 @@ export async function HomeV2() {
         </div>
       </section>
 
-      <nav className={styles.homeNav} aria-label="Homepage navigation">
-        <Link className={styles.logoLink} href="/">
-          <Logo size={32} showText variant="auto" />
-        </Link>
-        <div className={styles.navLinks}>
-          <Link href="/screener">Screener</Link>
-          <Link href="/collections">Explore</Link>
-          <Link href="/tools">Tools</Link>
-          <Link href="/watchlist">Watchlist</Link>
-          <Link href="/sign-in" className={styles.navLogin}>Log in</Link>
-          <Link href="/sign-up" className={styles.navCta}>Get started</Link>
-        </div>
-      </nav>
+      <LocalMarketingNav />
 
       <section className={styles.hero}>
         <div className={styles.heroTop}>

@@ -1,4 +1,9 @@
-"""Daily screening quota enforcement (Postgres-backed) with IST day boundary."""
+"""Legacy daily quota helpers.
+
+Screen quotas are intentionally disabled now that BarakFi uses the new
+monthly detailed-report usage system. Compare/peer quota helpers are left in
+place for older flows until they are fully migrated to the new product gates.
+"""
 
 from __future__ import annotations
 
@@ -12,8 +17,8 @@ from starlette.requests import Request
 
 from app.models import ScreeningQuota, ScreeningAccessLog
 
-ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "2"))
-AUTH_SCREENS_PER_DAY = int(os.getenv("AUTH_SCREENS_PER_DAY", "5"))
+ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "999"))
+AUTH_SCREENS_PER_DAY = int(os.getenv("AUTH_SCREENS_PER_DAY", "999"))
 COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "2"))
 PEER_COMPARISON_PER_DAY = int(os.getenv("PEER_COMPARISON_PER_DAY", "1"))
 
@@ -102,6 +107,13 @@ def _check_quota(
     amount: int = 1,
 ) -> dict:
     """Generic quota check+increment for a given quota_type."""
+    if quota_type == "screen":
+        return {
+            "allowed": True,
+            "remaining": 999,
+            "resets_at": _ist_midnight_utc(),
+        }
+
     if _is_admin(request):
         return {
             "allowed": True,
@@ -280,7 +292,10 @@ def get_quota_status(db: Session, request: Request) -> dict:
     admin = _is_admin(request)
     limit = 999 if admin else (AUTH_SCREENS_PER_DAY if is_auth else ANON_SCREENS_PER_DAY)
 
-    used = _quota_used_today(db, actor, today, "screen")
+    # Screen quotas are disabled. Keep the payload shape stable for older
+    # frontend consumers, but always report unrestricted browsing/basic detail
+    # access while the new monthly report-credit system handles paid gating.
+    used = 0
 
     screened = get_accessible_symbols(db, request)
 

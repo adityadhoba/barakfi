@@ -22,6 +22,7 @@ from app.config import APP_ENV, APP_NAME, APP_VERSION, CORS_ORIGINS, DATABASE_UR
 from app.config import AUTH_GOOGLE_ENABLED, AUTH_PROVIDER, CLERK_JS_URL, CLERK_PUBLISHABLE_KEY
 from app.database import Base, engine
 from app.api.routes import router
+from app.api.account_usage_routes import router as account_usage_router
 from app.api.v1.routes import router as api_v1_router
 from app.api.routes_v1 import router_v1
 from app.middleware.api_envelope import ApiEnvelopeMiddleware
@@ -809,6 +810,7 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 app.include_router(router)
+app.include_router(account_usage_router)
 app.include_router(api_v1_router)
 app.include_router(router_v1)
 
