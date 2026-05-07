@@ -24,7 +24,6 @@ interface ScreeningState {
   isAdmin: boolean;
   resetsAt: string;
   screenedSymbols: string[];
-  guestUnlockedSymbol: string | null;
   loading: boolean;
   hasAccess: (symbol: string) => boolean;
   refreshQuota: () => Promise<void>;
@@ -39,7 +38,6 @@ const ScreeningContext = createContext<ScreeningState>({
   isAdmin: false,
   resetsAt: "",
   screenedSymbols: [],
-  guestUnlockedSymbol: null,
   loading: true,
   hasAccess: () => false,
   refreshQuota: async () => {},
@@ -52,7 +50,6 @@ export function useScreening() {
 }
 
 const IST_LS_KEY = "barakfi_screened";
-const GUEST_DETAIL_LS_KEY = "barakfi_guest_detail_access";
 
 function getIstDateString(): string {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -88,33 +85,14 @@ function saveLocalScreened(symbols: string[]) {
   );
 }
 
-function getGuestUnlockedSymbol(): string | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(GUEST_DETAIL_LS_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { symbol?: string };
-    const clean = parsed.symbol?.trim().toUpperCase();
-    return clean || null;
-  } catch {
-    return null;
-  }
-}
-
-function saveGuestUnlockedSymbol(symbol: string) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(GUEST_DETAIL_LS_KEY, JSON.stringify({ symbol }));
-}
-
 export function ScreeningProvider({ children }: { children: ReactNode }) {
   const { userId } = useAuth();
-  const [remaining, setRemaining] = useState(2);
-  const [limit, setLimit] = useState(2);
+  const [remaining, setRemaining] = useState(999);
+  const [limit, setLimit] = useState(999);
   const [used, setUsed] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [resetsAt, setResetsAt] = useState("");
   const [screenedSymbols, setScreenedSymbols] = useState<string[]>([]);
-  const [guestUnlockedSymbol, setGuestUnlockedSymbol] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refreshQuota = useCallback(async () => {
@@ -124,30 +102,24 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       const payload =
         data && typeof data === "object" && "data" in data ? data.data : data;
-      setRemaining(payload.remaining ?? 0);
-      setLimit(payload.limit ?? 2);
+      setRemaining(payload.remaining ?? 999);
+      setLimit(payload.limit ?? 999);
       setUsed(payload.used ?? 0);
       setIsAdmin(payload.is_admin ?? false);
       setResetsAt(payload.resets_at ?? "");
       const syms: string[] = payload.screened_symbols ?? [];
       if (!userId) {
-        const guestSymbol = getGuestUnlockedSymbol();
-        setGuestUnlockedSymbol(guestSymbol);
-        const merged = guestSymbol && !syms.includes(guestSymbol) ? [...syms, guestSymbol] : syms;
-        setScreenedSymbols(merged);
-        saveLocalScreened(merged);
+        setScreenedSymbols(syms);
+        saveLocalScreened(syms);
       } else {
-        setGuestUnlockedSymbol(null);
         setScreenedSymbols(syms);
       }
     } catch {
       if (!userId) {
         const local = getLocalScreened();
-        const guestSymbol = getGuestUnlockedSymbol();
-        setGuestUnlockedSymbol(guestSymbol);
         setScreenedSymbols(local);
-        setUsed(guestSymbol ? 1 : 0);
-        setRemaining(Math.max(0, 1 - (guestSymbol ? 1 : 0)));
+        setUsed(0);
+        setRemaining(999);
       }
     } finally {
       setLoading(false);
@@ -162,16 +134,9 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
     (symbol: string) => {
       const clean = symbol.trim().toUpperCase();
       if (!clean) return;
-      if (!userId) {
-        setGuestUnlockedSymbol((previous) => {
-          if (previous && previous !== clean) return previous;
-          saveGuestUnlockedSymbol(clean);
-          return clean;
-        });
-      }
       setScreenedSymbols((prev) => {
         if (prev.includes(clean)) return prev;
-        const next = !userId && prev.length > 0 ? [prev[0]] : [...prev, clean];
+        const next = [...prev, clean];
         if (!userId) saveLocalScreened(next);
         return next;
       });
@@ -184,10 +149,9 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       if (isAdmin) return true;
       const clean = symbol.trim().toUpperCase();
       if (screenedSymbols.includes("__all__")) return true;
-      if (!userId && guestUnlockedSymbol === clean) return true;
       return screenedSymbols.includes(clean);
     },
-    [guestUnlockedSymbol, isAdmin, screenedSymbols, userId]
+    [isAdmin, screenedSymbols]
   );
 
   const unlockDetails = useCallback(
@@ -202,14 +166,8 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       }
 
       if (!userId) {
-        if (!guestUnlockedSymbol || guestUnlockedSymbol === clean) {
-          recordScreen(clean);
-          return { kind: "granted" };
-        }
-        return {
-          kind: "redirect",
-          url: `/sign-in?redirect_url=${encodeURIComponent(`/stocks/${clean}`)}`,
-        };
+        recordScreen(clean);
+        return { kind: "granted" };
       }
 
       try {
@@ -228,8 +186,8 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
         if (response.status === 429) {
           const message =
             payload && typeof payload === "object" && "detail" in payload
-              ? ((payload as { detail?: string }).detail ?? "You’ve reached today’s stock detail limit.")
-              : "You’ve reached today’s stock detail limit.";
+              ? ((payload as { detail?: string }).detail ?? "We couldn't open the detailed breakdown right now.")
+              : "We couldn't open the detailed breakdown right now.";
           return { kind: "limit_exhausted", message, redirectUrl: "/premium" };
         }
 
@@ -251,7 +209,7 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
         };
       }
     },
-    [guestUnlockedSymbol, hasAccess, isAdmin, recordScreen, refreshQuota, userId]
+    [hasAccess, isAdmin, recordScreen, refreshQuota, userId]
   );
 
   const value = useMemo<ScreeningState>(
@@ -262,7 +220,6 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       isAdmin,
       resetsAt,
       screenedSymbols,
-      guestUnlockedSymbol,
       loading,
       hasAccess,
       refreshQuota,
@@ -270,7 +227,6 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       unlockDetails,
     }),
     [
-      guestUnlockedSymbol,
       remaining,
       limit,
       used,

@@ -17,8 +17,8 @@ import styles from "./premium.module.css";
 const FEATURES = [
   {
     Icon: Infinity,
-    label: "Unlimited stock screening",
-    desc: "Screen every NSE-listed stock without daily limits.",
+    label: "Unlimited BarakFi reports",
+    desc: "Unlock full detailed screening reports without monthly credit limits.",
   },
   {
     Icon: SlidersHorizontal,
@@ -82,7 +82,7 @@ export default function PremiumPage() {
           </span>
           <h1 className={styles.title}>BarakFi Premium</h1>
           <p className={styles.subtitle}>
-            Deeper Shariah compliance insights, unlimited screening, and
+            Deeper Shariah compliance insights, unlimited BarakFi reports, and
             powerful portfolio tools — all in one place.
           </p>
         </div>

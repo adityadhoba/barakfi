@@ -58,12 +58,12 @@ export default function ScreeningRedirectPage() {
     return (
       <main className={styles.container}>
         <div className={styles.card}>
-          <h1 className={styles.title}>Daily limit reached</h1>
+          <h1 className={styles.title}>Couldn&apos;t open details</h1>
           <p className={styles.subtitle}>{state.message}</p>
           <div className={styles.actions}>
             {state.redirectUrl ? (
               <Link href={state.redirectUrl} className={styles.ctaBtn}>
-                Join Early Access
+                View upgrade options
               </Link>
             ) : null}
             <Link href="/screener" className={styles.secondaryBtn}>
