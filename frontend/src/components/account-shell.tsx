@@ -150,8 +150,8 @@ export function AccountShell() {
       try {
         const token = await getToken();
         if (!token) throw new Error("Could not load your account session.");
-        const [nextOverview, nextWatchlist, nextHistory] = await Promise.all([
-          getAccountOverview(token),
+        const nextOverview = await getAccountOverview(token);
+        const [nextWatchlist, nextHistory] = await Promise.all([
           getAuthenticatedWatchlist(token),
           getReportHistory(token).catch(() => []),
         ]);

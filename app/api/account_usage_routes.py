@@ -7,6 +7,7 @@ from hashlib import sha256
 import httpx
 from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from svix.webhooks import Webhook, WebhookVerificationError
 
@@ -150,7 +151,7 @@ def _ensure_free_plan(db: Session) -> Plan:
     plan = db.query(Plan).filter(Plan.key == "free").first()
     if plan:
         return plan
-    plan = Plan(
+    created = Plan(
         key="free",
         name="Free",
         max_reports_per_month=50,
@@ -162,16 +163,25 @@ def _ensure_free_plan(db: Session) -> Plan:
         portfolio_allowed=False,
         historical_tracking_allowed=False,
     )
-    db.add(plan)
-    db.flush()
-    return plan
+    savepoint = db.begin_nested()
+    try:
+        db.add(created)
+        db.flush()
+        savepoint.commit()
+        return created
+    except IntegrityError:
+        savepoint.rollback()
+        plan = db.query(Plan).filter(Plan.key == "free").first()
+        if plan:
+            return plan
+        raise
 
 
 def _ensure_user_settings(db: Session, user: User) -> None:
-    if user.settings:
+    existing = db.query(UserSettings).filter(UserSettings.user_id == user.id).first()
+    if existing:
         return
-    db.add(
-        UserSettings(
+    created = UserSettings(
             user_id=user.id,
             preferred_currency="INR",
             risk_profile="moderate",
@@ -181,7 +191,13 @@ def _ensure_user_settings(db: Session, user: User) -> None:
             default_screening_method="AAOIFI Aligned",
             notification_preference="Email · Weekly digest",
         )
-    )
+    savepoint = db.begin_nested()
+    try:
+        db.add(created)
+        db.flush()
+        savepoint.commit()
+    except IntegrityError:
+        savepoint.rollback()
 
 
 def _looks_placeholder_email(value: str | None) -> bool:
@@ -303,11 +319,15 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
         raise HTTPException(status_code=401, detail="Token subject missing")
 
     email = _claims_email(claims)
-    user = db.query(User).filter(User.auth_subject == auth_subject).first()
-    if not user and email:
-        user = db.query(User).filter(func.lower(User.email) == email.lower()).first()
-        if user:
-            user.auth_subject = auth_subject
+    def _find_user() -> User | None:
+        current = db.query(User).filter(User.auth_subject == auth_subject).first()
+        if not current and email:
+            current = db.query(User).filter(func.lower(User.email) == email.lower()).first()
+            if current and current.auth_subject != auth_subject:
+                current.auth_subject = auth_subject
+        return current
+
+    user = _find_user()
 
     now = _utc_now()
     name = _claims_name(claims)
@@ -327,7 +347,7 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
         if not user.plan_key:
             user.plan_key = "free"
     else:
-        user = User(
+        created = User(
             email=email or f"{auth_subject}@example.local",
             display_name=name,
             auth_provider="clerk",
@@ -338,8 +358,17 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
             image_url=image_url,
             last_seen_at=now,
         )
-        db.add(user)
-        db.flush()
+        savepoint = db.begin_nested()
+        try:
+            db.add(created)
+            db.flush()
+            savepoint.commit()
+            user = created
+        except IntegrityError:
+            savepoint.rollback()
+            user = _find_user()
+            if not user:
+                raise
     _ensure_user_settings(db, user)
     _ensure_free_plan(db)
     _repair_user_identity_from_clerk(user)
@@ -359,8 +388,9 @@ def get_current_app_user(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as exc:
         db.rollback()
+        print(f"[account usage] failed to resolve authenticated user: {exc!r}")
         raise HTTPException(status_code=500, detail="Failed to resolve authenticated user")
 
 
