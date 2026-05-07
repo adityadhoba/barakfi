@@ -41,7 +41,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 56px;
+  padding: 0 48px;
   border-bottom: 1px solid var(--ink3);
   background: rgba(9, 20, 16, 0.95);
 }
@@ -57,13 +57,20 @@
   font-style: normal;
 }
 
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
 .navLinks {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
 }
 
-.navLinks a {
+.navLinks a,
+.navLink {
   text-decoration: none;
   color: var(--ink2);
   font-size: 11.5px;
@@ -71,11 +78,55 @@
   text-transform: uppercase;
 }
 
-.navActive { color: var(--gold) !important; }
+.navLinks a:hover,
+.navLink:hover {
+  color: var(--ink);
+}
+
+.navAuth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.navAuthGhost {
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  padding: 7px 16px;
+  color: var(--ink) !important;
+}
+
+.navAuthGhost:hover {
+  border-color: var(--ink);
+  color: var(--ink) !important;
+}
+
+.navAuthPrimary {
+  border: 1px solid #a4dfb8;
+  background: #a4dfb8;
+  color: #091410 !important;
+  padding: 7px 16px;
+}
+
+.navAuthPrimary:hover {
+  filter: brightness(1.03);
+  color: #091410 !important;
+}
 
 .navUserButton {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+}
+
+.navUserButton :global(.cl-userButtonTrigger) {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  background: transparent;
+}
+
+.navUserButton :global(.cl-userButtonTrigger):hover {
+  border-color: var(--ink);
 }
 
 .pageWrap {

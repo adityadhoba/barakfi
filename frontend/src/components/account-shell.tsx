@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DM_Serif_Display, Inter } from "next/font/google";
-import { UserButton, useAuth, useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import {
   createAnalyticsEvent,
   deleteWatchlistItemV2,
@@ -20,6 +20,7 @@ import {
   type WatchlistEntry,
 } from "@/lib/api";
 import styles from "@/app/account/account-page.module.css";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600"] });
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -195,13 +196,19 @@ export function AccountShell() {
 
       <nav className={styles.nav}>
         <Link href="/" className={`${styles.logo} ${serif.className}`}>Barak<em>Fi</em></Link>
-        <div className={styles.navLinks}>
-          <Link href="/screener">Screener</Link>
-          <Link href="/explore">Explore</Link>
-          <Link href="/tools">Tools</Link>
-          <Link href="/watchlist">Watchlist</Link>
-          <Link href="/account" className={styles.navActive}>Account</Link>
-          <div className={styles.navUserButton}><UserButton /></div>
+        <div className={styles.navRight}>
+          <div className={styles.navLinks}>
+            <Link href="/screener">Screener</Link>
+            <Link href="/explore">Explore</Link>
+            <Link href="/tools">Tools</Link>
+            <Link href="/watchlist">Watchlist</Link>
+          </div>
+          <RouteLocalAuth
+            className={styles.navAuth}
+            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
+            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
+            userClassName={styles.navUserButton}
+          />
         </div>
       </nav>
 
