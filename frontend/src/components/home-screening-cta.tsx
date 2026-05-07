@@ -40,7 +40,7 @@ export function HomeScreeningCta() {
             Screen Now
           </button>
         </div>
-        <p className={styles.freeNote}>~5 free screenings per day</p>
+        <p className={styles.freeNote}>Basic screening is free to browse. Full BarakFi reports use monthly credits.</p>
       </div>
     </section>
   );

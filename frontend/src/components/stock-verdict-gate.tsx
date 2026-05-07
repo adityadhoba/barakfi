@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function StockVerdictGate({ symbol, children, mode = "card" }: Props) {
-  const { hasAccess, isAdmin, guestUnlockedSymbol, unlockDetails } = useScreening();
+  const { hasAccess, isAdmin, unlockDetails } = useScreening();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
@@ -51,8 +51,7 @@ export function StockVerdictGate({ symbol, children, mode = "card" }: Props) {
     return null;
   }
 
-  const ctaLabel =
-    guestUnlockedSymbol && guestUnlockedSymbol !== symbol ? "Sign in to continue" : "See Why?";
+  const ctaLabel = "See Why?";
 
   if (mode === "inline") {
     return (
@@ -79,9 +78,7 @@ export function StockVerdictGate({ symbol, children, mode = "card" }: Props) {
         </svg>
         <h3 className={styles.gateTitle}>See why this stock screened this way</h3>
         <p className={styles.gateSub}>
-          {guestUnlockedSymbol && guestUnlockedSymbol !== symbol
-            ? "You’ve already opened one stock as a guest. Sign in to unlock more detailed breakdowns."
-            : "Open the detailed compliance breakdown for this stock. Guests can view one stock before sign-in is required."}
+          Open the detailed compliance breakdown for this stock.
         </p>
         <button
           type="button"

@@ -116,6 +116,13 @@ def get_current_auth_claims(authorization: str | None = Header(default=None)) ->
     return verify_clerk_token(token)
 
 
+def get_optional_auth_claims(authorization: str | None = Header(default=None)) -> dict | None:
+    if not authorization:
+        return None
+    token = _extract_bearer_token(authorization)
+    return verify_clerk_token(token)
+
+
 def get_current_auth_claims_or_internal(
     authorization: str | None = Header(default=None),
     x_internal_service_token: str | None = Header(default=None),

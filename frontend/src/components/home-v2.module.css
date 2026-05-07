@@ -70,19 +70,30 @@
   transform: translateY(1px);
 }
 
-.navLinks {
+.navPrimary {
   display: flex;
   align-items: center;
   gap: 24px;
 }
 
-.navLinks a {
+.navPrimary a {
   font-family: Inter, sans-serif;
   font-size: 11.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink2);
   text-decoration: none;
+}
+
+.navAuth {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.navUser {
+  display: inline-flex;
+  align-items: center;
 }
 
 .navLogin {
@@ -770,12 +781,10 @@
     height: 56px;
     padding: 0 12px;
   }
-  .navLinks a:not(.navLogin):not(.navCta) {
+  .navPrimary a {
     display: none;
   }
-  .navLinks {
-    gap: 10px;
-  }
+  .navAuth { gap: 10px; }
   .hero { padding: 58px 20px 0; }
   .heroTop { grid-template-columns: 1fr; }
   .heroLeft { padding-right: 0; }

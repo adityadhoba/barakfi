@@ -1173,7 +1173,7 @@ def compare_bulk_screen(
         db.rollback()
         raise HTTPException(
             status_code=429,
-            detail="Daily screening limit reached",
+            detail="Detailed report access is currently unavailable",
             headers={
                 "X-Remaining": str(screen_quota.get("remaining", 0)),
                 "X-Resets-At": screen_quota.get("resets_at", ""),
@@ -1445,7 +1445,9 @@ def screen_stock_manual(
     """
     Manually screen any NSE stock by fetching live data from Yahoo Finance.
 
-    Auth: None (public — 2 anon / 5 auth screens per IST day, admin unlimited)
+    This endpoint no longer enforces the legacy daily screen quota. Basic
+    browsing and manual screening remain available while full BarakFi report
+    usage is handled by the newer monthly report-credit system.
     """
     from app.services.manual_screen_service import fetch_and_screen
     from app.services.quota_service import (
@@ -1457,12 +1459,6 @@ def screen_stock_manual(
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
     quota = check_and_increment_unique_screen_quota(db, request, [clean_symbol])
-    if not quota["allowed"]:
-        raise HTTPException(
-            status_code=429,
-            detail="Daily screening limit reached",
-            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
-        )
 
     existing = resolve_stock(db, clean_symbol, "NSE", active_only=True, require_indian_listing=True)
 
