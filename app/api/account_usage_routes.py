@@ -186,7 +186,7 @@ def _audit(db: Session, *, user_id: int | None, action: str, request: Request | 
             action=action,
             ip_hash=_hash_ip(request) if request else None,
             user_agent=_user_agent(request) if request else None,
-            metadata=metadata or {},
+            metadata_json=metadata or {},
         )
     )
 

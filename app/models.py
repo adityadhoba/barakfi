@@ -813,7 +813,7 @@ class AuditLog(Base):
     action = Column(String, nullable=False, index=True)
     ip_hash = Column(String, nullable=True)
     user_agent = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=False, default=dict)
+    metadata_json = Column("metadata", JSON, nullable=False, default=dict)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, index=True)
 
     user = relationship("User", back_populates="audit_logs")
