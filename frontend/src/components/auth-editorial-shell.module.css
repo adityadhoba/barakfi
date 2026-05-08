@@ -400,6 +400,19 @@
   padding: 0;
 }
 
+.clerkSignIn :global(.cl-cardBox),
+.clerkSignUp :global(.cl-cardBox),
+.clerkSignIn :global(.cl-main),
+.clerkSignUp :global(.cl-main),
+.clerkSignIn :global(.cl-page),
+.clerkSignUp :global(.cl-page) {
+  width: 100%;
+  max-width: none;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
 .clerkSignIn :global(.cl-header),
 .clerkSignUp :global(.cl-header) {
   display: none;
@@ -456,6 +469,21 @@
   text-transform: uppercase;
   color: var(--ink2);
   margin-bottom: 7px;
+}
+
+.clerkSignIn :global(.cl-formFieldLabelRow),
+.clerkSignUp :global(.cl-formFieldLabelRow) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  overflow: visible;
+}
+
+.clerkSignIn :global(.cl-formFieldLabelRow) :global(.cl-formFieldLabel),
+.clerkSignUp :global(.cl-formFieldLabelRow) :global(.cl-formFieldLabel) {
+  margin-bottom: 0;
 }
 
 .clerkSignIn :global(.cl-formFieldInput),
@@ -515,6 +543,7 @@
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid var(--ink3);
+  background: transparent;
 }
 
 .clerkSignIn :global(.cl-footerActionText),

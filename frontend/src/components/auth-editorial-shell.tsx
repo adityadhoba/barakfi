@@ -107,7 +107,7 @@ export function AuthEditorialShell({
             <p className={styles.mobileIntroText}>{description}</p>
           </div>
           <div className={`${styles.card} ${isSignIn ? styles.cardSignIn : styles.cardSignUp}`}>
-            <div className={styles.cardEyebrow}>{cardEyebrow}</div>
+            {cardEyebrow ? <div className={styles.cardEyebrow}>{cardEyebrow}</div> : null}
             <div className={`${styles.cardTitle} ${serif.className}`}>{cardTitle}</div>
             <div className={styles.cardSub}>{cardSub}</div>
             {children}
