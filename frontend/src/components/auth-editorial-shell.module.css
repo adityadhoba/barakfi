@@ -323,6 +323,14 @@
   margin-bottom: 8px;
 }
 
+.cardSignUp .cardTitle {
+  font-size: 28px;
+}
+
+.cardSignIn .cardTitle {
+  font-size: 34px;
+}
+
 .cardSub {
   font-size: 13px;
   color: var(--ink2);
@@ -479,11 +487,23 @@
   gap: 12px;
   margin-bottom: 10px;
   overflow: visible;
+  padding-left: 0;
+  margin-left: 0;
 }
 
 .clerkSignIn :global(.cl-formFieldLabelRow) :global(.cl-formFieldLabel),
 .clerkSignUp :global(.cl-formFieldLabelRow) :global(.cl-formFieldLabel) {
   margin-bottom: 0;
+  padding-left: 0;
+  margin-left: 0;
+}
+
+.clerkSignIn :global(.cl-formFieldLabel),
+.clerkSignIn :global(.cl-formFieldLabelRow) *,
+.clerkSignUp :global(.cl-formFieldLabel),
+.clerkSignUp :global(.cl-formFieldLabelRow) * {
+  overflow: visible;
+  text-indent: 0;
 }
 
 .clerkSignIn :global(.cl-formFieldInput),
