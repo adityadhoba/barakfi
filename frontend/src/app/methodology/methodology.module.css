@@ -265,10 +265,10 @@
 
 .sectorItem {
   background: var(--dark);
-  padding: 22px 26px;
+  padding: 20px 22px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   transition: background 0.18s ease, transform 0.18s ease;
 }
 
@@ -278,25 +278,30 @@
 }
 
 .sectorIcon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--ink3);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: var(--red);
-  font-size: 16px;
+}
+
+.sectorIcon svg {
+  width: 15px;
+  height: 15px;
+  opacity: 0.82;
 }
 
 .sectorName {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--ink);
   letter-spacing: 0.02em;
 }
 
 .sectorWhy {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--ink2);
   margin-top: 4px;
 }
@@ -307,7 +312,7 @@
   text-transform: uppercase;
   color: var(--red);
   border: 1px solid rgba(224, 104, 104, 0.25);
-  padding: 3px 8px;
+  padding: 3px 9px;
   margin-left: auto;
   flex-shrink: 0;
 }

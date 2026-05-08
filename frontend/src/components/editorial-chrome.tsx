@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DM_Serif_Display } from "next/font/google";
+import { RouteLocalAuth } from "@/components/route-local-auth";
 import styles from "./editorial-chrome.module.css";
 
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -17,8 +18,8 @@ const TICKER_ITEMS = [
 
 const NAV_ITEMS = [
   { href: "/screener", label: "Screener" },
-  { href: "/trending", label: "Trending" },
-  { href: "/methodology", label: "Methodology" },
+  { href: "/explore", label: "Explore" },
+  { href: "/tools", label: "Tools" },
   { href: "/watchlist", label: "Watchlist" },
 ];
 
@@ -56,8 +57,13 @@ export function EditorialChrome({
               {item.label}
             </Link>
           ))}
-          <Link href="/screener" className={styles.cta}>Open Screener</Link>
         </div>
+        <RouteLocalAuth
+          className={styles.auth}
+          ghostClassName={styles.authGhost}
+          primaryClassName={styles.authPrimary}
+          userClassName={styles.authUser}
+        />
       </nav>
 
       {children}
