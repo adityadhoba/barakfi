@@ -8,18 +8,35 @@ type Props = {
   ghostClassName: string;
   primaryClassName: string;
   userClassName?: string;
+  activeAuth?: "sign-in" | "sign-up";
+  ghostActiveClassName?: string;
+  primaryActiveClassName?: string;
 };
 
-export function RouteLocalAuth({ className, ghostClassName, primaryClassName, userClassName }: Props) {
+export function RouteLocalAuth({
+  className,
+  ghostClassName,
+  primaryClassName,
+  userClassName,
+  activeAuth,
+  ghostActiveClassName,
+  primaryActiveClassName,
+}: Props) {
   const { isLoaded, userId } = useAuth();
 
   if (!isLoaded || !userId) {
     return (
       <div className={className}>
-        <Link className={ghostClassName} href="/sign-in">
+        <Link
+          className={`${ghostClassName} ${activeAuth === "sign-in" && ghostActiveClassName ? ghostActiveClassName : ""}`.trim()}
+          href="/sign-in"
+        >
           Log in
         </Link>
-        <Link className={primaryClassName} href="/sign-up">
+        <Link
+          className={`${primaryClassName} ${activeAuth === "sign-up" && primaryActiveClassName ? primaryActiveClassName : ""}`.trim()}
+          href="/sign-up"
+        >
           Get started
         </Link>
       </div>

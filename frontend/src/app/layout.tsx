@@ -2,23 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import Link from "next/link";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AnalyticsProvider } from "@/components/analytics-provider";
-import { BottomNav } from "@/components/bottom-nav";
-import { MobileDrawer } from "@/components/mobile-drawer";
 import { MobileNavProvider } from "@/components/mobile-nav-context";
-import { TopbarSearch } from "@/components/topbar-search";
-import { TopbarSearchLauncher } from "@/components/topbar-search-launcher";
-import { TopbarScroll } from "@/components/topbar-scroll";
 import { ToastProvider } from "@/components/toast";
 import { NavProgress } from "@/components/nav-progress";
-import { MarketTicker } from "@/components/market-ticker";
-import { Logo } from "@/components/logo";
-import { SiteHeader } from "@/components/layout/site-header";
-import { TopbarAuthDeferred } from "@/components/topbar-auth-deferred";
 import { ScreeningProvider } from "@/contexts/screening-context";
 import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
+import { GlobalAppChrome } from "@/components/global-app-chrome";
 import "./globals.css";
 import "./shell.css";
 
@@ -307,21 +298,7 @@ export default function RootLayout({
             </Suspense>
             <HideTopbarSearchOnHome />
             <a className="skipToContent" href="#main-content">Skip to content</a>
-            <MarketTicker />
-            <SiteHeader>
-              <Link className="wordmark" href="/" style={{ textDecoration: "none" }}>
-                <Logo size={28} showText />
-              </Link>
-
-              <div className="topbarSearchSlot">
-                <TopbarSearchLauncher />
-                <TopbarSearch />
-              </div>
-
-              <MobileDrawer />
-
-              <TopbarAuthDeferred />
-            </SiteHeader>
+            <GlobalAppChrome />
             <ToastProvider>
               <ScreeningProvider>
               <Suspense fallback={null}>
@@ -331,8 +308,6 @@ export default function RootLayout({
                   </div>
                 </AnalyticsProvider>
               </Suspense>
-              <BottomNav />
-              <TopbarScroll />
               </ScreeningProvider>
             </ToastProvider>
             </MobileNavProvider>

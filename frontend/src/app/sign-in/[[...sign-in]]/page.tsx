@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { Logo } from "@/components/logo";
+import { AuthEditorialShell } from "@/components/auth-editorial-shell";
+import styles from "@/components/auth-editorial-shell.module.css";
 
 export const metadata: Metadata = {
   title: "Sign In — Barakfi",
@@ -12,135 +13,147 @@ export const metadata: Metadata = {
 
 export default function SignInPage() {
   return (
-    <div className="authPage">
-      <div className="authSidebar authSidebarGradient">
-        <div className="authSidebarInner">
-          <Link href="/" style={{ textDecoration: "none" }}>
-            <Logo size={28} showText variant="light" />
-          </Link>
-          <div
-            style={{
-              display: "inline-block",
-              padding: "4px 12px",
-              borderRadius: "9999px",
-              background: "rgba(255,255,255,0.12)",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.9)",
-              letterSpacing: "0.02em",
-              marginBottom: "16px",
-            }}
-          >
-            Built for Indian Equity Screening
-          </div>
-          <h2 className="authSidebarTitle">Sign in to your BarakFi screening workspace</h2>
-          <p className="authSidebarDesc">
-            Track compliance updates, continue saved comparisons, and keep your research notes in one secure place.
-          </p>
-          <div className="authFeatures">
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                DF
-              </span>
-              <span>Data-backed checks from published financial statements</span>
-            </div>
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                MS
-              </span>
-              <span>Multi-standard screening with transparent ratio evidence</span>
-            </div>
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                PR
-              </span>
-              <span>Portfolio watchlist, purification, and zakat tools</span>
-            </div>
-          </div>
-
-          <div className="authTestimonial">
-            <p className="authTestimonialQuote">
-              &ldquo;The ratio-level explanation helps me decide faster and with more confidence.&rdquo;
-            </p>
-            <span className="authTestimonialAttr">— Early user, Mumbai</span>
-          </div>
-
-          <p className="authSidebarFooter">370+ Indian listings covered across NSE and BSE</p>
-        </div>
-      </div>
-      <div className="authMain">
-        <div className="authMobileIntro">
-          <Link href="/" style={{ textDecoration: "none", marginBottom: "10px", display: "inline-flex" }}>
-            <Logo size={32} showText />
-          </Link>
-          <p className="authMobileIntroText">
-            Secure sign-in to continue your screening workflow and synced watchlist.
-          </p>
-        </div>
+    <AuthEditorialShell
+      mode="sign-in"
+      eyebrow="Welcome back"
+      heading={
+        <>
+          Your halal
+          <br />
+          portfolio starts
+          <br />
+          <em>here.</em>
+        </>
+      }
+      description={
+        <>
+          Sign in to access your personal watchlist, track compliance changes, and keep your
+          screening workflow in one place.
+        </>
+      }
+      features={[
+        {
+          title: "Compliance Watchlist",
+          body: "Save any of 527 screened NSE & BSE stocks and monitor their status over time.",
+        },
+        {
+          title: "Track status changes",
+          body: "Review when a saved stock moves from Compliant to Requires Review — or back.",
+        },
+        {
+          title: "Always free",
+          body: "No subscription. No credit card. BarakFi is free to use while we build the workflow.",
+        },
+      ]}
+      stats={[
+        { value: "527", label: "Stocks covered" },
+        { value: "4", label: "Screening standards" },
+        { value: "Free", label: "Always" },
+      ]}
+      cardEyebrow="Sign in"
+      cardTitle="Welcome back"
+      cardSub={
+        <>
+          Don&apos;t have an account? <Link href="/sign-up">Create one free →</Link>
+        </>
+      }
+    >
+      <div className={styles.clerkSignIn}>
         <SignIn
           appearance={{
             layout: {
-              logoImageUrl: "/brand/barakfi-logo-mark.svg",
-              logoPlacement: "inside",
+              logoPlacement: "none",
+              socialButtonsVariant: "blockButton",
+            },
+            variables: {
+              fontFamily: "Inter, sans-serif",
+              borderRadius: "0px",
+              colorPrimary: "#7ec8a0",
+              colorText: "#e6e2d8",
+              colorTextSecondary: "rgba(230, 226, 216, 0.58)",
+              colorBackground: "transparent",
+              colorInputBackground: "rgba(230, 226, 216, 0.04)",
+              colorInputText: "#e6e2d8",
             },
             elements: {
-              rootBox: { width: "100%", maxWidth: "440px" },
-              card: {
-                borderRadius: "20px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
+              rootBox: { width: "100%", maxWidth: "476px" },
+              cardBox: { width: "100%", boxShadow: "none", background: "transparent", border: "none" },
+              card: { background: "transparent", boxShadow: "none", border: "none", padding: "0", borderRadius: "0" },
+              page: { width: "100%" },
+              main: { width: "100%" },
+              header: { display: "none" },
+              socialButtonsBlockButton: {
+                background: "#e6e2d8",
+                color: "#091410",
+                border: "none",
+                borderRadius: "0px",
+                padding: "15px 20px",
+                fontSize: "12px",
+                fontWeight: "500",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
               },
-              headerTitle: {
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
+              socialButtonsProviderIcon: { width: "18px", height: "18px" },
+              dividerRow: { margin: "28px 0" },
+              dividerText: {
+                fontSize: "10px",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "rgba(230, 226, 216, 0.58)",
               },
-              headerSubtitle: {
-                color: "var(--text-secondary)",
+              dividerLine: { background: "rgba(230, 226, 216, 0.1)" },
+              formField: { marginBottom: "20px" },
+              formFieldLabelRow: {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "10px",
               },
-              logoImage: {
-                width: "52px",
-                height: "52px",
+              formFieldLabel: {
+                fontSize: "10px",
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "rgba(230, 226, 216, 0.58)",
               },
               formFieldInput: {
-                borderRadius: "10px",
-                background: "var(--bg-soft)",
-                fontSize: "0.9rem",
+                background: "#112318",
+                border: "1px solid rgba(230, 226, 216, 0.1)",
+                borderRadius: "0px",
+                padding: "13px 16px",
+                color: "#e6e2d8",
+                fontSize: "13.5px",
+                fontWeight: "300",
+                letterSpacing: "0.02em",
               },
+              footerActionLink: { color: "#7ec8a0" },
+              footerActionText: { color: "rgba(230, 226, 216, 0.58)" },
+              formFieldInputShowPasswordButton: { color: "rgba(230, 226, 216, 0.58)" },
               formButtonPrimary: {
-                background: "var(--emerald)",
-                borderRadius: "10px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "12px 0",
-                transition: "all 150ms ease",
-              },
-              footerActionLink: {
-                color: "var(--emerald)",
-              },
-              footerActionText: {
-                color: "var(--text-tertiary)",
+                width: "100%",
+                background: "#e6e2d8",
+                color: "#091410",
+                border: "none",
+                borderRadius: "0px",
+                padding: "15px 20px",
+                fontSize: "12px",
+                fontWeight: "500",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginTop: "8px",
               },
               footer: {
-                "& > *:last-child": { display: "none" },
+                marginTop: "24px",
+                paddingTop: "20px",
+                borderTop: "1px solid rgba(230, 226, 216, 0.1)",
+                background: "transparent",
               },
-              badge: {
-                display: "none",
-              },
-              dividerLine: {
-                background: "var(--line)",
-              },
-              socialButtonsBlockButton: {
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-                background: "var(--bg-soft)",
-                transition: "all 150ms ease",
-              },
+              footerAction: { justifyContent: "center" },
+              formFieldAction: { color: "rgba(230, 226, 216, 0.58)", fontSize: "11.5px", textDecoration: "none" },
             },
           }}
         />
       </div>
-    </div>
+    </AuthEditorialShell>
   );
 }

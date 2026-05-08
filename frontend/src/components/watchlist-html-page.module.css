@@ -9,7 +9,7 @@
   --accent: #5ec486;
   --red: #e06868;
   --amber: #e0a468;
-  --w: 56px;
+  --w: 72px;
   background: var(--dark);
   color: var(--ink);
   font-family: Inter, sans-serif;
@@ -71,12 +71,12 @@
 }
 
 .heroLeft {
-  padding: 72px var(--w) 64px;
+  padding: 64px var(--w) 56px;
   background: var(--dark);
 }
 
 .heroRight {
-  padding: 72px 64px 64px;
+  padding: 64px 56px 56px;
   background: var(--mid);
   display: flex;
   flex-direction: column;
@@ -96,7 +96,7 @@
 }
 
 .title {
-  font-size: clamp(36px, 5vw, 60px);
+  font-size: clamp(30px, 4.2vw, 50px);
   font-weight: 400;
   line-height: 1.05;
   letter-spacing: -0.01em;
@@ -108,7 +108,7 @@
 }
 
 .heroCopy {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink2);
   line-height: 1.8;
   max-width: 390px;
@@ -166,12 +166,12 @@
 
 .heroCard {
   border: 1px solid var(--ink3);
-  padding: 36px;
+  padding: 34px 30px;
   background: var(--dark);
 }
 
 .heroCardTitle {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--ink);
   margin-bottom: 10px;
 }
@@ -262,7 +262,7 @@
 }
 
 .sectionTitle {
-  font-size: clamp(26px, 3.5vw, 40px);
+  font-size: clamp(22px, 3vw, 34px);
   color: var(--ink);
   margin-bottom: 10px;
 }
@@ -472,7 +472,7 @@
 }
 
 .emptyTitle {
-  font-size: 22px;
+  font-size: 18px;
   color: var(--ink);
   margin-bottom: 10px;
 }
@@ -496,7 +496,7 @@
 }
 
 .footerBrand {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 400;
   color: var(--ink);
   margin-bottom: 10px;

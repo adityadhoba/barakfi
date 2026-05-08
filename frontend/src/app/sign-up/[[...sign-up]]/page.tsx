@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
-import { Logo } from "@/components/logo";
+import { AuthEditorialShell } from "@/components/auth-editorial-shell";
+import styles from "@/components/auth-editorial-shell.module.css";
 
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
@@ -12,135 +13,148 @@ export const metadata: Metadata = {
 
 export default function SignUpPage() {
   return (
-    <div className="authPage">
-      <div className="authSidebar authSidebarGradient">
-        <div className="authSidebarInner">
-          <Link href="/" style={{ textDecoration: "none" }}>
-            <Logo size={28} showText variant="light" />
-          </Link>
-          <div
-            style={{
-              display: "inline-block",
-              padding: "4px 12px",
-              borderRadius: "9999px",
-              background: "rgba(255,255,255,0.12)",
-              fontSize: "0.72rem",
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.9)",
-              letterSpacing: "0.02em",
-              marginBottom: "16px",
-            }}
-          >
-            Built for Indian Equity Screening
-          </div>
-          <h2 className="authSidebarTitle">Create your BarakFi account</h2>
-          <p className="authSidebarDesc">
-            Start with a free account to save screened stocks, compare ideas, and keep research notes across devices.
-          </p>
-          <div className="authFeatures">
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                DF
-              </span>
-              <span>Data-first screening with transparent ratio logic</span>
-            </div>
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                MS
-              </span>
-              <span>Multi-standard methodology checks per stock</span>
-            </div>
-            <div className="authFeature">
-              <span className="authFeatureIcon" aria-hidden>
-                PT
-              </span>
-              <span>Portfolio tracking plus purification and zakat tools</span>
-            </div>
-          </div>
-
-          <div className="authTestimonial">
-            <p className="authTestimonialQuote">
-              &ldquo;I can see the exact reasons behind each verdict before making a decision.&rdquo;
-            </p>
-            <span className="authTestimonialAttr">— Early beta user, Hyderabad</span>
-          </div>
-
-          <p className="authSidebarFooter">370+ Indian listings covered across NSE and BSE</p>
-        </div>
-      </div>
-      <div className="authMain">
-        <div className="authMobileIntro">
-          <Link href="/" style={{ textDecoration: "none", marginBottom: "10px", display: "inline-flex" }}>
-            <Logo size={32} showText />
-          </Link>
-          <p className="authMobileIntroText">
-            Create your account to unlock synced screening history and watchlist tracking.
-          </p>
-        </div>
+    <AuthEditorialShell
+      mode="sign-up"
+      eyebrow="Shariah Stock Screener · India"
+      heading={
+        <>
+          Screen with
+          <br />
+          <em>clarity.</em>
+          <br />
+          Screen with
+          <br />
+          conscience.
+        </>
+      }
+      description={
+        <>
+          BarakFi screens <strong>527 NSE &amp; BSE stocks</strong> against Shariah compliance
+          criteria, so you know exactly where you stand, every quarter.
+        </>
+      }
+      features={[
+        {
+          title: "Clear verdicts, no guesswork",
+          body: "Compliant, Requires Review, or Not Compliant — grounded in transparent methodology.",
+        },
+        {
+          title: "Watchlist & status alerts",
+          body: "Track stocks you save and keep an eye on compliance status changes over time.",
+        },
+        {
+          title: "Zakat & purification tools",
+          body: "Use BarakFi's calculators to estimate Zakat and purification amounts for screened holdings.",
+        },
+      ]}
+      stats={[
+        { value: "527+", label: "Stocks screened" },
+        { value: "4×", label: "Updated yearly" },
+        { value: "Free.", label: "Always" },
+      ]}
+      cardEyebrow=""
+      cardTitle="Create your account"
+      cardSub={
+        <>
+          Already have one? <Link href="/sign-in">Sign in →</Link>
+        </>
+      }
+    >
+      <div className={styles.clerkSignUp}>
         <SignUp
           appearance={{
             layout: {
-              logoImageUrl: "/brand/barakfi-logo-mark.svg",
-              logoPlacement: "inside",
+              logoPlacement: "none",
+              socialButtonsVariant: "blockButton",
+            },
+            variables: {
+              fontFamily: "Inter, sans-serif",
+              borderRadius: "0px",
+              colorPrimary: "#7ec8a0",
+              colorText: "#e6e2d8",
+              colorTextSecondary: "rgba(230, 226, 216, 0.58)",
+              colorBackground: "transparent",
+              colorInputBackground: "rgba(230, 226, 216, 0.04)",
+              colorInputText: "#e6e2d8",
             },
             elements: {
-              rootBox: { width: "100%", maxWidth: "440px" },
-              card: {
-                borderRadius: "20px",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
+              rootBox: { width: "100%", maxWidth: "476px" },
+              cardBox: { width: "100%", boxShadow: "none", background: "transparent", border: "none" },
+              card: { background: "transparent", boxShadow: "none", border: "none", padding: "0", borderRadius: "0" },
+              page: { width: "100%" },
+              main: { width: "100%" },
+              header: { display: "none" },
+              socialButtonsBlockButton: {
+                background: "#e6e2d8",
+                color: "#091410",
+                border: "none",
+                borderRadius: "0px",
+                padding: "13px 20px",
+                fontSize: "12px",
+                fontWeight: "500",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
               },
-              headerTitle: {
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
+              socialButtonsProviderIcon: { width: "16px", height: "16px" },
+              dividerRow: { margin: "4px 0 0" },
+              dividerText: {
+                fontSize: "10.5px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "rgba(230, 226, 216, 0.58)",
               },
-              headerSubtitle: {
-                color: "var(--text-secondary)",
+              dividerLine: { background: "rgba(230, 226, 216, 0.08)" },
+              formField: { marginBottom: "16px" },
+              formFieldRow: { gap: "12px" },
+              formFieldLabelRow: {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "12px",
+                marginBottom: "7px",
               },
-              logoImage: {
-                width: "52px",
-                height: "52px",
+              formFieldLabel: {
+                fontSize: "10.5px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "rgba(230, 226, 216, 0.58)",
               },
               formFieldInput: {
-                borderRadius: "10px",
-                background: "var(--bg-soft)",
-                fontSize: "0.9rem",
+                background: "rgba(230, 226, 216, 0.04)",
+                border: "1px solid rgba(230, 226, 216, 0.08)",
+                borderRadius: "0px",
+                padding: "13px 16px",
+                color: "#e6e2d8",
+                fontSize: "14px",
+                fontWeight: "300",
               },
+              formFieldInputShowPasswordButton: { color: "rgba(230, 226, 216, 0.58)" },
               formButtonPrimary: {
-                background: "var(--emerald)",
-                borderRadius: "10px",
-                fontWeight: 600,
-                fontSize: "0.9rem",
-                padding: "12px 0",
-                transition: "all 150ms ease",
-              },
-              footerActionLink: {
-                color: "var(--emerald)",
-              },
-              footerActionText: {
-                color: "var(--text-tertiary)",
+                width: "100%",
+                background: "#e6e2d8",
+                color: "#091410",
+                border: "none",
+                borderRadius: "0px",
+                padding: "15px 32px",
+                fontSize: "11.5px",
+                fontWeight: "500",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginTop: "4px",
               },
               footer: {
-                "& > *:last-child": { display: "none" },
+                marginTop: "24px",
+                paddingTop: "20px",
+                borderTop: "1px solid rgba(230, 226, 216, 0.08)",
+                background: "transparent",
               },
-              badge: {
-                display: "none",
-              },
-              dividerLine: {
-                background: "var(--line)",
-              },
-              socialButtonsBlockButton: {
-                borderRadius: "10px",
-                border: "1px solid var(--line)",
-                background: "var(--bg-soft)",
-                transition: "all 150ms ease",
-              },
+              footerAction: { justifyContent: "center" },
+              footerActionLink: { color: "#7ec8a0" },
+              footerActionText: { color: "rgba(230, 226, 216, 0.58)" },
             },
           }}
         />
       </div>
-    </div>
+    </AuthEditorialShell>
   );
 }

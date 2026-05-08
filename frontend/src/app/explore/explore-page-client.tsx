@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CollectionIcon } from "@/components/collection-icon";
 import { useState } from "react";
 import { StockLogo } from "@/components/stock-logo";
 import { RouteLocalAuth } from "@/components/route-local-auth";
@@ -167,7 +168,7 @@ export function ExplorePageClient({
           <div className={styles.collectionsGrid}>
             {collections.map((collection) => (
               <Link key={collection.slug} className={styles.collectionCard} href={`/collections/${collection.slug}`}>
-                <div className={styles.collectionTag}>{collection.icon || "Curated"}</div>
+                <div className={styles.collectionTag}><CollectionIcon slug={collection.slug} className={styles.collectionTagIcon} /></div>
                 <div className={styles.collectionTitle}>{collection.name}</div>
                 <div className={styles.collectionDesc}>{collection.description}</div>
                 <div className={styles.collectionFooter}><span className={styles.collectionCount}>{collection.stock_count} stocks</span><span className={styles.collectionArrow}>→</span></div>

@@ -11,7 +11,11 @@ export function HideTopbarSearchOnHome() {
   const isExplore = pathname === "/explore";
   const isTools = pathname === "/tools";
   const isWatchlist = pathname === "/watchlist";
-  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isAccount || isExplore || isTools || isWatchlist;
+  const isTrending = pathname === "/trending";
+  const isMethodology = pathname === "/methodology";
+  const isLegal = pathname === "/disclaimer" || pathname === "/privacy" || pathname === "/terms";
+  const isAuthRoute = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+  const shouldHideTopbarSearch = pathname === "/" || pathname === "/screener" || isStockPage || isAbout || isAccount || isExplore || isTools || isWatchlist || isTrending || isMethodology || isLegal || isAuthRoute;
   const isHome = pathname === "/";
   const isScreener = pathname === "/screener";
   const isStock = isStockPage;
@@ -71,6 +75,30 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-watchlist-v2");
     }
 
+    if (isTrending) {
+      document.body.setAttribute("data-trending-v2", "");
+    } else {
+      document.body.removeAttribute("data-trending-v2");
+    }
+
+    if (isMethodology) {
+      document.body.setAttribute("data-methodology-v2", "");
+    } else {
+      document.body.removeAttribute("data-methodology-v2");
+    }
+
+    if (isLegal) {
+      document.body.setAttribute("data-legal-v2", "");
+    } else {
+      document.body.removeAttribute("data-legal-v2");
+    }
+
+    if (isAuthRoute) {
+      document.body.setAttribute("data-auth-v2", "");
+    } else {
+      document.body.removeAttribute("data-auth-v2");
+    }
+
     return () => {
       document.body.removeAttribute("data-hide-topbar-search");
       document.body.removeAttribute("data-home-v2");
@@ -81,8 +109,12 @@ export function HideTopbarSearchOnHome() {
       document.body.removeAttribute("data-explore-v2");
       document.body.removeAttribute("data-tools-v2");
       document.body.removeAttribute("data-watchlist-v2");
+      document.body.removeAttribute("data-trending-v2");
+      document.body.removeAttribute("data-methodology-v2");
+      document.body.removeAttribute("data-legal-v2");
+      document.body.removeAttribute("data-auth-v2");
     };
-  }, [isAbout, isAccount, isExplore, isHome, isScreener, isStock, isTools, isWatchlist, shouldHideTopbarSearch]);
+  }, [isAbout, isAccount, isAuthRoute, isExplore, isHome, isLegal, isMethodology, isScreener, isStock, isTools, isTrending, isWatchlist, shouldHideTopbarSearch]);
 
   return null;
 }
