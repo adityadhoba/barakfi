@@ -397,6 +397,7 @@ body[data-explore-v2] .globalMarketTicker,
 body[data-tools-v2] .globalMarketTicker,
 body[data-watchlist-v2] .globalMarketTicker,
 body[data-trending-v2] .globalMarketTicker,
+body[data-methodology-v2] .globalMarketTicker,
 body[data-legal-v2] .globalMarketTicker {
   display: none !important;
 }
@@ -405,6 +406,7 @@ body[data-explore-v2] .topbar,
 body[data-tools-v2] .topbar,
 body[data-watchlist-v2] .topbar,
 body[data-trending-v2] .topbar,
+body[data-methodology-v2] .topbar,
 body[data-legal-v2] .topbar {
   display: none !important;
 }
@@ -413,6 +415,7 @@ body[data-explore-v2] .bottomNav,
 body[data-tools-v2] .bottomNav,
 body[data-watchlist-v2] .bottomNav,
 body[data-trending-v2] .bottomNav,
+body[data-methodology-v2] .bottomNav,
 body[data-legal-v2] .bottomNav {
   display: none !important;
 }

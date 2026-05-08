@@ -1,345 +1,307 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { DM_Serif_Display } from "next/font/google";
+import { EditorialChrome } from "@/components/editorial-chrome";
 import styles from "./methodology.module.css";
 
+const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
+
 export const metadata: Metadata = {
-  title: "Screening Methodology — 4 Shariah Standards Compared | Barakfi",
+  title: "Screening Methodology — BarakFi",
   description:
-    "Learn how Barakfi screens stocks using S&P, AAOIFI, FTSE, and Khatkhatay Independent methodologies. Compare thresholds, understand financial ratios, and see prohibited sectors.",
+    "Transparent Shariah stock screening criteria used by BarakFi across debt, interest income, business activity, and asset composition.",
   alternates: { canonical: "https://barakfi.in/methodology" },
 };
 
-const METHODOLOGY_COMPARISON = [
+const COMPARISON_ROWS = [
   {
-    screen: "Debt Ratio",
-    sp: "< 33% of 36m Avg MCap",
-    aaoifi: "< 30% of Total Assets",
-    ftse: "< 33% of Total Assets",
-    independent: "< 25% of Total Assets",
+    criterion: "Debt Ratio",
+    note: "Interest-bearing debt / Total assets",
+    barakfiValue: "33%",
+    barakfiDesc: "Conservative threshold",
+    spValue: "33%",
+    spDesc: "Of 36-month avg market cap",
+    aaoifiValue: "30%",
+    aaoifiDesc: "Of total assets",
+    ftseValue: "33.33%",
+    ftseDesc: "Of total assets",
+    indValue: "25%",
+    indDesc: "Stricter threshold",
   },
   {
-    screen: "Interest Income",
-    sp: "< 5% of Revenue",
-    aaoifi: "< 5% of Revenue",
-    ftse: "< 5% of Revenue",
-    independent: "< 3% of Revenue",
+    criterion: "Interest Income",
+    note: "Non-compliant income / Revenue",
+    barakfiValue: "5%",
+    barakfiDesc: "Of total revenue",
+    spValue: "5%",
+    spDesc: "Of total revenue",
+    aaoifiValue: "5%",
+    aaoifiDesc: "Of total revenue",
+    ftseValue: "5%",
+    ftseDesc: "Of gross revenue",
+    indValue: "5%",
+    indDesc: "Of total revenue",
   },
   {
-    screen: "Non-Permissible Income",
-    sp: "< 5% of Revenue",
-    aaoifi: "< 5% of Revenue",
-    ftse: "< 5% of Revenue",
-    independent: "< 5% of Revenue",
+    criterion: "Liquid Assets",
+    note: "Cash + receivables / Total assets",
+    barakfiValue: "50%",
+    barakfiDesc: "Of total assets",
+    spValue: "33%",
+    spDesc: "Accounts receivable only",
+    aaoifiValue: "30%",
+    aaoifiDesc: "Of total assets",
+    ftseValue: "50%",
+    ftseDesc: "Of total assets",
+    indValue: "33%",
+    indDesc: "Of total assets",
   },
   {
-    screen: "Receivables",
-    sp: "< 33% of MCap",
-    aaoifi: "< 49% of Total Assets",
-    ftse: "< 50% of Total Assets",
-    independent: "Not used *",
-  },
-  {
-    screen: "Cash & IB Securities",
-    sp: "< 33% of Total Assets",
-    aaoifi: "< 30% of Total Assets",
-    ftse: "< 33% of Total Assets",
-    independent: "< 10% of Total Assets",
-  },
-  {
-    screen: "Denominator",
-    sp: "Market Capitalisation",
-    aaoifi: "Total Assets",
-    ftse: "Total Assets",
-    independent: "Total Assets",
-  },
-];
-
-const RATIOS = [
-  {
-    name: "Debt to Market Cap / Total Assets",
-    threshold: "< 25% to 33%",
-    formula: "Total Debt / Denominator (varies by methodology)",
-    desc: "Measures the company's reliance on interest-bearing debt. The Khatkhatay paper argues that the denominator should be total assets (stable, objective) rather than market capitalisation (volatile, sentiment-driven). S&P uses 36-month average market cap; AAOIFI, FTSE, and Independent use total assets.",
-  },
-  {
-    name: "Non-Permissible Income Ratio",
-    threshold: "< 5%",
-    formula: "Non-Permissible Income / Total Revenue",
-    desc: "Tracks revenue from non-halal activities (interest income, gambling, alcohol, etc). All four methodologies agree on a 5% threshold. Companies must derive the vast majority of revenue from permissible business.",
-  },
-  {
-    name: "Interest Income Ratio",
-    threshold: "< 3% to 5%",
-    formula: "Interest Income / Total Revenue",
-    desc: "Measures interest-based earnings specifically. The Khatkhatay paper recommends a stricter 3% threshold, arguing that with interest-bearing assets capped at 10% of total assets, interest income should naturally be very small.",
-  },
-  {
-    name: "Accounts Receivable Ratio",
-    threshold: "< 33% to 50% (or not used)",
-    formula: "Accounts Receivable / Denominator",
-    desc: "Based on the Shariah principle that debts cannot be traded except at par value. The Khatkhatay paper argues this screen is 'fundamentally flawed' because share prices are driven by future earnings expectations, not the book value of receivables. The Independent methodology disables this screen.",
-  },
-  {
-    name: "Cash & Interest-Bearing Securities",
-    threshold: "< 10% to 33%",
-    formula: "(Cash + Short-Term Investments) / Total Assets",
-    desc: "Limits exposure to companies heavily invested in interest-bearing instruments. The Khatkhatay paper recommends the strictest threshold at 10%, arguing that involuntary interest-earning should be truly marginal.",
+    criterion: "Business Activity",
+    note: "Sector / core business screen",
+    barakfiValue: "Excluded sectors",
+    barakfiDesc: "Composite business screen",
+    spValue: "Primary",
+    spDesc: "Primary business screen",
+    aaoifiValue: "Primary + ancillary",
+    aaoifiDesc: "Primary + ancillary screen",
+    ftseValue: "Primary",
+    ftseDesc: "Primary business screen",
+    indValue: "Strict",
+    indDesc: "Strict sector exclusions",
   },
 ];
 
-const PROHIBITED_ACTIVITIES = [
+const CRITERIA = [
   {
-    title: "Alcohol",
-    desc: "Production & sales",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M8 2l2 4h4l2-4M6 6h12l-1 14H7L6 6z" strokeLinecap="round" strokeLinejoin="round"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
+    tag: "Financial Ratio",
+    number: "01",
+    title: "Debt Ratio",
+    body:
+      "Interest-bearing debt must remain below 33% of total assets. This screens out companies that fund their operations primarily through riba-based borrowing. We use total assets, not market cap, for consistency across market cycles.",
+    threshold: "Total interest-bearing debt ÷ Total assets < 33%",
   },
   {
-    title: "Gambling",
-    desc: "Casinos, betting, lotteries",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/><circle cx="16" cy="16" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
+    tag: "Revenue Screen",
+    number: "02",
+    title: "Interest Income %",
+    body:
+      "Interest income and other non-compliant revenue must be less than 5% of total revenue. Many otherwise-compliant businesses earn minor incidental interest from bank deposits, so this threshold captures and flags that. If passed, income purification is still required.",
+    threshold: "Interest income ÷ Total revenue < 5%",
   },
   {
-    title: "Tobacco",
-    desc: "Manufacturing & sales",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="14" width="16" height="4" rx="1"/><path d="M18 14V10c0-2-1-3-3-3"/><path d="M20 14V9c0-3-2-5-5-5"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
+    tag: "Sector Screen",
+    number: "03",
+    title: "Business Activity",
+    body:
+      "The core business must not operate in prohibited sectors. This is a binary exclusion: no ratio can compensate for a fundamentally impermissible business model. Prohibited sectors are evaluated on primary revenue source.",
+    threshold: "Banking, insurance, alcohol, tobacco, weapons, adult entertainment, pork",
   },
   {
-    title: "Weapons",
-    desc: "Arms & defense products",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2l8 8-4 4-8-8"/><path d="M10 6L4 12l2 2 6-6"/><path d="M6 16l-2 2"/><path d="M16 6l2-2"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Adult Entertainment",
-    desc: "Explicit content",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><circle cx="12" cy="16" r="0.5" fill="currentColor"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Interest-based Finance",
-    desc: "Conventional banking",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 21h18M3 10h18M12 3l9 7H3l9-7z"/><path d="M5 10v11M9 10v11M15 10v11M19 10v11"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Non-halal Foods",
-    desc: "Pork & non-halal products",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Excess Debt",
-    desc: "High debt ratios",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Cannabis",
-    desc: "Recreational marijuana",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 22V12M12 12C12 12 7 10 5 6c3 1 5 3 7 6M12 12c0 0 5-2 7-6-3 1-5 3-7 6"/><circle cx="12" cy="4" r="2"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
-  },
-  {
-    title: "Cloning",
-    desc: "Human cloning activities",
-    icon: `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="7" r="4"/><circle cx="15" cy="7" r="4"/><path d="M12 22c-4 0-7-2-7-5s3-5 7-5 7 2 7 5-3 5-7 5z"/><line x1="4" y1="4" x2="20" y2="20" strokeWidth="2" stroke="var(--red)"/></svg>`,
+    tag: "Asset Screen",
+    number: "04",
+    title: "Accounts Receivable",
+    body:
+      "Cash and accounts receivable combined must remain below 50% of total assets. This prevents pure financial holding companies, whose assets are primarily monetary claims, from qualifying as tangible businesses.",
+    threshold: "(Cash + receivables) ÷ Total assets < 50%",
   },
 ];
+
+const PROHIBITED_SECTORS = [
+  { name: "Banking & Financial Services", why: "Core riba-based income model", badge: "Excluded", glyph: "▣" },
+  { name: "Insurance (Conventional)", why: "Uncertainty (gharar) and interest income", badge: "Excluded", glyph: "◎" },
+  { name: "Alcohol & Beverages", why: "Prohibited substance (khamr)", badge: "Excluded", glyph: "◈" },
+  { name: "Tobacco", why: "Harmful substance, scholarly consensus", badge: "Excluded", glyph: "⊘" },
+  { name: "Defence & Weapons", why: "Primary business in armaments", badge: "Excluded", glyph: "➤" },
+  { name: "Adult Entertainment", why: "Morally impermissible content", badge: "Excluded", glyph: "▢" },
+  { name: "Pork & Related Products", why: "Prohibited in Islamic law (haram)", badge: "Excluded", glyph: "▤" },
+  { name: "Gambling & Speculation", why: "Maisir — prohibited financial activity", badge: "Excluded", glyph: "◇" },
+  { name: "Pornography", why: "Strictly impermissible", badge: "Excluded", glyph: "⬡" },
+];
+
+const LEGEND = [
+  {
+    badge: "Shariah Compliant",
+    tone: "compliant",
+    title: "Passes all four criteria",
+    body:
+      "The company's core business is permissible, all financial ratios are within thresholds, and interest income is below 5% of revenue. Minor interest income may still require purification.",
+  },
+  {
+    badge: "Requires Review",
+    tone: "review",
+    title: "Borderline — scholar consultation advised",
+    body:
+      "One or more ratios are near threshold boundaries, or the company's business activities have a grey-area component. We recommend consulting a qualified scholar before investing.",
+  },
+  {
+    badge: "Not Compliant",
+    tone: "nonCompliant",
+    title: "Fails one or more criteria",
+    body:
+      "The company either operates in a prohibited sector or its financial ratios exceed permissible limits. This status is definitive; purification cannot make investment in these companies permissible.",
+  },
+];
+
+const SOURCE_ITEMS = [
+  {
+    label: "01",
+    text: "NSE & BSE filings — Annual reports, balance sheets, and P&L statements from exchange disclosures.",
+  },
+  {
+    label: "02",
+    text: "Quarterly updates — Ratios recomputed after each Q4 earnings cycle. Status changes are reflected within 2–4 weeks.",
+  },
+  {
+    label: "03",
+    text: "527 stocks covered — All NIFTY 500 constituents plus select BSE-listed companies with sufficient data.",
+  },
+  {
+    label: "04",
+    text: "Not a fatwa — Results are educational screening only. Always consult a qualified Islamic scholar for investment rulings.",
+  },
+];
+
+function RatioCell({ value, description }: { value: string; description: string }) {
+  return (
+    <>
+      <span className={`${styles.ratioValue} ${serif.className}`}>{value}</span>
+      <span className={styles.ratioDesc}>{description}</span>
+    </>
+  );
+}
 
 export default function MethodologyPage() {
   return (
-    <main className="shellPage">
-      <div className={styles.container}>
-        <nav className={styles.breadcrumb}>
-          <Link href="/">Home</Link>
-          <span>/</span>
-          <span>Methodology</span>
-        </nav>
-
-        {/* Section 1: Introduction */}
-        <header className={styles.hero}>
-          <span className={styles.kicker}>Screening Methodology</span>
-          <h1 className={styles.title}>How We Screen Stocks for Shariah Compliance</h1>
-          <p className={styles.subtitle}>
-            Barakfi evaluates stocks using four globally recognised Shariah screening methodologies.
-            Each methodology applies a set of financial ratio tests and business activity screens
-            to determine whether a stock meets its specific compliance criteria.
+    <EditorialChrome activeHref="/methodology">
+      <main className={styles.page}>
+        <section className={styles.pageHeader}>
+          <div className={styles.eyebrow}>Screening Methodology</div>
+          <h1 className={`${styles.pageTitle} ${serif.className}`}>
+            Transparent criteria.
+            <br />
+            <em>No guesswork.</em>
+          </h1>
+          <p className={styles.pageIntro}>
+            BarakFi screens Indian equities using established Shariah finance principles drawn from S&amp;P,
+            AAOIFI, FTSE, and Khatkhatay Independent standards. Every ratio, every threshold — fully documented.
           </p>
-        </header>
-
-        <section className={styles.section}>
-          <div className={styles.introCard}>
-            <h2 className={styles.introTitle}>The Principle of Maslahah</h2>
-            <p className={styles.introText}>
-              Shariah scholars have permitted equity investment under the principle of <em>Maslahah</em> (public
-              interest), recognising that equity markets represent an important profit-and-loss sharing investment
-              avenue close to the Islamic ideal. However, due to the pervasiveness of interest-based transactions
-              in modern business, fully Shariah-compliant companies are extremely rare. Therefore, scholars have
-              established minimum compliance criteria — setting maximum acceptable limits for concessions from
-              strict Shariah requirements.
-            </p>
-            <p className={styles.introNote}>
-              Reference: Khatkhatay &amp; Nisar, &ldquo;Shariah Compliant Equity Investments: An Assessment of
-              Current Screening Norms&rdquo;, Seventh Harvard University Forum on Islamic Finance, 2006.
-            </p>
-          </div>
         </section>
 
-        {/* Section 2: Methodology Comparison */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>4-Methodology Comparison</h2>
-          <p className={styles.sectionDesc}>
-            Different scholars and institutions arrive at different thresholds. Barakfi screens every stock
-            against all four methodologies and reports the consensus result.
+          <div className={styles.sectionEyebrow}>Four Standards Compared</div>
+          <h2 className={`${styles.sectionTitle} ${serif.className}`}>How major bodies set the thresholds</h2>
+          <p className={styles.sectionSub}>
+            Different Shariah standards bodies use varying thresholds. BarakFi follows a conservative composite
+            approach. Here&apos;s how each standard compares.
           </p>
-          <div className={styles.comparisonTableWrap}>
-            <table className={styles.comparisonTable}>
+
+          <div className={styles.compareWrap}>
+            <table className={styles.compareTable}>
               <thead>
                 <tr>
-                  <th>Screen</th>
-                  <th>S&amp;P (DJIMI)</th>
+                  <th style={{ width: 220 }}>Criterion</th>
+                  <th className={styles.highlightHead}>BarakFi</th>
+                  <th>S&amp;P / Dow Jones</th>
                   <th>AAOIFI</th>
-                  <th>FTSE Yasaar</th>
-                  <th>Independent *</th>
+                  <th>FTSE Shariah</th>
+                  <th>Khatkhatay Ind.</th>
                 </tr>
               </thead>
               <tbody>
-                {METHODOLOGY_COMPARISON.map((row) => (
-                  <tr key={row.screen}>
-                    <td className={styles.screenLabel}>{row.screen}</td>
-                    <td>{row.sp}</td>
-                    <td>{row.aaoifi}</td>
-                    <td>{row.ftse}</td>
-                    <td className={styles.independentCol}>{row.independent}</td>
+                {COMPARISON_ROWS.map((row) => (
+                  <tr key={row.criterion}>
+                    <td>
+                      <span className={styles.criterionLabel}>{row.criterion}</span>
+                      <div className={styles.criterionNote}>{row.note}</div>
+                    </td>
+                    <td className={styles.highlightCol}>
+                      <RatioCell value={row.barakfiValue} description={row.barakfiDesc} />
+                    </td>
+                    <td><RatioCell value={row.spValue} description={row.spDesc} /></td>
+                    <td><RatioCell value={row.aaoifiValue} description={row.aaoifiDesc} /></td>
+                    <td><RatioCell value={row.ftseValue} description={row.ftseDesc} /></td>
+                    <td><RatioCell value={row.indValue} description={row.indDesc} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className={styles.tableNote}>
-            * Khatkhatay Independent Norms (Harvard 2006). Argues that market capitalisation is
-            volatile and disconnected from fundamentals; total assets is a more stable and
-            representative denominator. The receivables screen is removed as academically unsound.
-          </p>
         </section>
 
-        {/* Section 3: Why Multiple Methodologies */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Why Multiple Methodologies?</h2>
-          <div className={styles.twoCol}>
-            <div className={styles.colCard}>
-              <h3 className={styles.colTitle}>The Market Cap Debate</h3>
-              <p className={styles.colText}>
-                The S&amp;P methodology uses market capitalisation as the denominator for debt and
-                receivables ratios. The Khatkhatay paper criticises this approach: market prices are
-                &ldquo;largely driven by sentiments about future earnings&rdquo; and can &ldquo;skyrocket
-                or nosedive&rdquo; in weeks with no change in underlying fundamentals. A company that was
-                compliant one day could become non-compliant the next purely due to a price drop.
-              </p>
-            </div>
-            <div className={styles.colCard}>
-              <h3 className={styles.colTitle}>Total Assets: The Alternative</h3>
-              <p className={styles.colText}>
-                AAOIFI, FTSE, and the Independent methodology all use total assets as the denominator.
-                Total assets are reported quarterly, change slowly, and directly reflect the company&apos;s
-                actual business operations. The paper notes that &ldquo;how the market perceives a company
-                is not relevant to the Islamicity of its activities&rdquo; — screening should focus on
-                objective, company-level financial data.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: Financial Ratio Screens */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Financial Ratio Screens</h2>
-          <p className={styles.sectionDesc}>
-            Every stock is evaluated against these key financial ratios. The specific thresholds
-            and denominators vary by methodology (see comparison table above).
-          </p>
-          <div className={styles.ratioGrid}>
-            {RATIOS.map((ratio) => (
-              <div key={ratio.name} className={styles.ratioCard}>
-                <div className={styles.ratioHeader}>
-                  <h3 className={styles.ratioName}>{ratio.name}</h3>
-                  <span className={styles.ratioThreshold}>{ratio.threshold}</span>
+        <section className={styles.criteriaSection}>
+          <div className={styles.sectionEyebrow}>The Four Criteria</div>
+          <h2 className={`${styles.sectionTitle} ${serif.className}`}>What we test — and why</h2>
+          <div className={styles.criteriaGrid}>
+            {CRITERIA.map((item) => (
+              <article key={item.number} className={styles.criterionCard}>
+                <div className={`${styles.criterionGhost} ${serif.className}`}>{item.number}</div>
+                <div className={styles.criterionTag}>{item.tag}</div>
+                <h3 className={`${styles.criterionTitle} ${serif.className}`}>{item.title}</h3>
+                <p className={styles.criterionBody}>{item.body}</p>
+                <div className={styles.thresholdBox}>
+                  Threshold: <span>{item.threshold}</span>
                 </div>
-                <code className={styles.ratioFormula}>{ratio.formula}</code>
-                <p className={styles.ratioDesc}>{ratio.desc}</p>
-              </div>
+              </article>
             ))}
           </div>
         </section>
 
-        {/* Section 5: Prohibited Business Activities */}
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Prohibited Business Activities</h2>
-          <p className={styles.sectionDesc}>
-            Companies involved in these activities are classified as not meeting Shariah screening
-            criteria, regardless of their financial ratios.
+          <div className={styles.sectionEyebrow}>Prohibited Sectors</div>
+          <h2 className={`${styles.sectionTitle} ${serif.className}`}>Always excluded, regardless of ratios</h2>
+          <p className={styles.sectionSub}>
+            These sectors represent impermissible core business activities. No financial ratio threshold can
+            qualify a company whose primary business falls in these categories.
           </p>
-          <div className={styles.prohibitedGrid}>
-            {PROHIBITED_ACTIVITIES.map((item) => (
-              <div key={item.title} className={styles.prohibitedCard}>
-                <div className={styles.prohibitedIcon} dangerouslySetInnerHTML={{ __html: item.icon }} />
-                <h3 className={styles.prohibitedTitle}>{item.title}</h3>
-                <p className={styles.prohibitedDesc}>{item.desc}</p>
-              </div>
+          <div className={styles.sectorGrid}>
+            {PROHIBITED_SECTORS.map((sector) => (
+              <article key={sector.name} className={styles.sectorItem}>
+                <div className={styles.sectorIcon}>{sector.glyph}</div>
+                <div>
+                  <div className={styles.sectorName}>{sector.name}</div>
+                  <div className={styles.sectorWhy}>{sector.why}</div>
+                </div>
+                <div className={styles.sectorBadge}>{sector.badge}</div>
+              </article>
             ))}
           </div>
         </section>
 
-        {/* Section 6: Purification of Income */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Purification of Income</h2>
-          <div className={styles.purificationCard}>
-            <p className={styles.purificationText}>
-              Even stocks that meet Shariah screening criteria may have a small percentage of income
-              from non-permissible sources (such as interest). The Khatkhatay paper recommends that
-              investors should donate the <strong>pro rata amount of interest income earned per share</strong> for
-              the period of their holding, <strong>regardless of whether the company pays a dividend</strong>.
-            </p>
-            <p className={styles.purificationText}>
-              This ensures the entire interest component is purged from the investor&apos;s perspective —
-              not just the portion that flows through dividends, but also the portion retained in
-              the company&apos;s operations.
-            </p>
-            <div className={styles.purificationCta}>
-              <Link href="/tools/purification" className={styles.purificationLink}>
-                Open Purification Calculator &rarr;
-              </Link>
-              <Link href="/tools/zakat" className={styles.purificationLinkSecondary}>
-                Zakat Calculator
-              </Link>
-            </div>
+        <section className={styles.legendSection}>
+          <div className={styles.sectionEyebrow}>Compliance Status Definitions</div>
+          <div className={styles.legendGrid}>
+            {LEGEND.map((item) => (
+              <article key={item.badge} className={styles.legendCard}>
+                <span className={`${styles.badge} ${styles[item.tone]}`}>{item.badge}</span>
+                <h3 className={`${styles.legendTitle} ${serif.className}`}>{item.title}</h3>
+                <p className={styles.legendBody}>{item.body}</p>
+              </article>
+            ))}
           </div>
         </section>
 
-        {/* Section 7: Important Disclaimers */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Important Disclaimers</h2>
-          <div className={styles.disclaimerGrid}>
-            <div className={styles.disclaimerCard}>
-              <h3 className={styles.disclaimerTitle}>Not a Fatwa</h3>
-              <p className={styles.disclaimerText}>
-                Barakfi&apos;s screening results are based on automated financial ratio analysis. They do
-                not constitute a fatwa, religious ruling, or investment advice. The determination of whether
-                an investment is halal or haram is ultimately for qualified Shariah scholars.
+        <section className={styles.dataSection}>
+          <div className={styles.dataGrid}>
+            <div>
+              <div className={styles.sourceLabel}>Data &amp; Updates</div>
+              <h2 className={`${styles.sourceTitle} ${serif.className}`}>Where the data comes from</h2>
+              <p className={styles.sourceBody}>
+                All financial data is sourced from audited annual reports filed with SEBI, NSE, and BSE. Ratios
+                are computed from the most recently filed full-year financial statements. Screening is updated
+                quarterly following earnings season.
               </p>
             </div>
-            <div className={styles.disclaimerCard}>
-              <h3 className={styles.disclaimerTitle}>Data Limitations</h3>
-              <p className={styles.disclaimerText}>
-                Financial data is sourced from Yahoo Finance and may have delays, inaccuracies, or gaps.
-                Companies may change their business activities or financial structure between reporting periods.
-                Always verify with official filings before making investment decisions.
-              </p>
-            </div>
-            <div className={styles.disclaimerCard}>
-              <h3 className={styles.disclaimerTitle}>Consult a Scholar</h3>
-              <p className={styles.disclaimerText}>
-                We strongly recommend consulting a qualified Shariah scholar or advisor for personalised
-                guidance on your specific investment situation. Different scholars may have different opinions
-                on the same stock.
-              </p>
+            <div className={styles.sourceItems}>
+              {SOURCE_ITEMS.map((item) => (
+                <div key={item.label} className={styles.sourceItem}>
+                  <div className={`${styles.sourceItemNum} ${serif.className}`}>{item.label}</div>
+                  <div className={styles.sourceItemText}>{item.text}</div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
-      </div>
-    </main>
+      </main>
+    </EditorialChrome>
   );
 }
