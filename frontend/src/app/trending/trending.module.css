@@ -14,7 +14,7 @@
 }
 
 .pageHeader {
-  padding: 72px var(--w) 56px;
+  padding: 64px var(--w) 48px;
   border-bottom: 1px solid var(--ink3);
   display: grid;
   grid-template-columns: 1fr auto;
@@ -33,7 +33,7 @@
 .eyebrow { margin-bottom: 20px; }
 
 .title {
-  font-size: clamp(36px, 5vw, 64px);
+  font-size: clamp(32px, 4.4vw, 56px);
   line-height: 1.05;
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -42,9 +42,9 @@
 .title em { font-style: italic; color: var(--gold); }
 
 .subtitle {
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--ink2);
-  line-height: 1.75;
+  line-height: 1.72;
   max-width: 420px;
   margin-top: 16px;
 }
@@ -61,9 +61,9 @@
   background: var(--ink3);
 }
 
-.indexCard { background: var(--mid); padding: 28px 32px; }
+.indexCard { background: var(--mid); padding: 22px 26px; }
 .indexName { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink2); margin-bottom: 10px; }
-.indexValue { font-size: 30px; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+.indexValue { font-size: 26px; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
 .indexChangeRow { font-size: 12px; margin-top: 8px; display: flex; gap: 6px; align-items: center; }
 .indexMuted { color: var(--ink2); }
 .up { color: var(--accent); }
@@ -102,7 +102,7 @@
   background: var(--ink3);
 }
 
-.panel { background: var(--dark); padding: 40px 36px; }
+.panel { background: var(--dark); padding: 34px 30px; }
 .panelTitle { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; color: var(--ink); }
 .panelDotUp,.panelDotDown,.panelDotAmber,.panelDotGold { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .panelDotUp { background: var(--accent); }
@@ -129,7 +129,7 @@
 .miniPrice { font-size: 12.5px; color: var(--ink); }
 .miniStatus { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
 
-.section { padding: 52px var(--w); border-bottom: 1px solid var(--ink3); background: var(--mid); }
+.section { padding: 44px var(--w); border-bottom: 1px solid var(--ink3); background: var(--mid); }
 .sectionEyebrow { margin-bottom: 32px; display: flex; align-items: center; gap: 16px; }
 .sectionEyebrow::after { content: ""; flex: 1; height: 1px; background: var(--ink3); }
 .sectionTabs { display: flex; gap: 0; margin-bottom: 28px; border: 1px solid var(--ink3); width: fit-content; flex-wrap: wrap; }

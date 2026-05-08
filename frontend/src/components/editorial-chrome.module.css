@@ -48,7 +48,7 @@
 
 .item b {
   color: var(--ink);
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .up { color: var(--accent); }
@@ -69,11 +69,14 @@
 }
 
 .logo {
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 19px;
   font-weight: 400;
   letter-spacing: 0.02em;
   color: var(--ink);
   text-decoration: none;
+  transform: translateY(1px);
 }
 
 .logoAccent {
@@ -83,7 +86,7 @@
 .links {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 24px;
 }
 
 .link,
@@ -106,7 +109,7 @@
 
 .cta {
   border: 1px solid var(--ink);
-  padding: 7px 18px;
+  padding: 6px 16px;
   color: var(--ink);
 }
 
