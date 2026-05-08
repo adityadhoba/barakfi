@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import styles from "./disclaimer.module.css";
+import { LegalShell } from "@/components/legal-shell";
 
 export const metadata: Metadata = {
   title: "Risk Disclaimer — Barakfi",
@@ -9,296 +8,144 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://barakfi.in/disclaimer" },
 };
 
+const cards = [
+  {
+    flag: "Not Financial Advice",
+    tone: "red" as const,
+    title: "Not investment advice",
+    body: "Nothing on BarakFi is a recommendation to buy, sell, or hold any security. BarakFi is not registered with SEBI or any other financial regulator. Screening results are for educational reference only.",
+    icon: <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
+  },
+  {
+    flag: "Not a Fatwa",
+    tone: "amber" as const,
+    title: "Not a religious ruling",
+    body: "BarakFi screening results do not constitute a fatwa or certified Shariah opinion from any recognised Islamic scholar, mufti, or Shariah supervisory board.",
+    icon: <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>,
+  },
+  {
+    flag: "Data Limitations",
+    tone: "gold" as const,
+    title: "Data may be incomplete",
+    body: "Ratios are based on the most recently available audited annual reports and are updated quarterly. Data may not reflect the most recent financial disclosures. Always verify independently before making decisions.",
+    icon: <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
+  },
+];
+
+const sections = [
+  {
+    id: "educational",
+    num: "01",
+    title: "Educational Purpose Only",
+    paragraphs: [
+      "BarakFi is an educational tool designed to help individuals understand Shariah-inspired financial screening criteria as applied to Indian equities. All content — including stock compliance statuses, financial ratios, and methodology documentation — is provided solely for informational and educational purposes.",
+      "By using BarakFi, you acknowledge that you understand the limitations of the service and will not rely on it as the sole basis for any investment or religious decision.",
+    ],
+  },
+  {
+    id: "notsebi",
+    num: "02",
+    title: "Not SEBI Registered",
+    warning:
+      "BarakFi is not registered with the Securities and Exchange Board of India (SEBI) as an Investment Adviser, Research Analyst, or in any other capacity.",
+    paragraphs: [
+      "Nothing on this platform constitutes a research report, buy/sell/hold recommendation, or investment advisory service. Do not treat any content on BarakFi as investment advice.",
+      "Consult a SEBI-registered investment adviser or financial professional before making investment decisions.",
+    ],
+  },
+  {
+    id: "notshariah",
+    num: "03",
+    title: "Not a Certified Shariah Opinion",
+    paragraphs: [
+      "BarakFi's compliance designations — Compliant, Requires Review, Not Compliant — are not fatwas and do not constitute certified Shariah opinions from any recognised Islamic scholar, mufti, or Shariah supervisory board.",
+      "The screening methodology applies commonly referenced quantitative thresholds drawn from S&P Dow Jones, AAOIFI, FTSE, and Khatkhatay Independent standards for educational reference.",
+    ],
+    bullets: [
+      "Different scholars may classify the same stock differently based on their methodology.",
+      "Qualitative factors not captured by our ratios may affect a stock's permissibility.",
+      "For personal investment decisions, you must consult a qualified Islamic scholar.",
+    ],
+  },
+  {
+    id: "accuracy",
+    num: "04",
+    title: "Data Accuracy & Currency",
+    paragraphs: [
+      "Financial data is sourced from audited annual reports filed with NSE and BSE. We update compliance ratios quarterly, but there will always be a lag between a company's latest financial position and our displayed ratios.",
+      "We make reasonable efforts to ensure accuracy but cannot guarantee that all information is error-free, complete, or timely. Users should independently verify all data from primary sources before relying on it.",
+    ],
+  },
+  {
+    id: "investment",
+    num: "05",
+    title: "Investment Risk",
+    paragraphs: [
+      "Equity investments carry inherent risk. A stock being classified as Shariah Compliant does not indicate that it is a good investment, free from risk, or guaranteed to generate returns.",
+      "All investments in equities may result in partial or complete loss of capital. The value of investments may go up or down based on market conditions.",
+    ],
+  },
+  {
+    id: "screening",
+    num: "06",
+    title: "Screening Limitations",
+    bullets: [
+      "Ratios are based on the latest audited reports, not necessarily the latest quarter.",
+      "Corporate actions or business changes may shift a company before our next refresh cycle.",
+      "Methodology updates may affect future classifications.",
+    ],
+  },
+  {
+    id: "liability",
+    num: "07",
+    title: "Limitation of Liability",
+    paragraphs: [
+      "To the fullest extent permitted by law, BarakFi and its operators shall not be liable for any direct, indirect, incidental, special, or consequential damages arising out of your use of or inability to use the service.",
+    ],
+  },
+  {
+    id: "thirdparty",
+    num: "08",
+    title: "Third-Party Links and Sources",
+    paragraphs: [
+      "BarakFi may reference exchange filings, company disclosures, or third-party services. We are not responsible for the content, availability, or accuracy of those external resources.",
+    ],
+  },
+  {
+    id: "contact",
+    num: "09",
+    title: "Contact",
+    paragraphs: [
+      "If you have questions about this disclaimer or want to report a factual issue, please reach out through the BarakFi contact channels listed on the site.",
+    ],
+  },
+];
+
 export default function DisclaimerPage() {
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
-        {/* Hero */}
-        <header className={styles.hero}>
-          <Link href="/" className={styles.backLink}>
-            &larr; Back to Home
-          </Link>
-          <h1 className={styles.title}>Risk Disclaimer</h1>
-          <p className={styles.subtitle}>
-            Please read these disclaimers carefully. They contain important information
-            about the limitations of our screening service and your responsibilities
-            as an investor.
-          </p>
-          <span className={styles.effectiveDate}>Effective Date: 1 April 2026</span>
-        </header>
-
-        {/* SEBI Disclaimer — Most Prominent */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>SEBI Regulatory Disclaimer</h2>
-          <div className={styles.sebiBox}>
-            <p>
-              Barakfi is NOT registered with the Securities and Exchange Board of
-              India (SEBI) as an Investment Advisor under SEBI (Investment Advisers) Regulations
-              2013, as a Research Analyst under SEBI (Research Analysts) Regulations 2014, or as
-              a Portfolio Manager under SEBI (Portfolio Managers) Regulations 2020.
-            </p>
-          </div>
-          <p className={styles.prose}>
-            We do not provide personalised investment advice, specific buy/sell/hold
-            recommendations, or managed portfolio services. The screening results displayed
-            on this site are generated by automated algorithms and should not be construed
-            as recommendations to purchase, sell, or hold any security.
-          </p>
-          <p className={styles.prose}>
-            Users are strongly advised to consult with a <strong>SEBI-registered investment
-            advisor</strong> before making any investment decisions. The information provided by
-            this Service does not take into account your specific financial situation, risk
-            tolerance, investment objectives, or tax implications.
-          </p>
-        </section>
-
-        {/* Shariah Screening Disclaimer */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Shariah Screening Disclaimer</h2>
-          <div className={styles.shariahBox}>
-            <p>
-              Screening results are based on publicly available financial data and automated
-              rules derived from established Islamic finance methodologies. They do NOT
-              constitute a fatwa, certified Shariah opinion, or religious ruling from any
-              qualified Islamic scholar or Shariah board.
-            </p>
-          </div>
-          <p className={styles.prose}>
-            Our screening methodology is anchored to the S&amp;P Shariah Indices framework,
-            AAOIFI standards, and ICIF India guidance. However, there is scholarly disagreement
-            on certain aspects of Islamic equity screening, and different scholars and boards
-            may reach different conclusions on the same stock.
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              The classification of a stock as &quot;Halal&quot;, &quot;Requires Review&quot;, or
-              &quot;Non-Compliant&quot; is an automated assessment, not a religious certification.
-            </li>
-            <li>
-              Users must independently verify compliance with their preferred school of Islamic
-              jurisprudence (fiqh) and consult with a qualified Shariah scholar or their local
-              Islamic authority.
-            </li>
-            <li>
-              Shariah compliance is not static. A stock&apos;s compliance status may change as the
-              company&apos;s financial position evolves, as new quarterly/annual reports are
-              published, or as screening rules are updated.
-            </li>
-            <li>
-              Income purification ratios and zakat calculations, if provided, are estimates and
-              should be verified with a qualified scholar.
-            </li>
-          </ul>
-        </section>
-
-        {/* Market Risk Warning */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Market Risk Warning</h2>
-          <p className={styles.prose}>
-            Investments in equity securities are subject to market risks. The value of your
-            investments can go down as well as up, and you may receive back less than you
-            originally invested. Specific risks include but are not limited to:
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              <strong>Market Volatility:</strong> Stock prices on the NSE/BSE are subject to
-              significant short-term fluctuations driven by economic conditions, geopolitical
-              events, regulatory changes, and market sentiment.
-            </li>
-            <li>
-              <strong>Liquidity Risk:</strong> Some Shariah-compliant stocks, particularly
-              small-cap and mid-cap securities, may have lower trading volumes, making it
-              difficult to buy or sell at desired prices.
-            </li>
-            <li>
-              <strong>Concentration Risk:</strong> Shariah-compliant stock universes are
-              inherently smaller than the broader market, which may lead to sector or
-              thematic concentration in portfolios.
-            </li>
-            <li>
-              <strong>Currency and Inflation Risk:</strong> The purchasing power of your
-              investments may be eroded by inflation. Indian Rupee fluctuations may affect
-              the value of companies with significant foreign operations.
-            </li>
-            <li>
-              <strong>Regulatory Risk:</strong> Changes in SEBI regulations, taxation laws
-              (including Securities Transaction Tax, LTCG, STCG), or corporate governance
-              rules may adversely affect investment returns.
-            </li>
-          </ul>
-          <div className={styles.warningBox}>
-            <p>
-              <strong>Past performance is not indicative of future results.</strong> Historical
-              screening data, compliance trends, and stock performance shown on this site
-              should not be relied upon as a predictor of future outcomes.
-            </p>
-          </div>
-        </section>
-
-        {/* Data Accuracy Disclaimer */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Data Accuracy and Reliability</h2>
-          <p className={styles.prose}>
-            Barakfi relies on third-party data sources, primarily Yahoo Finance public
-            APIs, for financial statements, stock prices, and company information. We make
-            reasonable efforts to ensure data accuracy, but:
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              Financial data may be delayed by up to 24 hours or more. Real-time data is not
-              guaranteed.
-            </li>
-            <li>
-              Company financial statements sourced from third-party providers may contain errors,
-              omissions, or discrepancies compared to filings on the BSE/NSE or the Ministry of
-              Corporate Affairs (MCA).
-            </li>
-            <li>
-              Sector classifications and business descriptions used for sector screening are
-              based on publicly available information and may not reflect the full scope of a
-              company&apos;s activities.
-            </li>
-            <li>
-              Exchange rates, market capitalisation figures, and calculated ratios are based on
-              data available at the time of screening and may change.
-            </li>
-            <li>
-              We do not independently audit or verify the financial statements of the companies
-              screened on this site.
-            </li>
-          </ul>
-          <p className={styles.prose}>
-            Users should always cross-reference screening results with official filings available
-            on the NSE (<a href="https://www.nseindia.com" target="_blank" rel="noopener noreferrer"
-            style={{ color: 'var(--emerald)' }}>nseindia.com</a>), BSE (<a href="https://www.bseindia.com"
-            target="_blank" rel="noopener noreferrer" style={{ color: 'var(--emerald)' }}>bseindia.com</a>),
-            and MCA portals.
-          </p>
-        </section>
-
-        {/* No Guarantee of Compliance */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>No Guarantee of Ongoing Compliance</h2>
-          <p className={styles.prose}>
-            A stock&apos;s Shariah compliance status at any given time is based on the most recent
-            available data. There is no guarantee that a stock classified as &quot;Halal&quot; today
-            will remain compliant in the future. Factors that may affect compliance include:
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              Changes in the company&apos;s debt structure, revenue mix, or business activities
-              reported in subsequent quarterly or annual filings.
-            </li>
-            <li>
-              Mergers, acquisitions, or corporate restructuring that alter the company&apos;s
-              fundamental business profile.
-            </li>
-            <li>
-              Updates to our screening methodology, threshold values, or data sources.
-            </li>
-            <li>
-              Delays in data refresh due to reporting timelines, API limitations, or
-              technical issues.
-            </li>
-            <li>
-              Evolving scholarly opinions and changes to Islamic finance standards that may
-              redefine permissibility criteria.
-            </li>
-          </ul>
-        </section>
-
-        {/* Limitation of Liability */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Limitation of Liability</h2>
-          <p className={styles.prose}>
-            Barakfi, its founders, directors, employees, and affiliates shall not
-            be held responsible for:
-          </p>
-          <ul className={styles.legalList}>
-            <li>
-              Any financial losses, investment losses, or opportunity costs incurred as a
-              result of relying on screening results provided by this Service.
-            </li>
-            <li>
-              Errors, inaccuracies, or delays in the data provided by third-party sources.
-            </li>
-            <li>
-              Any religious consequences arising from investment decisions made based on
-              our screening classifications.
-            </li>
-            <li>
-              Service interruptions, downtime, or technical failures that may prevent access
-              to screening results.
-            </li>
-          </ul>
-        </section>
-
-        {/* Regulatory Environment */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Regulatory Environment</h2>
-          <p className={styles.prose}>
-            The regulatory environment for fintech services in India is evolving. SEBI, RBI,
-            and other regulatory bodies may introduce new rules, guidelines, or licensing
-            requirements that could affect the operation of this Service. We are committed to
-            complying with all applicable regulations and will make necessary adjustments to
-            the Service as the regulatory landscape evolves.
-          </p>
-          <p className={styles.prose}>
-            If future regulations require Barakfi to obtain specific licences or
-            registrations, we will pursue such compliance. Users will be notified of any
-            material changes to the Service&apos;s regulatory status.
-          </p>
-        </section>
-
-        {/* User Acknowledgement */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>User Acknowledgement</h2>
-          <div className={styles.warningBox}>
-            <p>
-              By using Barakfi, you acknowledge that you have read, understood, and
-              agree to the disclaimers set forth on this page. You accept full responsibility
-              for your investment decisions and agree that Barakfi shall not be liable
-              for any losses arising from the use of this Service.
-            </p>
-          </div>
-        </section>
-
-        {/* Third-Party Advertising */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Third-Party Advertising</h2>
-          <p className={styles.prose}>
-            Barakfi displays advertisements from third-party ad networks, including
-            Google AdSense (web) and Google AdMob (mobile). The appearance of any advertisement
-            on this site does not constitute an endorsement, guarantee, or recommendation
-            of the advertised product, service, or company by Barakfi. We do not control
-            the content of third-party advertisements and are not responsible for any claims
-            made therein. Users should exercise independent judgement before engaging with
-            any advertised content.
-          </p>
-        </section>
-
-        {/* Contact */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Report Concerns</h2>
-          <p className={styles.prose}>
-            If you believe any screening result is inaccurate or if you have concerns about
-            the data or methodology used:
-          </p>
-          <div className={styles.contactBox}>
-            <p>Email: <a href="mailto:support@barakfi.in">support@barakfi.in</a></p>
-            <p>Shariah Concerns: <a href="mailto:shariah@barakfi.in">shariah@barakfi.in</a></p>
-            <p>Legal Enquiries: <a href="mailto:legal@barakfi.in">legal@barakfi.in</a></p>
-          </div>
-        </section>
-
-        {/* Legal Nav */}
-        <nav className={styles.legalNav} aria-label="Legal pages">
-          <Link href="/terms" className={styles.legalNavLink}>Terms of Service</Link>
-          <Link href="/privacy" className={styles.legalNavLink}>Privacy Policy</Link>
-          <Link href="/shariah-compliance" className={styles.legalNavLink}>Shariah Compliance</Link>
-          <Link href="/methodology" className={styles.legalNavLink}>Screening Methodology</Link>
-        </nav>
-      </div>
-    </main>
+    <LegalShell
+      pageTitle="Risk"
+      titleAccent="Disclaimer"
+      eyebrow="Important — Please Read"
+      heroText="BarakFi is an educational screening tool. It is not a SEBI-registered investment adviser, and its results are not a certified Shariah opinion. Please read the full disclaimer before using this service."
+      heroRisk
+      cards={cards}
+      navItems={[
+        { id: "educational", label: "1. Educational Purpose" },
+        { id: "notsebi", label: "2. Not SEBI Registered" },
+        { id: "notshariah", label: "3. Not Shariah-Certified" },
+        { id: "accuracy", label: "4. Data Accuracy" },
+        { id: "investment", label: "5. Investment Risk" },
+        { id: "screening", label: "6. Screening Limitations" },
+        { id: "liability", label: "7. Liability" },
+        { id: "thirdparty", label: "8. Third-Party Links" },
+        { id: "contact", label: "9. Contact" },
+      ]}
+      relatedLinks={[
+        { href: "/terms", label: "Terms of Service" },
+        { href: "/privacy", label: "Privacy Policy" },
+      ]}
+      sections={sections}
+    />
   );
 }

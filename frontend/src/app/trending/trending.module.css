@@ -1,22 +1,161 @@
-.container { max-width: 900px; margin: 0 auto; padding: 24px 24px 64px; }
-.breadcrumb { display: flex; gap: 8px; font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 20px; }
-.breadcrumb a { color: var(--text-tertiary); text-decoration: none; }
-.breadcrumb a:hover { color: var(--emerald); }
-.header { margin-bottom: 24px; }
-.kicker { display: inline-flex; padding: 4px 12px; border-radius: var(--radius-full); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--emerald); background: var(--emerald-bg); border: 1px solid var(--emerald-border); margin-bottom: 12px; }
-.title { font-family: var(--font-display); font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; color: var(--text); margin: 0 0 8px; }
-.subtitle { font-size: 0.92rem; color: var(--text-secondary); margin: 0; }
-.pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-.pill { padding: 6px 16px; border-radius: var(--radius-full); border: 1px solid var(--line); background: var(--panel); font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
-.pillActive { border-color: var(--emerald); color: var(--emerald); background: var(--emerald-bg); }
-.grid { display: flex; flex-direction: column; gap: 8px; }
-.card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--radius-lg); border: 1px solid var(--line); background: var(--panel); text-decoration: none; transition: border-color 150ms, transform 150ms; }
-.card:hover { border-color: var(--emerald); transform: translateX(2px); }
-.cardRank { width: 28px; height: 28px; border-radius: var(--radius-sm); background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--text-tertiary); flex-shrink: 0; }
-.cardBody { flex: 1; min-width: 0; }
-.cardSymbol { font-size: 0.88rem; font-weight: 700; color: var(--text); }
-.cardName { font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cardRight { text-align: right; flex-shrink: 0; }
-.cardPrice { font-size: 0.88rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-.cardMcap { font-size: 0.7rem; color: var(--text-tertiary); }
-.cardExchange { padding: 2px 8px; border-radius: var(--radius-full); font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); background: var(--bg-soft); flex-shrink: 0; }
+.page {
+  --ink: #e6e2d8;
+  --ink2: rgba(230, 226, 216, 0.58);
+  --ink3: rgba(230, 226, 216, 0.1);
+  --dark: #091410;
+  --mid: #112318;
+  --gold: #7ec8a0;
+  --accent: #5ec486;
+  --red: #e06868;
+  --amber: #e0a468;
+  --w: 72px;
+  background: var(--dark);
+  color: var(--ink);
+}
+
+.pageHeader {
+  padding: 72px var(--w) 56px;
+  border-bottom: 1px solid var(--ink3);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 40px;
+}
+
+.eyebrow,
+.sectionEyebrow {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.eyebrow { margin-bottom: 20px; }
+
+.title {
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.title em { font-style: italic; color: var(--gold); }
+
+.subtitle {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.75;
+  max-width: 420px;
+  margin-top: 16px;
+}
+
+.headerMeta { text-align: right; }
+.metaLabel { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink2); margin-bottom: 8px; }
+.metaValue { font-size: 28px; color: var(--gold); }
+.metaSub { font-size: 11px; color: var(--ink2); margin-top: 4px; }
+
+.indexStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--ink3);
+}
+
+.indexCard { background: var(--mid); padding: 28px 32px; }
+.indexName { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink2); margin-bottom: 10px; }
+.indexValue { font-size: 30px; color: var(--ink); line-height: 1; letter-spacing: -0.02em; }
+.indexChangeRow { font-size: 12px; margin-top: 8px; display: flex; gap: 6px; align-items: center; }
+.indexMuted { color: var(--ink2); }
+.up { color: var(--accent); }
+.down { color: var(--red); }
+
+.tabsBar {
+  padding: 0 var(--w);
+  border-bottom: 1px solid var(--ink3);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--mid);
+  flex-wrap: wrap;
+}
+
+.tab,
+.sectionTab {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink2);
+  padding: 16px 24px;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover,
+.sectionTab:hover { color: var(--ink); }
+.activeTab,
+.sectionTabActive { color: var(--gold); border-bottom-color: var(--gold); }
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--ink3);
+}
+
+.panel { background: var(--dark); padding: 40px 36px; }
+.panelTitle { font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.panelDotUp,.panelDotDown,.panelDotAmber,.panelDotGold { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.panelDotUp { background: var(--accent); }
+.panelDotDown { background: var(--red); }
+.panelDotAmber { background: var(--amber); }
+.panelDotGold { background: var(--gold); }
+
+.miniRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--ink3);
+  text-decoration: none;
+}
+
+.miniRow:last-child { border-bottom: none; }
+.miniRow:hover { opacity: 0.78; }
+.miniLeft { display: flex; flex-direction: column; }
+.miniTicker { font-size: 12.5px; font-weight: 500; letter-spacing: 0.04em; color: var(--ink); }
+.miniCompany { font-size: 10.5px; color: var(--ink2); margin-top: 2px; }
+.miniRight { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.miniPrice { font-size: 12.5px; color: var(--ink); }
+.miniStatus { font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.section { padding: 52px var(--w); border-bottom: 1px solid var(--ink3); background: var(--mid); }
+.sectionEyebrow { margin-bottom: 32px; display: flex; align-items: center; gap: 16px; }
+.sectionEyebrow::after { content: ""; flex: 1; height: 1px; background: var(--ink3); }
+.sectionTabs { display: flex; gap: 0; margin-bottom: 28px; border: 1px solid var(--ink3); width: fit-content; flex-wrap: wrap; }
+.sectionTab { padding: 9px 20px; font-size: 10.5px; border-right: 1px solid var(--ink3); }
+.sectionTab:last-child { border-right: none; }
+.sectionTabActive { background: rgba(126,200,160,.08); }
+
+.table { width: 100%; border-collapse: collapse; }
+.table th { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink2); padding: 0 0 14px; border-bottom: 1px solid var(--ink3); font-weight: 400; text-align: left; }
+.table th:not(:first-child):not(:nth-child(2)) { text-align: right; }
+.table td { padding: 14px 0; border-bottom: 1px solid var(--ink3); font-size: 13px; color: var(--ink); vertical-align: middle; }
+.table td:not(:first-child):not(:nth-child(2)) { text-align: right; }
+.table tr:hover td { color: var(--gold); }
+.rank { font-size: 11px; color: var(--ink2); width: 32px; }
+.stockLink { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+.stockTicker { font-weight: 500; letter-spacing: 0.04em; }
+.stockName, .sector { font-size: 11px; color: var(--ink2); margin-top: 2px; }
+.badge { display: inline-block; font-size: 9.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px; border: 1.5px solid; }
+.badgeCompliant { color: var(--accent); border-color: rgba(94,196,134,.4); }
+.badgeReview { color: var(--amber); border-color: rgba(224,164,104,.4); }
+.badgeNonCompliant { color: var(--red); border-color: rgba(224,104,104,.4); }
+
+@media (max-width: 900px) {
+  .page { --w: 20px; }
+  .pageHeader { grid-template-columns: 1fr; gap: 24px; }
+  .headerMeta { text-align: left; }
+  .indexStrip, .panels { grid-template-columns: 1fr; }
+  .sectionTabs { width: 100%; }
+}

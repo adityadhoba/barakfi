@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, startTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DM_Serif_Display } from "next/font/google";
 import { useBatchQuotes } from "@/hooks/use-batch-quotes";
@@ -9,7 +9,7 @@ import type { ScreeningResult, WatchlistEntry } from "@/lib/api";
 import { formatMoney, resolveDisplayCurrency, resolveMarketLabel } from "@/lib/currency-format";
 import { exchangeForBatchQuote } from "@/lib/exchange-for-quotes";
 import { useToast } from "@/components/toast";
-import { LocalMarketingNav } from "@/components/local-marketing-nav";
+import { EditorialChrome } from "@/components/editorial-chrome";
 import styles from "./watchlist-html-page.module.css";
 
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -17,17 +17,6 @@ const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
 type EnrichedEntry = WatchlistEntry & {
   screening: ScreeningResult | null;
 };
-
-const TICKER_ITEMS = [
-  { label: "NIFTY 50", value: "23,842.75", change: "+0.54%", positive: true },
-  { label: "SENSEX", value: "78,553.20", change: "+0.54%", positive: true },
-  { label: "NIFTY BANK", value: "51,236.80", change: "-0.17%", positive: false },
-  { label: "NIFTY IT", value: "33,156.40", change: "+0.75%", positive: true },
-  { label: "NIFTY PHARMA", value: "19,872.35", change: "+0.28%", positive: true },
-  { label: "NIFTY AUTO", value: "23,145.90", change: "-0.48%", positive: false },
-  { label: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
-  { label: "INDIA VIX", value: "13.42", change: "-2.75%", positive: false },
-];
 
 const PUBLIC_ROWS = [
   { symbol: "TCS", name: "Tata Consultancy Services", sector: "IT", price: "₹3,577", change: "+0.84%", status: "compliant" },
@@ -41,13 +30,6 @@ const STATUS_LABELS: Record<string, string> = {
   CAUTIOUS: "Requires Review",
   NON_COMPLIANT: "Not Compliant",
 };
-
-const NAV_ITEMS = [
-  { href: "/screener", label: "Screener" },
-  { href: "/trending", label: "Trending" },
-  { href: "/methodology", label: "Methodology" },
-  { href: "/watchlist", label: "Watchlist" },
-];
 
 function badgeVariant(status: string | null | undefined) {
   if (status === "HALAL" || status === "compliant") return styles.badgeCompliant;
@@ -72,23 +54,28 @@ export function WatchlistHtmlPage({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [localEntries, setLocalEntries] = useState(entries);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "HALAL" | "CAUTIOUS" | "NON_COMPLIANT">("all");
   const [pendingSymbol, setPendingSymbol] = useState<string | null>(null);
 
-  const symbols = useMemo(() => entries.map((entry) => entry.stock.symbol), [entries]);
+  useEffect(() => {
+    setLocalEntries(entries);
+  }, [entries]);
+
+  const symbols = useMemo(() => localEntries.map((entry) => entry.stock.symbol), [localEntries]);
   const exchangeBySymbol = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const entry of entries) {
+    for (const entry of localEntries) {
       map[entry.stock.symbol] = exchangeForBatchQuote(entry.stock.exchange, entry.stock.currency);
     }
     return map;
-  }, [entries]);
+  }, [localEntries]);
 
   const quotes = useBatchQuotes(symbols, exchangeBySymbol);
 
   const filtered = useMemo(() => {
-    return entries.filter((entry) => {
+    return localEntries.filter((entry) => {
       const matchesQuery =
         query.trim().length === 0 ||
         entry.stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
@@ -97,15 +84,15 @@ export function WatchlistHtmlPage({
       const matchesFilter = filter === "all" || status === filter;
       return matchesQuery && matchesFilter;
     });
-  }, [entries, filter, query]);
+  }, [filter, localEntries, query]);
 
   const summary = useMemo(
     () => ({
-      compliant: entries.filter((entry) => entry.screening?.status === "HALAL").length,
-      review: entries.filter((entry) => entry.screening?.status === "CAUTIOUS" || !entry.screening?.status).length,
-      nonCompliant: entries.filter((entry) => entry.screening?.status === "NON_COMPLIANT").length,
+      compliant: localEntries.filter((entry) => entry.screening?.status === "HALAL").length,
+      review: localEntries.filter((entry) => entry.screening?.status === "CAUTIOUS" || !entry.screening?.status).length,
+      nonCompliant: localEntries.filter((entry) => entry.screening?.status === "NON_COMPLIANT").length,
     }),
-    [entries],
+    [localEntries],
   );
 
   async function removeSymbol(symbol: string) {
@@ -119,8 +106,9 @@ export function WatchlistHtmlPage({
         const payload = await response.json().catch(() => ({}));
         throw new Error(payload?.detail || payload?.error || "Could not remove watchlist item");
       }
+      setLocalEntries((current) => current.filter((entry) => entry.stock.symbol !== symbol));
       toast(`${symbol} removed from watchlist`, "info");
-      startTransition(() => router.refresh());
+      router.refresh();
     } catch (error) {
       toast(error instanceof Error ? error.message : "Could not remove watchlist item", "error");
     } finally {
@@ -129,20 +117,8 @@ export function WatchlistHtmlPage({
   }
 
   return (
+    <EditorialChrome activeHref="/watchlist">
     <main className={styles.page}>
-      <div className={styles.ticker}>
-        <div className={styles.tickerTrack}>
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
-            <span className={styles.tickerItem} key={`${item.label}-${index}`}>
-              <b>{item.label}</b> {item.value}{" "}
-              <span className={item.positive ? styles.tickerUp : styles.tickerDown}>{item.change}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <LocalMarketingNav activeHref="/watchlist" items={NAV_ITEMS} />
-
       <section className={styles.hero}>
         <div className={styles.heroLeft}>
           <div className={styles.eyebrow}>Your Watchlist</div>
@@ -186,7 +162,7 @@ export function WatchlistHtmlPage({
             <div className={styles.heroCard}>
               <div className={`${styles.heroCardTitle} ${serif.className}`}>Your saved view</div>
               <p className={styles.heroCardBody}>
-                {entries.length} saved {entries.length === 1 ? "stock" : "stocks"} across your BarakFi watchlist.
+                {localEntries.length} saved {localEntries.length === 1 ? "stock" : "stocks"} across your BarakFi watchlist.
                 Use the filters below or jump back to the screener to add more.
               </p>
               <div className={styles.heroStats}>
@@ -311,13 +287,20 @@ export function WatchlistHtmlPage({
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : localEntries.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={`${styles.emptyTitle} ${serif.className}`}>Your watchlist is empty</div>
               <p className={styles.emptyBody}>
                 Save stocks from the screener to build a cleaner research list and revisit names faster.
               </p>
               <Link href="/screener" className={styles.primaryButton}>Browse Screener</Link>
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <div className={`${styles.emptyTitle} ${serif.className}`}>No stocks match this filter</div>
+              <p className={styles.emptyBody}>
+                Try a different search or switch status filters to bring more saved names back into view.
+              </p>
             </div>
           )
         ) : (
@@ -355,35 +338,7 @@ export function WatchlistHtmlPage({
         )}
       </section>
 
-      <footer className={styles.footer}>
-        <div>
-          <div className={`${styles.footerBrand} ${serif.className}`}>Barak<span>Fi</span></div>
-          <div className={styles.footerSub}>Shariah-compliant stock research for Indian markets. Built with care.</div>
-        </div>
-        <div className={styles.footerCols}>
-          <div className={styles.footerCol}>
-            <div className={styles.footerHeading}>Product</div>
-            <Link href="/screener">Screener</Link>
-            <Link href="/watchlist">Watchlist</Link>
-            <Link href="/tools">Tools</Link>
-          </div>
-          <div className={styles.footerCol}>
-            <div className={styles.footerHeading}>Learn</div>
-            <Link href="/methodology">Methodology</Link>
-            <Link href="/about-us">About</Link>
-          </div>
-          <div className={styles.footerCol}>
-            <div className={styles.footerHeading}>Legal</div>
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-            <Link href="/disclaimer">Disclaimer</Link>
-          </div>
-        </div>
-      </footer>
-      <div className={styles.footerBottom}>
-        <span>© 2026 BarakFi · Educational screening · Not a religious ruling or financial advice</span>
-        <span>Made in India</span>
-      </div>
     </main>
+    </EditorialChrome>
   );
 }
