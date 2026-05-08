@@ -107,15 +107,100 @@ const CRITERIA = [
 ];
 
 const PROHIBITED_SECTORS = [
-  { name: "Banking & Financial Services", why: "Core riba-based income model", badge: "Excluded", glyph: "▣" },
-  { name: "Insurance (Conventional)", why: "Uncertainty (gharar) and interest income", badge: "Excluded", glyph: "◎" },
-  { name: "Alcohol & Beverages", why: "Prohibited substance (khamr)", badge: "Excluded", glyph: "◈" },
-  { name: "Tobacco", why: "Harmful substance, scholarly consensus", badge: "Excluded", glyph: "⊘" },
-  { name: "Defence & Weapons", why: "Primary business in armaments", badge: "Excluded", glyph: "➤" },
-  { name: "Adult Entertainment", why: "Morally impermissible content", badge: "Excluded", glyph: "▢" },
-  { name: "Pork & Related Products", why: "Prohibited in Islamic law (haram)", badge: "Excluded", glyph: "▤" },
-  { name: "Gambling & Speculation", why: "Maisir — prohibited financial activity", badge: "Excluded", glyph: "◇" },
-  { name: "Pornography", why: "Strictly impermissible", badge: "Excluded", glyph: "⬡" },
+  {
+    name: "Banking & Financial Services",
+    why: "Core riba-based income model",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Insurance (Conventional)",
+    why: "Uncertainty (gharar) and interest income",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+      </svg>
+    ),
+  },
+  {
+    name: "Alcohol & Beverages",
+    why: "Prohibited substance (khamr)",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Tobacco",
+    why: "Harmful substance, scholarly consensus",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+      </svg>
+    ),
+  },
+  {
+    name: "Defence & Weapons",
+    why: "Primary business in armaments",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Adult Entertainment",
+    why: "Morally impermissible content",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+      </svg>
+    ),
+  },
+  {
+    name: "Pork & Related Products",
+    why: "Prohibited in Islamic law (haram)",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
+    ),
+  },
+  {
+    name: "Gambling & Speculation",
+    why: "Maisir — prohibited financial activity",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Pornography",
+    why: "Strictly impermissible",
+    badge: "Excluded",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+  },
 ];
 
 const LEGEND = [
@@ -256,7 +341,7 @@ export default function MethodologyPage() {
           <div className={styles.sectorGrid}>
             {PROHIBITED_SECTORS.map((sector) => (
               <article key={sector.name} className={styles.sectorItem}>
-                <div className={styles.sectorIcon}>{sector.glyph}</div>
+                <div className={styles.sectorIcon}>{sector.icon}</div>
                 <div>
                   <div className={styles.sectorName}>{sector.name}</div>
                   <div className={styles.sectorWhy}>{sector.why}</div>
