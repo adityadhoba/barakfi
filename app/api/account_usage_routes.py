@@ -278,6 +278,26 @@ def _repair_user_identity_from_clerk(user: User) -> bool:
     return changed
 
 
+def _can_discard_placeholder_user(user: User) -> bool:
+    return (
+        _looks_placeholder_email(user.email)
+        and _looks_placeholder_name(user.display_name, user.auth_subject, user.email)
+        and not user.watchlist_entries
+        and not user.portfolios
+        and not user.saved_screeners
+        and not user.research_notes
+        and not user.support_notes
+        and not user.monthly_usages
+        and not user.report_usage_events
+        and not user.screening_report_history
+        and not user.feature_waitlist_entries
+        and not user.analytics_events
+        and not user.audit_logs
+        and not user.data_export_requests
+        and not user.account_deletion_requests
+    )
+
+
 def _audit(db: Session, *, user_id: int | None, action: str, request: Request | None = None, metadata: dict | None = None) -> None:
     db.add(
         AuditLog(
@@ -319,6 +339,21 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
         raise HTTPException(status_code=401, detail="Token subject missing")
 
     email = _claims_email(claims)
+    name = _claims_name(claims)
+    image_url = _claims_image(claims)
+
+    clerk_email = None
+    clerk_name = None
+    clerk_image_url = None
+    if not email or _looks_placeholder_name(name, auth_subject, email):
+        clerk_email, clerk_name, clerk_image_url = _fetch_clerk_user_profile(auth_subject)
+        if clerk_email and not email:
+            email = clerk_email
+        if clerk_name and _looks_placeholder_name(name, auth_subject, email):
+            name = clerk_name
+        if clerk_image_url and not image_url:
+            image_url = clerk_image_url
+
     def _find_user() -> User | None:
         current = db.query(User).filter(User.auth_subject == auth_subject).first()
         if not current and email:
@@ -328,10 +363,16 @@ def _ensure_current_user(db: Session, claims: dict) -> User:
         return current
 
     user = _find_user()
-
     now = _utc_now()
-    name = _claims_name(claims)
-    image_url = _claims_image(claims)
+
+    if user and email and _looks_placeholder_email(user.email):
+        email_match = db.query(User).filter(func.lower(User.email) == email.lower()).first()
+        if email_match and email_match.id != user.id and _can_discard_placeholder_user(user):
+            db.delete(user)
+            db.flush()
+            user = email_match
+            if user.auth_subject != auth_subject:
+                user.auth_subject = auth_subject
 
     if user:
         if email:
