@@ -15,44 +15,46 @@ export default function SignInPage() {
   return (
     <AuthEditorialShell
       mode="sign-in"
-      eyebrow="Secure Access"
+      eyebrow="Welcome back"
       heading={
         <>
-          Sign in to your
+          Your halal
           <br />
-          BarakFi <em>screening workspace</em>
+          portfolio starts
+          <br />
+          <em>here.</em>
         </>
       }
       description={
         <>
-          Track compliance updates, continue saved comparisons, and keep your research notes in one
-          secure place.
+          Sign in to access your personal watchlist, track compliance changes, and keep your
+          screening workflow in one place.
         </>
       }
       features={[
         {
-          title: "Research-backed checks",
-          body: "Data-backed checks from published financial statements and transparent ratio evidence.",
+          title: "Compliance Watchlist",
+          body: "Save any of 527 screened NSE & BSE stocks and monitor their status over time.",
         },
         {
-          title: "Multi-standard screening",
-          body: "Review methodology context across debt, interest income, receivables, and business screens.",
+          title: "Track status changes",
+          body: "Review when a saved stock moves from Compliant to Requires Review — or back.",
         },
         {
-          title: "Synced workflow",
-          body: "Keep your watchlist, screening history, and future workflow tools tied to one account.",
+          title: "Always free",
+          body: "No subscription. No credit card. BarakFi is free to use while we build the workflow.",
         },
       ]}
       stats={[
-        { value: "370+", label: "Indian listings covered" },
-        { value: "NSE · BSE", label: "Exchanges supported" },
+        { value: "527", label: "Stocks covered" },
+        { value: "4", label: "Screening standards" },
+        { value: "Free", label: "Always" },
       ]}
-      cardEyebrow="Welcome back"
-      cardTitle="Sign in"
+      cardEyebrow="Sign in"
+      cardTitle="Welcome back"
       cardSub={
         <>
-          Continue to your BarakFi account and synced watchlist. New here?{" "}
-          <Link href="/sign-up">Create an account</Link>.
+          Don&apos;t have an account? <Link href="/sign-up">Create one free →</Link>
         </>
       }
     >

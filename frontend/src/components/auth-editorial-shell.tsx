@@ -52,6 +52,7 @@ export function AuthEditorialShell({
   children,
 }: Props) {
   const isSignUp = mode === "sign-up";
+  const isSignIn = mode === "sign-in";
 
   return (
     <div className={styles.shell}>
@@ -69,12 +70,12 @@ export function AuthEditorialShell({
       <LocalMarketingNav activeAuth={mode} />
 
       <main className={`${styles.page} ${isSignUp ? styles.pageSignUp : styles.pageSignIn}`}>
-        <section
-          className={`${styles.left} ${isSignUp ? styles.leftSignUp : ""} ${isSignUp ? styles.leftGradient : ""}`}
-        >
+        <section className={`${styles.left} ${isSignUp ? styles.leftSignUp : ""}`}>
           <div className={styles.leftTop}>
             <div className={styles.eyebrow}>{eyebrow}</div>
-            <h1 className={`${styles.heading} ${serif.className}`}>{heading}</h1>
+            <h1 className={`${styles.heading} ${serif.className} ${isSignIn ? styles.headingSignIn : styles.headingSignUp}`}>
+              {heading}
+            </h1>
             <p className={styles.desc}>{description}</p>
 
             <div className={styles.features}>
@@ -100,12 +101,12 @@ export function AuthEditorialShell({
           </div>
         </section>
 
-        <section className={`${styles.right} ${isSignUp ? styles.rightSignUp : ""}`}>
+        <section className={`${styles.right} ${isSignUp ? styles.rightSignUp : ""} ${isSignIn ? styles.rightSignIn : ""}`}>
           <div className={styles.mobileIntro}>
             <div className={styles.eyebrow}>{eyebrow}</div>
             <p className={styles.mobileIntroText}>{description}</p>
           </div>
-          <div className={styles.card}>
+          <div className={`${styles.card} ${isSignIn ? styles.cardSignIn : styles.cardSignUp}`}>
             <div className={styles.cardEyebrow}>{cardEyebrow}</div>
             <div className={`${styles.cardTitle} ${serif.className}`}>{cardTitle}</div>
             <div className={styles.cardSub}>{cardSub}</div>
@@ -120,6 +121,7 @@ export function AuthEditorialShell({
           <Link href="/privacy">Privacy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/disclaimer">Disclaimer</Link>
+          <Link href="/methodology">Methodology</Link>
         </div>
       </footer>
     </div>

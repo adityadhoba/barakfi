@@ -15,38 +15,42 @@ export default function SignUpPage() {
   return (
     <AuthEditorialShell
       mode="sign-up"
-      eyebrow="Start your account"
+      eyebrow="Shariah Stock Screener · India"
       heading={
         <>
-          Create your
+          Screen with
           <br />
-          BarakFi <em>account</em>
+          <em>clarity.</em>
+          <br />
+          Screen with
+          <br />
+          conscience.
         </>
       }
       description={
         <>
-          Start with a free account to save screened stocks, compare ideas, and keep research notes
-          across devices.
+          BarakFi screens <strong>527 NSE &amp; BSE stocks</strong> against Shariah compliance
+          criteria, so you know where a company stands before you save it.
         </>
       }
       features={[
         {
-          title: "Data-first screening",
-          body: "Review ratio logic and methodology context before you decide on a stock.",
+          title: "Clear verdicts, no guesswork",
+          body: "Compliant, Requires Review, or Not Compliant — grounded in transparent methodology.",
         },
         {
-          title: "Persistent workflow",
-          body: "Save watchlist names and pick up your research flow across sessions and devices.",
+          title: "Understand why a stock is flagged",
+          body: "See business-screen and ratio context before you decide what deserves more research.",
         },
         {
-          title: "Future-ready tools",
-          body: "Your account will connect screening history, export requests, and upcoming workflow tools.",
+          title: "Save stocks for later",
+          body: "Create a synced watchlist and continue your screening workflow across sessions and devices.",
         },
       ]}
       stats={[
-        { value: "Free", label: "Account tier to start" },
-        { value: "25", label: "Watchlist slots" },
-        { value: "50", label: "Monthly report opens" },
+        { value: "527", label: "Stocks screened" },
+        { value: "4", label: "Screening standards" },
+        { value: "Free", label: "To start" },
       ]}
       cardEyebrow="Create account"
       cardTitle="Get started"

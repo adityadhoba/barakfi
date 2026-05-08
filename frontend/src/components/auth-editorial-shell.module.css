@@ -130,21 +130,15 @@
   height: 280px;
 }
 
-.leftGradient {
-  background: linear-gradient(135deg, #047857 0%, #059669 40%, #10b981 70%, #065f46 100%);
-  background-size: 200% 200%;
-  animation: authGradientShift 12s ease-in-out infinite;
-  border-right: none;
-}
-
 .leftTop,
 .leftBottom {
   position: relative;
   z-index: 1;
+  animation: fadeUp 0.65s ease both;
 }
 
 .eyebrow {
-  font-size: 10.5px;
+  font-size: 10px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--gold);
@@ -153,11 +147,19 @@
 
 .heading {
   font-family: var(--font-display), "DM Serif Display", serif;
-  font-size: clamp(32px, 3.5vw, 52px);
+  font-size: clamp(36px, 4vw, 54px);
   font-weight: 400;
-  line-height: 1.08;
+  line-height: 1.05;
   letter-spacing: -0.01em;
   color: var(--ink);
+}
+
+.headingSignIn {
+  max-width: 520px;
+}
+
+.headingSignUp {
+  max-width: 520px;
 }
 
 .heading em {
@@ -166,7 +168,7 @@
 }
 
 .desc {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--ink2);
   line-height: 1.8;
   max-width: 340px;
@@ -183,6 +185,7 @@
   flex-direction: column;
   gap: 0;
   margin-top: 44px;
+  animation: fadeUp 0.72s 0.08s ease both;
 }
 
 .featureRow {
@@ -222,6 +225,7 @@
 .stats {
   display: flex;
   gap: 0;
+  animation: fadeUp 0.74s 0.16s ease both;
 }
 
 .statsThree {
@@ -229,6 +233,7 @@
   grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--ink3);
   padding-top: 28px;
+  animation: fadeUp 0.74s 0.16s ease both;
 }
 
 .stat {
@@ -280,6 +285,10 @@
   background: var(--dark);
 }
 
+.rightSignIn {
+  padding: 72px 86px;
+}
+
 .rightSignUp {
   padding: 80px 72px 80px var(--w);
 }
@@ -287,6 +296,14 @@
 .card {
   width: 100%;
   max-width: 400px;
+}
+
+.cardSignIn {
+  max-width: 474px;
+}
+
+.cardSignUp {
+  max-width: 476px;
 }
 
 .cardEyebrow {
@@ -370,7 +387,7 @@
 .clerkSignIn :global(.cl-rootBox),
 .clerkSignUp :global(.cl-rootBox) {
   width: 100%;
-  max-width: 400px;
+  max-width: 476px;
 }
 
 .clerkSignIn :global(.cl-card),
@@ -396,13 +413,13 @@
   gap: 12px;
   width: 100%;
   padding: 15px 20px;
-  background: transparent;
-  color: var(--ink2);
-  border: 1px solid var(--ink3);
+  background: var(--ink);
+  color: var(--dark);
+  border: none;
   border-radius: 0;
   font-family: Inter, sans-serif;
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow: none;
@@ -410,9 +427,8 @@
 
 .clerkSignIn :global(.cl-socialButtonsBlockButton):hover,
 .clerkSignUp :global(.cl-socialButtonsBlockButton):hover {
-  border-color: rgba(230, 226, 216, 0.25);
-  color: var(--ink);
-  background: transparent;
+  background: var(--gold);
+  color: var(--dark);
 }
 
 .clerkSignIn :global(.cl-dividerRow),
@@ -435,22 +451,22 @@
 
 .clerkSignIn :global(.cl-formFieldLabel),
 .clerkSignUp :global(.cl-formFieldLabel) {
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink2);
-  margin-bottom: 10px;
+  margin-bottom: 7px;
 }
 
 .clerkSignIn :global(.cl-formFieldInput),
 .clerkSignUp :global(.cl-formFieldInput) {
   width: 100%;
-  background: var(--mid);
+  background: rgba(230, 226, 216, 0.04);
   border: 1px solid var(--ink3);
   border-radius: 0;
   padding: 13px 16px;
   font-family: Inter, sans-serif;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 300;
   color: var(--ink);
   outline: none;
@@ -461,6 +477,7 @@
 .clerkSignIn :global(.cl-formFieldInput):focus,
 .clerkSignUp :global(.cl-formFieldInput):focus {
   border-color: rgba(126, 200, 160, 0.5);
+  background: rgba(126, 200, 160, 0.03);
   box-shadow: none;
 }
 
@@ -474,17 +491,18 @@
 .clerkSignIn :global(.cl-formButtonPrimary),
 .clerkSignUp :global(.cl-formButtonPrimary) {
   width: 100%;
-  padding: 15px 20px;
+  padding: 15px 32px;
   background: var(--ink);
   color: var(--dark);
   border: none;
   border-radius: 0;
   font-family: Inter, sans-serif;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   box-shadow: none;
+  margin-top: 4px;
 }
 
 .clerkSignIn :global(.cl-formButtonPrimary):hover,
@@ -526,14 +544,57 @@
   border: 1px solid var(--ink3);
 }
 
+.clerkSignIn :global(.cl-socialButtonsProviderIcon),
+.clerkSignUp :global(.cl-socialButtonsProviderIcon) {
+  width: 18px;
+  height: 18px;
+}
+
+.clerkSignIn :global(.cl-formField),
+.clerkSignUp :global(.cl-formField) {
+  margin-bottom: 16px;
+}
+
+.clerkSignIn :global(.cl-formFieldRow),
+.clerkSignUp :global(.cl-formFieldRow) {
+  gap: 12px;
+}
+
+.clerkSignIn :global(.cl-formResendCodeLink),
+.clerkSignIn :global(.cl-formFieldAction),
+.clerkSignUp :global(.cl-formResendCodeLink),
+.clerkSignUp :global(.cl-formFieldAction) {
+  color: var(--ink2);
+  font-size: 11.5px;
+  text-decoration: none;
+}
+
+.clerkSignIn :global(.cl-formFieldAction):hover,
+.clerkSignUp :global(.cl-formFieldAction):hover,
+.clerkSignIn :global(.cl-formResendCodeLink):hover,
+.clerkSignUp :global(.cl-formResendCodeLink):hover {
+  color: var(--gold);
+}
+
+.clerkSignIn :global(.cl-footerAction),
+.clerkSignUp :global(.cl-footerAction) {
+  justify-content: center;
+}
+
 @keyframes authTick {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 
-@keyframes authGradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 980px) {
