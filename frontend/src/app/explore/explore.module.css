@@ -202,6 +202,26 @@
   color: #7ec8a0;
 }
 
+.collectionTag {
+  margin-bottom: 12px;
+}
+
+.collectionTagIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: #7ec8a0;
+  opacity: 0.95;
+}
+
+.collectionTagIcon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .eyebrow {
   margin-bottom: 16px;
   letter-spacing: 0.2em;
