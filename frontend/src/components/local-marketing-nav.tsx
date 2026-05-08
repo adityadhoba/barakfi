@@ -22,9 +22,11 @@ const DEFAULT_ITEMS: Item[] = [
 export function LocalMarketingNav({
   activeHref,
   items = DEFAULT_ITEMS,
+  activeAuth,
 }: {
   activeHref?: string;
   items?: Item[];
+  activeAuth?: "sign-in" | "sign-up";
 }) {
   return (
     <nav className={styles.nav} aria-label="Marketing navigation">
@@ -47,6 +49,9 @@ export function LocalMarketingNav({
           className={styles.navAuth}
           ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
           primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
+          ghostActiveClassName={styles.navAuthGhostActive}
+          primaryActiveClassName={styles.navAuthPrimaryActive}
+          activeAuth={activeAuth}
           userClassName={styles.navUser}
         />
       </div>
