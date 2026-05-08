@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DM_Serif_Display } from "next/font/google";
-import { RouteLocalAuth } from "@/components/route-local-auth";
+import { LocalMarketingNav } from "@/components/local-marketing-nav";
 import styles from "./editorial-chrome.module.css";
 
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
@@ -14,13 +14,6 @@ const TICKER_ITEMS = [
   { label: "NIFTY AUTO", value: "23,145.90", change: "−0.48%", positive: false },
   { label: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
   { label: "INDIA VIX", value: "13.42", change: "−2.75%", positive: false },
-];
-
-const NAV_ITEMS = [
-  { href: "/screener", label: "Screener" },
-  { href: "/explore", label: "Explore" },
-  { href: "/tools", label: "Tools" },
-  { href: "/watchlist", label: "Watchlist" },
 ];
 
 export function EditorialChrome({
@@ -43,28 +36,7 @@ export function EditorialChrome({
         </div>
       </div>
 
-      <nav className={styles.nav}>
-        <Link href="/" className={`${styles.logo} ${serif.className}`}>
-          Barak<span className={styles.logoAccent}>Fi</span>
-        </Link>
-        <div className={styles.links}>
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`${styles.link} ${activeHref === item.href ? styles.activeLink : ""}`}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-        <RouteLocalAuth
-          className={styles.auth}
-          ghostClassName={styles.authGhost}
-          primaryClassName={styles.authPrimary}
-          userClassName={styles.authUser}
-        />
-      </nav>
+      <LocalMarketingNav activeHref={activeHref} />
 
       {children}
 
