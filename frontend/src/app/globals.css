@@ -295,8 +295,8 @@ input, select, textarea, button {
   gap: 12px;
   padding: 0 12px;
   height: 56px;
-  border-bottom: 1px solid rgba(230,226,216,0.1);
-  background: rgba(9,20,16,0.97);
+  border-bottom: 1px solid var(--topbar-border);
+  background: var(--topbar-bg);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
@@ -312,11 +312,11 @@ input, select, textarea, button {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #e6e2d8;
-  font-family: 'DM Serif Display', Georgia, serif;
-  font-weight: 400;
-  font-size: 1.15rem;
-  letter-spacing: -0.01em;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
   transition: opacity var(--transition-fast);
   white-space: nowrap;
   flex-shrink: 0;
@@ -790,22 +790,20 @@ body[data-screener-v2] .topbarActions {
 /* Nav links */
 .ghostLink {
   padding: 7px 16px;
-  color: rgba(230,226,216,0.65);
-  font-size: 11px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
   font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   border-radius: var(--radius-full);
   transition: all 0.2s ease;
   position: relative;
 }
 .ghostLink:hover {
-  color: #e6e2d8;
-  background: rgba(230,226,216,0.06);
+  color: var(--text);
+  background: var(--bg-soft);
 }
 .ghostLinkActive {
-  color: #cb926a !important;
-  background: rgba(203,146,106,0.1);
+  color: var(--emerald) !important;
+  background: var(--emerald-dim);
   font-weight: 600;
 }
 
@@ -847,35 +845,29 @@ body[data-screener-v2] .topbarActions {
   justify-content: center;
   min-height: 44px;
   padding: 9px 20px;
-  border-radius: 0;
+  border-radius: var(--radius-full);
   background: transparent;
-  color: rgba(230,226,216,0.65);
-  font-weight: 500;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  border: 1px solid rgba(230,226,216,0.18);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.84rem;
+  border: 1px solid var(--line);
   transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 .ghostButtonLink:hover {
-  color: #e6e2d8;
-  border-color: rgba(230,226,216,0.35);
-  background: rgba(230,226,216,0.05);
+  color: var(--text);
+  background: var(--bg-soft);
+  border-color: var(--line-strong);
 }
 
 .solidButton {
-  background: #e6e2d8;
-  color: #0d0a07;
+  background: var(--emerald);
+  color: #fff;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 11px;
-  border-radius: 0;
 }
 .solidButton:hover {
-  background: #f5f0e8;
+  background: var(--emerald-hover);
 }
 
 @media (min-width: 769px) {
@@ -890,20 +882,21 @@ body[data-screener-v2] .topbarActions {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 9px 24px;
-  border-radius: 0;
-  background: #e6e2d8;
-  color: #0d0a07;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: opacity 0.15s;
+  padding: 9px 20px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-emerald);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.84rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-emerald);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 .solidButtonLink:hover {
-  opacity: 0.88;
+  box-shadow: var(--shadow-emerald-lg);
+  transform: translateY(-1px);
+  filter: brightness(1.08);
 }
 
 @media (min-width: 769px) {
