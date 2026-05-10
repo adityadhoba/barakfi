@@ -32,16 +32,39 @@
 
 .tickerTrack {
   display: flex;
+  animation: tickerMove 32s linear infinite;
   gap: 28px;
   white-space: nowrap;
-  padding: 0 28px;
   font-size: 11px;
   letter-spacing: 0.06em;
   color: var(--ink-muted);
 }
 
+@keyframes tickerMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
 .tickerItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
+  padding: 0 28px;
+  border-right: 1px solid var(--line);
+}
+
+.tickerItem b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tickerUp {
+  color: var(--accent);
+}
+
+.tickerDown {
+  color: var(--red);
 }
 
 .pageWrap {
