@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getStocks } from "@/lib/api";
 import { CompareTable } from "@/components/compare-table";
-import styles from "@/app/screener.module.css";
+import resultStyles from "./results.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -38,20 +38,15 @@ export default async function CompareResultsPage({
   const stocks = await getStocks();
 
   return (
-    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
-      <div className={styles.screenerContainer}>
-        <header className={styles.screenerHeader}>
-          <div className={styles.headerRow}>
-            <div>
-              <h1 className={styles.pageTitle}>Comparison Results</h1>
-              <p className={styles.pageDesc}>
-                Side-by-side Shariah screening, ratios, and financial data for your selected
-                stocks.
-              </p>
-            </div>
-          </div>
-        </header>
-
+    <main className={resultStyles.page}>
+      <div className={resultStyles.header}>
+        <div className={resultStyles.eyebrow}>COMPARE</div>
+        <h1 className={resultStyles.title}>Comparison Results</h1>
+        <p className={resultStyles.subtitle}>
+          Side-by-side Shariah screening, ratios, and financial data for your selected stocks.
+        </p>
+      </div>
+      <div className={resultStyles.tableWrap}>
         <CompareTable allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
       </div>
     </main>

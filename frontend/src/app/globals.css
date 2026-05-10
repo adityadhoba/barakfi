@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* ── Performance hints ── */
@@ -56,6 +57,7 @@
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   /* Product UI uses one typeface for clarity */
   --font-display: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, serif;
 
   /* Status colors: Halal = green, Doubtful = yellow/amber, Haram = red (accessible on card backgrounds) */
   --status-halal-fg: #047857;
@@ -178,6 +180,8 @@
   --status-haram-fg: #fda4af;
   --status-haram-bg: rgba(251, 113, 133, 0.12);
   --status-haram-border: rgba(251, 113, 133, 0.35);
+
+  --font-serif: 'DM Serif Display', Georgia, serif;
 
   color-scheme: dark;
 }
@@ -1252,7 +1256,7 @@ textarea:focus::placeholder {
 .authPage {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - 92px);
 }
 
 @media (max-width: 860px) {
@@ -1263,28 +1267,28 @@ textarea:focus::placeholder {
 }
 
 .authSidebar {
+  background: #112318;
+  border-right: 1px solid rgba(230,226,216,0.1);
+  padding: 72px 72px;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-  background: var(--emerald-bg);
-  border-right: 1px solid var(--emerald-border);
-}
-
-/* Premium gradient variant for login/signup */
-.authSidebarGradient {
-  background: linear-gradient(135deg, #047857 0%, #059669 40%, #10b981 70%, #065f46 100%);
-  background-size: 200% 200%;
-  animation: authGradientShift 12s ease-in-out infinite;
-  border-right: none;
+  flex-direction: column;
+  justify-content: space-between;
   position: relative;
   overflow: hidden;
 }
 
-@keyframes authGradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+/* New dark sidebar variant — same as .authSidebar but with circle decorations */
+.authSidebarGradient {
+  background: #112318;
+  border-right: 1px solid rgba(230,226,216,0.1);
+  padding: 72px 72px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
 }
+
 .authSidebarGradient::before {
   content: "";
   position: absolute;
@@ -1293,7 +1297,7 @@ textarea:focus::placeholder {
   width: 300px;
   height: 300px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(230,226,216,0.1);
   pointer-events: none;
 }
 .authSidebarGradient::after {
@@ -1304,27 +1308,11 @@ textarea:focus::placeholder {
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(230,226,216,0.1);
   pointer-events: none;
-}
-.authSidebarGradient .authSidebarTitle { color: #ffffff; }
-.authSidebarGradient .authSidebarDesc { color: rgba(255, 255, 255, 0.8); }
-.authSidebarGradient .authFeature { color: rgba(255, 255, 255, 0.85); }
-.authSidebarGradient .authFeatureIcon {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(4px);
-  width: 32px;
-  height: 32px;
-}
-.authSidebarGradient .authSidebarFooter { color: rgba(255, 255, 255, 0.5); }
-
-[data-theme="dark"] .authSidebar:not(.authSidebarGradient) {
-  background: rgba(5, 150, 105, 0.06);
-  border-right-color: rgba(5, 150, 105, 0.15);
 }
 
 .authSidebarInner {
-  max-width: 360px;
   position: relative;
   z-index: 1;
 }
@@ -1340,53 +1328,65 @@ textarea:focus::placeholder {
   margin-bottom: 24px;
 }
 
+.authLeftEyebrow {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  margin-bottom: 28px;
+}
+
 .authSidebarTitle {
-  font-family: var(--font-display);
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-  margin: 0 0 12px;
+  font-family: var(--font-serif);
+  font-size: clamp(32px, 3.5vw, 52px);
+  font-weight: 400;
+  line-height: 1.1;
+  color: #e6e2d8;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.authSidebarTitle em {
+  font-style: italic;
+  color: #7ec8a0;
 }
 
 .authSidebarDesc {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0 0 28px;
+  font-size: 13px;
+  color: rgba(230,226,216,0.58);
+  line-height: 1.8;
+  max-width: 340px;
+  margin: 24px 0 0;
 }
 
 .authFeatures {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: 0;
+  margin-top: 48px;
 }
 
 .authFeature {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(230,226,216,0.1);
+  font-size: 12.5px;
+  color: rgba(230,226,216,0.58);
   line-height: 1.5;
 }
 
+.authFeature:last-child {
+  border-bottom: 1px solid rgba(230,226,216,0.1);
+}
+
 .authFeatureIcon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7ec8a0;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 /* Testimonial card on auth sidebar */
@@ -1412,16 +1412,102 @@ textarea:focus::placeholder {
 }
 
 .authSidebarFooter {
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
-  font-style: italic;
+  font-size: 11px;
+  color: rgba(230,226,216,0.45);
+  letter-spacing: 0.04em;
+  font-style: normal;
   margin: 0;
+}
+
+.authSidebarStats {
+  display: flex;
+  gap: 0;
+  margin-top: auto;
+  padding-top: 32px;
+  border-top: 1px solid rgba(230,226,216,0.1);
+}
+
+.authSidebarStat {
+  flex: 1;
+  border-right: 1px solid rgba(230,226,216,0.1);
+  padding: 0 0 0 0;
+}
+
+.authSidebarStat:last-child {
+  border-right: none;
+}
+
+.authSidebarStatNum {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: #e6e2d8;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.authSidebarStatLabel {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230,226,216,0.58);
+  margin-top: 6px;
 }
 
 .authMain {
   display: grid;
   place-items: center;
   padding: 24px;
+  background: #091410;
+}
+
+/* Clerk form overrides for dark auth pages */
+.authMain .cl-card {
+  background: #091410 !important;
+  border: 1px solid rgba(230,226,216,0.1) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.authMain .cl-formButtonPrimary {
+  background: #e6e2d8 !important;
+  color: #091410 !important;
+  border-radius: 0 !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+}
+.authMain .cl-formButtonPrimary:hover {
+  background: #7ec8a0 !important;
+}
+.authMain .cl-formFieldInput {
+  background: #112318 !important;
+  border: 1px solid rgba(230,226,216,0.1) !important;
+  border-radius: 0 !important;
+  color: #e6e2d8 !important;
+  font-size: 13.5px !important;
+  font-weight: 300 !important;
+}
+.authMain .cl-socialButtonsBlockButton {
+  background: #e6e2d8 !important;
+  color: #091410 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.08em !important;
+  font-size: 12px !important;
+}
+.authMain .cl-headerTitle {
+  font-family: var(--font-serif) !important;
+  font-size: 34px !important;
+  font-weight: 400 !important;
+  color: #e6e2d8 !important;
+}
+.authMain .cl-headerSubtitle {
+  color: rgba(230,226,216,0.58) !important;
+  font-size: 13px !important;
+}
+.authMain .cl-footerActionLink {
+  color: #7ec8a0 !important;
 }
 
 .authMobileIntro {
