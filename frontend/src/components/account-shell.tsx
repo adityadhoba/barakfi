@@ -1,4 +1,5 @@
 import styles from "@/app/page.module.css";
+import headerStyles from "@/components/account-shell.module.css";
 import { AccountSettingsForm } from "@/components/account-settings-form";
 import { getAuthenticatedAlerts, getAuthenticatedUser, getUserBySubject } from "@/lib/api";
 import { auth, currentUser } from "@clerk/nextjs/server";
@@ -34,34 +35,26 @@ export async function AccountShell() {
   return (
     <main className="shellPage">
       {/* Profile Header */}
-      <section className="shellHeroSingle">
-        <div className="shellCard">
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: "50%",
-              background: "var(--emerald)", color: "var(--bg)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "1.4rem", fontWeight: 800, flexShrink: 0,
-            }}>
-              {initial}
-            </div>
-            <div>
-              <h1 className="shellH1" style={{ marginBottom: 2 }}>
-                {backendUser.display_name}
-              </h1>
-              <p className="shellSub" style={{ marginTop: 4 }}>
-                {primaryEmail}
-              </p>
-            </div>
+      <section className={headerStyles.pageHeader}>
+        <div className={headerStyles.eyebrow}>My Account</div>
+        <h1 className={headerStyles.pageTitle}>
+          Welcome back, <em>{firstName}.</em>
+        </h1>
+        <p className={headerStyles.pageSub}>
+          {primaryEmail} · {backendUser.is_active ? "Active account" : "Inactive account"}
+        </p>
+        <div className={headerStyles.statsStrip}>
+          <div className={headerStyles.stripStat}>
+            <div className={headerStyles.stripNum}>Free</div>
+            <div className={headerStyles.stripLabel}>Current plan</div>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-            <span className={styles.pill}>Free plan</span>
-            <span className={styles.pill}>
-              {backendUser.is_active ? "Active" : "Inactive"}
-            </span>
-            {alerts.length > 0 && (
-              <span className={styles.pill}>{alerts.length} alert{alerts.length > 1 ? "s" : ""}</span>
-            )}
+          <div className={headerStyles.stripStat}>
+            <div className={headerStyles.stripNum}>{alerts.length}</div>
+            <div className={headerStyles.stripLabel}>Active alerts</div>
+          </div>
+          <div className={headerStyles.stripStat}>
+            <div className={headerStyles.stripNum}>{backendUser.is_active ? "On" : "Off"}</div>
+            <div className={headerStyles.stripLabel}>Account status</div>
           </div>
         </div>
       </section>

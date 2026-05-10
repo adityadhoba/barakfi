@@ -1,0 +1,94 @@
+/* ═══════════════════════════════════════════════════════════════════
+   ACCOUNT PAGE — dark editorial header ribbon
+   ═══════════════════════════════════════════════════════════════════ */
+
+.pageHeader {
+  padding: 52px 72px 40px;
+  border-bottom: 1px solid rgba(230,226,216,0.1);
+  background: #091410;
+}
+
+@media (max-width: 768px) {
+  .pageHeader { padding: 36px 24px 32px; }
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  margin-bottom: 16px;
+}
+
+.eyebrow::after {
+  content: '';
+  flex: 1;
+  max-width: 120px;
+  height: 1px;
+  background: rgba(230,226,216,0.1);
+}
+
+.pageTitle {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 400;
+  line-height: 1.1;
+  color: #e6e2d8;
+  margin: 0 0 10px;
+  letter-spacing: -0.01em;
+}
+
+.pageTitle em {
+  color: #7ec8a0;
+  font-style: italic;
+}
+
+.pageSub {
+  font-size: 13px;
+  color: rgba(230,226,216,0.58);
+  font-weight: 300;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Stats strip */
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(230,226,216,0.1);
+  margin-top: 40px;
+}
+
+@media (max-width: 600px) {
+  .statsStrip { grid-template-columns: 1fr; }
+}
+
+.stripStat {
+  padding: 28px 0;
+  border-right: 1px solid rgba(230,226,216,0.1);
+}
+
+.stripStat:last-child {
+  border-right: none;
+}
+
+.stripNum {
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #7ec8a0;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.stripLabel {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(230,226,216,0.58);
+  margin-top: 6px;
+  font-weight: 400;
+}
