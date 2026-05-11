@@ -47,6 +47,7 @@ if not _DB_URL or _DB_URL.startswith("sqlite"):
     sys.exit(1)
 
 _ENV_FORCE = os.getenv("PIPELINE_FORCE_RUN", "").lower() in {"1", "true", "yes"}
+_EOD_PRICE_SOURCE = os.getenv("EOD_PRICE_SOURCE", "NSE_ARCHIVE").strip().upper() or "NSE_ARCHIVE"
 
 
 def _idempotency_key(job_name: str, trade_date: date) -> str:
@@ -59,6 +60,99 @@ def _ensure_tables() -> None:
     from app.database import Base, engine
     import app.models_v2  # noqa: F401 – registers all v2 models
     Base.metadata.create_all(bind=engine)
+
+
+def _fetch_yfinance_prices_for_date(db: Session, trade_date: date):
+    import pandas as pd
+
+    try:
+        import yfinance as yf
+    except ImportError as exc:  # pragma: no cover - guarded by requirements in prod
+        raise RuntimeError("yfinance fallback requested but yfinance is not installed") from exc
+
+    from app.models_v2 import ListingV2
+
+    listings = (
+        db.query(ListingV2.symbol)
+        .filter(ListingV2.exchange_code == "NSE")
+        .order_by(ListingV2.symbol.asc())
+        .all()
+    )
+    symbols = [row.symbol.strip().upper() for row in listings if row.symbol]
+    if not symbols:
+        return pd.DataFrame()
+
+    tickers = [f"{symbol}.NS" for symbol in symbols]
+    start = trade_date
+    end = trade_date + timedelta(days=1)
+    frames = []
+    batch_size = 100
+
+    for start_idx in range(0, len(tickers), batch_size):
+        batch = tickers[start_idx : start_idx + batch_size]
+        data = yf.download(
+            tickers=batch,
+            start=start.isoformat(),
+            end=end.isoformat(),
+            auto_adjust=False,
+            progress=False,
+            group_by="ticker",
+            threads=False,
+        )
+        if data is None or data.empty:
+            continue
+
+        for ticker in batch:
+            symbol = ticker.removesuffix(".NS")
+            try:
+                if len(batch) == 1:
+                    frame = data
+                else:
+                    frame = data[ticker]
+            except Exception:
+                continue
+            if frame is None or frame.empty:
+                continue
+            row = frame.iloc[-1]
+            close_value = row.get("Close")
+            if close_value is None or pd.isna(close_value):
+                continue
+            frames.append(
+                {
+                    "symbol": symbol,
+                    "series": "EQ",
+                    "open_price": float(row.get("Open")) if pd.notna(row.get("Open")) else None,
+                    "high_price": float(row.get("High")) if pd.notna(row.get("High")) else None,
+                    "low_price": float(row.get("Low")) if pd.notna(row.get("Low")) else None,
+                    "close_price": float(close_value),
+                    "volume": int(row.get("Volume")) if pd.notna(row.get("Volume")) else None,
+                    "turnover_value": None,
+                    "trade_date": trade_date,
+                    "source_url": f"https://finance.yahoo.com/quote/{ticker}/history",
+                    "source_name": "yfinance_eod",
+                    "exchange_code": "NSE",
+                }
+            )
+
+    if not frames:
+        return pd.DataFrame()
+    return pd.DataFrame(frames)
+
+
+def _fetch_price_frame_for_date(
+    db: Session,
+    connector,
+    trade_date: date,
+    job_run_id: int | None = None,
+):
+    if _EOD_PRICE_SOURCE == "YFINANCE":
+        logger.info("Using YFINANCE fallback for EOD price sync on %s", trade_date)
+        return _fetch_yfinance_prices_for_date(db, trade_date)
+    return connector.fetch_bhavcopy(
+        trade_date=trade_date,
+        db_session=db,
+        job_run_id=job_run_id,
+    )
 
 
 def run_for_date(
@@ -86,6 +180,7 @@ def run_for_date(
     started_at = datetime.now(UTC)
 
     db = SessionLocal()
+    connector = None
     try:
         # Idempotency guard
         existing = db.query(JobRun).filter_by(idempotency_key=idempotency_key).first()
@@ -111,19 +206,16 @@ def run_for_date(
 
         # Fetch bhavcopy
         connector = NSEBhavCopyConnector(timeout=120, max_retries=3)
-        df = connector.fetch_bhavcopy(
-            trade_date=trade_date,
-            db_session=db,
-            job_run_id=job_run.id,
-        )
+        df = _fetch_price_frame_for_date(db, connector, trade_date, job_run.id)
 
         if df.empty:
-            logger.warning("No bhavcopy data for %s (holiday or non-trading day?)", trade_date)
-            job_run.status = "succeeded"
+            logger.error("No EOD data synced, failing cron")
+            job_run.status = "failed"
             job_run.finished_at = datetime.now(UTC)
-            job_run.metrics_json = {**metrics, "note": "no_data_probably_holiday"}
+            job_run.metrics_json = {**metrics, "note": "no_data"}
+            job_run.error_json = {"error": f"No EOD data fetched for {trade_date.isoformat()}"}
             db.commit()
-            return metrics
+            raise RuntimeError(f"No EOD data fetched for {trade_date.isoformat()}")
 
         metrics["rows_fetched"] = len(df)
 
@@ -169,7 +261,7 @@ def run_for_date(
                 close_price=float(close_price),
                 volume=row.get("volume") or None,
                 turnover_value=row.get("turnover_value") or None,
-                source_name="nse_bhavcopy",
+                source_name=str(row.get("source_name") or "nse_bhavcopy"),
                 source_url=str(row.get("source_url", "")),
                 quality_flags=[],
             )
@@ -190,10 +282,11 @@ def run_for_date(
         if metrics["rows_inserted"] > 0:
             try:
                 from sqlalchemy import text
+                writeback_source_name = "yfinance_eod" if _EOD_PRICE_SOURCE == "YFINANCE" else "nse_bhavcopy"
                 update_sql = text("""
                     UPDATE stocks s
                     SET price = mpd.close_price,
-                        data_source = 'nse_bhavcopy'
+                        data_source = :source_name
                     FROM market_prices_daily mpd
                     JOIN listings_v2 lv ON lv.id = mpd.listing_id
                     WHERE lv.exchange_code = 'NSE'
@@ -201,7 +294,7 @@ def run_for_date(
                       AND s.exchange = 'NSE'
                       AND mpd.trade_date = :trade_date
                 """)
-                result = db.execute(update_sql, {"trade_date": trade_date})
+                result = db.execute(update_sql, {"trade_date": trade_date, "source_name": writeback_source_name})
                 stocks_updated = result.rowcount
                 db.commit()
                 logger.info("Updated stocks.price for %d rows from bhavcopy %s", stocks_updated, trade_date)
@@ -238,40 +331,33 @@ def run_for_date(
         metrics["errors"] += 1
         raise
     finally:
+        if connector is not None:
+            connector.close()
         db.close()
 
     return metrics
 
 
-def _latest_trading_date(max_lookback: int = 5) -> date:
-    """Return the most recent date that has NSE bhavcopy data.
-
-    Skips weekends automatically, then scans backwards up to max_lookback
-    weekdays to handle public holidays (e.g. Diwali, Republic Day).
-    Falls back to calendar yesterday if nothing is found.
-    """
+def _latest_trading_date(max_lookback: int = 10) -> date:
+    """Return the most recent calendar date that has fetchable EOD data."""
+    from app.database import SessionLocal
     from app.connectors.nse_bhavcopy import NSEBhavCopyConnector
 
     connector = NSEBhavCopyConnector()
-    # Start from today — cron runs at 7 PM IST so today's bhavcopy is already published
-    candidate = date.today()
-    checked = 0
-    while checked < max_lookback:
-        if candidate.weekday() < 5:  # Mon–Fri only
-            df = connector.fetch_bhavcopy(candidate)
+    db = SessionLocal()
+    try:
+        candidate = date.today()
+        for _ in range(max_lookback):
+            df = _fetch_price_frame_for_date(db, connector, candidate)
             if not df.empty:
                 logger.info("Latest trading date found: %s", candidate)
                 return candidate
-            checked += 1
-        candidate -= timedelta(days=1)
+            candidate -= timedelta(days=1)
+    finally:
+        connector.close()
+        db.close()
 
-    fallback = date.today()
-    logger.warning(
-        "Could not find a trading date in the last %d weekdays; using today %s as fallback",
-        max_lookback,
-        fallback,
-    )
-    return fallback
+    raise RuntimeError(f"No EOD data found in the last {max_lookback} calendar days")
 
 
 def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool = False, force: bool = False) -> dict:
@@ -296,10 +382,15 @@ def run(trade_date: Optional[date] = None, backfill_days: int = 1, dry_run: bool
             except Exception as exc:
                 logger.warning("Backfill failed for %s: %s", current, exc)
             current += timedelta(days=1)
-        return {
+        result = {
             "dates_processed": len(all_metrics),
+            "total_fetched": sum(m.get("rows_fetched", 0) for m in all_metrics),
             "total_inserted": sum(m.get("rows_inserted", 0) for m in all_metrics),
         }
+        if result["total_fetched"] == 0 and result["total_inserted"] == 0:
+            logger.error("No EOD data synced, failing cron")
+            raise RuntimeError("No EOD data fetched during backfill")
+        return result
 
     if trade_date is None:
         trade_date = _latest_trading_date()
@@ -319,6 +410,21 @@ if __name__ == "__main__":
     if args.date:
         target_date = date.fromisoformat(args.date)
 
-    result = run(trade_date=target_date, backfill_days=args.backfill_days, dry_run=args.dry_run, force=args.force or _ENV_FORCE)
-    logger.info("Result: %s", result)
-    sys.exit(0 if result.get("errors", 0) == 0 else 1)
+    try:
+        result = run(
+            trade_date=target_date,
+            backfill_days=args.backfill_days,
+            dry_run=args.dry_run,
+            force=args.force or _ENV_FORCE,
+        )
+        logger.info("Result: %s", result)
+        rows_fetched = result.get("rows_fetched", result.get("total_fetched", 0))
+        rows_inserted = result.get("rows_inserted", result.get("total_inserted", 0))
+        if rows_fetched > 0 or rows_inserted > 0:
+            sys.exit(0)
+        logger.error("No EOD data synced, failing cron")
+        raise RuntimeError("No EOD data fetched")
+    except Exception as exc:
+        logger.error("No EOD data synced, failing cron")
+        logger.exception("EOD price sync exiting non-zero: %s", exc)
+        sys.exit(1)

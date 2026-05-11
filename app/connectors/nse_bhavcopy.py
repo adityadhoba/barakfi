@@ -23,6 +23,7 @@ from typing import List, Optional
 import pandas as pd
 
 from app.connectors.base import BaseConnector, NSE_HEADERS, sha256_bytes
+from app.connectors.nse_client import NSESession
 
 logger = logging.getLogger("barakfi.nse_bhavcopy")
 UTC = timezone.utc
@@ -70,6 +71,10 @@ class NSEBhavCopyConnector(BaseConnector):
     source_name = "nse_bhavcopy"
     default_headers = NSE_HEADERS
 
+    def __init__(self, timeout: int = 60, max_retries: int = 3):
+        super().__init__(timeout=timeout, max_retries=max_retries)
+        self._nse_session = NSESession(timeout=float(timeout))
+
     def fetch_bhavcopy(
         self,
         trade_date: date,
@@ -85,10 +90,14 @@ class NSEBhavCopyConnector(BaseConnector):
         logger.info("Fetching NSE bhavcopy for %s: %s", trade_date.isoformat(), url)
 
         try:
-            content, http_status = self.fetch(url)
+            http_status, content, _headers = self._nse_session.get(url, max_attempts=self.max_retries)
         except Exception as exc:
             logger.warning("Bhavcopy fetch failed for %s: %s", trade_date.isoformat(), exc)
             return pd.DataFrame()
+        if http_status >= 400 or not content:
+            logger.warning("Bhavcopy fetch failed for %s with HTTP %s", trade_date.isoformat(), http_status)
+            return pd.DataFrame()
+        logger.info("Bhavcopy downloaded successfully")
 
         if db_session is not None:
             self.record_artifact(
@@ -205,3 +214,7 @@ class NSEBhavCopyConnector(BaseConnector):
         if not frames:
             return pd.DataFrame()
         return pd.concat(frames, ignore_index=True)
+
+    def close(self) -> None:
+        self._nse_session.close()
+        super().close()
