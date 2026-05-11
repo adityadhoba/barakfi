@@ -24,6 +24,7 @@ from typing import Optional
 import pandas as pd
 
 from app.connectors.base import BaseConnector, NSE_HEADERS, sha256_bytes
+from app.connectors.nse_client import NSESession
 
 logger = logging.getLogger("barakfi.nse_master")
 UTC = timezone.utc
@@ -49,6 +50,16 @@ class NSEMasterConnector(BaseConnector):
     source_name = "nse_master"
     default_headers = NSE_HEADERS
 
+    def __init__(self, timeout: int = 60, max_retries: int = 3):
+        super().__init__(timeout=timeout, max_retries=max_retries)
+        self._nse_session = NSESession(timeout=float(timeout))
+
+    def _fetch_csv_bytes(self, url: str) -> bytes:
+        http_status, content, _headers = self._nse_session.get(url, max_attempts=self.max_retries)
+        if http_status >= 400 or not content:
+            raise RuntimeError(f"NSE master fetch failed for {url} with HTTP {http_status or '0'}")
+        return content
+
     # ------------------------------------------------------------------
     # Nifty 500 constituent list
     # ------------------------------------------------------------------
@@ -61,7 +72,7 @@ class NSEMasterConnector(BaseConnector):
             company_name, industry, symbol, series, isin_code
         """
         logger.info("Fetching Nifty 500 constituent list from NSE")
-        content, _ = self.fetch(NSE_NIFTY500_CSV_URL)
+        content = self._fetch_csv_bytes(NSE_NIFTY500_CSV_URL)
         df = pd.read_csv(io.BytesIO(content))
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
@@ -94,7 +105,7 @@ class NSEMasterConnector(BaseConnector):
             symbol, name_of_company, series, date_of_listing, face_value, isin_number
         """
         logger.info("Fetching NSE securities master (EQUITY_L.csv)")
-        content, _ = self.fetch(NSE_SECURITIES_CSV_URL)
+        content = self._fetch_csv_bytes(NSE_SECURITIES_CSV_URL)
         df = pd.read_csv(io.BytesIO(content))
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
@@ -129,7 +140,7 @@ class NSEMasterConnector(BaseConnector):
         """
         logger.info("Fetching NSE symbol change history")
         try:
-            content, _ = self.fetch(NSE_SYMBOL_CHANGES_URL)
+            content = self._fetch_csv_bytes(NSE_SYMBOL_CHANGES_URL)
         except Exception as exc:
             logger.warning("Symbol changes fetch failed (non-fatal): %s", exc)
             return pd.DataFrame()
@@ -166,7 +177,7 @@ class NSEMasterConnector(BaseConnector):
         """
         logger.info("Fetching NSE company name change history")
         try:
-            content, _ = self.fetch(NSE_NAME_CHANGES_URL)
+            content = self._fetch_csv_bytes(NSE_NAME_CHANGES_URL)
         except Exception as exc:
             logger.warning("Name changes fetch failed (non-fatal): %s", exc)
             return pd.DataFrame()
@@ -187,3 +198,7 @@ class NSEMasterConnector(BaseConnector):
         df["source_hash"] = sha256_bytes(content)
         logger.info("Name changes: %d rows fetched", len(df))
         return df
+
+    def close(self) -> None:
+        self._nse_session.close()
+        super().close()
