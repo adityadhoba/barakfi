@@ -51,6 +51,12 @@ from app.schemas import (
 from app.services.auth_service import get_current_auth_claims, get_optional_auth_claims
 from app.services.halal_service import PRIMARY_PROFILE, evaluate_stock, get_profile_version
 from app.services.stock_lookup import resolve_stock
+from app.services.user_resolution import (
+    ensure_free_plan,
+    ensure_user_settings,
+    repair_user_identity_from_clerk as shared_repair_user_identity_from_clerk,
+    resolve_or_provision_user,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -144,44 +150,6 @@ def _hash_ip(request: Request) -> str | None:
 def _user_agent(request: Request) -> str | None:
     value = request.headers.get("user-agent", "").strip()
     return value or None
-
-
-def _ensure_free_plan(db: Session) -> Plan:
-    plan = db.query(Plan).filter(Plan.key == "free").first()
-    if plan:
-        return plan
-    plan = Plan(
-        key="free",
-        name="Free",
-        max_reports_per_month=50,
-        max_watchlist_items=25,
-        alerts_allowed=False,
-        advanced_filters_allowed=False,
-        export_allowed=False,
-        compare_allowed=False,
-        portfolio_allowed=False,
-        historical_tracking_allowed=False,
-    )
-    db.add(plan)
-    db.flush()
-    return plan
-
-
-def _ensure_user_settings(db: Session, user: User) -> None:
-    if user.settings:
-        return
-    db.add(
-        UserSettings(
-            user_id=user.id,
-            preferred_currency="INR",
-            risk_profile="moderate",
-            notifications_enabled=True,
-            theme="dark",
-            preferred_index="NIFTY 50",
-            default_screening_method="AAOIFI Aligned",
-            notification_preference="Email · Weekly digest",
-        )
-    )
 
 
 def _looks_placeholder_email(value: str | None) -> bool:
@@ -298,53 +266,7 @@ def _track_event(
 
 
 def _ensure_current_user(db: Session, claims: dict) -> User:
-    auth_subject = str(claims.get("sub") or "").strip()
-    if not auth_subject:
-        raise HTTPException(status_code=401, detail="Token subject missing")
-
-    email = _claims_email(claims)
-    user = db.query(User).filter(User.auth_subject == auth_subject).first()
-    if not user and email:
-        user = db.query(User).filter(func.lower(User.email) == email.lower()).first()
-        if user:
-            user.auth_subject = auth_subject
-
-    now = _utc_now()
-    name = _claims_name(claims)
-    image_url = _claims_image(claims)
-
-    if user:
-        if email:
-            user.email = email
-        if name and not _looks_placeholder_name(name, auth_subject, email):
-            user.display_name = name
-        user.auth_provider = "clerk"
-        user.is_active = True
-        user.status = "active"
-        user.last_seen_at = now
-        if image_url:
-            user.image_url = image_url
-        if not user.plan_key:
-            user.plan_key = "free"
-    else:
-        user = User(
-            email=email or f"{auth_subject}@example.local",
-            display_name=name,
-            auth_provider="clerk",
-            auth_subject=auth_subject,
-            is_active=True,
-            status="active",
-            plan_key="free",
-            image_url=image_url,
-            last_seen_at=now,
-        )
-        db.add(user)
-        db.flush()
-    _ensure_user_settings(db, user)
-    _ensure_free_plan(db)
-    _repair_user_identity_from_clerk(user)
-    db.flush()
-    return user
+    return resolve_or_provision_user(db, claims)
 
 
 def get_current_app_user(
@@ -379,7 +301,7 @@ def _get_or_create_monthly_usage(db: Session, user_id: int, usage_month: str) ->
 
 
 def _plan_for_user(db: Session, user: User) -> Plan:
-    _ensure_free_plan(db)
+    ensure_free_plan(db)
     plan = db.query(Plan).filter(Plan.key == (user.plan_key or "free")).first()
     return plan or db.query(Plan).filter(Plan.key == "free").one()
 
@@ -454,8 +376,8 @@ async def clerk_webhook(request: Request, db: Session = Depends(get_db)):
         )
         db.add(user)
         db.flush()
-    _ensure_user_settings(db, user)
-    _ensure_free_plan(db)
+    ensure_user_settings(db, user)
+    ensure_free_plan(db)
     action = "user_synced_from_clerk" if event_type == "user.created" else "clerk_user_updated"
     _audit(db, user_id=user.id, action=action, metadata={"clerk_user_id": clerk_user_id})
     db.commit()
@@ -469,8 +391,8 @@ def get_account_overview(
     db: Session = Depends(get_db),
 ):
     usage_month = _usage_month_for()
-    _repair_user_identity_from_clerk(user)
-    _ensure_user_settings(db, user)
+    shared_repair_user_identity_from_clerk(db, user)
+    ensure_user_settings(db, user)
     usage = _get_or_create_monthly_usage(db, user.id, usage_month)
     plan = _plan_for_user(db, user)
     watchlist_count = db.query(func.count(WatchlistEntry.id)).filter(WatchlistEntry.user_id == user.id).scalar() or 0
@@ -516,8 +438,8 @@ def update_account_profile(
     user: User = Depends(get_current_app_user),
     db: Session = Depends(get_db),
 ):
-    _ensure_user_settings(db, user)
-    _repair_user_identity_from_clerk(user)
+    ensure_user_settings(db, user)
+    shared_repair_user_identity_from_clerk(db, user)
     if payload.display_name is not None and payload.display_name.strip():
         user.display_name = payload.display_name.strip()
     if payload.preferred_index is not None and user.settings:

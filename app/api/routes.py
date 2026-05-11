@@ -38,6 +38,7 @@ from app.services.rbac import (
     VALID_ROLES,
     normalize_user_role,
 )
+from app.services.user_resolution import resolve_or_provision_user
 from app.database import get_db
 from app.api import helpers
 from app.api.envelope import api_error
@@ -1913,100 +1914,26 @@ def _email_from_auth_claims(claims: dict) -> str:
 
 @router.get("/me", response_model=UserRead)
 def get_current_user(claims: dict = Depends(get_current_auth_claims_or_internal), db: Session = Depends(get_db)):
-    auth_subject = claims.get("sub")
-    if not auth_subject:
-        raise HTTPException(status_code=401, detail="Token subject missing")
-
-    user = db.query(User).filter(User.auth_subject == auth_subject, User.is_active.is_(True)).first()
-    if not user:
-        # Auto-provision: create the user from available claims so first-time
-        # sign-ins "just work" without a separate bootstrap call.
-        email = _email_from_auth_claims(claims)
-        if not email:
-            raw_e = claims.get("email")
-            email = raw_e.strip().lower() if isinstance(raw_e, str) else ""
-        display = email.split("@")[0] if email else auth_subject
-        try:
-            user = User(
-                email=email,
-                display_name=display,
-                auth_provider="clerk",
-                auth_subject=auth_subject,
-                is_active=True,
-            )
-            db.add(user)
-            db.flush()
+    try:
+        user = resolve_or_provision_user(db, claims)
+        has_workspace = (
+            db.query(Portfolio.id).filter(Portfolio.user_id == user.id).first() is not None
+            or db.query(WatchlistEntry.id).filter(WatchlistEntry.user_id == user.id).first() is not None
+            or db.query(SavedScreener.id).filter(SavedScreener.user_id == user.id).first() is not None
+        )
+        if not has_workspace:
             helpers.create_default_workspace(db, user)
-            if not user.settings:
-                db.add(
-                    UserSettings(
-                        user_id=user.id,
-                        preferred_currency="INR",
-                        risk_profile="moderate",
-                        notifications_enabled=True,
-                        theme="dark",
-                        preferred_index="NIFTY 50",
-                        default_screening_method="AAOIFI Aligned",
-                        notification_preference="Email · Weekly digest",
-                    )
-                )
-            db.commit()
-            db.refresh(user)
-        except Exception:
-            db.rollback()
-            raise HTTPException(status_code=500, detail="Failed to auto-provision user")
+        db.commit()
+        db.refresh(user)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to auto-provision user")
 
-    claim_email = _email_from_auth_claims(claims)
-    if claim_email and (not user.email or not str(user.email).strip()):
-        user.email = claim_email
-        try:
-            db.commit()
-            db.refresh(user)
-        except Exception:
-            db.rollback()
-
-    # Canonical DB role (e.g. "Admin" -> "admin") so /me and Admin nav match RBAC.
-    effective_role = normalize_user_role(user.role)
-    raw_sl = str(getattr(user, "role", "") or "").strip().lower()
-    if raw_sl in VALID_ROLES and (user.role or "") != raw_sl:
-        user.role = raw_sl
-        effective_role = raw_sl
-        try:
-            db.commit()
-            db.refresh(user)
-        except Exception:
-            db.rollback()
-
-    # Auto-promote to owner/admin based on configured identities.
-    db_email = (user.email or "").strip().lower()
-    owner_match = (
-        (db_email and db_email in OWNER_EMAILS)
-        or (claim_email and claim_email in OWNER_EMAILS)
-        or (auth_subject in OWNER_AUTH_SUBJECTS)
-    )
-    admin_match = (
-        (db_email and db_email in ADMIN_EMAILS)
-        or (claim_email and claim_email in ADMIN_EMAILS)
-        or (auth_subject in ADMIN_AUTH_SUBJECTS)
-    )
-    if owner_match and effective_role != "owner":
-        effective_role = "owner"
-        try:
-            user.role = "owner"
-            db.commit()
-        except Exception:
-            db.rollback()
-    elif admin_match and effective_role not in {"owner", "admin"}:
-        effective_role = "admin"
-        try:
-            user.role = "admin"
-            db.commit()
-        except Exception:
-            db.rollback()
-
-    # Return user with effective role
     result = UserRead.model_validate(user)
-    result.role = effective_role
+    result.role = normalize_user_role(user.role)
     return result
 
 

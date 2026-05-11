@@ -27,26 +27,18 @@ import httpx
 
 logger = logging.getLogger("barakfi.nse")
 
-# Complete browser header set that NSE's Cloudflare/bot-detection checks
 _BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/123.0.0.0 Safari/537.36"
+        "Chrome/124.0 Safari/537.36"
     ),
-    "Accept": "application/json, text/plain, */*",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate",
+    "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
     "Referer": "https://www.nseindia.com/",
     "Origin": "https://www.nseindia.com",
-    "sec-ch-ua": '"Google Chrome";v="123", "Not:A-Brand";v="8"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
-    "DNT": "1",
 }
 
 _WARM_URLS = [
@@ -104,31 +96,38 @@ class NSESession:
             except Exception as exc:
                 logger.debug("NSE warm failed for %s: %s", url, exc)
         self._warm_at = time.monotonic()
+        if ok:
+            logger.info("NSE session warmed")
         return ok
 
-    def get(self, url: str) -> tuple[int, bytes, dict[str, Any]]:
+    def refresh(self) -> bool:
+        self.close()
+        self._client = self._make_client()
+        return self.warm()
+
+    def get(self, url: str, max_attempts: int = 3) -> tuple[int, bytes, dict[str, Any]]:
         """
         Fetch *url* using the persistent session.  Re-warms automatically
-        on 403 (session expired) and retries once.
+        on 403 (session expired) and retries.
         """
         if self._client is None:
             self._client = self._make_client()
             self.warm()
 
-        for attempt in range(2):
+        for attempt in range(max_attempts):
             try:
                 r = self._client.get(url, headers=_BROWSER_HEADERS)
-                if r.status_code == 403 and attempt == 0:
-                    logger.info("NSE 403 on attempt 0 — re-warming session")
-                    time.sleep(2.0)
-                    self.warm()
+                if r.status_code == 403 and attempt < max_attempts - 1:
+                    logger.warning("403 received, refreshing cookies")
+                    time.sleep(1.0 + (attempt * 0.5))
+                    self.refresh()
                     continue
                 headers = {k.lower(): v for k, v in r.headers.items()}
                 return r.status_code, r.content, headers
             except Exception as exc:
                 logger.warning("NSE GET %s failed attempt %d: %s", url, attempt, exc)
-                if attempt == 0:
-                    time.sleep(1.0)
+                if attempt < max_attempts - 1:
+                    time.sleep(1.0 + (attempt * 0.5))
         return 0, b"", {}
 
     def close(self) -> None:

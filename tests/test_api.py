@@ -3,7 +3,7 @@ import json
 from fastapi.testclient import TestClient
 from app.config import INTERNAL_SERVICE_TOKEN
 from app.database import SessionLocal
-from app.models import ComplianceOverride, ComplianceReviewCase, ComplianceReviewEvent, Stock, StockCorporateEvent
+from app.models import ComplianceOverride, ComplianceReviewCase, ComplianceReviewEvent, Stock, StockCorporateEvent, User
 
 from app.main import app
 
@@ -616,6 +616,73 @@ def test_me_workspace(mock_admin_auth):
     assert isinstance(body["compliance_check"], list)
     assert len(body["activity_feed"]) >= 1
     assert len(body["review_cases"]) >= 1
+
+
+def test_me_promotes_always_admin_email(monkeypatch):
+    from app.services import auth_service
+
+    monkeypatch.setattr(
+        auth_service,
+        "verify_clerk_token",
+        lambda _token: {
+            "sub": "chiranter-admin-subject",
+            "azp": "http://localhost:3000",
+            "email": "chiranterrawat123@gmail.com",
+            "name": "Chiranter Rawat",
+        },
+    )
+
+    response = client.get("/api/me", headers=AUTH_HEADER)
+    assert response.status_code == 200
+    assert api_json(response)["role"] == "admin"
+
+
+def test_account_overview_handles_existing_email_collision(monkeypatch):
+    from app.services import auth_service
+
+    collision_subject = "collision-admin-subject"
+    with SessionLocal() as db:
+        placeholder = db.query(User).filter(User.auth_subject == collision_subject).first()
+        if not placeholder:
+            placeholder = User(
+                email=f"{collision_subject}@example.local",
+                display_name=f"user_{collision_subject}",
+                auth_provider="clerk",
+                auth_subject=collision_subject,
+                is_active=True,
+                status="active",
+                plan_key="free",
+            )
+            db.add(placeholder)
+        existing = db.query(User).filter(User.email == "chiranterrawat123@gmail.com").first()
+        if not existing:
+            existing = User(
+                email="chiranterrawat123@gmail.com",
+                display_name="Chiranter Rawat",
+                auth_provider="clerk",
+                auth_subject="legacy-chiranter-subject",
+                is_active=True,
+                status="active",
+                plan_key="free",
+            )
+            db.add(existing)
+        db.commit()
+
+    monkeypatch.setattr(
+        auth_service,
+        "verify_clerk_token",
+        lambda _token: {
+            "sub": collision_subject,
+            "azp": "http://localhost:3000",
+            "email": "chiranterrawat123@gmail.com",
+            "name": "Chiranter Rawat",
+        },
+    )
+
+    response = client.get("/api/account/overview", headers=AUTH_HEADER)
+    assert response.status_code == 200
+    body = api_json(response)
+    assert body["user"]["plan"].lower() == "free"
 
 
 def test_me_bootstrap(mock_auth):
