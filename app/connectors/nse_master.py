@@ -29,11 +29,12 @@ from app.connectors.nse_client import NSESession
 logger = logging.getLogger("barakfi.nse_master")
 UTC = timezone.utc
 
-# Official NSE download URLs — these are stable public endpoints
-NSE_NIFTY500_CSV_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
-NSE_SECURITIES_CSV_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
-NSE_SYMBOL_CHANGES_URL = "https://archives.nseindia.com/content/equities/symbolchange.csv"
-NSE_NAME_CHANGES_URL = "https://archives.nseindia.com/content/equities/namechange.csv"
+# Official NSE download URLs. Prefer the current nsearchives host because
+# Render/NSE has been intermittently stricter on the older archives host.
+NSE_NIFTY500_CSV_URL = "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv"
+NSE_SECURITIES_CSV_URL = "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
+NSE_SYMBOL_CHANGES_URL = "https://nsearchives.nseindia.com/content/equities/symbolchange.csv"
+NSE_NAME_CHANGES_URL = "https://nsearchives.nseindia.com/content/equities/namechange.csv"
 
 # BSE listed companies (for BSE scrip code cross-reference)
 BSE_LISTED_CSV_URL = "https://api.bseindia.com/BseIndiaAPI/api/ListofScripData/w?Group=&Scripcode=&industry=&segment=Equity&status=Active"
