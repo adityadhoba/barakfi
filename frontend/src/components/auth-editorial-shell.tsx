@@ -70,7 +70,7 @@ export function AuthEditorialShell({
       <LocalMarketingNav activeAuth={mode} />
 
       <main className={`${styles.page} ${isSignUp ? styles.pageSignUp : styles.pageSignIn}`}>
-        <section className={`${styles.left} ${isSignUp ? styles.leftSignUp : ""}`}>
+        <section className={`${styles.left} ${isSignUp ? styles.leftSignUp : ""} ${isSignIn ? styles.leftSignIn : ""}`}>
           <div className={styles.leftTop}>
             <div className={styles.eyebrow}>{eyebrow}</div>
             <h1 className={`${styles.heading} ${serif.className} ${isSignIn ? styles.headingSignIn : styles.headingSignUp}`}>
