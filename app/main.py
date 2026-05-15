@@ -551,9 +551,7 @@ _auto_migrate_columns()
 _drop_news_articles_table_if_exists()
 # 2b. Heal legacy screening_quotas unique index shape in older environments
 _migrate_screening_quota_unique_index()
-# 3. Auto-seed stocks if the database is empty
-_auto_seed_stocks()
-_seed_symbol_aliases()
+# 3. Auto-seed stocks if the database is empty — moved to startup event (async, non-blocking)
 
 # 4. Seed collections and super investors (single-worker safe)
 log = logging.getLogger("barakfi")
@@ -782,9 +780,20 @@ def _warmup_screening_cache() -> None:
         log.warning("[warmup] Screening cache warmup failed: %s", exc)
 
 
+def _seed_startup_background():
+    """Run auto-seed and symbol alias seeding in background after app is ready."""
+    _auto_seed_stocks()
+    _seed_symbol_aliases()
+
 @app.on_event("startup")
 async def startup_warmup():
     import threading
+    # Start auto-seed in background (doesn't block health checks)
+    t_seed = threading.Thread(target=_seed_startup_background, daemon=True, name="auto-seed")
+    t_seed.start()
+    log.info("[startup] Auto-seed background thread started")
+
+    # Start screening cache warmup
     t = threading.Thread(target=_warmup_screening_cache, daemon=True, name="screening-warmup")
     t.start()
     log.info("[startup] Screening cache warmup thread started")
