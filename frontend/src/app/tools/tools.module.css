@@ -483,7 +483,7 @@
 .compareLead {
   margin: 1.25rem 0 0;
   max-width: 760px;
-  font-size: 34x;
+  font-size: 14px;
   line-height: 1.65;
   color: rgba(230, 226, 216, 0.55);
 }
@@ -682,7 +682,7 @@
   border: none;
   outline: none;
   font-family: inherit;
-  font-size: 33px;
+  font-size: 13px;
   color: #e6e2d8;
   padding: 4px 0;
 }
