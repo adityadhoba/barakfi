@@ -40,6 +40,8 @@ from app.schemas import (
     AccountOverviewWaitlist,
     DataExportRequestRead,
     ReportUnlockResponse,
+    CompareUnlockRequest,
+    CompareUnlockResponse,
     ScreeningReportHistoryRead,
     WaitlistJoinRequest,
     WaitlistJoinResponse,
@@ -579,6 +581,91 @@ def unlock_report(
     return ReportUnlockResponse(
         allowed=True,
         counted=True,
+        reports_used=usage.reports_used,
+        reports_limit=plan.max_reports_per_month,
+        reports_remaining=max(plan.max_reports_per_month - usage.reports_used, 0),
+    )
+
+
+@router.post("/reports/compare/unlock", response_model=CompareUnlockResponse)
+def unlock_compare_reports(
+    payload: CompareUnlockRequest,
+    request: Request,
+    user: User = Depends(get_current_app_user),
+    db: Session = Depends(get_db),
+):
+    clean_symbols = []
+    seen = set()
+    for symbol in payload.symbols:
+        clean = str(symbol or "").strip().upper()
+        if not clean or clean in seen:
+            continue
+        seen.add(clean)
+        clean_symbols.append(clean)
+        if len(clean_symbols) >= 3:
+            break
+
+    if len(clean_symbols) < 2:
+        raise HTTPException(status_code=400, detail="Select at least 2 symbols to compare")
+
+    usage_month = _usage_month_for()
+    plan = _plan_for_user(db, user)
+    usage = _get_or_create_monthly_usage(db, user.id, usage_month)
+
+    charged_count = len(clean_symbols)
+    remaining = max(plan.max_reports_per_month - usage.reports_used, 0)
+
+    if remaining < charged_count:
+        _track_event(
+            db,
+            event_name="compare_limit_reached",
+            user_id=user.id,
+            request=request,
+            properties={"symbols": clean_symbols, "requested": charged_count},
+            page_path="/compare",
+        )
+        db.commit()
+        return CompareUnlockResponse(
+            allowed=False,
+            charged_count=0,
+            reason="MONTHLY_LIMIT_REACHED",
+            message="You do not have enough monthly report credits to run this comparison.",
+            cta="JOIN_PRO_WAITLIST",
+            reports_used=usage.reports_used,
+            reports_limit=plan.max_reports_per_month,
+            reports_remaining=remaining,
+        )
+
+    usage.reports_used += charged_count
+    usage.watchlist_count = db.query(func.count(WatchlistEntry.id)).filter(WatchlistEntry.user_id == user.id).scalar() or 0
+
+    for symbol in clean_symbols:
+        db.add(
+            ReportUsageEvent(
+                user_id=user.id,
+                stock_symbol=f"CMP::{symbol}::{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S%f')}",
+                exchange="NSE",
+                usage_date=_today_ist(),
+                usage_month=usage_month,
+                counted=True,
+                reason="COMPARE_RUN",
+            )
+        )
+
+    _track_event(
+        db,
+        event_name="compare_reports_unlocked",
+        user_id=user.id,
+        request=request,
+        properties={"symbols": clean_symbols, "charged_count": charged_count},
+        page_path="/compare",
+    )
+    _audit(db, user_id=user.id, action="compare_reports_unlocked", request=request, metadata={"symbols": clean_symbols, "charged_count": charged_count})
+    db.commit()
+
+    return CompareUnlockResponse(
+        allowed=True,
+        charged_count=charged_count,
         reports_used=usage.reports_used,
         reports_limit=plan.max_reports_per_month,
         reports_remaining=max(plan.max_reports_per_month - usage.reports_used, 0),

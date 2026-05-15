@@ -90,16 +90,6 @@ function normalizeCompareLimitState(value: unknown): CompareLimitState | null {
   return null;
 }
 
-function buildDefaultCompareLimitState(resetsAt?: string): CompareLimitState {
-  return {
-    status: "limit_exhausted",
-    message: "You’ve reached today’s compare limit.",
-    actions: ["Come back tomorrow", "Join Early Access"],
-    redirect_url: "/premium",
-    resets_at: resetsAt,
-  };
-}
-
 function ratioClass(value: number, threshold: number): string {
   if (value <= threshold * 0.7) return styles.ratioGood;
   if (value <= threshold) return styles.ratioWarn;
@@ -249,8 +239,7 @@ function CompareLimitReachedState({
       <div className={styles.limitContent}>
         <h3 className={styles.limitTitle}>{limitState.message}</h3>
         <p className={styles.limitDesc}>
-          Compare sessions are limited each IST day.{" "}
-          {resetLabel ? `Your compare access resets after ${resetLabel}.` : "Please try again tomorrow."}
+          Compare charges monthly report credits per selected stock. {resetLabel ? `Usage resets after ${resetLabel}.` : "Please try again next month."}
         </p>
         <div className={styles.limitActions}>
           <button type="button" className={styles.secondaryBtn} disabled>
@@ -473,41 +462,8 @@ export function CompareTable({
     setCheckingQuota(true);
     setCompareLimitState(null);
     setError(null);
-
-    void (async () => {
-      try {
-        const response = await fetch("/api/quota", {
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-
-        if (response.ok) {
-          const body: unknown = await response.json().catch(() => ({}));
-          const payload =
-            body && typeof body === "object" && "data" in body
-              ? (body as { data?: Record<string, unknown> }).data
-              : body;
-          const compareRemaining =
-            payload && typeof payload === "object" && "compare_remaining" in payload
-              ? Number((payload as { compare_remaining?: unknown }).compare_remaining ?? 0)
-              : null;
-          const resetsAt =
-            payload && typeof payload === "object" && "resets_at" in payload
-              ? String((payload as { resets_at?: unknown }).resets_at ?? "")
-              : undefined;
-          if (compareRemaining != null && compareRemaining <= 0) {
-            setCompareLimitState(buildDefaultCompareLimitState(resetsAt));
-            return;
-          }
-        }
-
-        router.push(`/compare/results?symbols=${queryString}`);
-      } catch {
-        router.push(`/compare/results?symbols=${queryString}`);
-      } finally {
-        setCheckingQuota(false);
-      }
-    })();
+    router.push(`/compare/results?symbols=${queryString}`);
+    setCheckingQuota(false);
   }
 
   function editSelection() {
@@ -744,8 +700,7 @@ export function CompareTable({
 
           <div className={styles.selectionActions}>
             <span className={styles.selectionHint}>
-              Daily compare sessions are limited, so selections stay editable until you launch the
-              comparison.
+              Compare uses monthly report credits based on selected symbols.
             </span>
             <button
               type="button"

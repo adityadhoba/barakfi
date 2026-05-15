@@ -180,69 +180,6 @@ const websiteSchema = {
   },
 };
 
-const faqSchema = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "What is Halal Stock Checker?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Halal Stock Checker (Barakfi) helps you check halal stocks and see methodology-based compliance status. It uses trusted financial ratios aligned with standards such as S&P Shariah, AAOIFI, and FTSE/Maxis. The product verdict labels are Shariah Compliant, Requires Review, and Not Compliant.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How does Shariah stock screening work?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Shariah stock screening evaluates companies against Islamic financial principles. Each stock is tested on 5 key financial ratios: debt-to-market-cap, cash & interest-bearing securities to market cap, accounts receivables to market cap, non-permissible income ratio, and sector/business activity screening. Stocks that pass all criteria are marked as Shariah Compliant.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Is Barakfi free to use?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Yes. Halal Stock Checker is free. You can check stocks, use calculators, and compare — all without payment.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What screening methodologies does Barakfi use?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Barakfi uses three globally recognized Shariah screening methodologies: S&P Shariah Indices methodology, AAOIFI (Accounting and Auditing Organization for Islamic Financial Institutions) standards, and FTSE/Maxis Shariah methodology. Each has slightly different thresholds, giving you a comprehensive multi-standard compliance view.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How many Indian stocks does Barakfi screen?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Barakfi currently screens 160+ NSE-listed Indian stocks covering all major sectors including IT, pharma, auto, FMCG, cement, and more. The universe is continuously expanding.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What is a purification calculator?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "A purification calculator helps users determine the non-permissible portion of dividends received from screened stocks. Even Shariah-compliant companies may have a small percentage of non-permissible income, and this amount can be set aside for purification.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "How do I calculate zakat on my stocks?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Barakfi's free zakat calculator helps you compute zakat on stocks, gold, savings, and other zakatable assets based on current Nisab values. The standard zakat rate is 2.5% of total zakatable wealth held for one lunar year.",
-      },
-    },
-  ],
-};
-
 const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -278,7 +215,6 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webAppSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       </head>
       <body suppressHydrationWarning>

@@ -410,6 +410,21 @@ class ReportUnlockResponse(BaseModel):
     reports_remaining: int | None = None
 
 
+class CompareUnlockRequest(BaseModel):
+    symbols: list[str]
+
+
+class CompareUnlockResponse(BaseModel):
+    allowed: bool
+    charged_count: int
+    reason: str | None = None
+    message: str | None = None
+    cta: str | None = None
+    reports_used: int
+    reports_limit: int
+    reports_remaining: int
+
+
 class ScreeningReportHistoryRead(BaseModel):
     id: str
     stock_symbol: str

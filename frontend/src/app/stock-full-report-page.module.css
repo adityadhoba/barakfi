@@ -1,0 +1,307 @@
+.pageWrap {
+  width: min(1320px, 100% - 4rem);
+  margin: 1.25rem auto 3rem;
+  color: #dce8de;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.hero {
+  border: 1px solid rgba(130, 201, 164, 0.2);
+  background: linear-gradient(140deg, rgba(9, 35, 28, 0.92), rgba(7, 24, 20, 0.96));
+  padding: 1.4rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: rgba(189, 210, 194, 0.78);
+  font-size: 0.85rem;
+}
+
+.crumbs a {
+  color: rgba(189, 210, 194, 0.95);
+  text-decoration: none;
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.identity h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.4vw, 2.2rem);
+  line-height: 1.1;
+  color: #f3f8f2;
+}
+
+.identity p {
+  margin: 0.25rem 0 0;
+  color: rgba(190, 212, 195, 0.85);
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.solidBtn,
+.ghostBtn {
+  text-decoration: none;
+  border: 1px solid rgba(130, 201, 164, 0.33);
+  padding: 0.55rem 0.85rem;
+  color: #f2f7f2;
+  font-size: 0.86rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.solidBtn {
+  background: rgba(126, 206, 162, 0.18);
+}
+
+.verdictStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.label {
+  color: rgba(168, 194, 174, 0.75);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.metric {
+  margin-top: 0.3rem;
+  color: #f0f6f1;
+  font-weight: 600;
+}
+
+.verdictBadge {
+  margin-top: 0.32rem;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid;
+  padding: 0.3rem 0.58rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.statusPass {
+  border-color: rgba(112, 224, 154, 0.55);
+  color: #82e0ac;
+}
+
+.statusReview {
+  border-color: rgba(238, 199, 116, 0.55);
+  color: #f1d488;
+}
+
+.statusFail {
+  border-color: rgba(243, 115, 116, 0.55);
+  color: #ff9b9b;
+}
+
+.summary {
+  margin: 0;
+  line-height: 1.55;
+  color: rgba(205, 223, 208, 0.88);
+}
+
+.section {
+  border: 1px solid rgba(127, 196, 158, 0.2);
+  background: rgba(7, 25, 19, 0.86);
+  padding: 1.2rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.section h2 {
+  margin: 0;
+  color: #f2f8f2;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.ratioCard {
+  border: 1px solid rgba(130, 201, 164, 0.23);
+  background: rgba(9, 33, 26, 0.9);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.ratioTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ratioTop h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.ratioBadge {
+  border: 1px solid;
+  padding: 0.18rem 0.38rem;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ratioValue {
+  font-size: 1.18rem;
+  color: #f4faf4;
+  font-weight: 650;
+}
+
+.threshold {
+  font-size: 0.78rem;
+  color: rgba(182, 204, 188, 0.78);
+}
+
+.note {
+  margin: 0;
+  color: rgba(190, 211, 196, 0.84);
+  line-height: 1.45;
+  font-size: 0.84rem;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.panel {
+  border: 1px solid rgba(128, 197, 158, 0.24);
+  background: rgba(7, 27, 21, 0.9);
+  padding: 0.85rem;
+}
+
+.panel h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  color: #eef8ef;
+}
+
+.panel ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.panel li,
+.panel p {
+  color: rgba(201, 219, 206, 0.9);
+  line-height: 1.45;
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.indexList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.indexRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.86rem;
+  color: rgba(198, 218, 203, 0.9);
+}
+
+.similarList {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.similarItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  text-decoration: none;
+  color: #e7f4e9;
+  border: 1px solid rgba(130, 201, 164, 0.2);
+  padding: 0.52rem 0.62rem;
+  background: rgba(8, 30, 24, 0.86);
+}
+
+.similarItem div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.similarItem strong {
+  font-size: 0.9rem;
+}
+
+.similarItem span {
+  font-size: 0.8rem;
+  color: rgba(191, 211, 195, 0.88);
+}
+
+.disclaimer {
+  border: 1px solid rgba(129, 198, 159, 0.2);
+  background: rgba(7, 20, 17, 0.92);
+  padding: 0.85rem;
+  color: rgba(180, 200, 185, 0.84);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .pageWrap {
+    width: min(1320px, 100% - 2rem);
+  }
+
+  .verdictStrip,
+  .cardGrid,
+  .twoCol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .pageWrap {
+    width: min(1320px, 100% - 1.2rem);
+    margin-top: 0.8rem;
+  }
+
+  .heroActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .verdictStrip,
+  .cardGrid,
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}

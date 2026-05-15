@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display } from "next/font/google";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { buildBackendHeaders } from "@/lib/backend-auth";
-import { getPublicApiBaseUrl, parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
 import { notFound, redirect } from "next/navigation";
 import {
-  getAuthenticatedWatchlist,
   getBulkScreeningResults,
   getEquityQuote,
   getMarketIndices,
@@ -13,20 +9,13 @@ import {
   type EquityQuote,
   type ReportUnlockResult,
 } from "@/lib/api";
-import {
-  fetchStockAndScreenForPage,
-  fetchStockMetadataBundle,
-} from "@/lib/stock-detail-fetch";
+import { buildBackendHeaders } from "@/lib/backend-auth";
+import { getPublicApiBaseUrl, parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
+import { fetchStockAndScreenForPage, fetchStockMetadataBundle } from "@/lib/stock-detail-fetch";
 import { StockDetailError } from "@/components/stock-detail-error";
-import { StockPageHtml } from "@/components/stock-page-html";
+import { StockFullReportPage } from "@/components/stock-full-report-page";
 import { StockPageRouteShell } from "@/components/stock-page-route-shell";
 import { screeningUiLabel } from "@/lib/screening-status";
-
-const dmSerif = DM_Serif_Display({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-stock-serif",
-});
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,17 +25,6 @@ type StockPageUsageState =
   | { kind: "allowed"; access: ReportUnlockResult | null }
   | { kind: "limit_reached"; access: ReportUnlockResult }
   | { kind: "soft_fail"; access: null; message: string };
-
-export async function generateStaticParams() {
-  try {
-    const stocks = await getStocks({ orderBy: "market_cap_desc" });
-    return stocks
-      .filter((stock) => stock.symbol && stock.exchange === "NSE")
-      .map((stock) => ({ symbol: stock.symbol }));
-  } catch {
-    return [];
-  }
-}
 
 export async function generateMetadata({
   params,
@@ -58,35 +36,29 @@ export async function generateMetadata({
   const bundle = await fetchStockMetadataBundle(sym);
   if (!bundle) {
     return {
-      title: `${sym} — Shariah screening`,
-      description:
-        `See whether ${sym} is Shariah Compliant, Requires Review, or Not Compliant under Shariah financial screening for NSE/BSE-listed Indian equities. BarakFi explains debt, non-permissible income, interest income, and other ratios used in compliance checks.`,
+      title: `${sym} Full Breakdown | BarakFi`,
+      description: `Detailed Shariah screening report for ${sym}: ratio-level compliance checks, reasons, and market context.`,
       robots: { index: true, follow: true },
     };
   }
 
   const { stock, statusLabel } = bundle;
-  const title = `Is ${stock.name} Halal? Shariah compliance (${stock.symbol}) | BarakFi`;
+  const title = `${stock.name} (${stock.symbol}) Full Breakdown | BarakFi`;
   const description =
-    `Check halal stock status for ${stock.name} (${stock.symbol}) on ${stock.exchange} using Shariah stock screening: current classification ${statusLabel}, with debt, revenue, interest income, and asset ratios compared to widely used Islamic finance benchmarks. Updated when fundamentals sync runs; educational context only.`;
+    `${stock.name} full BarakFi screening breakdown: current classification ${statusLabel}, debt and income-purity ratios, receivables, cash/IB assets checks, and detailed report context.`;
 
   return {
     title,
     description,
     robots: { index: true, follow: true },
-    alternates: { canonical: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}` },
+    alternates: { canonical: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}/report` },
     openGraph: {
       title,
       description,
-      url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`,
+      url: `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}/report`,
       siteName: "BarakFi",
       locale: "en_IN",
       type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
     },
   };
 }
@@ -165,7 +137,7 @@ function sanitizeEquityQuote(raw: EquityQuote | null): EquityQuote | null {
   };
 }
 
-export default async function StockDetailPage({
+export default async function StockFullReportRoute({
   params,
 }: {
   params: Promise<{ symbol: string }>;
@@ -174,7 +146,7 @@ export default async function StockDetailPage({
   if (!authState.userId) {
     const { symbol } = await params;
     const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
-    const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}`;
+    const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}/report`;
     redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
   }
 
@@ -191,9 +163,8 @@ export default async function StockDetailPage({
       ? { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress || null }
       : null;
 
-  const [detail, watchlist, allStocks, indices] = await Promise.all([
+  const [detail, allStocks, indices] = await Promise.all([
     fetchStockAndScreenForPage(normalizedSymbol),
-    token ? getAuthenticatedWatchlist(token, actor).catch(() => []) : Promise.resolve([]),
     getStocks().catch(() => []),
     getMarketIndices().catch(() => []),
   ]);
@@ -202,7 +173,7 @@ export default async function StockDetailPage({
     notFound();
   }
   if (detail.kind === "redirect") {
-    redirect(`/stocks/${encodeURIComponent(detail.targetSymbol)}`);
+    redirect(`/stocks/${encodeURIComponent(detail.targetSymbol)}/report`);
   }
   if (detail.kind === "legacy_blocked") {
     return (
@@ -225,8 +196,18 @@ export default async function StockDetailPage({
   }
 
   const { stock, screening } = detail;
-
   const usageState = await checkStockPageUsageAccess(stock.symbol, token, actor);
+
+  if (usageState.kind === "limit_reached") {
+    return (
+      <StockPageRouteShell breadcrumbSymbol={stock.symbol}>
+        <StockDetailError
+          symbol={stock.symbol}
+          message={usageState.access.message || "You've used all 50 monthly full report credits. Access resets next month."}
+        />
+      </StockPageRouteShell>
+    );
+  }
 
   const [liveQuote, similarScreenings] = await Promise.all([
     getEquityQuote(stock.symbol, "auto_india", stock.exchange).then(sanitizeEquityQuote).catch(() => null),
@@ -240,8 +221,6 @@ export default async function StockDetailPage({
     })(),
   ]);
 
-  const isInWatchlist = watchlist.some((entry) => entry.stock.symbol === stock.symbol);
-
   const sameSector = allStocks
     .filter((candidate) => candidate.symbol !== stock.symbol && candidate.sector === stock.sector)
     .sort((a, b) => b.market_cap - a.market_cap)
@@ -252,60 +231,26 @@ export default async function StockDetailPage({
     screening: similarScreenings.find((result) => result.symbol.toUpperCase() === peer.symbol.toUpperCase()) ?? null,
   }));
 
-  const pageUrl = `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}`;
+  const pageUrl = `https://barakfi.in/stocks/${encodeURIComponent(stock.symbol)}/report`;
   const jsonLdProduct = {
     "@context": "https://schema.org",
     "@type": "FinancialProduct",
-    name: `${stock.name} (${stock.symbol})`,
-    description: `Shariah compliance view for ${stock.name} on ${stock.exchange}: ${screeningUiLabel(screening.status)}. Uses financial ratios and methodology checks.`,
+    name: `${stock.name} (${stock.symbol}) Full Breakdown`,
+    description: `Detailed Shariah compliance report for ${stock.name} on ${stock.exchange}: ${screeningUiLabel(screening.status)} with ratio-level analysis and reasons.`,
     url: pageUrl,
-    brand: { "@type": "Brand", name: "BarakFi" },
     provider: { "@type": "Organization", name: "BarakFi", url: "https://barakfi.in" },
-    additionalProperty: [
-      { "@type": "PropertyValue", name: "complianceStatus", value: screeningUiLabel(screening.status) },
-      { "@type": "PropertyValue", name: "exchange", value: stock.exchange },
-      { "@type": "PropertyValue", name: "sector", value: stock.sector },
-    ],
-  };
-
-  const jsonLdFaq = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `What is ${stock.name}'s Shariah compliance status?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `BarakFi currently classifies this listing as ${screeningUiLabel(screening.status)} under its educational screening methodology.`,
-        },
-      },
-      {
-        "@type": "Question",
-        name: `Why is ${stock.symbol} considered ${screeningUiLabel(screening.status)}?`,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: screening.reasons.length > 0 ? screening.reasons.join(" ") : "No detailed reasons were returned by the screening engine.",
-        },
-      },
-    ],
   };
 
   return (
-    <div className={dmSerif.variable}>
+    <StockPageRouteShell breadcrumbSymbol={stock.symbol}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdProduct) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
-      <StockPageHtml
+      <StockFullReportPage
         stock={stock}
         screening={screening}
         liveQuote={liveQuote}
         indices={indices}
         similarStocks={similarStocks}
-        isInWatchlist={isInWatchlist}
-        reportAccess={usageState.access}
-        reportAccessState={usageState.kind}
-        reportAccessMessage={usageState.kind === "limit_reached" ? usageState.access.message ?? null : usageState.kind === "soft_fail" ? usageState.message : null}
       />
-    </div>
+    </StockPageRouteShell>
   );
 }

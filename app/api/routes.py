@@ -1118,68 +1118,16 @@ def compare_bulk_screen(
     _: None = Depends(enforce_screening_budget),
 ):
     """
-    Batch screening for the Compare Stocks tool only.
-    Counts against the actor's daily compare quota and consumes screen quota only
-    for symbols the actor has not already screened today (IST).
+    Batch screening for compare flows.
+
+    Monthly report-credit charging is handled by /api/reports/compare/unlock.
+    This endpoint only returns the comparison screening payload.
     """
-    from app.services.quota_service import (
-        check_and_increment_unique_screen_quota,
-        check_compare_quota,
-        log_screening_accesses,
-    )
+    from app.services.quota_service import log_screening_accesses
 
     symbols = [s.strip().upper() for s in symbols if s and str(s).strip()][:3]
     if not symbols:
         return []
-
-    service_unavailable_message = "Compare is temporarily unavailable. Please try again shortly."
-
-    try:
-        quota = check_compare_quota(db, request)
-    except Exception as exc:
-        db.rollback()
-        logger.exception("[compare/bulk] compare quota check failed: %s", exc)
-        return JSONResponse(
-            status_code=503,
-            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
-        )
-
-    if not quota["allowed"]:
-        return JSONResponse(
-            status_code=429,
-            headers={"X-Remaining": "0", "X-Resets-At": quota.get("resets_at", "")},
-            content=api_error(
-                "You’ve reached today’s compare limit.",
-                code="limit_exhausted",
-                extra={
-                    "status": "limit_exhausted",
-                    "actions": ["Come back tomorrow", "Join Early Access"],
-                    "redirect_url": "/premium",
-                    "resets_at": quota.get("resets_at", ""),
-                },
-            ),
-        )
-
-    try:
-        screen_quota = check_and_increment_unique_screen_quota(db, request, symbols)
-    except Exception as exc:
-        db.rollback()
-        logger.exception("[compare/bulk] screen quota reservation failed: %s", exc)
-        return JSONResponse(
-            status_code=503,
-            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
-        )
-
-    if not screen_quota["allowed"]:
-        db.rollback()
-        raise HTTPException(
-            status_code=429,
-            detail="Detailed report access is currently unavailable",
-            headers={
-                "X-Remaining": str(screen_quota.get("remaining", 0)),
-                "X-Resets-At": screen_quota.get("resets_at", ""),
-            },
-        )
 
     try:
         log_screening_accesses(db, request, symbols)
@@ -1187,10 +1135,6 @@ def compare_bulk_screen(
     except Exception as exc:
         db.rollback()
         logger.exception("[compare/bulk] failed to log compare screening access: %s", exc)
-        return JSONResponse(
-            status_code=503,
-            content=api_error(service_unavailable_message, code="compare_temporarily_unavailable"),
-        )
 
     return _screen_stocks_bulk_impl(symbols, db)
 

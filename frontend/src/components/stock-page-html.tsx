@@ -369,7 +369,9 @@ export function StockPageHtml({
               <div className={styles.verdictLabel}>Methodology</div>
               <div className={styles.verdictValue}>AAOIFI aligned · {PRIMARY_METHODOLOGY_VERSION}</div>
               <div className={styles.verdictButtonRow}>
-                <a className={styles.actionSolidButton} href="#compliance-breakdown">See Full Breakdown</a>
+                <Link className={styles.actionSolidButton} href={`/stocks/${encodeURIComponent(stock.symbol)}/report`}>
+                  See Full Breakdown
+                </Link>
               </div>
             </div>
           </div>
