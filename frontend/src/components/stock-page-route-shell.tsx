@@ -44,9 +44,8 @@ export function StockPageRouteShell({
           <div className={styles.localNavLinks}>
             <Link className={styles.localNavLink} href="/screener">Screener</Link>
             <Link className={styles.localNavLink} href="/explore">Explore</Link>
+            <Link className={styles.localNavLink} href="/tools">Tools</Link>
             <Link className={styles.localNavLink} href="/watchlist">Watchlist</Link>
-            <Link className={styles.localNavLink} href="/methodology">Methodology</Link>
-            <Link className={`${styles.localNavLink} ${styles.localNavCta}`} href="/screener">Open Screener</Link>
           </div>
           <RouteLocalAuth
             className={styles.localNavAuth}
