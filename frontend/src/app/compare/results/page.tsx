@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import { getStocks } from "@/lib/api";
-import { CompareTable } from "@/components/compare-table";
-import styles from "@/app/screener.module.css";
+import { CompareHtmlPage } from "@/components/compare-html-page";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,18 @@ export const metadata: Metadata = {
   description:
     "Review Shariah compliance, financial ratios, and market data side by side for selected Indian stocks.",
 };
+
+const compareSans = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--tools-font-sans",
+});
+
+const compareDisplay = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--tools-font-display",
+});
 
 export default async function CompareResultsPage({
   searchParams,
@@ -37,25 +49,11 @@ export default async function CompareResultsPage({
     redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
   }
 
-  const stocks = await getStocks();
+  const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
 
   return (
-    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
-      <div className={styles.screenerContainer}>
-        <header className={styles.screenerHeader}>
-          <div className={styles.headerRow}>
-            <div>
-              <h1 className={styles.pageTitle}>Comparison Results</h1>
-              <p className={styles.pageDesc}>
-                Side-by-side Shariah screening, ratios, and financial data for your selected
-                stocks.
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <CompareTable allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
-      </div>
+    <main className={`${compareSans.variable} ${compareDisplay.variable}`}>
+      <CompareHtmlPage allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
     </main>
   );
 }

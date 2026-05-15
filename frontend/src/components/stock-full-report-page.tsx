@@ -115,7 +115,10 @@ function statusClass(status: "pass" | "review" | "fail") {
 }
 
 function reportSummary(screening: ScreeningResult) {
-  const reasons = screening.reasons.length > 0 ? screening.reasons.join(" ") : "No additional reason text was returned by the current screening run.";
+  const reasons =
+    screening.reasons.length > 0
+      ? screening.reasons.join(" ")
+      : "No additional reason text was returned by the current screening run.";
   return `${screeningUiLabel(screening.status)} — ${reasons}`;
 }
 
@@ -130,50 +133,51 @@ export function StockFullReportPage({ stock, screening, liveQuote, indices, simi
   return (
     <div className={styles.pageWrap}>
       <section className={styles.hero}>
-        <div className={styles.crumbs}>
-          <Link href="/">Home</Link>
-          <span>›</span>
-          <Link href={`/stocks/${encodeURIComponent(stock.symbol)}`}>{stock.symbol}</Link>
-          <span>›</span>
-          <span>Full Breakdown</span>
-        </div>
+        <div className={styles.heroLeft}>
+          <div className={styles.crumbs}>
+            <Link href="/">Home</Link>
+            <span>›</span>
+            <Link href={`/stocks/${encodeURIComponent(stock.symbol)}`}>{stock.symbol}</Link>
+            <span>›</span>
+            <span>Full Breakdown</span>
+          </div>
 
-        <div className={styles.heroTop}>
           <div className={styles.identity}>
-            <StockLogo symbol={stock.symbol} size={52} status={screening.status} />
+            <StockLogo symbol={stock.symbol} size={56} status={screening.status} />
             <div>
-              <h1>{stock.name} Full Screening Report</h1>
-              <p>
-                {stock.symbol} · {stock.exchange} · {stock.sector}
-              </p>
+              <p className={styles.kicker}>{stock.symbol} · {stock.exchange}</p>
+              <h1>{stock.name}</h1>
+              <p className={styles.subhead}>{stock.sector} · {stock.country || "India"}</p>
             </div>
           </div>
+
+          <p className={styles.summary}>{reportSummary(screening)}</p>
+
           <div className={styles.heroActions}>
             <Link href={`/stocks/${encodeURIComponent(stock.symbol)}`} className={styles.ghostBtn}>Back to Stock Page</Link>
             <a href={shareUrl} className={styles.solidBtn}>Copy Report URL</a>
           </div>
         </div>
 
-        <div className={styles.verdictStrip}>
-          <div>
-            <div className={styles.label}>Final Verdict</div>
-            <div className={`${styles.verdictBadge} ${statusClass(verdictStatus)}`}>{reportStatus}</div>
-          </div>
-          <div>
-            <div className={styles.label}>Current Price</div>
-            <div className={styles.metric}>{formatPrice(displayPrice, quoteCurrency)}</div>
-          </div>
-          <div>
-            <div className={styles.label}>Methodology</div>
-            <div className={styles.metric}>AAOIFI Aligned · {PRIMARY_METHODOLOGY_VERSION}</div>
-          </div>
-          <div>
-            <div className={styles.label}>Screening Score</div>
-            <div className={styles.metric}>{Math.max(0, Math.round(screening.screening_score || 0))}%</div>
-          </div>
-        </div>
+        <aside className={styles.heroRight}>
+          <div className={styles.sideMetricLabel}>Final Verdict</div>
+          <div className={`${styles.verdictBadge} ${statusClass(verdictStatus)}`}>{reportStatus}</div>
 
-        <p className={styles.summary}>{reportSummary(screening)}</p>
+          <div className={styles.sideMetricBlock}>
+            <div className={styles.sideMetricLabel}>Current Price</div>
+            <div className={styles.sideMetricValue}>{formatPrice(displayPrice, quoteCurrency)}</div>
+          </div>
+
+          <div className={styles.sideMetricBlock}>
+            <div className={styles.sideMetricLabel}>Screening Score</div>
+            <div className={styles.sideMetricValue}>{Math.max(0, Math.round(screening.screening_score || 0))}%</div>
+          </div>
+
+          <div className={styles.sideMetricBlock}>
+            <div className={styles.sideMetricLabel}>Methodology</div>
+            <div className={styles.sideMetricValue}>AAOIFI · {PRIMARY_METHODOLOGY_VERSION}</div>
+          </div>
+        </aside>
       </section>
 
       <section className={styles.section}>
@@ -195,65 +199,61 @@ export function StockFullReportPage({ stock, screening, liveQuote, indices, simi
         </div>
       </section>
 
-      <section className={styles.section}>
-        <h2>Reasoning & Flags</h2>
-        <div className={styles.twoCol}>
-          <article className={styles.panel}>
-            <h3>Screening Reasons</h3>
-            {screening.reasons.length > 0 ? (
-              <ul>
-                {screening.reasons.map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>No detailed reasons returned for this run.</p>
-            )}
-          </article>
-          <article className={styles.panel}>
-            <h3>Manual Review Flags</h3>
-            {screening.manual_review_flags.length > 0 ? (
-              <ul>
-                {screening.manual_review_flags.map((flag) => (
-                  <li key={flag}>{flag}</li>
-                ))}
-              </ul>
-            ) : (
-              <p>No manual review flags are currently active for this stock.</p>
-            )}
-          </article>
-        </div>
+      <section className={styles.sectionGrid}>
+        <article className={styles.panel}>
+          <h3>Screening Reasons</h3>
+          {screening.reasons.length > 0 ? (
+            <ul>
+              {screening.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No detailed reasons returned for this run.</p>
+          )}
+        </article>
+
+        <article className={styles.panel}>
+          <h3>Manual Review Flags</h3>
+          {screening.manual_review_flags.length > 0 ? (
+            <ul>
+              {screening.manual_review_flags.map((flag) => (
+                <li key={flag}>{flag}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No manual review flags are currently active for this stock.</p>
+          )}
+        </article>
       </section>
 
-      <section className={styles.section}>
-        <h2>Market Context</h2>
-        <div className={styles.twoCol}>
-          <article className={styles.panel}>
-            <h3>Indices Snapshot</h3>
-            <div className={styles.indexList}>
-              {indices.slice(0, 6).map((idx) => (
-                <div key={`${idx.name}-${idx.as_of}`} className={styles.indexRow}>
-                  <span>{idx.name}</span>
-                  <span>{idx.change_percent >= 0 ? "+" : ""}{idx.change_percent.toFixed(2)}%</span>
+      <section className={styles.sectionGrid}>
+        <article className={styles.panel}>
+          <h3>Indices Snapshot</h3>
+          <div className={styles.indexList}>
+            {indices.slice(0, 6).map((idx) => (
+              <div key={`${idx.name}-${idx.as_of}`} className={styles.indexRow}>
+                <span>{idx.name}</span>
+                <span>{idx.change_percent >= 0 ? "+" : ""}{idx.change_percent.toFixed(2)}%</span>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className={styles.panel}>
+          <h3>Similar Stocks ({stock.sector})</h3>
+          <div className={styles.similarList}>
+            {similarStocks.length > 0 ? similarStocks.map(({ stock: peer, screening: peerScreening }) => (
+              <Link key={peer.symbol} href={`/stocks/${encodeURIComponent(peer.symbol)}`} className={styles.similarItem}>
+                <div>
+                  <strong>{peer.symbol}</strong>
+                  <span>{peer.name}</span>
                 </div>
-              ))}
-            </div>
-          </article>
-          <article className={styles.panel}>
-            <h3>Similar Stocks ({stock.sector})</h3>
-            <div className={styles.similarList}>
-              {similarStocks.length > 0 ? similarStocks.map(({ stock: peer, screening: peerScreening }) => (
-                <Link key={peer.symbol} href={`/stocks/${encodeURIComponent(peer.symbol)}`} className={styles.similarItem}>
-                  <div>
-                    <strong>{peer.symbol}</strong>
-                    <span>{peer.name}</span>
-                  </div>
-                  <span>{peerScreening ? screeningUiLabel(peerScreening.status) : "Requires Review"}</span>
-                </Link>
-              )) : <p>No comparable sector peers available.</p>}
-            </div>
-          </article>
-        </div>
+                <span>{peerScreening ? screeningUiLabel(peerScreening.status) : "Requires Review"}</span>
+              </Link>
+            )) : <p>No comparable sector peers available.</p>}
+          </div>
+        </article>
       </section>
 
       <section className={styles.disclaimer}>
