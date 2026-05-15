@@ -30,8 +30,17 @@ def seed_database():
     if ADMIN_SUBJECT not in config.ADMIN_AUTH_SUBJECTS:
         config.ADMIN_AUTH_SUBJECTS.append(ADMIN_SUBJECT)
 
-    _auto_seed_stocks()
-    _seed_symbol_aliases()
+    try:
+        _auto_seed_stocks()
+    except Exception as e:
+        print(f"[CONFTEST] auto_seed_stocks failed: {e}", flush=True)
+        raise
+
+    try:
+        _seed_symbol_aliases()
+    except Exception as e:
+        print(f"[CONFTEST] seed_symbol_aliases failed: {e}", flush=True)
+        raise
 
 
 @pytest.fixture()
