@@ -613,27 +613,27 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
                 </thead>
                 <tbody>
                   {/* Status badges */}
-                  {renderMetricRow("Status", "Shariah screening verdict", orderedResults.map((r) =>
+                  {renderMetricRow("Status", "Shariah screening verdict", orderedResults.map((r, i) =>
                     r ? (
-                      <span className={`${styles.cmpTbadge} ${statusBadgeClass(r.status)}`}>
+                      <span key={i} className={`${styles.cmpTbadge} ${statusBadgeClass(r.status)}`}>
                         {screeningUiLabel(r.status)}
                       </span>
                     ) : "-"
                   ))}
 
                   {/* Business Activity */}
-                  {renderMetricRow("Business Activity", "Sector permissibility", orderedResults.map((r) =>
+                  {renderMetricRow("Business Activity", "Sector permissibility", orderedResults.map((r, i) =>
                     r ? (
-                      <span className={r.breakdown.sector_allowed ? styles.cmpPass : styles.cmpFail}>
+                      <span key={i} className={r.breakdown.sector_allowed ? styles.cmpPass : styles.cmpFail}>
                         {r.breakdown.sector_allowed ? "Permissible" : "Not Permissible"}
                       </span>
                     ) : "-"
                   ))}
 
                   {/* Compliance Score rings */}
-                  {renderMetricRow("Compliance Score", "0–100 methodology score", orderedResults.map((r) =>
+                  {renderMetricRow("Compliance Score", "0–100 methodology score", orderedResults.map((r, i) =>
                     r ? (
-                      <div className={`${styles.cmpScoreRing} ${scoreRingClass(r.screening_score)}`}>
+                      <div key={i} className={`${styles.cmpScoreRing} ${scoreRingClass(r.screening_score)}`}>
                         <span className={styles.cmpSn}>{r.screening_score}</span>
                         <span className={styles.cmpSl}>Score</span>
                       </div>
@@ -643,12 +643,12 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
                   {renderDividerRow("Financial Ratios")}
 
                   {/* Debt ratio with bars */}
-                  {renderMetricRow("Debt / Market Cap", "Threshold: 33%", orderedResults.map((r) => {
+                  {renderMetricRow("Debt / Market Cap", "Threshold: 33%", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const val = r.breakdown.debt_to_market_cap_ratio;
                     const status = ratioBarStatus(val, 0.33);
                     return (
-                      <div className={styles.cmpBarW}>
+                      <div key={i} className={styles.cmpBarW}>
                         <span className={`${styles.cmpMn} ${ratioColorClass(status)}`}>{formatPct(val)}</span>
                         <div className={styles.cmpBarT}>
                           <div className={barFillClass(status)} style={{ width: `${Math.min(val / 0.33 * 100, 100)}%` }} />
@@ -658,12 +658,12 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
                   }), bestIdx(orderedResults.map((r) => r?.breakdown.debt_to_market_cap_ratio), "min"))}
 
                   {/* Interest income with bars */}
-                  {renderMetricRow("Interest Income", "Threshold: 5%", orderedResults.map((r) => {
+                  {renderMetricRow("Interest Income", "Threshold: 5%", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const val = r.breakdown.interest_income_ratio;
                     const status = ratioBarStatus(val, 0.05);
                     return (
-                      <div className={styles.cmpBarW}>
+                      <div key={i} className={styles.cmpBarW}>
                         <span className={`${styles.cmpMn} ${ratioColorClass(status)}`}>{formatPct(val)}</span>
                         <div className={styles.cmpBarT}>
                           <div className={barFillClass(status)} style={{ width: `${Math.min(val / 0.05 * 100, 100)}%` }} />
@@ -673,12 +673,12 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
                   }), bestIdx(orderedResults.map((r) => r?.breakdown.interest_income_ratio), "min"))}
 
                   {/* Receivables with bars */}
-                  {renderMetricRow("Receivables / Market Cap", "Threshold: 33%", orderedResults.map((r) => {
+                  {renderMetricRow("Receivables / Market Cap", "Threshold: 33%", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const val = r.breakdown.receivables_to_market_cap_ratio;
                     const status = ratioBarStatus(val, 0.33);
                     return (
-                      <div className={styles.cmpBarW}>
+                      <div key={i} className={styles.cmpBarW}>
                         <span className={`${styles.cmpMn} ${ratioColorClass(status)}`}>{formatPct(val)}</span>
                         <div className={styles.cmpBarT}>
                           <div className={barFillClass(status)} style={{ width: `${Math.min(val / 0.33 * 100, 100)}%` }} />
@@ -779,20 +779,20 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
                   {renderMetricRow("Purification Ratio", "Required purification %", orderedResults.map((r) =>
                     r?.purification_ratio_pct != null ? `${r.purification_ratio_pct.toFixed(2)}%` : "N/A"
                   ), bestIdx(orderedResults.map((r) => r?.purification_ratio_pct), "min"))}
-                  {renderMetricRow("Debt Check", "≤ 33% of market cap", orderedResults.map((r) => {
+                  {renderMetricRow("Debt Check", "≤ 33% of market cap", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const pass = r.breakdown.debt_to_market_cap_ratio <= 0.33;
-                    return <span className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
+                    return <span key={i} className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
                   }))}
-                  {renderMetricRow("Interest Income Check", "≤ 5% of revenue", orderedResults.map((r) => {
+                  {renderMetricRow("Interest Income Check", "≤ 5% of revenue", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const pass = r.breakdown.interest_income_ratio <= 0.05;
-                    return <span className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
+                    return <span key={i} className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
                   }))}
-                  {renderMetricRow("Receivables Check", "≤ 33% of market cap", orderedResults.map((r) => {
+                  {renderMetricRow("Receivables Check", "≤ 33% of market cap", orderedResults.map((r, i) => {
                     if (!r) return "-";
                     const pass = r.breakdown.receivables_to_market_cap_ratio <= 0.33;
-                    return <span className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
+                    return <span key={i} className={pass ? styles.cmpPass : styles.cmpFail}>{pass ? "PASS" : "FAIL"}</span>;
                   }))}
                 </tbody>
               </table>
