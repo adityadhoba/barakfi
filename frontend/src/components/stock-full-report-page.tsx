@@ -147,7 +147,7 @@ export function StockFullReportPage({ stock, screening, liveQuote, indices, simi
             <div>
               <p className={styles.kicker}>{stock.symbol} · {stock.exchange}</p>
               <h1>{stock.name}</h1>
-              <p className={styles.subhead}>{stock.sector} · {stock.industry} · {stock.country || "India"}</p>
+              <p className={styles.subhead}>{stock.sector} · {stock.country || "India"}</p>
             </div>
           </div>
 
