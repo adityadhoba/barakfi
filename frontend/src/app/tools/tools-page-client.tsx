@@ -2,28 +2,17 @@
 
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { RouteLocalAuth } from "@/components/route-local-auth";
-import { rankStocksForQuery } from "@/lib/stock-search-rank";
-import { screeningUiLabel } from "@/lib/screening-status";
-import type { ScreeningResult, Stock } from "@/lib/api";
-import { formatMcapShort, formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 import styles from "./tools.module.css";
 
-export type ToolTab = "purification" | "zakat" | "compare" | "request";
+export type ToolTab = "purification" | "zakat" | "request";
 
 const TAB_LABELS: Array<{ id: ToolTab; label: string }> = [
   { id: "purification", label: "Purification Calculator" },
   { id: "zakat", label: "Zakat Calculator" },
-  { id: "compare", label: "Compare Stocks" },
   { id: "request", label: "Request Coverage" },
 ];
-
-function statusClass(status: string | null) {
-  if (status === "HALAL") return styles.badgeCompliant;
-  if (status === "CAUTIOUS") return styles.badgeReview;
-  return styles.badgeFail;
-}
 
 function formatApiError(data: Record<string, unknown>): string {
   const d = data.detail;
@@ -342,161 +331,6 @@ function ZakatPanel() {
   );
 }
 
-function ComparePanel({ stocks }: { stocks: Stock[] }) {
-  const [slots, setSlots] = useState<string[]>(["", "", ""]);
-  const [queries, setQueries] = useState(["", "", ""]);
-  const [screening, setScreening] = useState<Record<string, ScreeningResult>>({});
-  const [loading, setLoading] = useState(false);
-
-  const selected = useMemo(
-    () =>
-      slots
-        .map((symbol) => stocks.find((stock) => stock.symbol === symbol))
-        .filter((stock): stock is Stock => Boolean(stock)),
-    [slots, stocks],
-  );
-
-  const suggestions = queries.map((query, index) => {
-    const picked = new Set(slots.filter(Boolean));
-    if (slots[index]) picked.delete(slots[index]);
-    return rankStocksForQuery(stocks, query, 6).filter((stock) => !picked.has(stock.symbol));
-  });
-
-  async function runCompare() {
-    const symbols = slots.filter(Boolean);
-    if (symbols.length < 2) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/screen-bulk?symbols=${encodeURIComponent(symbols.join(","))}`);
-      const data = (await res.json()) as ScreeningResult[];
-      setScreening(Object.fromEntries(data.map((row) => [row.symbol, row])));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function setSlot(index: number, symbol: string) {
-    const next = [...slots];
-    next[index] = symbol;
-    setSlots(next);
-    const nextQueries = [...queries];
-    nextQueries[index] = symbol;
-    setQueries(nextQueries);
-  }
-
-  return (
-    <section className={styles.comparePageWrap}>
-      <header className={styles.toolHeader}>
-        <p className={styles.toolEyebrow}>Compare</p>
-        <h1 className={styles.toolTitle}>Compare Stocks</h1>
-        <p className={styles.toolDesc}>Compare <strong>Shariah compliance ratios, financial data, and screening status</strong> side by side for up to 3 stocks.</p>
-      </header>
-
-      <div className={styles.compareTip}>
-        <span className={styles.tipIcon}>◆</span>
-        <p className={styles.tipText}><strong>Daily compare sessions are limited.</strong> Selections stay editable until you click Compare.</p>
-      </div>
-
-      <div className={styles.compareSearchRow}>
-        {queries.map((query, index) => {
-          const selectedStock = selected.find((stock) => stock.symbol === slots[index]);
-          return (
-            <div key={index} className={styles.compareSearchSlot}>
-              <div className={styles.cssLabel}><span className={styles.slotNum}>{index + 1}</span> Stock {index + 1}{index === 2 ? <span className={styles.optionalTag}> (optional)</span> : null}</div>
-              <input
-                className={styles.cssInput}
-                type="text"
-                placeholder="Search ticker or name…"
-                value={query}
-                onChange={(e) => {
-                  const next = [...queries];
-                  next[index] = e.target.value.toUpperCase();
-                  setQueries(next);
-                  if (!e.target.value) {
-                    const nextSlots = [...slots];
-                    nextSlots[index] = "";
-                    setSlots(nextSlots);
-                  }
-                }}
-              />
-              {selectedStock ? (
-                <div className={styles.cssStockPreview}>
-                  <div className={styles.cssLogo}>{selectedStock.symbol.charAt(0)}</div>
-                  <div>
-                    <div className={styles.cssTicker}>{selectedStock.symbol}</div>
-                    <div className={styles.cssName}>{selectedStock.name}</div>
-                  </div>
-                </div>
-              ) : <div className={styles.slotPlaceholder}>Type a ticker like RELIANCE or TCS</div>}
-              {query && !selectedStock ? (
-                <div className={styles.suggestionBox}>
-                  {suggestions[index].slice(0, 5).map((stock) => (
-                    <button key={stock.symbol} type="button" className={styles.suggestionItem} onClick={() => setSlot(index, stock.symbol)}>
-                      <strong>{stock.symbol}</strong>
-                      <span>{stock.name}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-
-        <button type="button" className={styles.btnCompare} disabled={selected.length < 2 || loading} onClick={runCompare}>
-          {loading ? "Comparing…" : "Compare →"}
-        </button>
-      </div>
-
-      {selected.length >= 2 && Object.keys(screening).length > 0 ? (
-        <div className={styles.compareTableWrap}>
-          <table className={styles.compareTable}>
-            <thead>
-              <tr>
-                <th>Metric</th>
-                {selected.map((stock) => <th key={stock.symbol} className={styles.stockCol}>{stock.symbol}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className={styles.sectionDividerRow}><td colSpan={selected.length + 1}>Shariah Compliance</td></tr>
-              <tr>
-                <td className={styles.metricLabel}>Status</td>
-                {selected.map((stock) => {
-                  const status = screening[stock.symbol]?.status ?? null;
-                  return <td key={stock.symbol} className={styles.statusCell}><span className={`${styles.badge} ${statusClass(status)}`}>{screeningUiLabel(status ?? "NON_COMPLIANT")}</span></td>;
-                })}
-              </tr>
-              <tr>
-                <td className={styles.metricLabel}>Sector</td>
-                {selected.map((stock) => <td key={stock.symbol} className={styles.centerCell}>{stock.sector}</td>)}
-              </tr>
-              <tr className={styles.sectionDividerRow}><td colSpan={selected.length + 1}>Market Data</td></tr>
-              <tr>
-                <td className={styles.metricLabel}>Price</td>
-                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{formatMoney(stock.price, resolveDisplayCurrency(stock.exchange, stock.currency))}</td>)}
-              </tr>
-              <tr>
-                <td className={styles.metricLabel}>Market Cap</td>
-                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{formatMcapShort(stock.market_cap, resolveDisplayCurrency(stock.exchange, stock.currency))}</td>)}
-              </tr>
-              <tr>
-                <td className={styles.metricLabel}>P/E Ratio</td>
-                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{stock.pe_ratio != null ? `${stock.pe_ratio.toFixed(1)}×` : "—"}</td>)}
-              </tr>
-            </tbody>
-          </table>
-          <div className={styles.compareLinkRow}><Link className={styles.btnOutlineLink} href={`/compare/results?symbols=${selected.map((stock) => stock.symbol).join(",")}`}>Open full compare →</Link></div>
-        </div>
-      ) : (
-        <div className={styles.compareEmpty}>
-          <div className={styles.compareEmptyTitle}>Choose stocks to compare</div>
-          <div className={styles.compareEmptyBody}>Search above to add between 2 and 3 stocks. We only use the compare workflow after you click Compare.</div>
-          <div className={styles.compareEmptyHint}>Tip: try RELIANCE, TCS, or INFY</div>
-        </div>
-      )}
-    </section>
-  );
-}
-
 function RequestPanel() {
   const { isSignedIn, getToken } = useAuth();
   const [symbol, setSymbol] = useState("");
@@ -615,7 +449,7 @@ function RequestPanel() {
   );
 }
 
-export function ToolsPageClient({ stocks, initialTab }: { stocks: Stock[]; initialTab?: ToolTab }) {
+export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
@@ -656,8 +490,7 @@ export function ToolsPageClient({ stocks, initialTab }: { stocks: Stock[]; initi
       <div className={styles.pageWrap}>
         {activeTab === "purification" ? <PurificationPanel /> : null}
         {activeTab === "zakat" ? <ZakatPanel /> : null}
-        {activeTab === "compare" ? <ComparePanel stocks={stocks} /> : null}
-        {activeTab === "request" ? <RequestPanel /> : null}
+                {activeTab === "request" ? <RequestPanel /> : null}
 
         <div className={styles.disclaimerBar}>
           <span>Educational only · Not a religious ruling · <Link href="/methodology">Methodology</Link></span>

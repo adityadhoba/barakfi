@@ -29,9 +29,11 @@ export default async function CompareResultsPage({
     : [];
 
   const authState = await auth();
-  if (requestedSymbols.length > 0 && !authState.userId) {
+  if (!authState.userId) {
     const requestedQuery = requestedSymbols.join(",");
-    const redirectPath = `/compare/results?symbols=${requestedQuery}`;
+    const redirectPath = requestedQuery
+      ? `/compare/results?symbols=${requestedQuery}`
+      : "/compare/results";
     redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
   }
 

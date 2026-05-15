@@ -170,13 +170,20 @@ export default async function StockDetailPage({
 }: {
   params: Promise<{ symbol: string }>;
 }) {
+  const authState = await auth();
+  if (!authState.userId) {
+    const { symbol } = await params;
+    const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
+    const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}`;
+    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+  }
+
   const { symbol } = await params;
   const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
   if (!normalizedSymbol || normalizedSymbol === "COMPANY" || normalizedSymbol === "SYMBOL") {
     notFound();
   }
 
-  const authState = await auth();
   const clerkUser = await currentUser();
   const token = await authState.getToken();
   const actor =

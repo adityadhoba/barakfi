@@ -1,40 +1,32 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { adaptBackendJsonForProxy, getPublicApiBaseUrl } from "@/lib/api-base";
+import { buildBackendHeaders } from "@/lib/backend-auth";
 
 const apiBaseUrl = getPublicApiBaseUrl();
 
-function extractCompareLimitPayload(body: unknown): Record<string, unknown> | null {
-  if (!body || typeof body !== "object") return null;
+type CompareUnlockResponse = {
+  allowed: boolean;
+  charged_count: number;
+  reason?: string | null;
+  message?: string | null;
+  cta?: string | null;
+  reports_used: number;
+  reports_limit: number;
+  reports_remaining: number;
+};
 
-  const envelope = body as { error?: unknown };
-  const candidate: unknown =
-    envelope.error && typeof envelope.error === "object" ? envelope.error : body;
-
-  if (
-    !candidate ||
-    typeof candidate !== "object" ||
-    !("status" in candidate) ||
-    (candidate as { status?: unknown }).status !== "limit_exhausted"
-  ) {
-    return null;
+function unwrapPayload<T>(body: unknown): T | null {
+  if (body && typeof body === "object" && "data" in body) {
+    return ((body as { data?: unknown }).data as T) ?? null;
   }
-
-  const payload = candidate as Record<string, unknown>;
-  return {
-    status: "limit_exhausted",
-    message:
-      typeof payload.message === "string"
-        ? payload.message
-        : "You’ve reached today’s compare limit.",
-    actions: Array.isArray(payload.actions) ? payload.actions : [],
-    redirect_url: typeof payload.redirect_url === "string" ? payload.redirect_url : "/premium",
-    resets_at: typeof payload.resets_at === "string" ? payload.resets_at : undefined,
-  };
+  return (body as T) ?? null;
 }
 
 /**
- * Proxy POST /api/compare/bulk -> backend /compare/bulk (same-origin for browser).
+ * Proxy POST /api/compare/bulk:
+ * 1) reserves monthly report credits for compare symbols
+ * 2) fetches comparison screening payload only if credits are available
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -44,35 +36,96 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Invalid JSON" }, { status: 400 });
   }
 
+  const symbols = Array.isArray(body)
+    ? body.map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).slice(0, 3)
+    : [];
+
+  if (symbols.length < 2) {
+    return NextResponse.json({ detail: "Select at least 2 symbols to compare" }, { status: 400 });
+  }
+
   const authState = await auth();
-  const userId = authState.userId;
-  if (!userId) {
+  const token = await authState.getToken();
+  const clerkUser = await currentUser();
+
+  if (!token || !clerkUser) {
     return NextResponse.json({ detail: "Sign in to compare stocks." }, { status: 401 });
   }
-  const clerkUser = await currentUser();
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  headers["x-clerk-user-id"] = userId;
-  const email = clerkUser?.primaryEmailAddress?.emailAddress;
-  if (email) headers["x-actor-email"] = email;
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) headers["x-forwarded-for"] = forwardedFor;
+
+  const actor = {
+    authSubject: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress ?? null,
+  };
 
   try {
+    const unlockRes = await fetch(`${apiBaseUrl}/reports/compare/unlock`, {
+      method: "POST",
+      headers: buildBackendHeaders({ token, actor, contentType: true }),
+      cache: "no-store",
+      body: JSON.stringify({ symbols }),
+    });
+
+    const unlockBody: unknown = await unlockRes.json().catch(() => ({}));
+    const unlockPayload = unwrapPayload<CompareUnlockResponse>(unlockBody);
+
+    if (!unlockRes.ok || !unlockPayload) {
+      return NextResponse.json(adaptBackendJsonForProxy(unlockBody, unlockRes.ok), {
+        status: unlockRes.status,
+      });
+    }
+
+    if (!unlockPayload.allowed) {
+      return NextResponse.json(
+        {
+          status: "limit_exhausted",
+          message:
+            unlockPayload.message ||
+            "You do not have enough monthly report credits to run this comparison.",
+          actions: ["Come back next month", "Join BarakFi Pro"],
+          redirect_url: "/premium",
+          reports_used: unlockPayload.reports_used,
+          reports_limit: unlockPayload.reports_limit,
+          reports_remaining: unlockPayload.reports_remaining,
+          reason: unlockPayload.reason || "MONTHLY_LIMIT_REACHED",
+          cta: unlockPayload.cta || "JOIN_PRO_WAITLIST",
+        },
+        { status: 429 },
+      );
+    }
+
+    const compareHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-clerk-user-id": actor.authSubject,
+    };
+    if (actor.email) compareHeaders["x-actor-email"] = actor.email;
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    if (forwardedFor) compareHeaders["x-forwarded-for"] = forwardedFor;
+
     const response = await fetch(`${apiBaseUrl}/compare/bulk`, {
       method: "POST",
-      headers,
-      body: JSON.stringify(body),
+      headers: compareHeaders,
+      body: JSON.stringify(symbols),
       cache: "no-store",
     });
+
     const responseBody: unknown = await response.json().catch(() => ({}));
-    const compareLimitPayload = extractCompareLimitPayload(responseBody);
-    if (response.status === 429 && compareLimitPayload) {
-      return NextResponse.json(compareLimitPayload, {
+
+    if (!response.ok) {
+      return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), {
         status: response.status,
       });
     }
-    return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), {
-      status: response.status,
+
+    const comparePayload = unwrapPayload<unknown[]>(responseBody) ?? [];
+
+    return NextResponse.json({
+      data: comparePayload,
+      usage: {
+        charged_count: unlockPayload.charged_count,
+        reports_used: unlockPayload.reports_used,
+        reports_limit: unlockPayload.reports_limit,
+        reports_remaining: unlockPayload.reports_remaining,
+      },
     });
   } catch {
     return NextResponse.json({ detail: "Backend unreachable" }, { status: 502 });
