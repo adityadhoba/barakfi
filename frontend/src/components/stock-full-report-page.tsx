@@ -232,7 +232,7 @@ export function StockFullReportPage({ stock, screening, liveQuote, indices, simi
             <h3>Indices Snapshot</h3>
             <div className={styles.indexList}>
               {indices.slice(0, 6).map((idx) => (
-                <div key={`${idx.name}-${idx.updated_at}`} className={styles.indexRow}>
+                <div key={`${idx.name}-${idx.as_of}`} className={styles.indexRow}>
                   <span>{idx.name}</span>
                   <span>{idx.change_percent >= 0 ? "+" : ""}{idx.change_percent.toFixed(2)}%</span>
                 </div>
