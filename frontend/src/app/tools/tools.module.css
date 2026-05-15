@@ -1124,3 +1124,1025 @@
     align-items: flex-start;
   }
 }
+
+/* ── COMPARE V2 ─────────────────────────────────────────── */
+
+/* Hero */
+.cmpHero {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 64px 64px 0;
+}
+
+.cmpEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  margin: 0 0 20px;
+}
+
+.cmpEyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: #7ec8a0;
+}
+
+.cmpTitle {
+  margin: 0 0 16px;
+  font-family: var(--tools-font-display), serif;
+  font-size: clamp(48px, 5.5vw, 72px);
+  font-weight: 400;
+  line-height: 0.96;
+  color: #e6e2d8;
+}
+
+.cmpTitle span {
+  color: #7ec8a0;
+}
+
+.cmpSub {
+  margin: 0 0 32px;
+  max-width: 720px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.cmpStats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(126, 200, 160, 0.15);
+  border-bottom: 1px solid rgba(126, 200, 160, 0.15);
+  margin-bottom: 40px;
+}
+
+.cmpStat {
+  padding: 16px 24px;
+  border-left: 2px solid #7ec8a0;
+  margin-left: 24px;
+}
+
+.cmpStat:first-child {
+  margin-left: 0;
+}
+
+.cmpStatNum {
+  font-family: var(--tools-font-display), serif;
+  font-size: 28px;
+  color: #7ec8a0;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.cmpStatLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.52);
+  margin-top: 4px;
+}
+
+/* Search Section */
+.cmpSearchSection {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 64px;
+}
+
+.cmpSearchGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.cmpSlotWrap {
+  position: relative;
+}
+
+.cmpSlotBox {
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(10, 26, 18, 0.95));
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  padding: 16px 18px;
+  min-height: 110px;
+  transition: border-color 0.18s;
+}
+
+.cmpSlotBox:focus-within {
+  border-color: rgba(126, 200, 160, 0.45);
+}
+
+.cmpHasStock {
+  border-color: rgba(94, 196, 134, 0.35);
+}
+
+.cmpSlotLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.cmpSlotNumBadge {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.cmpSlotLabelText {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  margin-left: 8px;
+}
+
+.cmpSlotClearBtn {
+  display: none;
+  border: 0;
+  background: transparent;
+  color: rgba(230, 226, 216, 0.4);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.cmpSlotClearBtn:hover {
+  color: #e6e2d8;
+}
+
+.cmpHasStock .cmpSlotClearBtn {
+  display: block;
+}
+
+.cmpSlotInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 300;
+  color: #e6e2d8;
+  padding: 4px 0;
+}
+
+.cmpSlotInput::placeholder {
+  color: rgba(230, 226, 216, 0.35);
+}
+
+.cmpSlotChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.cmpChipLogo {
+  width: 26px;
+  height: 26px;
+  background: #112318;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #7ec8a0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cmpChipTicker {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e6e2d8;
+}
+
+.cmpChipName {
+  font-size: 10.5px;
+  color: rgba(230, 226, 216, 0.55);
+  margin-top: 1px;
+}
+
+.cmpChipBadge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1.5px solid;
+  margin-left: auto;
+}
+
+.cmpChipBadgeC {
+  color: #5ec486;
+  border-color: rgba(94, 196, 134, 0.4);
+}
+
+.cmpChipBadgeR {
+  color: #e0a468;
+  border-color: rgba(224, 164, 104, 0.4);
+}
+
+.cmpChipBadgeN {
+  color: #e06868;
+  border-color: rgba(224, 104, 104, 0.4);
+}
+
+/* Dropdown */
+.cmpDropdown {
+  position: absolute;
+  z-index: 500;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #091410;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cmpDropItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 0;
+  border-top: 1px solid rgba(230, 226, 216, 0.06);
+  background: transparent;
+  color: #e6e2d8;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s;
+}
+
+.cmpDropItem:first-child {
+  border-top: 0;
+}
+
+.cmpDropItem:hover {
+  background: rgba(126, 200, 160, 0.08);
+}
+
+.cmpDropItemLogo {
+  width: 26px;
+  height: 26px;
+  background: #112318;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #7ec8a0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cmpDropItemTicker {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e6e2d8;
+}
+
+.cmpDropItemName {
+  font-size: 11px;
+  color: rgba(230, 226, 216, 0.55);
+  margin-top: 1px;
+}
+
+.cmpDropItemRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.cmpDropBadge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1.5px solid;
+}
+
+.cmpDropNoResult {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(230, 226, 216, 0.4);
+}
+
+/* Compare Button */
+.cmpBtn {
+  background: #7ec8a0;
+  color: #091410;
+  border: none;
+  padding: 0 32px;
+  min-height: 90px;
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.18s, transform 0.18s;
+}
+
+.cmpBtn:hover {
+  background: #5ec486;
+  transform: translateY(-1px);
+}
+
+.cmpBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cmpBtnArrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Presets */
+.cmpPresets {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 64px 40px;
+}
+
+.cmpPresetLabel {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+}
+
+.cmpPresetPill {
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  background: transparent;
+  color: rgba(230, 226, 216, 0.65);
+  padding: 7px 14px;
+  font-size: 11px;
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cmpPresetPill:hover {
+  border-color: rgba(126, 200, 160, 0.5);
+  color: #7ec8a0;
+}
+
+/* Results Area */
+.cmpResults {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 64px 80px;
+}
+
+/* Section Dividers */
+.cmpSecDivider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 52px 0 28px;
+}
+
+.cmpSecLine {
+  flex: 1;
+  height: 1px;
+  background: rgba(230, 226, 216, 0.1);
+}
+
+.cmpSecLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  white-space: nowrap;
+}
+
+.cmpSecLabel::before {
+  content: "◆ ";
+  font-size: 7px;
+}
+
+/* Stock Header Cards */
+.cmpHeaderGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.cmpShc {
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(10, 26, 18, 0.95));
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  border-top: 3px solid #7ec8a0;
+  padding: 24px;
+  position: relative;
+}
+
+.cmpShcTop {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.cmpShcLogo {
+  width: 42px;
+  height: 42px;
+  background: #112318;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #7ec8a0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cmpShcTicker {
+  font-family: var(--tools-font-display), serif;
+  font-size: 21px;
+  font-weight: 400;
+  color: #e6e2d8;
+  line-height: 1.1;
+}
+
+.cmpShcName {
+  font-size: 11.5px;
+  color: rgba(230, 226, 216, 0.55);
+  margin-top: 2px;
+}
+
+.cmpShcStatus {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1.5px solid;
+  margin-top: 6px;
+}
+
+.cmpShcPriceRow {
+  margin: 16px 0 12px;
+}
+
+.cmpShcPrice {
+  font-family: var(--tools-font-display), serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: #e6e2d8;
+  line-height: 1;
+}
+
+.cmpShcChg {
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+.cmpShcChgUp {
+  color: #5ec486;
+}
+
+.cmpShcChgDown {
+  color: #e06868;
+}
+
+.cmpShcGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid rgba(126, 200, 160, 0.15);
+  margin-top: 12px;
+}
+
+.cmpShcKv {
+  padding: 10px 8px 8px 0;
+  border-bottom: 1px solid rgba(230, 226, 216, 0.06);
+}
+
+.cmpShcKv:nth-child(odd) {
+  border-right: 1px solid rgba(230, 226, 216, 0.06);
+  padding-right: 10px;
+}
+
+.cmpShcKv:nth-child(even) {
+  padding-left: 10px;
+}
+
+.cmpShcK {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+}
+
+.cmpShcV {
+  font-size: 13.5px;
+  color: #e6e2d8;
+  margin-top: 2px;
+}
+
+/* Compare Tables */
+.cmpTblWrap {
+  overflow-x: auto;
+}
+
+.cmpCtbl {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 460px;
+}
+
+.cmpCtbl th {
+  padding: 13px 18px;
+  background: #112318;
+  border-bottom: 2px solid rgba(126, 200, 160, 0.15);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.55);
+  font-weight: 400;
+  text-align: left;
+}
+
+.cmpStockTh {
+  text-align: center !important;
+  font-size: 10.5px !important;
+  color: #e6e2d8 !important;
+}
+
+.cmpCtbl td {
+  padding: 15px 18px;
+  border-bottom: 1px solid rgba(230, 226, 216, 0.06);
+  font-size: 13px;
+  color: #e6e2d8;
+  vertical-align: middle;
+}
+
+.cmpCtbl tr:hover td {
+  background: rgba(126, 200, 160, 0.03);
+}
+
+.cmpCtblDivider td {
+  background: #112318;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+  padding: 9px 18px;
+}
+
+.cmpMl {
+  font-size: 11.5px;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.cmpMs {
+  font-size: 10px;
+  color: rgba(230, 226, 216, 0.55);
+  opacity: 0.6;
+}
+
+.cmpMv {
+  text-align: center;
+}
+
+.cmpMn {
+  font-family: var(--tools-font-display), serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #e6e2d8;
+}
+
+.cmpPass {
+  color: #5ec486;
+}
+
+.cmpWarn {
+  color: #e0a468;
+}
+
+.cmpFail {
+  color: #e06868;
+}
+
+.cmpNeutral {
+  color: #e6e2d8;
+}
+
+.cmpMt {
+  text-align: center;
+  font-size: 12.5px;
+}
+
+.cmpMw {
+  background: rgba(94, 196, 134, 0.06);
+}
+
+.cmpWd {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #5ec486;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Bars in table */
+.cmpBarW {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.cmpBarT {
+  width: 88px;
+  height: 4px;
+  background: rgba(230, 226, 216, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cmpBarF {
+  height: 100%;
+  border-radius: 2px;
+  background: #5ec486;
+}
+
+.cmpBarFWarn {
+  background: #e0a468;
+}
+
+.cmpBarFFail {
+  background: #e06868;
+}
+
+/* Status badges in table */
+.cmpTbadge {
+  display: inline-block;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1.5px solid;
+}
+
+.cmpTbadgeC {
+  color: #5ec486;
+  border-color: rgba(94, 196, 134, 0.4);
+}
+
+.cmpTbadgeR {
+  color: #e0a468;
+  border-color: rgba(224, 164, 104, 0.4);
+}
+
+.cmpTbadgeN {
+  color: #e06868;
+  border-color: rgba(224, 104, 104, 0.4);
+}
+
+/* Score Ring */
+.cmpScoreRing {
+  width: 68px;
+  height: 68px;
+  border: 2px solid rgba(230, 226, 216, 0.15);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.cmpScoreRing .cmpSn {
+  font-family: var(--tools-font-display), serif;
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.cmpScoreRing .cmpSl {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.cmpRingE {
+  border-color: rgba(94, 196, 134, 0.5);
+  color: #5ec486;
+}
+
+.cmpRingG {
+  border-color: rgba(126, 200, 160, 0.5);
+  color: #7ec8a0;
+}
+
+.cmpRingC {
+  border-color: rgba(224, 164, 104, 0.5);
+  color: #e0a468;
+}
+
+.cmpRingP {
+  border-color: rgba(224, 104, 104, 0.5);
+  color: #e06868;
+}
+
+/* Purification Cards */
+.cmpPurifyGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.cmpPurifyCard {
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(10, 26, 18, 0.95));
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  padding: 22px;
+}
+
+.cmpPurifyTicker {
+  font-family: var(--tools-font-display), serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: #e6e2d8;
+  margin-bottom: 14px;
+}
+
+.cmpPurifyRatioRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.cmpPurifyRatioVal {
+  font-family: var(--tools-font-display), serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: #e6e2d8;
+  line-height: 1;
+}
+
+.cmpPurifyRatioLabel {
+  font-size: 11px;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.cmpPurifyBarRow {
+  margin-bottom: 16px;
+}
+
+.cmpPurifyBarLabel {
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+  margin-bottom: 6px;
+}
+
+.cmpPurifyNote {
+  font-size: 11.5px;
+  color: rgba(230, 226, 216, 0.55);
+  line-height: 1.65;
+  border-top: 1px solid rgba(126, 200, 160, 0.15);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+
+/* Insight Cards */
+.cmpInsightGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.cmpInsightCard {
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(10, 26, 18, 0.95));
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  padding: 22px;
+}
+
+.cmpInsightCardHead {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+  margin-bottom: 14px;
+}
+
+.cmpInsightBody {
+  font-size: 12.5px;
+  color: rgba(230, 226, 216, 0.55);
+  line-height: 1.75;
+  border-bottom: 1px solid rgba(126, 200, 160, 0.15);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+
+.cmpInsightSectionLabel {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+  margin-bottom: 8px;
+}
+
+.cmpInsightRow {
+  padding: 9px 12px;
+  border-left: 2px solid rgba(126, 200, 160, 0.25);
+  font-size: 12px;
+  color: rgba(230, 226, 216, 0.55);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+/* Method Note */
+.cmpMethodNote {
+  background: rgba(28, 61, 40, 0.5);
+  border: 1px solid rgba(126, 200, 160, 0.15);
+  border-left: 3px solid #7ec8a0;
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cmpMethodNoteIcon {
+  color: #7ec8a0;
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-top: 1px;
+}
+
+.cmpMethodNoteText {
+  font-size: 12px;
+  color: rgba(230, 226, 216, 0.55);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Empty State */
+.cmpEmpty {
+  text-align: center;
+  padding: 80px 24px;
+  border: 1px solid rgba(126, 200, 160, 0.15);
+}
+
+.cmpEmptyIcon {
+  font-size: 28px;
+  opacity: 0.25;
+  margin-bottom: 16px;
+}
+
+.cmpEmptyTitle {
+  font-family: var(--tools-font-display), serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #e6e2d8;
+  margin-bottom: 12px;
+}
+
+.cmpEmptyDesc {
+  font-size: 13px;
+  color: rgba(230, 226, 216, 0.55);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* Loading */
+.cmpLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  padding: 80px 24px;
+}
+
+.cmpLdots {
+  display: flex;
+  gap: 6px;
+}
+
+.cmpLdot {
+  width: 8px;
+  height: 8px;
+  background: #7ec8a0;
+  border-radius: 50%;
+  animation: cmpPulse 1.2s ease-in-out infinite;
+}
+
+.cmpLdot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.cmpLdot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes cmpPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+.cmpLtext {
+  font-size: 12px;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+/* Animations */
+.cmpAnim {
+  animation: cmpFadeUp 0.45s ease-out both;
+}
+
+@keyframes cmpFadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cmpA1 { animation-delay: 0.05s; }
+.cmpA2 { animation-delay: 0.12s; }
+.cmpA3 { animation-delay: 0.19s; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .cmpHero,
+  .cmpSearchSection,
+  .cmpPresets,
+  .cmpResults {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .cmpSearchGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cmpBtn {
+    width: 100%;
+    min-height: 52px;
+    flex-direction: row;
+    gap: 8px;
+    padding: 0 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cmpStats {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .cmpStat {
+    margin-left: 0;
+  }
+
+  .cmpCtbl th,
+  .cmpCtbl td {
+    font-size: 11px;
+    padding: 10px 12px;
+  }
+
+  .cmpMn {
+    font-size: 16px;
+  }
+
+  .cmpTitle {
+    font-size: 36px;
+  }
+}
