@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { RouteLocalAuth } from "@/components/route-local-auth";
 import styles from "./tools.module.css";
 
-export type ToolTab = "purification" | "zakat" | "request";
+export type ToolTab = "purification" | "zakat" | "compare" | "request";
 
 const TAB_LABELS: Array<{ id: ToolTab; label: string }> = [
   { id: "purification", label: "Purification Calculator" },
   { id: "zakat", label: "Zakat Calculator" },
+  { id: "compare", label: "Compare Stocks" },
   { id: "request", label: "Request Coverage" },
 ];
 
@@ -331,6 +333,26 @@ function ZakatPanel() {
   );
 }
 
+function CompareShortcutPanel() {
+  return (
+    <section className={styles.requestPageWrap}>
+      <header className={styles.toolHeader}>
+        <p className={styles.toolEyebrow}>Tools · Compare</p>
+        <h1 className={styles.toolTitle}>Compare Stocks</h1>
+        <p className={styles.toolDesc}>Open the dedicated compare workspace for side-by-side Shariah screening and monthly credit-based compare sessions.</p>
+      </header>
+      <div className={styles.requestCard}>
+        <div className={styles.requestCopy}>
+          Compare now lives in a dedicated page to keep performance and usage tracking accurate.
+        </div>
+        <div className={styles.limitActions}>
+          <Link href="/compare" className={styles.btnPrimary}>Open Compare</Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function RequestPanel() {
   const { isSignedIn, getToken } = useAuth();
   const [symbol, setSymbol] = useState("");
@@ -450,6 +472,7 @@ function RequestPanel() {
 }
 
 export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
@@ -480,7 +503,14 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
             key={tab.id}
             type="button"
             className={`${styles.pageTab} ${activeTab === tab.id ? styles.pageTabActive : ""}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              if (tab.id === "compare") {
+                setActiveTab("compare");
+                router.push("/compare");
+                return;
+              }
+              setActiveTab(tab.id);
+            }}
           >
             {tab.label}
           </button>
@@ -490,7 +520,8 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
       <div className={styles.pageWrap}>
         {activeTab === "purification" ? <PurificationPanel /> : null}
         {activeTab === "zakat" ? <ZakatPanel /> : null}
-                {activeTab === "request" ? <RequestPanel /> : null}
+        {activeTab === "compare" ? <CompareShortcutPanel /> : null}
+        {activeTab === "request" ? <RequestPanel /> : null}
 
         <div className={styles.disclaimerBar}>
           <span>Educational only · Not a religious ruling · <Link href="/methodology">Methodology</Link></span>
