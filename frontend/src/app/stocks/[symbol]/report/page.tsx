@@ -3,8 +3,10 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import {
   getBulkScreeningResults,
+  getComplianceHistory,
   getEquityQuote,
   getMarketIndices,
+  getMultiScreeningResult,
   getStocks,
   type EquityQuote,
   type ReportUnlockResult,
@@ -209,7 +211,7 @@ export default async function StockFullReportRoute({
     );
   }
 
-  const [liveQuote, similarScreenings] = await Promise.all([
+  const [liveQuote, similarScreenings, multiScreening, complianceHistory] = await Promise.all([
     getEquityQuote(stock.symbol, "auto_india", stock.exchange).then(sanitizeEquityQuote).catch(() => null),
     (async () => {
       const sectorPeers = allStocks
@@ -219,6 +221,8 @@ export default async function StockFullReportRoute({
       if (sectorPeers.length === 0) return [];
       return getBulkScreeningResults(sectorPeers.map((peer) => peer.symbol)).catch(() => []);
     })(),
+    getMultiScreeningResult(stock.symbol).catch(() => null),
+    getComplianceHistory(stock.symbol).catch(() => []),
   ]);
 
   const sameSector = allStocks
@@ -250,6 +254,8 @@ export default async function StockFullReportRoute({
         liveQuote={liveQuote}
         indices={indices}
         similarStocks={similarStocks}
+        multiScreening={multiScreening}
+        complianceHistory={complianceHistory}
       />
     </StockPageRouteShell>
   );
