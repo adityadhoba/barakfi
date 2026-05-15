@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import { getStocks } from "@/lib/api";
-import { CompareTable } from "@/components/compare-table";
-import styles from "@/app/screener.module.css";
+import { CompareHtmlPage } from "@/components/compare-html-page";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,18 @@ export const metadata: Metadata = {
     "Compare Shariah compliance, key financial ratios, and market context side by side for Indian stocks.",
   alternates: { canonical: "https://barakfi.in/compare" },
 };
+
+const compareSans = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--tools-font-sans",
+});
+
+const compareDisplay = DM_Serif_Display({
+  subsets: ["latin"],
+  weight: ["400"],
+  variable: "--tools-font-display",
+});
 
 export default async function ComparePage({
   searchParams,
@@ -40,10 +52,8 @@ export default async function ComparePage({
   const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
 
   return (
-    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
-      <div className={styles.screenerContainer}>
-        <CompareTable allStocks={stocks} initialSymbols={initialSymbols} mode="select" />
-      </div>
+    <main className={`${compareSans.variable} ${compareDisplay.variable}`}>
+      <CompareHtmlPage allStocks={stocks} initialSymbols={initialSymbols} mode="select" />
     </main>
   );
 }
