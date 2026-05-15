@@ -450,10 +450,178 @@
 }
 
 .comparePageWrap {
-  max-width: 1300px;
+  max-width: 1340px;
   margin: 0 auto;
   padding-bottom: 56px;
 }
+
+.compareHero {
+  margin-bottom: 2rem;
+}
+
+.compareEyebrow {
+  margin: 0 0 1rem;
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #7ec8a0;
+}
+
+.compareTitle {
+  margin: 0;
+  font-family: var(--tools-font-display), serif;
+  font-size: clamp(52px, 6vw, 74px);
+  line-height: 0.96;
+  font-weight: 400;
+  color: #e6e2d8;
+}
+
+.compareTitle span {
+  color: #7ec8a0;
+}
+
+.compareLead {
+  margin: 1.25rem 0 0;
+  max-width: 760px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: rgba(230, 226, 216, 0.55);
+}
+
+.compareStatsRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid rgba(230, 226, 216, 0.12);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.12);
+  margin: 2rem 0 1.7rem;
+}
+
+.compareStat {
+  padding: 0.85rem 1rem;
+  border-right: 1px solid rgba(230, 226, 216, 0.12);
+  display: grid;
+  gap: 0.15rem;
+}
+
+.compareStat:last-child {
+  border-right: 0;
+}
+
+.compareStat strong {
+  font-family: var(--tools-font-display), serif;
+  font-size: 2.2rem;
+  color: #7ec8a0;
+  font-weight: 400;
+}
+
+.compareStat span {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(230, 226, 216, 0.52);
+}
+
+.compareEntryRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 120px;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 0.9rem;
+}
+
+.compareSlotCard {
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(10, 26, 18, 0.95));
+  border: 1px solid rgba(126, 200, 160, 0.28);
+  padding: 1rem;
+  min-height: 148px;
+  position: relative;
+}
+
+.compareSlotHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compareSlotClear {
+  border: 0;
+  background: transparent;
+  color: rgba(230, 226, 216, 0.4);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.compareSlotClear:hover {
+  color: #e6e2d8;
+}
+
+.compareStockLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 0.65rem;
+}
+
+.compareRunButton {
+  border: 1px solid #7ec8a0;
+  background: #7ec8a0;
+  color: #091410;
+  display: grid;
+  place-items: center;
+  gap: 0.2rem;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.compareRunButton span {
+  font-size: 1.2rem;
+}
+
+.compareRunButton strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.compareRunButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.compareTryRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.compareTryRow > span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(230, 226, 216, 0.52);
+}
+
+.compareTryChip {
+  border: 1px solid rgba(230, 226, 216, 0.16);
+  background: transparent;
+  color: rgba(230, 226, 216, 0.65);
+  padding: 0.5rem 0.72rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.compareTryChip:hover {
+  border-color: rgba(126, 200, 160, 0.5);
+  color: #e6e2d8;
+}
+
 .compareTip {
   background: #1c3d28;
   border: 1px solid rgba(230, 226, 216, 0.1);
@@ -681,6 +849,97 @@
 .badgeReview { color: #e0a468; border-color: rgba(224, 164, 104, 0.4); }
 .badgeFail { color: #e06868; border-color: rgba(224, 104, 104, 0.4); }
 
+.requestCard {
+  background: rgba(28, 61, 40, 0.78);
+  border: 1px solid rgba(230, 226, 216, 0.1);
+  padding: 18px;
+  margin: 12px 0 20px;
+}
+
+.requestCopy {
+  margin: 0;
+  color: rgba(230, 226, 216, 0.8);
+}
+
+.limitActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.compareResultsCards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 1.2rem;
+}
+
+.compareResultCard {
+  border: 1px solid rgba(126, 200, 160, 0.35);
+  background: linear-gradient(180deg, rgba(17, 35, 24, 0.95), rgba(9, 24, 18, 0.95));
+  padding: 1rem;
+}
+
+.compareResultHead {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.compareResultHead h3 {
+  margin: 0;
+  font-family: var(--tools-font-display), serif;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 0.95;
+}
+
+.compareResultHead p {
+  margin: 0.2rem 0 0.35rem;
+  color: rgba(230, 226, 216, 0.55);
+  font-size: 0.88rem;
+}
+
+.compareResultPrice {
+  margin: 1rem 0 0.4rem;
+  font-family: var(--tools-font-display), serif;
+  font-size: 2.1rem;
+  color: #e6e2d8;
+}
+
+.compareResultMetaGrid {
+  margin-top: 0.7rem;
+  border-top: 1px solid rgba(230, 226, 216, 0.1);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compareResultMetaGrid > div {
+  padding: 0.65rem 0.45rem 0.45rem 0;
+  border-right: 1px solid rgba(230, 226, 216, 0.08);
+  border-bottom: 1px solid rgba(230, 226, 216, 0.08);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.compareResultMetaGrid > div:nth-child(2n) {
+  border-right: 0;
+  padding-left: 0.6rem;
+}
+
+.compareResultMetaGrid span {
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(230, 226, 216, 0.45);
+}
+
+.compareResultMetaGrid strong {
+  font-size: 1.05rem;
+  color: #e6e2d8;
+  font-weight: 500;
+}
+
 .requestPageWrap {
   max-width: 920px;
   margin: 0 auto;
@@ -809,6 +1068,14 @@
   .compareSearchRow {
     grid-template-columns: 1fr;
   }
+
+  .compareEntryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .compareResultsCards {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -828,7 +1095,8 @@
   .navLinks a:not(:first-child):not(:nth-child(2)) { display: none; }
 
   .fieldRow,
-  .requestStats {
+  .requestStats,
+  .compareStatsRow {
     grid-template-columns: 1fr;
   }
 
@@ -840,6 +1108,10 @@
 @media (max-width: 768px) {
   .toolTitle {
     font-size: 40px;
+  }
+
+  .compareTitle {
+    font-size: 2.6rem;
   }
 
   .siteFooter {
