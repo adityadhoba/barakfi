@@ -9,6 +9,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.services import auth_service  # noqa: E402
+from app.main import _auto_seed_stocks  # noqa: E402
 
 ADMIN_SUBJECT = "google-oauth2|aditya-seed"
 # Provide stable user identity so seeded admin expectations match tests.
@@ -18,6 +19,13 @@ ADMIN_CLAIMS = {
     "email": "aditya@barakfi.in",
     "name": "Aditya",
 }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def seed_database():
+    """Ensure database is seeded before tests run. Auto-seed normally runs in background thread,
+    but tests need the data synchronously, so we call it directly before any tests execute."""
+    _auto_seed_stocks()
 
 
 @pytest.fixture()
