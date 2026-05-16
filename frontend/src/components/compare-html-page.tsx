@@ -59,6 +59,16 @@ function normalizeLimitState(payload: unknown): CompareLimitState | null {
   };
 }
 
+function extractApiMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const obj = payload as Record<string, unknown>;
+  const detail = obj.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  const message = obj.message;
+  if (typeof message === "string" && message.trim()) return message;
+  return null;
+}
+
 function formatPct(value: number) {
   return `${(value * 100).toFixed(2)}%`;
 }
@@ -146,8 +156,15 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
         setResults([]);
         return;
       }
+
       if (!response.ok) {
-        setError("Unable to compare the selected stocks right now.");
+        if (response.status === 401) {
+          setError("Your session expired. Please sign in again to compare stocks.");
+          setResults([]);
+          return;
+        }
+        const msg = extractApiMessage(payload) ?? extractApiMessage(body);
+        setError(msg || "Unable to compare the selected stocks right now.");
         setResults([]);
         return;
       }
