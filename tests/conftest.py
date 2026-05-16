@@ -9,6 +9,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from app.services import auth_service  # noqa: E402
+from app.main import _auto_seed_stocks, _seed_symbol_aliases  # noqa: E402
+import app.config as config  # noqa: E402
 
 ADMIN_SUBJECT = "google-oauth2|aditya-seed"
 # Provide stable user identity so seeded admin expectations match tests.
@@ -18,6 +20,27 @@ ADMIN_CLAIMS = {
     "email": "aditya@barakfi.in",
     "name": "Aditya",
 }
+
+
+@pytest.fixture(scope="session", autouse=True)
+def seed_database():
+    """Ensure database is seeded before tests run. Auto-seed normally runs in background thread,
+    but tests need the data synchronously, so we call it directly before any tests execute."""
+    # Ensure the seeded admin subject is recognized as admin
+    if ADMIN_SUBJECT not in config.ADMIN_AUTH_SUBJECTS:
+        config.ADMIN_AUTH_SUBJECTS.append(ADMIN_SUBJECT)
+
+    try:
+        _auto_seed_stocks()
+    except Exception as e:
+        print(f"[CONFTEST] auto_seed_stocks failed: {e}", flush=True)
+        raise
+
+    try:
+        _seed_symbol_aliases()
+    except Exception as e:
+        print(f"[CONFTEST] seed_symbol_aliases failed: {e}", flush=True)
+        raise
 
 
 @pytest.fixture()
@@ -30,7 +53,6 @@ def mock_admin_auth(monkeypatch):
     )
     # Ensure the API recognizes the mocked subject as admin.
     # Tests expect admin-only endpoints to be accessible with this subject.
-    import app.config as config  # local import to avoid import-order surprises
     if ADMIN_SUBJECT not in config.ADMIN_AUTH_SUBJECTS:
         config.ADMIN_AUTH_SUBJECTS.append(ADMIN_SUBJECT)
 
