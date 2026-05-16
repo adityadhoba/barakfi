@@ -37,7 +37,7 @@ function extractDetail(body: unknown): string {
 
 async function fetchSingleScreenings(
   symbols: string[],
-  headers: Record<string, string>,
+  headers: HeadersInit,
 ): Promise<unknown[] | null> {
   const settled = await Promise.all(
     symbols.map(async (symbol) => {
