@@ -23,6 +23,18 @@ function unwrapPayload<T>(body: unknown): T | null {
   return (body as T) ?? null;
 }
 
+function extractDetail(body: unknown): string {
+  if (!body || typeof body !== "object") return "";
+  const obj = body as Record<string, unknown>;
+  if (typeof obj.detail === "string") return obj.detail;
+  if (typeof obj.message === "string") return obj.message;
+  if (obj.error && typeof obj.error === "object") {
+    const e = obj.error as Record<string, unknown>;
+    if (typeof e.message === "string") return e.message;
+  }
+  return "";
+}
+
 /**
  * Proxy POST /api/compare/bulk:
  * 1) reserves monthly report credits for compare symbols
@@ -93,22 +105,49 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await fetch(`${apiBaseUrl}/compare/bulk`, {
+    const headers = buildBackendHeaders({ token, actor, contentType: true });
+
+    const primaryRes = await fetch(`${apiBaseUrl}/compare/bulk`, {
       method: "POST",
-      headers: buildBackendHeaders({ token, actor, contentType: true }),
+      headers,
       body: JSON.stringify(symbols),
       cache: "no-store",
     });
+    const primaryBody: unknown = await primaryRes.json().catch(() => ({}));
 
-    const responseBody: unknown = await response.json().catch(() => ({}));
+    let compareRes = primaryRes;
+    let compareBody = primaryBody;
 
-    if (!response.ok) {
-      return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), {
-        status: response.status,
+    // Backward-compatible fallback for stricter backend payload contracts.
+    if (!primaryRes.ok) {
+      const detail = extractDetail(primaryBody).toLowerCase();
+      const shouldRetry =
+        primaryRes.status === 422 ||
+        detail.includes("stock not found") ||
+        detail.includes("validation") ||
+        detail.includes("invalid");
+
+      if (shouldRetry) {
+        const fallbackPayload = symbols.map((symbol) => ({ symbol, exchange: "NSE" }));
+        const fallbackRes = await fetch(`${apiBaseUrl}/compare/bulk`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(fallbackPayload),
+          cache: "no-store",
+        });
+        const fallbackBody: unknown = await fallbackRes.json().catch(() => ({}));
+        compareRes = fallbackRes;
+        compareBody = fallbackBody;
+      }
+    }
+
+    if (!compareRes.ok) {
+      return NextResponse.json(adaptBackendJsonForProxy(compareBody, compareRes.ok), {
+        status: compareRes.status,
       });
     }
 
-    const comparePayload = unwrapPayload<unknown[]>(responseBody) ?? [];
+    const comparePayload = unwrapPayload<unknown[]>(compareBody) ?? [];
 
     return NextResponse.json({
       data: comparePayload,
