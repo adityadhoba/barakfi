@@ -35,6 +35,27 @@ function extractDetail(body: unknown): string {
   return "";
 }
 
+async function fetchSingleScreenings(
+  symbols: string[],
+  headers: Record<string, string>,
+): Promise<unknown[] | null> {
+  const settled = await Promise.all(
+    symbols.map(async (symbol) => {
+      const res = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}?exchange=NSE`, {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      });
+      const body = (await res.json().catch(() => ({}))) as unknown;
+      if (!res.ok) return null;
+      return unwrapPayload<unknown>(body) ?? body;
+    }),
+  );
+
+  const filtered = settled.filter((item): item is unknown => item != null);
+  return filtered.length >= 2 ? filtered : null;
+}
+
 /**
  * Proxy POST /api/compare/bulk:
  * 1) reserves monthly report credits for compare symbols
@@ -115,11 +136,11 @@ export async function POST(request: Request) {
     });
     const primaryBody: unknown = await primaryRes.json().catch(() => ({}));
 
-    let compareRes = primaryRes;
-    let compareBody = primaryBody;
+    let comparePayload: unknown[] | null = null;
 
-    // Backward-compatible fallback for stricter backend payload contracts.
-    if (!primaryRes.ok) {
+    if (primaryRes.ok) {
+      comparePayload = unwrapPayload<unknown[]>(primaryBody) ?? [];
+    } else {
       const detail = extractDetail(primaryBody).toLowerCase();
       const shouldRetry =
         primaryRes.status === 422 ||
@@ -136,21 +157,27 @@ export async function POST(request: Request) {
           cache: "no-store",
         });
         const fallbackBody: unknown = await fallbackRes.json().catch(() => ({}));
-        compareRes = fallbackRes;
-        compareBody = fallbackBody;
+
+        if (fallbackRes.ok) {
+          comparePayload = unwrapPayload<unknown[]>(fallbackBody) ?? [];
+        } else {
+          // Durable fallback so compare still works even when /compare/bulk payload parsing is strict.
+          comparePayload = await fetchSingleScreenings(symbols, headers);
+          if (!comparePayload) {
+            return NextResponse.json(adaptBackendJsonForProxy(fallbackBody, fallbackRes.ok), {
+              status: fallbackRes.status,
+            });
+          }
+        }
+      } else {
+        return NextResponse.json(adaptBackendJsonForProxy(primaryBody, primaryRes.ok), {
+          status: primaryRes.status,
+        });
       }
     }
 
-    if (!compareRes.ok) {
-      return NextResponse.json(adaptBackendJsonForProxy(compareBody, compareRes.ok), {
-        status: compareRes.status,
-      });
-    }
-
-    const comparePayload = unwrapPayload<unknown[]>(compareBody) ?? [];
-
     return NextResponse.json({
-      data: comparePayload,
+      data: comparePayload ?? [],
       usage: {
         charged_count: unlockPayload.charged_count,
         reports_used: unlockPayload.reports_used,
