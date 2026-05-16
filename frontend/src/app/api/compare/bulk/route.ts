@@ -93,17 +93,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const compareHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-clerk-user-id": actor.authSubject,
-    };
-    if (actor.email) compareHeaders["x-actor-email"] = actor.email;
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    if (forwardedFor) compareHeaders["x-forwarded-for"] = forwardedFor;
-
     const response = await fetch(`${apiBaseUrl}/compare/bulk`, {
       method: "POST",
-      headers: compareHeaders,
+      headers: buildBackendHeaders({ token, actor, contentType: true }),
       body: JSON.stringify(symbols),
       cache: "no-store",
     });
