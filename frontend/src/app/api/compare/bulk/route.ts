@@ -23,18 +23,6 @@ function unwrapPayload<T>(body: unknown): T | null {
   return (body as T) ?? null;
 }
 
-function extractDetail(body: unknown): string {
-  if (!body || typeof body !== "object") return "";
-  const obj = body as Record<string, unknown>;
-  if (typeof obj.detail === "string") return obj.detail;
-  if (typeof obj.message === "string") return obj.message;
-  if (obj.error && typeof obj.error === "object") {
-    const e = obj.error as Record<string, unknown>;
-    if (typeof e.message === "string") return e.message;
-  }
-  return "";
-}
-
 async function fetchSingleScreenings(
   symbols: string[],
   headers: HeadersInit,
@@ -59,7 +47,7 @@ async function fetchSingleScreenings(
 /**
  * Proxy POST /api/compare/bulk:
  * 1) reserves monthly report credits for compare symbols
- * 2) fetches comparison screening payload only if credits are available
+ * 2) fetches screening payload through stable endpoints for compare rendering
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -91,9 +79,11 @@ export async function POST(request: Request) {
   };
 
   try {
+    const headers = buildBackendHeaders({ token, actor, contentType: true });
+
     const unlockRes = await fetch(`${apiBaseUrl}/reports/compare/unlock`, {
       method: "POST",
-      headers: buildBackendHeaders({ token, actor, contentType: true }),
+      headers,
       cache: "no-store",
       body: JSON.stringify({ symbols }),
     });
@@ -126,58 +116,40 @@ export async function POST(request: Request) {
       );
     }
 
-    const headers = buildBackendHeaders({ token, actor, contentType: true });
-
-    const primaryRes = await fetch(`${apiBaseUrl}/compare/bulk`, {
+    // Permanent stabilization: avoid brittle /compare/bulk payload contracts.
+    // Use the same bulk screening engine as screener pages.
+    const screeningRes = await fetch(`${apiBaseUrl}/screen/bulk`, {
       method: "POST",
       headers,
       body: JSON.stringify(symbols),
       cache: "no-store",
     });
-    const primaryBody: unknown = await primaryRes.json().catch(() => ({}));
+    const screeningBody: unknown = await screeningRes.json().catch(() => ({}));
 
-    let comparePayload: unknown[] | null = null;
+    let comparePayload = screeningRes.ok ? unwrapPayload<unknown[]>(screeningBody) ?? [] : null;
 
-    if (primaryRes.ok) {
-      comparePayload = unwrapPayload<unknown[]>(primaryBody) ?? [];
-    } else {
-      const detail = extractDetail(primaryBody).toLowerCase();
-      const shouldRetry =
-        primaryRes.status === 422 ||
-        detail.includes("stock not found") ||
-        detail.includes("validation") ||
-        detail.includes("invalid");
-
-      if (shouldRetry) {
-        const fallbackPayload = symbols.map((symbol) => ({ symbol, exchange: "NSE" }));
-        const fallbackRes = await fetch(`${apiBaseUrl}/compare/bulk`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(fallbackPayload),
-          cache: "no-store",
-        });
-        const fallbackBody: unknown = await fallbackRes.json().catch(() => ({}));
-
-        if (fallbackRes.ok) {
-          comparePayload = unwrapPayload<unknown[]>(fallbackBody) ?? [];
-        } else {
-          // Durable fallback so compare still works even when /compare/bulk payload parsing is strict.
-          comparePayload = await fetchSingleScreenings(symbols, headers);
-          if (!comparePayload) {
-            return NextResponse.json(adaptBackendJsonForProxy(fallbackBody, fallbackRes.ok), {
-              status: fallbackRes.status,
-            });
-          }
-        }
-      } else {
-        return NextResponse.json(adaptBackendJsonForProxy(primaryBody, primaryRes.ok), {
-          status: primaryRes.status,
-        });
+    if (!comparePayload || comparePayload.length < 2) {
+      // Last-resort fallback: per-symbol pulls.
+      const perSymbol = await fetchSingleScreenings(symbols, headers);
+      if (perSymbol && perSymbol.length >= 2) {
+        comparePayload = perSymbol;
       }
     }
 
+    if (!comparePayload || comparePayload.length < 2) {
+      return NextResponse.json(
+        {
+          detail: "Unable to compare the selected stocks right now.",
+          reports_used: unlockPayload.reports_used,
+          reports_limit: unlockPayload.reports_limit,
+          reports_remaining: unlockPayload.reports_remaining,
+        },
+        { status: screeningRes.ok ? 502 : screeningRes.status },
+      );
+    }
+
     return NextResponse.json({
-      data: comparePayload ?? [],
+      data: comparePayload,
       usage: {
         charged_count: unlockPayload.charged_count,
         reports_used: unlockPayload.reports_used,
