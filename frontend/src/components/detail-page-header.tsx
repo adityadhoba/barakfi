@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import styles from "@/components/home-v2.module.css";
-import navStyles from "@/components/local-marketing-nav.module.css";
+import styles from "@/components/detail-page-header.module.css";
 
 const FALLBACK_INDICES = [
   { name: "NIFTY", value: 23145.9, change: 1, change_percent: 0.75 },
@@ -49,22 +48,22 @@ export function DetailPageHeader({ indices }: Props) {
         </div>
       </section>
 
-      <nav className={navStyles.nav} aria-label="Main navigation">
-        <Link href="/" className={navStyles.logo}>
-          Barak<span className={navStyles.logoAccent}>Fi</span>
+      <nav className={styles.nav} aria-label="Main navigation">
+        <Link href="/" className={styles.logo}>
+          Barak<span className={styles.logoAccent}>Fi</span>
         </Link>
-        <div className={navStyles.navRight}>
-          <div className={navStyles.navLinks}>
+        <div className={styles.navRight}>
+          <div className={styles.navLinks}>
             <Link href="/screener">Screener</Link>
             <Link href="/explore">Explore</Link>
             <Link href="/tools">Tools</Link>
             <Link href="/watchlist">Watchlist</Link>
           </div>
-          <div className={navStyles.navAuth}>
-            <Link href="/sign-in" className={`${navStyles.navLink} ${navStyles.navAuthGhost}`}>
+          <div className={styles.navAuth}>
+            <Link href="/sign-in" className={`${styles.navLink} ${styles.navAuthGhost}`}>
               Log in
             </Link>
-            <Link href="/sign-up" className={`${navStyles.navLink} ${navStyles.navAuthPrimary}`}>
+            <Link href="/sign-up" className={`${styles.navLink} ${styles.navAuthPrimary}`}>
               Get started
             </Link>
           </div>

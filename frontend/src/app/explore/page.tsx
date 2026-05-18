@@ -145,7 +145,11 @@ export default async function ExplorePage({
   const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams;
   const initialTab = resolveInitialTab(resolvedSearchParams?.tab);
   const [collections, investors, stocks] = await Promise.all([
-    getCollections().catch(() => [] as Collection[]),
+    getCollections()
+      .then((colls) =>
+        colls.filter((c) => c.slug !== "sp500-halal" && c.slug !== "ftse100-halal")
+      )
+      .catch(() => [] as Collection[]),
     getSuperInvestors().catch(() => [] as SuperInvestorSummary[]),
     getStocks({ limit: 200, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => [] as Stock[]),
   ]);
