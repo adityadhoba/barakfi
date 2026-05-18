@@ -37,5 +37,5 @@ export default async function WatchlistPage() {
     screening: screeningMap.get(entry.stock.symbol) || null,
   }));
 
-  return <WatchlistHtmlPage signedIn entries={entries} />;
+  return <WatchlistHtmlPage signedIn={true} entries={entries} />;
 }
