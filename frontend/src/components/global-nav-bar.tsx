@@ -8,7 +8,6 @@ import styles from "./global-nav-bar.module.css";
 const NAV_LINKS = [
   { href: "/screener", label: "Screener" },
   { href: "/explore", label: "Explore" },
-  { href: "/compare", label: "Compare" },
   { href: "/tools", label: "Tools" },
   { href: "/watchlist", label: "Watchlist" },
 ];
