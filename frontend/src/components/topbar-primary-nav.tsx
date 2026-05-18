@@ -25,7 +25,7 @@ export function TopbarPrimaryNav() {
         items={[
           { href: "/tools/purification", label: "Purification Calculator" },
           { href: "/tools/zakat", label: "Zakat Calculator" },
-          { href: "/compare", label: "Compare Stocks" },
+          { href: "/tools?tab=compare", label: "Compare Stocks" },
           { href: "/request-coverage", label: "Request Coverage" },
         ]}
       />

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getSuperInvestor } from "@/lib/api";
 import { notFound } from "next/navigation";
+import { DetailPageHeader } from "@/components/detail-page-header";
 import styles from "./detail.module.css";
 
 export const dynamic = "force-dynamic";
@@ -36,24 +37,26 @@ export default async function InvestorDetailPage({ params }: Props) {
   const avgWeight = holdingCount > 0 ? (totalWeight / holdingCount).toFixed(1) : 0;
 
   return (
-    <main className="shellPage">
-      <div className={styles.container}>
-        <nav className={styles.breadcrumb}>
-          <Link href="/">Home</Link>
-          <span>/</span>
-          <Link href="/super-investors">Super Investors</Link>
-          <span>/</span>
-          <span>{inv.name}</span>
-        </nav>
+    <>
+      <DetailPageHeader />
+      <main className={styles.container}>
+      <nav className={styles.breadcrumb}>
+        <Link href="/">Home</Link>
+        <span>/</span>
+        <Link href="/super-investors">Super Investors</Link>
+        <span>/</span>
+        <span>{inv.name}</span>
+      </nav>
 
-        <header className={styles.header}>
-          <div className={styles.headerMeta}>
-            {inv.image_url ? (
-              <img src={inv.image_url} alt={inv.name} className={styles.avatarImg} />
-            ) : (
-              <div className={styles.avatar}>{inv.name.charAt(0)}</div>
-            )}
-          </div>
+      <div className={styles.hero}>
+        <div className={styles.headerMeta}>
+          {inv.image_url ? (
+            <img src={inv.image_url} alt={inv.name} className={styles.avatarImg} />
+          ) : (
+            <div className={styles.avatar}>{inv.name.charAt(0)}</div>
+          )}
+        </div>
+        <div className={styles.header}>
           <div className={styles.headerContent}>
             <div>
               <h1 className={styles.name}>{inv.name}</h1>
@@ -79,8 +82,10 @@ export default async function InvestorDetailPage({ params }: Props) {
               </div>
             </div>
           </div>
-        </header>
+        </div>
+      </div>
 
+      <div className={styles.portfolio}>
         <h2 className={styles.sectionTitle}>Portfolio Holdings</h2>
         <div className={styles.list}>
           {inv.holdings.map((h, i) => (
@@ -101,5 +106,6 @@ export default async function InvestorDetailPage({ params }: Props) {
         </div>
       </div>
     </main>
+    </>
   );
 }

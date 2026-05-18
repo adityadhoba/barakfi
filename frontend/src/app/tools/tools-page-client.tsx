@@ -49,7 +49,7 @@ function ToolsFooter() {
       <div className={styles.footerLinks}>
         <Link href="/tools/purification">Purification</Link>
         <Link href="/tools/zakat">Zakat</Link>
-        <Link href="/compare">Compare</Link>
+        <Link href="/tools?tab=compare">Compare</Link>
         <Link href="/request-coverage">Request Coverage</Link>
       </div>
       <div className={styles.footerMeta}>© 2026 BarakFi · Educational use</div>
