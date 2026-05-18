@@ -469,7 +469,6 @@ function RequestPanel() {
 }
 
 export function ToolsPageClient({ initialTab, stocks = [] }: { initialTab?: ToolTab; stocks?: Stock[] }) {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (

@@ -101,17 +101,6 @@ export async function HomeV2() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  const defaultTickerData = [
-    { name: "NIFTY 50", value: 24850.5, change: 1, change_percent: 0.85, source: "index", as_of: "" },
-    { name: "SENSEX", value: 81245.0, change: 1, change_percent: 0.72, source: "index", as_of: "" },
-    { name: "NIFTY IT", value: 42380.5, change: -1, change_percent: -0.45, source: "index", as_of: "" },
-    { name: "NIFTY BANK", value: 51580.0, change: 1, change_percent: 0.95, source: "index", as_of: "" },
-    { name: "NIFTY AUTO", value: 15920.5, change: 1, change_percent: 1.2, source: "index", as_of: "" },
-    { name: "NIFTY PHARMA", value: 19340.0, change: -1, change_percent: -0.3, source: "index", as_of: "" },
-    { name: "NIFTY FMCG", value: 55670.5, change: 1, change_percent: 0.6, source: "index", as_of: "" },
-    { name: "NIFTY ENERGY", value: 28450.0, change: 1, change_percent: 0.55, source: "index", as_of: "" },
-  ];
-
   const tickerItems = indices.length > 0
     ? indices
     : featuredWithStatus.length

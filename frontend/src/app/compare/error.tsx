@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ErrorState } from "@/components/error-state";
 
 export default function CompareError({
   error,
@@ -18,7 +17,7 @@ export default function CompareError({
           Something went wrong
         </h1>
         <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, margin: "0 0 24px" }}>
-          We couldn't load the comparison. This may be a temporary issue.
+          We couldn&apos;t load the comparison. This may be a temporary issue.
         </p>
         <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
           <button

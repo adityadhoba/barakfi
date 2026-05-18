@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { getStocks } from "@/lib/api";
 import { CompareHtmlPage } from "@/components/compare-html-page";
 import { DM_Serif_Display, Inter } from "next/font/google";
