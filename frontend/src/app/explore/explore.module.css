@@ -1,15 +1,5 @@
 /* ── EXPLORE COLOR TOKENS ── */
-:root {
-  --explore-bg: #091410;
-  --explore-text: #e6e2d8;
-  --explore-text-secondary: rgba(230, 226, 216, 0.55);
-  --explore-accent: #7ec8a0;
-  --explore-success: #5ec486;
-  --explore-error: #e06868;
-  --explore-line: rgba(230, 226, 216, 0.1);
-  --explore-panel: #112318;
-  --explore-panel-dark: #1c3d28;
-}
+/* Variables defined in globals.css dark theme section */
 
 .pageRoot {
   background: var(--explore-bg);

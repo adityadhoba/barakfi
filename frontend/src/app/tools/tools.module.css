@@ -1,22 +1,6 @@
 /* ── TOOLS COLOR TOKENS ── */
 /* Maps tools isolated theme to design system (dark mode) */
-:root {
-  --tools-bg: #091410;
-  --tools-text: #e6e2d8;
-  --tools-text-secondary: rgba(230, 226, 216, 0.55);
-  --tools-text-tertiary: rgba(230, 226, 216, 0.4);
-  --tools-text-hover: #e6e2d8;
-  --tools-accent: #7ec8a0;
-  --tools-accent-hover: #5ec486;
-  --tools-success: #5ec486;
-  --tools-warning: #e0a468;
-  --tools-error: #e06868;
-  --tools-panel: #112318;
-  --tools-panel-dark: #1c3d28;
-  --tools-panel-light: #0f1e18;
-  --tools-line: rgba(230, 226, 216, 0.1);
-  --tools-line-hover: rgba(230, 226, 216, 0.16);
-}
+/* Variables defined in globals.css dark theme section */
 
 /* ── TICKER ── */
 .localTicker {

@@ -179,6 +179,34 @@
   --status-haram-bg: rgba(251, 113, 133, 0.12);
   --status-haram-border: rgba(251, 113, 133, 0.35);
 
+  /* ── Tools Isolated Theme (Dark Mode Compatibility) ── */
+  --tools-bg: #091410;
+  --tools-text: #e6e2d8;
+  --tools-text-secondary: rgba(230, 226, 216, 0.55);
+  --tools-text-tertiary: rgba(230, 226, 216, 0.4);
+  --tools-text-hover: #e6e2d8;
+  --tools-accent: #7ec8a0;
+  --tools-accent-hover: #5ec486;
+  --tools-success: #5ec486;
+  --tools-warning: #e0a468;
+  --tools-error: #e06868;
+  --tools-panel: #112318;
+  --tools-panel-dark: #1c3d28;
+  --tools-panel-light: #0f1e18;
+  --tools-line: rgba(230, 226, 216, 0.1);
+  --tools-line-hover: rgba(230, 226, 216, 0.16);
+
+  /* ── Explore Isolated Theme (Dark Mode Compatibility) ── */
+  --explore-bg: #091410;
+  --explore-text: #e6e2d8;
+  --explore-text-secondary: rgba(230, 226, 216, 0.55);
+  --explore-accent: #7ec8a0;
+  --explore-success: #5ec486;
+  --explore-error: #e06868;
+  --explore-line: rgba(230, 226, 216, 0.1);
+  --explore-panel: #112318;
+  --explore-panel-dark: #1c3d28;
+
   color-scheme: dark;
 }
 
