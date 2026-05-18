@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useMobileNav } from "@/components/mobile-nav-context";
+import { buildCurrentPath, buildLoginUrl } from "@/lib/auth-redirect";
 
 const TABS = [
   { href: "/", label: "Home", icon: "\u2302", match: (p: string) => p === "/" },
@@ -13,19 +14,21 @@ const TABS = [
     label: "Watchlist",
     icon: "\u2606",
     match: (p: string) => p.startsWith("/watchlist"),
-    guestHref: "/sign-in?redirect_url=/watchlist",
+    guestHref: "/sign-in?redirect=%2Fwatchlist",
   },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { userId } = useAuth();
   const { open } = useMobileNav();
+  const currentPath = buildCurrentPath(pathname, searchParams.toString());
 
   return (
     <nav className="bottomNav" aria-label="Main navigation">
       {TABS.map((tab) => {
-        const href = "guestHref" in tab && !userId ? tab.guestHref : tab.href;
+        const href = "guestHref" in tab && !userId ? buildLoginUrl(currentPath) : tab.href;
         const active = tab.match(pathname);
         return (
           <Link

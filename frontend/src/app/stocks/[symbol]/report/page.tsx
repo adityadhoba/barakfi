@@ -171,7 +171,7 @@ export default async function StockFullReportRoute({
     const { symbol } = await params;
     const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
     const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}/report`;
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+    redirect(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
   const { symbol } = await params;

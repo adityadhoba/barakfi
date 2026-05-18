@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default async function FreshnessPage() {
   const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  if (!userId) redirect("/sign-in?redirect=%2Fadmin%2Ffreshness");
 
   const serviceToken = process.env.INTERNAL_SERVICE_TOKEN ?? "";
 

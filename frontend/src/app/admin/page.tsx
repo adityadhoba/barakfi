@@ -12,12 +12,12 @@ async function checkAdminAccess() {
   const { userId } = authState;
 
   if (!userId) {
-    redirect("/sign-in?redirect_url=/admin");
+    redirect("/sign-in?redirect=%2Fadmin");
   }
 
   const token = await authState.getToken();
   if (!token) {
-    redirect("/sign-in?redirect_url=/admin");
+    redirect("/sign-in?redirect=%2Fadmin");
   }
 
   const clerkUser = await currentUser();

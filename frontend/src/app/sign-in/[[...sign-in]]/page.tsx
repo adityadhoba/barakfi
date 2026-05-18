@@ -3,6 +3,7 @@ import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { AuthEditorialShell } from "@/components/auth-editorial-shell";
 import styles from "@/components/auth-editorial-shell.module.css";
+import { getSafeRedirectPath } from "@/lib/auth-redirect";
 
 export const metadata: Metadata = {
   title: "Sign In — Barakfi",
@@ -11,7 +12,15 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string; redirect_url?: string }>;
+}) {
+  const params = await searchParams;
+  const safeRedirectPath = getSafeRedirectPath(params.redirect ?? params.redirect_url);
+  const signUpHref = `/sign-up?redirect=${encodeURIComponent(safeRedirectPath)}`;
+
   return (
     <AuthEditorialShell
       mode="sign-in"
@@ -54,12 +63,15 @@ export default function SignInPage() {
       cardTitle="Welcome back"
       cardSub={
         <>
-          Don&apos;t have an account? <Link href="/sign-up">Create one free →</Link>
+          Don&apos;t have an account? <Link href={signUpHref}>Create one free →</Link>
         </>
       }
     >
       <div className={styles.clerkSignIn}>
         <SignIn
+          forceRedirectUrl={safeRedirectPath}
+          fallbackRedirectUrl={safeRedirectPath}
+          signUpUrl={signUpHref}
           appearance={{
             layout: {
               logoPlacement: "none",

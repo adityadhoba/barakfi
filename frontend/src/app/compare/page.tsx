@@ -38,7 +38,7 @@ export default async function ComparePage({
     const redirectPath = symbols?.trim()
       ? `/compare?symbols=${encodeURIComponent(symbols)}`
       : "/compare";
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+    redirect(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
   const { symbols: rawSymbols } = await searchParams;

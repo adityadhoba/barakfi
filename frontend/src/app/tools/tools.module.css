@@ -1,3 +1,48 @@
+/* ── TICKER ── */
+.localTicker {
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+  height: 32px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: rgba(9, 20, 16, 0.8);
+}
+
+.localTickerTrack {
+  display: flex;
+  animation: tick 40s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes tick {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.localTickerItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(230, 226, 216, 0.55);
+  border-right: 1px solid rgba(230, 226, 216, 0.1);
+}
+
+.localTickerItem b {
+  color: #e6e2d8;
+  font-weight: 500;
+}
+
+.tickerUp {
+  color: #5ec486;
+}
+
+.tickerDown {
+  color: #e06868;
+}
+
 .pageRoot {
   background: #091410;
   color: #e6e2d8;

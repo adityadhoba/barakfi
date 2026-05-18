@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Serif_Display, Inter } from "next/font/google";
+import { getStocks } from "@/lib/api";
 import { ToolsPageClient, type ToolTab } from "./tools-page-client";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ function resolveInitialTab(rawTab: string | undefined): ToolTab {
     case "zakat":
     case "request":
     case "purification":
+    case "compare":
       return rawTab;
     default:
       return "purification";
@@ -41,9 +43,10 @@ export default async function ToolsPage({
 }) {
   const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams;
   const initialTab = resolveInitialTab(resolvedSearchParams?.tab);
+  const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
   return (
     <div className={`${toolsSans.variable} ${toolsDisplay.variable}`}>
-      <ToolsPageClient initialTab={initialTab} />
+      <ToolsPageClient initialTab={initialTab} stocks={stocks} />
     </div>
   );
 }
