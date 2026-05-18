@@ -125,7 +125,7 @@ export function WatchlistPublicLanding() {
 
           <div className="flex flex-col gap-3">
             <Link
-              href="/sign-in?redirect_url=%2Fwatchlist"
+              href="/sign-in?redirect=%2Fwatchlist"
               className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors cursor-pointer"
               style={{
                 background: "var(--emerald)",
@@ -142,7 +142,7 @@ export function WatchlistPublicLanding() {
             </Link>
 
             <Link
-              href="/sign-up?redirect_url=%2Fwatchlist"
+              href="/sign-up?redirect=%2Fwatchlist"
               className="flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors cursor-pointer"
               style={{
                 background: "transparent",

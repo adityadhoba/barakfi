@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { DM_Serif_Display, Inter } from "next/font/google";
 import { getStocks } from "@/lib/api";
 import { CompareHtmlPage } from "@/components/compare-html-page";
+import { DM_Serif_Display, Inter } from "next/font/google";
 
 export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Compare Results — Barakfi",
-  description:
-    "Review Shariah compliance, financial ratios, and market data side by side for selected Indian stocks.",
-};
 
 const compareSans = Inter({
   subsets: ["latin"],
@@ -24,6 +18,13 @@ const compareDisplay = DM_Serif_Display({
   weight: ["400"],
   variable: "--tools-font-display",
 });
+
+export const metadata: Metadata = {
+  title: "Compare Results — Barakfi",
+  description:
+    "Review Shariah compliance, financial ratios, and market data side by side for selected Indian stocks.",
+  robots: { index: false, follow: true },
+};
 
 export default async function CompareResultsPage({
   searchParams,
@@ -46,10 +47,10 @@ export default async function CompareResultsPage({
     const redirectPath = requestedQuery
       ? `/compare/results?symbols=${requestedQuery}`
       : "/compare/results";
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+    redirect(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
-  const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
+  const stocks = await getStocks();
 
   return (
     <main className={`${compareSans.variable} ${compareDisplay.variable}`}>

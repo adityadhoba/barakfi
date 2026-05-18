@@ -182,7 +182,7 @@ export function WatchlistHtmlPage({
                 Your saved stocks live in your BarakFi account. Sign in to access them across devices and keep your list synced.
               </p>
               <div className={styles.heroActions}>
-                <Link href="/sign-in?redirect_url=%2Fwatchlist" className={styles.primaryButton}>Sign In</Link>
+                <Link href="/sign-in?redirect=%2Fwatchlist" className={styles.primaryButton}>Sign In</Link>
                 <Link href="/screener" className={styles.secondaryButton}>Browse Screener</Link>
               </div>
             </div>

@@ -28,8 +28,10 @@ Metric code → FundamentalsSnapshot column mapping:
 
 from __future__ import annotations
 
+import gzip
 import json
 import logging
+import zlib
 from datetime import date, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -47,6 +49,11 @@ from app.connectors.nse_client import NSEClient
 logger = logging.getLogger("barakfi.nse_xbrl")
 
 IST = ZoneInfo("Asia/Kolkata")
+
+try:
+    import brotli  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    brotli = None
 
 
 class NSESoftBlockError(RuntimeError):
@@ -344,6 +351,85 @@ def _fetch_url(
         return 0, b""
 
 
+def _json_from_text(text: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Parse JSON object from a text blob, including framed payloads."""
+    try:
+        payload = json.loads(text)
+        if isinstance(payload, dict):
+            return payload, "plain"
+    except Exception:
+        pass
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None, None
+    try:
+        payload = json.loads(text[start : end + 1])
+        if isinstance(payload, dict):
+            return payload, "framed"
+    except Exception:
+        pass
+    return None, None
+
+
+def _decode_results_payload(content: bytes) -> tuple[dict[str, Any] | None, str | None]:
+    """
+    Decode NSE results-comparision payload robustly.
+
+    In production, NSE occasionally returns:
+      - plain JSON
+      - JSON framed with control bytes
+      - gzip/deflate/brotli compressed payload bytes
+    """
+    if not content:
+        return None, None
+
+    for encoding in ("utf-8", "latin-1"):
+        try:
+            text = content.decode(encoding, errors="replace")
+        except Exception:
+            continue
+        parsed, mode = _json_from_text(text)
+        if parsed is not None:
+            return parsed, mode
+
+    compressed_variants: list[tuple[str, bytes]] = []
+
+    try:
+        compressed_variants.append(("gzip", gzip.decompress(content)))
+    except Exception:
+        pass
+
+    try:
+        compressed_variants.append(("zlib", zlib.decompress(content)))
+    except Exception:
+        pass
+
+    try:
+        compressed_variants.append(("deflate_raw", zlib.decompress(content, -zlib.MAX_WBITS)))
+    except Exception:
+        pass
+
+    if brotli is not None:
+        try:
+            compressed_variants.append(("brotli", brotli.decompress(content)))
+        except Exception:
+            pass
+
+    for codec_name, decoded_bytes in compressed_variants:
+        for encoding in ("utf-8", "latin-1"):
+            try:
+                text = decoded_bytes.decode(encoding, errors="replace")
+            except Exception:
+                continue
+            parsed, mode = _json_from_text(text)
+            if parsed is not None:
+                return parsed, f"{codec_name}:{mode or 'plain'}"
+
+    return None, None
+
+
 def fetch_nse_financials(
     symbol: str,
     period: str = "Annual",
@@ -378,15 +464,15 @@ def fetch_nse_financials(
             f"IP is soft-blocked. Response starts: {snippet!r}"
         )
 
-    try:
-        payload = json.loads(content.decode("utf-8", errors="replace"))
-    except json.JSONDecodeError:
+    payload, decode_mode = _decode_results_payload(content)
+    if payload is None:
         snippet = content[:120].decode("utf-8", errors="replace").strip()
         logger.warning(
             "nse_xbrl: JSON decode error for %s — response starts: %r", sym, snippet
         )
         return {}, url, http_code, None
 
+    logger.info("nse_xbrl: %s decode_mode=%s", sym, decode_mode or "unknown")
     metrics, period_end = _extract_rescmpdata_metrics(payload, period, sym)
     return metrics, url, http_code, period_end
 

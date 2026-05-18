@@ -17,7 +17,7 @@ from starlette.requests import Request
 
 from app.models import ScreeningQuota, ScreeningAccessLog
 
-ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "999"))
+ANON_SCREENS_PER_DAY = int(os.getenv("ANON_SCREENS_PER_DAY", "5"))
 AUTH_SCREENS_PER_DAY = int(os.getenv("AUTH_SCREENS_PER_DAY", "999"))
 COMPARE_PER_DAY = int(os.getenv("COMPARE_PER_DAY", "2"))
 PEER_COMPARISON_PER_DAY = int(os.getenv("PEER_COMPARISON_PER_DAY", "1"))
@@ -107,13 +107,6 @@ def _check_quota(
     amount: int = 1,
 ) -> dict:
     """Generic quota check+increment for a given quota_type."""
-    if quota_type == "screen":
-        return {
-            "allowed": True,
-            "remaining": 999,
-            "resets_at": _ist_midnight_utc(),
-        }
-
     if _is_admin(request):
         return {
             "allowed": True,
@@ -292,10 +285,7 @@ def get_quota_status(db: Session, request: Request) -> dict:
     admin = _is_admin(request)
     limit = 999 if admin else (AUTH_SCREENS_PER_DAY if is_auth else ANON_SCREENS_PER_DAY)
 
-    # Screen quotas are disabled. Keep the payload shape stable for older
-    # frontend consumers, but always report unrestricted browsing/basic detail
-    # access while the new monthly report-credit system handles paid gating.
-    used = 0
+    used = _quota_used_today(db, actor, today, "screen")
 
     screened = get_accessible_symbols(db, request)
 

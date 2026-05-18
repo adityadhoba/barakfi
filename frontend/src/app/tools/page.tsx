@@ -29,6 +29,7 @@ function resolveInitialTab(rawTab: string | undefined): ToolTab {
     case "zakat":
     case "request":
     case "purification":
+    case "compare":
       return rawTab;
     default:
       return "purification";
@@ -43,7 +44,6 @@ export default async function ToolsPage({
   const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams;
   const initialTab = resolveInitialTab(resolvedSearchParams?.tab);
   const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
-
   return (
     <div className={`${toolsSans.variable} ${toolsDisplay.variable}`}>
       <ToolsPageClient initialTab={initialTab} stocks={stocks} />

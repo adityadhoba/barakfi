@@ -467,6 +467,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={sec}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setSectorFilter(sec)}
                   aria-selected={active}
@@ -490,6 +491,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={opt.key}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setMcapFilter(opt.key)}
                   aria-selected={active}
@@ -512,6 +514,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={opt.key}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setIndexFilter(opt.key)}
                   aria-selected={active}
@@ -608,7 +611,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
               </div>
             </div>
             <button type="button" className={styles.headerBtn} onClick={() => { exportToCsv(sorted); toast(`Exported ${sorted.length} stocks`, "success"); }}>&#x2913; Export</button>
-            <Link href="/compare" className={styles.headerBtn}>Compare</Link>
+            <Link href="/tools?tab=compare" className={styles.headerBtn}>Compare</Link>
             <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>Save</button>
             <button type="button" className={styles.sidebarToggleMobile} onClick={() => setSidebarOpen((o) => !o)}>
               <SlidersHorizontal size={14} />

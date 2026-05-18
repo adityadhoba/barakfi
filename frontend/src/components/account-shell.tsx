@@ -298,8 +298,8 @@ export function AccountShell() {
           <h1 className={`${styles.guestTitle} ${serif.className}`}>Sign in to open your BarakFi account</h1>
           <p className={styles.guestBody}>Your watchlist, report credits, waitlist joins, and export requests are all tied to your signed-in BarakFi profile.</p>
           <div className={styles.guestActions}>
-            <Link href="/sign-in" className={styles.ghostButton}>Log in</Link>
-            <Link href="/sign-up" className={styles.solidButton}>Get started</Link>
+            <Link href="/sign-in?redirect=%2Faccount" className={styles.ghostButton}>Log in</Link>
+            <Link href="/sign-up?redirect=%2Faccount" className={styles.solidButton}>Get started</Link>
           </div>
         </div>
       </main>

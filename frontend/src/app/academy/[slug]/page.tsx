@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DM_Serif_Display, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
-import styles from "./article.module.css";
-
-const articleSans = Inter({ subsets: ["latin"] });
-const articleDisplay = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
+import s from "./academy.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -64,27 +60,21 @@ export default async function AcademyArticlePage({ params }: Props) {
   }
 
   return (
-    <div className={`${styles.page} ${articleSans.className} ${articleDisplay.className}`}>
-      <main className="shellPage">
-        <article className={styles.article}>
-          <nav className={styles.breadcrumb}>
-            <Link href="/">Home</Link>
-            <span>/</span>
-            <Link href="/academy">Academy</Link>
-            <span>/</span>
-            <span>{article.title}</span>
-          </nav>
-          <h1 className={styles.title}>
-            {article.title}
-          </h1>
-          <div className={styles.content}>
-            {article.content}
-          </div>
-          <div className={styles.footer}>
-            <Link href="/academy" className={styles.backLink}>← Back to Academy</Link>
-          </div>
-        </article>
-      </main>
-    </div>
+    <main className="shellPage">
+      <article className={s.article}>
+        <nav className={s.breadcrumb}>
+          <Link href="/">Home</Link>
+          <span>/</span>
+          <Link href="/academy">Academy</Link>
+          <span>/</span>
+          <span>{article.title}</span>
+        </nav>
+        <h1 className={s.h1}>{article.title}</h1>
+        <div className={s.content}>{article.content}</div>
+        <div className={s.footer}>
+          <Link href="/academy" className={s.footerLink}>← Back to Academy</Link>
+        </div>
+      </article>
+    </main>
   );
 }

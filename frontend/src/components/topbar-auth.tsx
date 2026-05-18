@@ -2,10 +2,12 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { TopbarPrimaryNav } from "@/components/topbar-primary-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useBarakfiAdminAccess } from "@/components/admin-link";
 import { TopbarLink } from "@/components/topbar-link";
+import { buildCurrentPath, buildLoginUrl, buildSignupUrl } from "@/lib/auth-redirect";
 
 function AdminMenuIcon() {
   return (
@@ -22,16 +24,21 @@ function AdminMenuIcon() {
 export function TopbarAuth() {
   const { isLoaded, userId } = useAuth();
   const { showAdmin, ready: adminReady } = useBarakfiAdminAccess();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPath = buildCurrentPath(pathname, searchParams.toString());
+  const signInHref = buildLoginUrl(currentPath);
+  const signUpHref = buildSignupUrl(currentPath);
 
   return (
     <div className="topbarActions">
       {!isLoaded ? (
         <>
           <TopbarPrimaryNav />
-          <Link className="ghostButtonLink" href="/sign-in">
+          <Link className="ghostButtonLink" href={signInHref}>
             Log in
           </Link>
-          <Link className="solidButtonLink" href="/sign-up">
+          <Link className="solidButtonLink" href={signUpHref}>
             Get started
           </Link>
           <ThemeToggle />
@@ -39,10 +46,10 @@ export function TopbarAuth() {
       ) : !userId ? (
         <>
           <TopbarPrimaryNav />
-          <Link className="ghostButtonLink" href="/sign-in">
+          <Link className="ghostButtonLink" href={signInHref}>
             Log in
           </Link>
-          <Link className="solidButtonLink" href="/sign-up">
+          <Link className="solidButtonLink" href={signUpHref}>
             Get started
           </Link>
           <ThemeToggle />

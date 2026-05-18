@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { UserButton, useAuth } from "@clerk/nextjs";
+import { buildCurrentPath, buildLoginUrl, buildSignupUrl } from "@/lib/auth-redirect";
 
 type Props = {
   className?: string;
@@ -23,19 +25,24 @@ export function RouteLocalAuth({
   primaryActiveClassName,
 }: Props) {
   const { isLoaded, userId } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentPath = buildCurrentPath(pathname, searchParams.toString());
+  const signInHref = buildLoginUrl(currentPath);
+  const signUpHref = buildSignupUrl(currentPath);
 
   if (!isLoaded || !userId) {
     return (
       <div className={className}>
         <Link
           className={`${ghostClassName} ${activeAuth === "sign-in" && ghostActiveClassName ? ghostActiveClassName : ""}`.trim()}
-          href="/sign-in"
+          href={signInHref}
         >
           Log in
         </Link>
         <Link
           className={`${primaryClassName} ${activeAuth === "sign-up" && primaryActiveClassName ? primaryActiveClassName : ""}`.trim()}
-          href="/sign-up"
+          href={signUpHref}
         >
           Get started
         </Link>

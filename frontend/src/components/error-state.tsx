@@ -1,80 +1,29 @@
-"use client";
+import Link from "next/link";
+import s from "./error-state.module.css";
 
-import styles from "./error-state.module.css";
-
-interface ErrorStateProps {
+export interface ErrorStateProps {
+  icon?: string;
   title: string;
   description?: string;
-  icon?: React.ReactNode;
-  actionLabel?: string;
-  onAction?: () => void;
-  primaryButton?: boolean;
-  minHeight?: string;
+  action?: {
+    label: string;
+    href: string;
+  };
 }
 
-export function ErrorState({
-  title,
-  description,
-  icon,
-  actionLabel,
-  onAction,
-  primaryButton = true,
-  minHeight = "400px",
-}: ErrorStateProps) {
-  const containerStyle = minHeight ? { minHeight } : undefined;
-
+export function ErrorState({ icon = "⚠️", title, description, action }: ErrorStateProps) {
   return (
-    <div className={styles.container} style={containerStyle}>
-      <div className={styles.content}>
-        {icon && <div className={styles.icon}>{icon}</div>}
-        <h2 className={styles.title}>{title}</h2>
-        {description && <p className={styles.description}>{description}</p>}
-        {actionLabel && onAction && (
-          <button
-            type="button"
-            className={primaryButton ? styles.buttonPrimary : styles.buttonSecondary}
-            onClick={onAction}
-          >
-            {actionLabel}
-          </button>
+    <div className={s.container}>
+      <div className={s.content}>
+        <div className={s.icon}>{icon}</div>
+        <h1 className={s.title}>{title}</h1>
+        {description && <p className={s.description}>{description}</p>}
+        {action && (
+          <Link href={action.href} className={s.action}>
+            {action.label}
+          </Link>
         )}
       </div>
     </div>
-  );
-}
-
-export function NotFoundState() {
-  return (
-    <ErrorState
-      title="Page Not Found"
-      description="The page you're looking for doesn't exist or has been moved."
-      icon={<span className={styles.emoji}>404</span>}
-      actionLabel="Go Home"
-      onAction={() => (window.location.href = "/")}
-    />
-  );
-}
-
-export function AccessDeniedState() {
-  return (
-    <ErrorState
-      title="Access Denied"
-      description="You don't have permission to view this content."
-      icon={<span className={styles.emoji}>🔒</span>}
-      actionLabel="Sign In"
-      onAction={() => (window.location.href = "/sign-in")}
-    />
-  );
-}
-
-export function ServerErrorState() {
-  return (
-    <ErrorState
-      title="Something Went Wrong"
-      description="We encountered an error. Please try again later."
-      icon={<span className={styles.emoji}>⚠️</span>}
-      actionLabel="Refresh Page"
-      onAction={() => window.location.reload()}
-    />
   );
 }

@@ -40,6 +40,9 @@ export function StockPageActionButtons({
 
       if (!response.ok) {
         const errBody = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error("Sign in to add stocks to your watchlist");
+        }
         throw new Error(errBody?.detail || errBody?.error || "Watchlist update failed");
       }
 

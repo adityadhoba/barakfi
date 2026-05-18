@@ -633,7 +633,7 @@ export function StockScreenerTableHtml({ screenedStocks }: Props) {
             >
               ↓ Export
             </button>
-            <Link href="/compare" className={styles.headerBtn}>
+            <Link href="/tools?tab=compare" className={styles.headerBtn}>
               Compare
             </Link>
             <button type="button" className={styles.headerBtn} onClick={() => setShowSaveModal(true)}>

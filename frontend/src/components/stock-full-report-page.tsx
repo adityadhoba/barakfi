@@ -294,8 +294,6 @@ export function StockFullReportPage({
   stock,
   screening,
   liveQuote,
-  indices,
-  similarStocks,
   multiScreening,
   complianceHistory,
 }: Props) {

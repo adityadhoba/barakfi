@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
   const token = await authState.getToken();
 
   if (!clerkUser || !email || !token) {
-    redirect("/sign-in");
+    redirect("/sign-in?redirect=%2Fonboarding");
   }
 
   try {

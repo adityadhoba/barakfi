@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { buildCurrentPath, buildLoginUrl, buildSignupUrl } from "@/lib/auth-redirect";
 import s from "./mobile-drawer.module.css";
 
 type DrawerLink = {
@@ -18,7 +20,7 @@ type DrawerLink = {
 const DRAWER_LINKS: DrawerLink[] = [
   { href: "/", label: "Home", icon: "\u2302" },
   { href: "/screener", label: "Stocks", icon: "\u2315" },
-  { href: "/compare", label: "Compare", icon: "\u229E" },
+  { href: "/tools?tab=compare", label: "Compare", icon: "\u229E" },
   { href: "/watchlist", label: "Watchlist", icon: "\u2606", auth: true },
   { href: "/learn", label: "Learn", icon: "\u2728" },
   { href: "/admin", label: "Admin", icon: "\u26A0", auth: true, adminOnly: true },
@@ -34,6 +36,11 @@ export function MobileDrawerBody({ pathname, onNavigate }: Props) {
   const [loadingRole, setLoadingRole] = useState(true);
   const { userId } = useAuth();
   const { user } = useUser();
+  const currentPathname = usePathname();
+  const currentSearchParams = useSearchParams();
+  const currentPath = buildCurrentPath(currentPathname, currentSearchParams.toString());
+  const signInHref = buildLoginUrl(currentPath);
+  const signUpHref = buildSignupUrl(currentPath);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -66,10 +73,10 @@ export function MobileDrawerBody({ pathname, onNavigate }: Props) {
     <div className="flex flex-1 flex-col px-4 py-4">
       {!userId && (
         <div className={cn(s.drawerAuthRow, "mb-4")}>
-          <Link href="/sign-in" className={s.drawerAuthPrimary} onClick={onNavigate}>
+          <Link href={signInHref} className={s.drawerAuthPrimary} onClick={onNavigate}>
             Log in
           </Link>
-          <Link href="/sign-up" className={s.drawerAuthSecondary} onClick={onNavigate}>
+          <Link href={signUpHref} className={s.drawerAuthSecondary} onClick={onNavigate}>
             Get started
           </Link>
         </div>

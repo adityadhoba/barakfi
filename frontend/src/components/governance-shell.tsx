@@ -68,7 +68,7 @@ export async function GovernanceShell() {
                 Your session could not be verified. Sign out and sign back in to restore access.
               </p>
               <div className={styles.ctaRow}>
-                <Link className={styles.primaryCta} href="/sign-in">Sign in</Link>
+                <Link className={styles.primaryCta} href="/sign-in?redirect=%2Fgovernance">Sign in</Link>
                 <Link className={styles.secondaryCta} href="/workspace">Workspace</Link>
               </div>
             </div>

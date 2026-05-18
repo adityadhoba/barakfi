@@ -67,7 +67,7 @@ export function RequestCoverageForm() {
   if (!isSignedIn) {
     return (
       <div className={styles.cta}>
-        <Link href="/sign-in?redirect_url=/request-coverage" className={styles.ctaButton}>
+        <Link href="/sign-in?redirect=%2Frequest-coverage" className={styles.ctaButton}>
           Sign in to request coverage
         </Link>
       </div>
