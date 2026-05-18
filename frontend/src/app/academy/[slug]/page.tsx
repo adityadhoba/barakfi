@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import s from "./academy.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -60,22 +61,18 @@ export default async function AcademyArticlePage({ params }: Props) {
 
   return (
     <main className="shellPage">
-      <article style={{ maxWidth: 700, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <nav style={{ display: "flex", gap: 8, fontSize: "0.8rem", color: "var(--text-tertiary)", marginBottom: 20 }}>
-          <Link href="/" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>Home</Link>
+      <article className={s.article}>
+        <nav className={s.breadcrumb}>
+          <Link href="/">Home</Link>
           <span>/</span>
-          <Link href="/academy" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>Academy</Link>
+          <Link href="/academy">Academy</Link>
           <span>/</span>
-          <span style={{ color: "var(--text-secondary)" }}>{article.title}</span>
+          <span>{article.title}</span>
         </nav>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", marginBottom: 24 }}>
-          {article.title}
-        </h1>
-        <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.8, whiteSpace: "pre-line" }}>
-          {article.content}
-        </div>
-        <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line)" }}>
-          <Link href="/academy" style={{ color: "var(--emerald)", fontWeight: 600, fontSize: "0.88rem" }}>← Back to Academy</Link>
+        <h1 className={s.h1}>{article.title}</h1>
+        <div className={s.content}>{article.content}</div>
+        <div className={s.footer}>
+          <Link href="/academy" className={s.footerLink}>← Back to Academy</Link>
         </div>
       </article>
     </main>

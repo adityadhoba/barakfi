@@ -1,7 +1,7 @@
 "use client";
 
-import styles from "@/app/screener.module.css";
 import Link from "next/link";
+import { ErrorState } from "@/components/error-state";
 
 export default function CompareError({
   error,
@@ -11,54 +11,49 @@ export default function CompareError({
   reset: () => void;
 }) {
   return (
-    <main className={`${styles.screenerPage} ${styles.screenerPageFlow}`}>
-      <div className={styles.screenerContainer}>
-        <div style={{ textAlign: "center", padding: "64px 24px" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: 16, opacity: 0.4 }}>⚠</div>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: 8, color: "var(--text)" }}>
-            Something went wrong
-          </h1>
-          <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: 24, maxWidth: 400, margin: "0 auto 24px" }}>
-            We couldn&apos;t load the comparison. This may be a temporary issue.
-          </p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-            <button
-              onClick={reset}
-              style={{
-                padding: "8px 20px",
-                borderRadius: 8,
-                border: "none",
-                background: "var(--emerald)",
-                color: "#fff",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                cursor: "pointer",
-              }}
-            >
-              Try Again
-            </button>
-            <Link
-              href="/screener"
-              style={{
-                padding: "8px 20px",
-                borderRadius: 8,
-                border: "1px solid var(--line)",
-                background: "var(--panel)",
-                color: "var(--text)",
-                fontWeight: 600,
-                fontSize: "0.85rem",
-                textDecoration: "none",
-              }}
-            >
-              Back to Screener
-            </Link>
-          </div>
-          {error.digest && (
-            <p style={{ fontSize: "0.7rem", color: "var(--text-tertiary)", marginTop: 16 }}>
-              Error ID: {error.digest}
-            </p>
-          )}
+    <main style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "400px", padding: "24px" }}>
+      <div style={{ textAlign: "center", maxWidth: "500px" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "16px" }}>⚠️</div>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, margin: "0 0 12px", color: "var(--text)" }}>
+          Something went wrong
+        </h1>
+        <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.6, margin: "0 0 24px" }}>
+          We couldn't load the comparison. This may be a temporary issue.
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={reset}
+            style={{
+              background: "var(--emerald)",
+              color: "white",
+              border: "none",
+              padding: "10px 24px",
+              borderRadius: "6px",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              cursor: "pointer",
+            }}
+          >
+            Try Again
+          </button>
+          <Link href="/screener"
+            style={{
+              background: "transparent",
+              color: "var(--emerald)",
+              border: "1px solid var(--emerald)",
+              padding: "10px 24px",
+              borderRadius: "6px",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            Back to Screener
+          </Link>
         </div>
+        {error.digest && <p style={{ fontSize: "0.875rem", color: "var(--text-tertiary)", marginTop: "20px" }}>Error ID: {error.digest}</p>}
       </div>
     </main>
   );

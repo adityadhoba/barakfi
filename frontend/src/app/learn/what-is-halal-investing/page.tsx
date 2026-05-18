@@ -10,9 +10,26 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://barakfi.in/learn/what-is-halal-investing" },
 };
 
+const headings = [
+  "Why ratios matter for stocks",
+  "How this maps to Indian markets",
+  "Using BarakFi responsibly",
+  "Purification and zakat",
+  "Common misconceptions",
+  "How BarakFi presents information",
+  "Building a simple workflow",
+  "Corporate actions that quietly move ratios",
+  "Fees, wrappers, and everyday accounts",
+];
+
 export default function WhatIsHalalInvestingPage() {
   return (
     <main className={s.page}>
+      <div className={s.breadcrumb}>
+        <a href="/learn">Learn</a>
+        <span>/</span>
+        <span>What is halal investing?</span>
+      </div>
       <p className={s.kicker}>Foundations</p>
       <h1 className={s.h1}>What is halal investing?</h1>
       <article className={s.prose}>
@@ -113,6 +130,48 @@ export default function WhatIsHalalInvestingPage() {
           screening, or jump to the <Link href="/methodology">methodology</Link> page for threshold detail.
         </p>
       </article>
+
+      <aside className={s.sidebar}>
+        <div className={s.tableOfContents}>
+          <h3 className={s.tableOfContentsTitle}>On this page</h3>
+          <ul className={s.tableOfContentsList}>
+            {headings.map((h) => (
+              <li key={h}>
+                <a href={`#${h.toLowerCase().replace(/\s+/g, "-")}`}>{h}</a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </aside>
+
+      <section className={s.relatedArticles}>
+        <h2 className={s.relatedArticlesTitle}>Related articles</h2>
+        <div className={s.relatedArticlesGrid}>
+          <Link href="/learn/halal-stocks-india" className={s.relatedArticleCard}>
+            <p className={s.relatedArticleTag}>Screening</p>
+            <p className={s.relatedArticleTitle}>Halal stocks in India</p>
+          </Link>
+          <Link href="/methodology" className={s.relatedArticleCard}>
+            <p className={s.relatedArticleTag}>Deep Dive</p>
+            <p className={s.relatedArticleTitle}>Methodology & standards</p>
+          </Link>
+          <Link href="/learn/top-halal-stocks-india" className={s.relatedArticleCard}>
+            <p className={s.relatedArticleTag}>Featured</p>
+            <p className={s.relatedArticleTitle}>Top halal stocks</p>
+          </Link>
+        </div>
+      </section>
+
+      <nav className={s.navigation}>
+        <Link href="/learn" className={s.navLink}>
+          <span className={s.navLabel}>← Previous</span>
+          <span className={s.navTitle}>Learn hub</span>
+        </Link>
+        <Link href="/learn/halal-stocks-india" className={s.navLink}>
+          <span className={s.navLabel}>Next →</span>
+          <span className={s.navTitle}>Halal stocks in India</span>
+        </Link>
+      </nav>
     </main>
   );
 }
