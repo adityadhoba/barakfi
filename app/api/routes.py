@@ -1404,6 +1404,41 @@ def screen_stock_manual(
     clean_symbol = symbol.strip().upper().replace(".NS", "")
 
     quota = check_and_increment_unique_screen_quota(db, request, [clean_symbol])
+    if not quota.get("allowed", False):
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "You’ve used your 5 free screenings for today",
+                "code": "guest_screening_limit_reached",
+                "remaining": int(quota.get("remaining", 0) or 0),
+                "resets_at": quota.get("resets_at"),
+            },
+        )
+
+    monthly_usage_payload = None
+    actor_sub = (request.headers.get("x-clerk-user-id") or "").strip()
+    monthly_usage = None
+    monthly_limit = 50
+    if actor_sub:
+        from app.api.account_usage_routes import _get_or_create_monthly_usage, _usage_month_for, _plan_for_user
+        from app.models import User
+
+        app_user = db.query(User).filter(User.auth_subject == actor_sub, User.is_active == True).first()  # noqa: E712
+        if app_user:
+            monthly_usage = _get_or_create_monthly_usage(db, app_user.id, _usage_month_for())
+            plan = _plan_for_user(db, app_user)
+            monthly_limit = int(plan.report_limit or 50)
+            if int(monthly_usage.reports_used or 0) >= monthly_limit:
+                raise HTTPException(
+                    status_code=429,
+                    detail={
+                        "message": "You’ve used your 50 free screenings for this month. Premium unlimited screening is coming soon.",
+                        "code": "monthly_screening_limit_reached",
+                        "reports_used": int(monthly_usage.reports_used or 0),
+                        "reports_limit": monthly_limit,
+                        "reports_remaining": 0,
+                    },
+                )
 
     existing = resolve_stock(db, clean_symbol, "NSE", active_only=True, require_indian_listing=True)
 
@@ -1412,6 +1447,13 @@ def screen_stock_manual(
         multi_result = evaluate_stock_multi(stock_data)
         primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
         log_screening_accesses(db, request, [clean_symbol])
+        if monthly_usage is not None:
+            monthly_usage.reports_used = int(monthly_usage.reports_used or 0) + 1
+            monthly_usage_payload = {
+                "reports_used": int(monthly_usage.reports_used),
+                "reports_limit": int(monthly_limit),
+                "reports_remaining": max(0, int(monthly_limit) - int(monthly_usage.reports_used)),
+            }
         db.commit()
         return {
             "symbol": existing.symbol,
@@ -1421,6 +1463,7 @@ def screen_stock_manual(
             "multi": {"symbol": existing.symbol, "name": existing.name, **multi_result},
             "quota": {"remaining": quota["remaining"], "resets_at": quota["resets_at"]},
             "screened_symbols": get_accessible_symbols(db, request),
+            "monthly_usage": monthly_usage_payload,
         }
 
     stock_data = fetch_and_screen(clean_symbol)
@@ -1430,6 +1473,13 @@ def screen_stock_manual(
     multi_result = evaluate_stock_multi(stock_data)
     primary_result = evaluate_stock(stock_data, profile=PRIMARY_PROFILE)
     log_screening_accesses(db, request, [clean_symbol])
+    if monthly_usage is not None:
+        monthly_usage.reports_used = int(monthly_usage.reports_used or 0) + 1
+        monthly_usage_payload = {
+            "reports_used": int(monthly_usage.reports_used),
+            "reports_limit": int(monthly_limit),
+            "reports_remaining": max(0, int(monthly_limit) - int(monthly_usage.reports_used)),
+        }
     db.commit()
 
     return {
@@ -1440,6 +1490,7 @@ def screen_stock_manual(
         "multi": {"symbol": stock_data["symbol"], "name": stock_data["name"], **multi_result},
         "quota": {"remaining": quota["remaining"], "resets_at": quota["resets_at"]},
         "screened_symbols": get_accessible_symbols(db, request),
+        "monthly_usage": monthly_usage_payload,
     }
 
 
