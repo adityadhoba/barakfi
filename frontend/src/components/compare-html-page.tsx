@@ -7,11 +7,13 @@ import type { ScreeningResult, Stock } from "@/lib/api";
 import { screeningUiLabel } from "@/lib/screening-status";
 import { rankStocksForQuery } from "@/lib/stock-search-rank";
 import { formatMcapShort, formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
+import { QuotaLimitModal } from "./quota-limit-modal";
 
 type Props = {
   allStocks: Stock[];
   initialSymbols?: string[];
   mode?: "select" | "results";
+  userId?: string | null;
 };
 
 type CompareLimit = {
@@ -41,7 +43,8 @@ function normalizeSymbols(symbols: string[]) {
   return out;
 }
 
-export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select" }: Props) {
+export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select", userId = null }: Props) {
+  const isGuest = userId === null;
   const [slots, setSlots] = useState<string[]>([
     initialSymbols[0] ?? "",
     initialSymbols[1] ?? "",
@@ -56,6 +59,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
   const [loading, setLoading] = useState(mode === "results");
   const [error, setError] = useState<string>("");
   const [limitState, setLimitState] = useState<CompareLimit | null>(null);
+  const [showQuotaModal, setShowQuotaModal] = useState(false);
 
   const selected = useMemo(
     () =>
@@ -94,13 +98,15 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
 
       if (res.status === 429) {
         const payload = body as CompareLimit;
+        const quotaMessage = payload.message || "You've used all 50 monthly full report credits";
         setLimitState({
           status: "limit_exhausted",
-          message: payload.message || "You do not have enough monthly report credits to run this comparison.",
+          message: quotaMessage,
           actions: payload.actions,
           redirect_url: payload.redirect_url || "/premium",
           reports_remaining: payload.reports_remaining,
         });
+        setShowQuotaModal(true);
         setScreening({});
         return;
       }
@@ -136,6 +142,31 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
   const selectedCount = selected.length;
 
   const showResults = selectedCount >= 2 && Object.keys(screening).length > 0;
+
+  if (isGuest) {
+    return (
+      <section className={styles.comparePageWrap}>
+        <header className={styles.toolHeader}>
+          <p className={styles.toolEyebrow}>Compare</p>
+          <h1 className={styles.toolTitle}>Compare Stocks</h1>
+          <p className={styles.toolDesc}>
+            Compare <strong>Shariah compliance ratios, financial data, and screening status</strong> side by side for up to 3 stocks.
+          </p>
+        </header>
+
+        <div className={styles.compareEmpty}>
+          <div className={styles.compareEmptyTitle}>Sign in to start comparing</div>
+          <div className={styles.compareEmptyBody}>
+            Create a free account to compare Shariah compliance, financial ratios, and market metrics for Indian stocks.
+          </div>
+          <div className={styles.compareLinkRow}>
+            <Link className={styles.btnOutlineLink} href="/sign-in">Sign In</Link>
+            <Link className={styles.btnPrimary} href="/sign-up">Create Account</Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.comparePageWrap}>
@@ -265,6 +296,12 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
           <div className={styles.compareEmptyHint}>Tip: try RELIANCE, TCS, or INFY</div>
         </div>
       ) : null}
+
+      <QuotaLimitModal
+        isOpen={showQuotaModal}
+        onClose={() => setShowQuotaModal(false)}
+        message={limitState?.message}
+      />
     </section>
   );
 }
