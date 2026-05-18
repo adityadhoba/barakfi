@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | BarakFi",
   },
   description:
-    "BarakFi (Halal Stock Checker) helps you check halal stocks on NSE and BSE using standard Shariah screening criteria — debt, non-permissible income, interest income, receivables, and cash tests with transparent methodology. Free educational tools; not a religious ruling or certification.",
+    "Screen Indian stocks for Shariah compliance. Free for 5 stocks or 50/month with account. BarakFi uses S&P, AAOIFI, and FTSE methodologies with debt, interest, and receivables analysis. Educational tool, not a religious ruling.",
   keywords: [
     "halal stocks India",
     "shariah compliant stocks India",

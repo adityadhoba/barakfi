@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { canGuestScreen, recordGuestScreening } from "@/lib/guest-access";
 
 type DetailUnlockResult =
   | { kind: "granted" }
@@ -166,6 +167,13 @@ export function ScreeningProvider({ children }: { children: ReactNode }) {
       }
 
       if (!userId) {
+        if (!canGuestScreen()) {
+          return {
+            kind: "limit_exhausted",
+            message: "You've used your 5 free screenings for today. Create a free account to unlock 50 detailed stock screening reports every month.",
+          };
+        }
+        recordGuestScreening(clean);
         recordScreen(clean);
         return { kind: "granted" };
       }

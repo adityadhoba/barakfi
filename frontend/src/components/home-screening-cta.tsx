@@ -40,7 +40,7 @@ export function HomeScreeningCta() {
             Screen Now
           </button>
         </div>
-        <p className={styles.freeNote}>Basic screening is free to browse. Full BarakFi reports use monthly credits.</p>
+        <p className={styles.freeNote}>Check 5 stocks for free without an account. Create a free account for 50 detailed monthly reports.</p>
       </div>
     </section>
   );

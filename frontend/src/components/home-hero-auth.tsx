@@ -25,7 +25,7 @@ export function HomeHeroAuth() {
       </h1>
       <p className={styles.heroSub}>
         Screen Indian stocks using S&amp;P, AAOIFI &amp; FTSE Shariah standards. Multi-methodology compliance, real-time
-        data, zero cost.
+        data. 5 free checks, no account required.
       </p>
       <div className={styles.heroCtas}>
         <Link href="/screener" className={styles.heroCtaPrimary}>
@@ -34,7 +34,7 @@ export function HomeHeroAuth() {
         </Link>
         {!signedIn && (
           <Link href="/sign-up" className={styles.heroCtaSecondary}>
-            Create free account
+            Sign up for more screenings
           </Link>
         )}
         {signedIn && (

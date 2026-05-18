@@ -41,14 +41,14 @@ export default function SignInPage() {
           body: "Review when a saved stock moves from Compliant to Requires Review — or back.",
         },
         {
-          title: "Always free",
-          body: "No subscription. No credit card. BarakFi is free to use while we build the workflow.",
+          title: "Check 5 stocks free, then sign up for 50 monthly",
+          body: "Create a free account to unlock 50 detailed stock screening reports per month.",
         },
       ]}
       stats={[
         { value: "527", label: "Stocks covered" },
         { value: "4", label: "Screening standards" },
-        { value: "Free", label: "Always" },
+        { value: "50", label: "Monthly/free account" },
       ]}
       cardEyebrow="Sign in"
       cardTitle="Welcome back"
