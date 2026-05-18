@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DM_Serif_Display, Inter } from "next/font/google";
 import { getStocks } from "@/lib/api";
 import { CompareHtmlPage } from "@/components/compare-html-page";
+import { StockPageRouteShell } from "@/components/stock-page-route-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,9 @@ export default async function CompareResultsPage({
 
   return (
     <main className={`${compareSans.variable} ${compareDisplay.variable}`}>
-      <CompareHtmlPage allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
+      <StockPageRouteShell>
+        <CompareHtmlPage allStocks={stocks} initialSymbols={requestedSymbols} mode="results" />
+      </StockPageRouteShell>
     </main>
   );
 }
