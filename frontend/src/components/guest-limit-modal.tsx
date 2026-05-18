@@ -27,7 +27,7 @@ export function GuestLimitModal({ isOpen, onClose }: Props) {
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h3 className={styles.title}>
-          You've used your 5 free screenings for today
+          You&apos;ve used your 5 free screenings for today
         </h3>
         <p className={styles.description}>
           Create a free account to unlock 50 detailed stock screening reports every month.
