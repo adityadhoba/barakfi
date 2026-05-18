@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
+import styles from "./article.module.css";
+
+const articleSans = Inter({ subsets: ["latin"] });
+const articleDisplay = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
 
 export const dynamic = "force-dynamic";
 
@@ -59,25 +64,27 @@ export default async function AcademyArticlePage({ params }: Props) {
   }
 
   return (
-    <main className="shellPage">
-      <article style={{ maxWidth: 700, margin: "0 auto", padding: "24px 24px 64px" }}>
-        <nav style={{ display: "flex", gap: 8, fontSize: "0.8rem", color: "var(--text-tertiary)", marginBottom: 20 }}>
-          <Link href="/" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>Home</Link>
-          <span>/</span>
-          <Link href="/academy" style={{ color: "var(--text-tertiary)", textDecoration: "none" }}>Academy</Link>
-          <span>/</span>
-          <span style={{ color: "var(--text-secondary)" }}>{article.title}</span>
-        </nav>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text)", marginBottom: 24 }}>
-          {article.title}
-        </h1>
-        <div style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.8, whiteSpace: "pre-line" }}>
-          {article.content}
-        </div>
-        <div style={{ marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line)" }}>
-          <Link href="/academy" style={{ color: "var(--emerald)", fontWeight: 600, fontSize: "0.88rem" }}>← Back to Academy</Link>
-        </div>
-      </article>
-    </main>
+    <div className={`${styles.page} ${articleSans.className} ${articleDisplay.className}`}>
+      <main className="shellPage">
+        <article className={styles.article}>
+          <nav className={styles.breadcrumb}>
+            <Link href="/">Home</Link>
+            <span>/</span>
+            <Link href="/academy">Academy</Link>
+            <span>/</span>
+            <span>{article.title}</span>
+          </nav>
+          <h1 className={styles.title}>
+            {article.title}
+          </h1>
+          <div className={styles.content}>
+            {article.content}
+          </div>
+          <div className={styles.footer}>
+            <Link href="/academy" className={styles.backLink}>← Back to Academy</Link>
+          </div>
+        </article>
+      </main>
+    </div>
   );
 }

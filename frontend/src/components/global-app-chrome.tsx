@@ -15,6 +15,8 @@ import { TopbarScroll } from "@/components/topbar-scroll";
 export function GlobalAppChrome() {
   const pathname = usePathname();
   const isStockPage = pathname.startsWith("/stocks/");
+  const isCollectionDetail = pathname.startsWith("/collections/");
+  const isSuperInvestorDetail = pathname.startsWith("/super-investors/");
   const isAbout = pathname === "/about-us";
   const isAccount = pathname === "/account";
   const isExplore = pathname === "/explore";
@@ -24,20 +26,23 @@ export function GlobalAppChrome() {
   const isMethodology = pathname === "/methodology";
   const isLegal = pathname === "/disclaimer" || pathname === "/privacy" || pathname === "/terms";
   const isAuthRoute = pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
+  const isLearn = pathname.startsWith("/learn");
 
   const hideGlobalChrome =
     pathname === "/" ||
     pathname === "/screener" ||
     isStockPage ||
+    isCollectionDetail ||
+    isSuperInvestorDetail ||
     isAbout ||
     isAccount ||
     isExplore ||
-    isTools ||
     isWatchlist ||
     isTrending ||
     isMethodology ||
     isLegal ||
-    isAuthRoute;
+    isAuthRoute ||
+    isLearn;
 
   if (hideGlobalChrome) {
     return null;

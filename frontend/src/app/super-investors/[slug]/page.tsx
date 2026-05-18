@@ -1,9 +1,13 @@
 /* eslint-disable @next/next/no-img-element -- remote investor avatars from API */
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DM_Serif_Display, Inter } from "next/font/google";
 import { getSuperInvestor } from "@/lib/api";
 import { notFound } from "next/navigation";
 import styles from "./detail.module.css";
+
+const investorSans = Inter({ subsets: ["latin"] });
+const investorDisplay = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +36,9 @@ export default async function InvestorDetailPage({ params }: Props) {
   if (!inv || !inv.holdings || inv.holdings.length === 0) notFound();
 
   return (
-    <main className="shellPage">
-      <div className={styles.container}>
+    <div className={`${styles.page} ${investorSans.className} ${investorDisplay.className}`}>
+      <main className="shellPage">
+        <div className={styles.container}>
         <nav className={styles.breadcrumb}>
           <Link href="/">Home</Link>
           <span>/</span>
@@ -70,6 +75,7 @@ export default async function InvestorDetailPage({ params }: Props) {
           ))}
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -2332,6 +2332,49 @@
   animation-delay: 0.19s;
 }
 
+/* Market Ticker */
+.ticker {
+  border-bottom: 1px solid rgba(230, 226, 216, 0.1);
+  height: 32px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.tickerTrack {
+  display: flex;
+  animation: tickerMove 32s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes tickerMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.tickerItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(230, 226, 216, 0.55);
+  border-right: 1px solid rgba(230, 226, 216, 0.1);
+}
+
+.tickerName {
+  font-weight: 500;
+  color: #e6e2d8;
+}
+
+.tickerValue {
+  color: #e6e2d8;
+}
+
+.tickerUp { color: #5ec486; }
+.tickerDown { color: #e06868; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .nav {
