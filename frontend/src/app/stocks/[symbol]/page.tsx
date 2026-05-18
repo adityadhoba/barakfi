@@ -3,7 +3,6 @@ import { DM_Serif_Display } from "next/font/google";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { buildBackendHeaders } from "@/lib/backend-auth";
 import { getPublicApiBaseUrl, parseFastapiFetchError, unwrapBackendEnvelope } from "@/lib/api-base";
-import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
   getAuthenticatedWatchlist,
@@ -31,26 +30,6 @@ const dmSerif = DM_Serif_Display({
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const CRAWLER_UA_MARKERS = [
-  "googlebot",
-  "google-inspectiontool",
-  "bingbot",
-  "duckduckbot",
-  "slurp",
-  "yandexbot",
-  "baiduspider",
-  "facebookexternalhit",
-  "twitterbot",
-  "linkedinbot",
-  "applebot",
-  "petalbot",
-];
-
-async function isCrawlerRequest(): Promise<boolean> {
-  const ua = (await headers()).get("user-agent")?.toLowerCase() ?? "";
-  return CRAWLER_UA_MARKERS.some((marker) => ua.includes(marker));
-}
 
 type StockPageUsageState =
   | { kind: "anonymous"; access: null }
@@ -192,13 +171,6 @@ export default async function StockDetailPage({
   params: Promise<{ symbol: string }>;
 }) {
   const authState = await auth();
-  const crawlerRequest = await isCrawlerRequest();
-  if (!authState.userId && !crawlerRequest) {
-    const { symbol } = await params;
-    const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
-    const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}`;
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
-  }
 
   const { symbol } = await params;
   const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
