@@ -45,7 +45,6 @@ function normalizeSymbols(symbols: string[]) {
 
 export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select", userId = null }: Props) {
   const isGuest = userId === null;
-  console.log("[CompareHtmlPage] userId:", userId, "isGuest:", isGuest, "typeof userId:", typeof userId);
   const [slots, setSlots] = useState<string[]>([
     initialSymbols[0] ?? "",
     initialSymbols[1] ?? "",
