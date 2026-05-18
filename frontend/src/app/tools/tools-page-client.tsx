@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { RouteLocalAuth } from "@/components/route-local-auth";
+import { GlobalMarketTicker } from "@/components/global-market-ticker";
+import { GlobalNavBar } from "@/components/global-nav-bar";
+import { CompareHtmlPage } from "@/components/compare-html-page";
+import type { Stock } from "@/lib/api";
 import styles from "./tools.module.css";
 
 export type ToolTab = "purification" | "zakat" | "compare" | "request";
@@ -333,24 +335,8 @@ function ZakatPanel() {
   );
 }
 
-function CompareShortcutPanel() {
-  return (
-    <section className={styles.requestPageWrap}>
-      <header className={styles.toolHeader}>
-        <p className={styles.toolEyebrow}>Tools · Compare</p>
-        <h1 className={styles.toolTitle}>Compare Stocks</h1>
-        <p className={styles.toolDesc}>Open the dedicated compare workspace for side-by-side Shariah screening and monthly credit-based compare sessions.</p>
-      </header>
-      <div className={styles.requestCard}>
-        <div className={styles.requestCopy}>
-          Compare now lives in a dedicated page to keep performance and usage tracking accurate.
-        </div>
-        <div className={styles.limitActions}>
-          <Link href="/compare" className={styles.btnPrimary}>Open Compare</Link>
-        </div>
-      </div>
-    </section>
-  );
+function ComparePanel({ stocks }: { stocks: Stock[] }) {
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" inline />;
 }
 
 function RequestPanel() {
@@ -471,31 +457,13 @@ function RequestPanel() {
   );
 }
 
-export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
-  const router = useRouter();
+export function ToolsPageClient({ initialTab, stocks }: { initialTab?: ToolTab; stocks: Stock[] }) {
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
     <main className={styles.pageRoot}>
-      <nav className={styles.nav} aria-label="Tools navigation">
-        <Link className={styles.logo} href="/">
-          Barak<span className={styles.logoAccent}>Fi</span>
-        </Link>
-        <div className={styles.navRight}>
-          <div className={styles.navLinks}>
-            <Link href="/screener">Screener</Link>
-            <Link href="/explore">Explore</Link>
-            <Link href="/tools">Tools</Link>
-            <Link href="/watchlist">Watchlist</Link>
-          </div>
-          <RouteLocalAuth
-            className={styles.navAuth}
-            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
-            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
-            userClassName={styles.navUser}
-          />
-        </div>
-      </nav>
+      <GlobalMarketTicker />
+      <GlobalNavBar />
 
       <div className={styles.pageTabs}>
         {TAB_LABELS.map((tab) => (
@@ -503,14 +471,7 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
             key={tab.id}
             type="button"
             className={`${styles.pageTab} ${activeTab === tab.id ? styles.pageTabActive : ""}`}
-            onClick={() => {
-              if (tab.id === "compare") {
-                setActiveTab("compare");
-                router.push("/compare");
-                return;
-              }
-              setActiveTab(tab.id);
-            }}
+            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </button>
@@ -520,7 +481,7 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
       <div className={styles.pageWrap}>
         {activeTab === "purification" ? <PurificationPanel /> : null}
         {activeTab === "zakat" ? <ZakatPanel /> : null}
-        {activeTab === "compare" ? <CompareShortcutPanel /> : null}
+        {activeTab === "compare" ? <ComparePanel stocks={stocks} /> : null}
         {activeTab === "request" ? <RequestPanel /> : null}
 
         <div className={styles.disclaimerBar}>

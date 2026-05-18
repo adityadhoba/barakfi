@@ -20,6 +20,7 @@ type Props = {
   allStocks: Stock[];
   initialSymbols?: string[];
   mode?: "select" | "results";
+  inline?: boolean;
 };
 
 const PRESET_ROWS = [
@@ -167,7 +168,7 @@ function bestIdx(values: (number | null | undefined)[], mode: "min" | "max"): nu
   return best;
 }
 
-export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select" }: Props) {
+export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select", inline = false }: Props) {
   const router = useRouter();
   const [slotSymbols, setSlotSymbols] = useState<(string | null)[]>([
     initialSymbols[0] ?? null,
@@ -177,6 +178,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
   const [slotQueries, setSlotQueries] = useState<string[]>(["", "", ""]);
   const [openSlot, setOpenSlot] = useState<number | null>(null);
   const [results, setResults] = useState<ScreeningResult[]>([]);
+  const [showResults, setShowResults] = useState(mode === "results");
   const [loading, setLoading] = useState(mode === "results");
   const [error, setError] = useState<string | null>(null);
   const [limitState, setLimitState] = useState<CompareLimitState | null>(null);
@@ -261,11 +263,11 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
   }
 
   useEffect(() => {
-    if (mode !== "results") return;
+    if (!showResults) return;
     if (autoFetchedRef.current) return;
     autoFetchedRef.current = true;
     void fetchCompare(activeSymbols);
-  }, [activeSymbols, mode]);
+  }, [activeSymbols, showResults]);
 
   function chooseSymbol(slot: number, symbol: string) {
     setSlotSymbols((prev) => {
@@ -297,6 +299,11 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
 
   function runCompare() {
     if (activeSymbols.length < 2) return;
+    if (inline) {
+      setShowResults(true);
+      void fetchCompare(activeSymbols);
+      return;
+    }
     if (mode === "select") {
       router.push(`/compare/results?symbols=${activeSymbols.join(",")}`);
       return;
@@ -309,7 +316,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
     setSlotSymbols(next);
     setSlotQueries(["", "", ""]);
     setOpenSlot(null);
-    if (mode === "results") {
+    if (showResults) {
       void fetchCompare(normalizeSymbols(preset.map((v) => v)));
     }
   }
@@ -530,7 +537,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
       )}
 
       {/* ── Empty state ── */}
-      {!loading && results.length === 0 && !limitState && !error && (
+      {showResults && !loading && results.length === 0 && !limitState && !error && (
         <div className={styles.cmpResults}>
           <div className={styles.cmpEmpty}>
             <div className={styles.cmpEmptyIcon}>⇄</div>
@@ -544,7 +551,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
       )}
 
       {/* ── Results ── */}
-      {!loading && results.length > 0 && (
+      {showResults && !loading && results.length > 0 && (
         <div className={styles.cmpResults}>
           {/* Stock Header Cards */}
           <div className={`${styles.cmpHeaderGrid} ${styles.cmpAnim} ${styles.cmpA1}`} style={{ gridTemplateColumns: `repeat(${activeSymbols.length}, 1fr)` }}>
