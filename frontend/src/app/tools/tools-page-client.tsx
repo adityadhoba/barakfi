@@ -346,7 +346,8 @@ function ZakatPanel() {
 }
 
 function ComparePanel({ stocks }: { stocks: Stock[] }) {
-  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" />;
+  const { userId } = useAuth();
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" userId={userId ?? null} />;
 }
 
 function RequestPanel() {
