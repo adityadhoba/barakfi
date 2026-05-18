@@ -351,7 +351,7 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
   }
 
   return (
-    <section>
+    <section className={styles.comparePageWrap}>
       {/* ── Hero ── */}
       <div className={styles.cmpHero}>
         <p className={styles.cmpEyebrow}>BarakFi · Compare</p>
