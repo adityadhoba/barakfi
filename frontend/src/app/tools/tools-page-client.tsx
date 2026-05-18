@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { RouteLocalAuth } from "@/components/route-local-auth";
 import { CompareHtmlPage } from "@/components/compare-html-page";
 import { type Stock } from "@/lib/api";
