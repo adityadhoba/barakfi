@@ -7,7 +7,7 @@ import styles from "@/components/auth-editorial-shell.module.css";
 export const metadata: Metadata = {
   title: "Sign Up — Barakfi",
   description:
-    "Create your free BarakFi account to sync a Shariah-aware watchlist, save research notes, and use stock screening tools for NSE and BSE equities — private sign-up flow, not for search indexing.",
+    "Get 50 monthly stock screening reports. Free account required. Screen Indian stocks for Shariah compliance — private sign-up flow, not for search indexing.",
   robots: { index: false, follow: true },
 };
 
@@ -50,7 +50,7 @@ export default function SignUpPage() {
       stats={[
         { value: "527+", label: "Stocks screened" },
         { value: "4×", label: "Updated yearly" },
-        { value: "Free.", label: "Always" },
+        { value: "50", label: "Monthly/free account" },
       ]}
       cardEyebrow=""
       cardTitle="Create your account"

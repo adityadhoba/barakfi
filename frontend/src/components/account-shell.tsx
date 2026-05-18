@@ -512,7 +512,7 @@ export function AccountShell() {
               <div className={styles.planCurrent}>
                 <div className={styles.planSectionLabel}>Plan &amp; Usage</div>
                 <div className={`${styles.planName} ${serif.className}`}>BarakFi Free</div>
-                <div className={styles.planDescription}>BarakFi Free gives you access to the screener, basic stock status previews, watchlist tools, and 50 detailed BarakFi screening reports every month. Searching, filtering, and browsing do not count.</div>
+                <div className={styles.planDescription}>BarakFi Free: 50 detailed stock screening reports per month. Unlimited screener access, watchlist, and calculators. Create a free account.</div>
                 <div className={styles.planFeatureRows}>
                   {includedFeatures.map((item) => (
                     <div className={styles.planFeatureRow} key={item}>

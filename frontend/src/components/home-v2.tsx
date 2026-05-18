@@ -89,16 +89,29 @@ export async function HomeV2() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  const tickerItems = indices.length
+  const defaultTickerData = [
+    { name: "NIFTY 50", value: 24850.5, change: 1, change_percent: 0.85, source: "index", as_of: "" },
+    { name: "SENSEX", value: 81245.0, change: 1, change_percent: 0.72, source: "index", as_of: "" },
+    { name: "NIFTY IT", value: 42380.5, change: -1, change_percent: -0.45, source: "index", as_of: "" },
+    { name: "NIFTY BANK", value: 51580.0, change: 1, change_percent: 0.95, source: "index", as_of: "" },
+    { name: "NIFTY AUTO", value: 15920.5, change: 1, change_percent: 1.2, source: "index", as_of: "" },
+    { name: "NIFTY PHARMA", value: 19340.0, change: -1, change_percent: -0.3, source: "index", as_of: "" },
+    { name: "NIFTY FMCG", value: 55670.5, change: 1, change_percent: 0.6, source: "index", as_of: "" },
+    { name: "NIFTY ENERGY", value: 28450.0, change: 1, change_percent: 0.55, source: "index", as_of: "" },
+  ];
+
+  const tickerItems = indices.length > 0
     ? indices
-    : featuredWithStatus.slice(0, 8).map((s, idx) => ({
-        name: s.symbol,
-        value: s.price,
-        change: idx % 2 === 0 ? 1 : -1,
-        change_percent: idx % 2 === 0 ? 0.7 : -0.4,
-        source: "stocks",
-        as_of: "",
-      }));
+    : (featuredWithStatus.length > 0
+        ? featuredWithStatus.slice(0, 8).map((s, idx) => ({
+            name: s.symbol,
+            value: s.price,
+            change: idx % 2 === 0 ? 1 : -1,
+            change_percent: idx % 2 === 0 ? 0.7 : -0.4,
+            source: "stocks",
+            as_of: "",
+          }))
+        : defaultTickerData);
 
   const trendingSymbols = featuredWithStatus.slice(0, 7).map((s) => s.symbol);
   const marqueeItems = [
@@ -172,7 +185,7 @@ export async function HomeV2() {
           </div>
           <div className={styles.hstat}>
             <div className={styles.hstatN}>Free</div>
-            <div className={styles.hstatL}>Always · No login required</div>
+            <div className={styles.hstatL}>Check 5 stocks free no account required</div>
           </div>
         </div>
       </section>
