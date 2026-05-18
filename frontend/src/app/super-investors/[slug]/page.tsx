@@ -38,10 +38,9 @@ export default async function InvestorDetailPage({ params }: Props) {
   const avgWeight = holdingCount > 0 ? (totalWeight / holdingCount).toFixed(1) : 0;
 
   return (
-    <>
+    <main className={styles.container}>
       <GlobalMarketTicker />
       <GlobalNavBar />
-      <main className={styles.container}>
       <nav className={styles.breadcrumb}>
         <Link href="/">Home</Link>
         <span>/</span>
@@ -108,6 +107,5 @@ export default async function InvestorDetailPage({ params }: Props) {
         </div>
       </div>
     </main>
-    </>
   );
 }

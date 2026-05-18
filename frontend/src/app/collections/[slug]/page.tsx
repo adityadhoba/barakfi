@@ -33,10 +33,9 @@ export default async function CollectionDetailPage({ params }: Props) {
   if (!coll) notFound();
 
   return (
-    <>
+    <main className={styles.container}>
       <GlobalMarketTicker />
       <GlobalNavBar />
-      <main className={styles.container}>
       <nav className={styles.breadcrumb}>
         <Link href="/">Home</Link>
         <span>/</span>
@@ -64,6 +63,5 @@ export default async function CollectionDetailPage({ params }: Props) {
         ))}
       </div>
     </main>
-    </>
   );
 }
