@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getSuperInvestor } from "@/lib/api";
 import { notFound } from "next/navigation";
+import { DetailPageHeader } from "@/components/detail-page-header";
 import styles from "./detail.module.css";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,9 @@ export default async function InvestorDetailPage({ params }: Props) {
   const avgWeight = holdingCount > 0 ? (totalWeight / holdingCount).toFixed(1) : 0;
 
   return (
-    <main className={styles.container}>
+    <>
+      <DetailPageHeader />
+      <main className={styles.container}>
       <nav className={styles.breadcrumb}>
         <Link href="/">Home</Link>
         <span>/</span>
@@ -103,5 +106,6 @@ export default async function InvestorDetailPage({ params }: Props) {
         </div>
       </div>
     </main>
+    </>
   );
 }
