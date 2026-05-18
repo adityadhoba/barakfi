@@ -1,5 +1,4 @@
-import s from "../detail.module.css";
-import ls from "@/app/loading.module.css";
+import s from "./detail.module.css";
 
 export default function CollectionLoading() {
   return (

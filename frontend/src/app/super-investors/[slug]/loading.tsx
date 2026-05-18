@@ -1,4 +1,4 @@
-import s from "../detail.module.css";
+import s from "./detail.module.css";
 
 export default function SuperInvestorLoading() {
   return (
