@@ -21,21 +21,11 @@ import {
   type WatchlistEntry,
 } from "@/lib/api";
 import styles from "@/app/account/account-page.module.css";
+import { GlobalMarketTicker } from "@/components/global-market-ticker";
 import { LocalMarketingNav } from "@/components/local-marketing-nav";
 
 const inter = Inter({ subsets: ["latin"], weight: ["300", "400", "500", "600"] });
 const serif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
-
-const ACCOUNT_TICKER_ITEMS = [
-  { label: "NIFTY 50", value: "23,842.75", change: "+0.54%", positive: true },
-  { label: "SENSEX", value: "78,553.20", change: "+0.54%", positive: true },
-  { label: "NIFTY BANK", value: "51,236.80", change: "-0.17%", positive: false },
-  { label: "NIFTY IT", value: "33,156.40", change: "+0.75%", positive: true },
-  { label: "NIFTY PHARMA", value: "19,872.35", change: "+0.28%", positive: true },
-  { label: "NIFTY AUTO", value: "23,145.90", change: "-0.48%", positive: false },
-  { label: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
-  { label: "INDIA VIX", value: "13.42", change: "-2.75%", positive: false },
-] as const;
 
 type EditableField = "name" | "preferredIndex" | "defaultMethod" | "notificationPreference" | null;
 
@@ -341,16 +331,7 @@ export function AccountShell() {
 
   return (
     <main className={`${styles.page} ${inter.className}`}>
-      <div className={styles.ticker}>
-        <div className={styles.tickerTrack}>
-          {[...ACCOUNT_TICKER_ITEMS, ...ACCOUNT_TICKER_ITEMS].map((item, index) => (
-            <span className={styles.tickerItem} key={`${item.label}-${index}`}>
-              <b>{item.label}</b> {item.value}{" "}
-              <span className={item.positive ? styles.tickerUp : styles.tickerDown}>{item.change}</span>
-            </span>
-          ))}
-        </div>
-      </div>
+      <GlobalMarketTicker />
 
       <LocalMarketingNav />
 

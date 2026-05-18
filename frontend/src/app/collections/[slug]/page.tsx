@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getCollection } from "@/lib/api";
 import { notFound } from "next/navigation";
-import { DetailPageHeader } from "@/components/detail-page-header";
+import { GlobalMarketTicker } from "@/components/global-market-ticker";
+import { GlobalNavBar } from "@/components/global-nav-bar";
 import styles from "./detail.module.css";
 
 export const dynamic = "force-dynamic";
@@ -32,9 +33,9 @@ export default async function CollectionDetailPage({ params }: Props) {
   if (!coll) notFound();
 
   return (
-    <>
-      <DetailPageHeader />
-      <main className={styles.container}>
+    <main className={styles.container}>
+      <GlobalMarketTicker />
+      <GlobalNavBar />
       <nav className={styles.breadcrumb}>
         <Link href="/">Home</Link>
         <span>/</span>
@@ -62,6 +63,5 @@ export default async function CollectionDetailPage({ params }: Props) {
         ))}
       </div>
     </main>
-    </>
   );
 }

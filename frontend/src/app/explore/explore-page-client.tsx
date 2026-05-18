@@ -4,7 +4,8 @@ import Link from "next/link";
 import { CollectionIcon } from "@/components/collection-icon";
 import { useState } from "react";
 import { StockLogo } from "@/components/stock-logo";
-import { RouteLocalAuth } from "@/components/route-local-auth";
+import { GlobalMarketTicker } from "@/components/global-market-ticker";
+import { GlobalNavBar } from "@/components/global-nav-bar";
 import { formatMcapShort, formatMoney, resolveDisplayCurrency } from "@/lib/currency-format";
 import type { Collection, SuperInvestorSummary } from "@/lib/api";
 import styles from "./explore.module.css";
@@ -45,17 +46,6 @@ const TAB_LABELS: Array<{ id: ExploreTab; label: string }> = [
   { id: "superinvestors", label: "Super Investors" },
   { id: "academy", label: "Academy" },
 ];
-
-const LOCAL_TICKER = [
-  { name: "NIFTY 50", value: "23,842.75", change: "+0.54%", positive: true },
-  { name: "SENSEX", value: "78,553.20", change: "+0.54%", positive: true },
-  { name: "NIFTY BANK", value: "51,236.80", change: "−0.17%", positive: false },
-  { name: "NIFTY IT", value: "33,156.40", change: "+0.75%", positive: true },
-  { name: "NIFTY PHARMA", value: "19,872.35", change: "+0.28%", positive: true },
-  { name: "NIFTY AUTO", value: "23,145.90", change: "−0.48%", positive: false },
-  { name: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
-  { name: "INDIA VIX", value: "13.42", change: "−2.75%", positive: false },
-] as const;
 
 function badgeClass(status: string | null) {
   if (status === "HALAL") return styles.badgeCompliant;
@@ -103,37 +93,8 @@ export function ExplorePageClient({
 
   return (
     <main className={styles.pageRoot}>
-      <div className={styles.ticker}>
-        <div className={styles.tickerTrack}>
-          {[...LOCAL_TICKER, ...LOCAL_TICKER].map((item, index) => (
-            <span className={styles.tickerItem} key={`${item.name}-${index}`}>
-              <b>{item.name}</b>
-              {item.value}
-              <span className={item.positive ? styles.tickerUp : styles.tickerDown}>{item.change}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <nav className={styles.nav} aria-label="Explore navigation">
-        <Link className={styles.logo} href="/">
-          Barak<span className={styles.logoAccent}>Fi</span>
-        </Link>
-        <div className={styles.navRight}>
-          <div className={styles.navLinks}>
-            <Link href="/screener">Screener</Link>
-            <Link href="/explore">Explore</Link>
-            <Link href="/tools">Tools</Link>
-            <Link href="/watchlist">Watchlist</Link>
-          </div>
-          <RouteLocalAuth
-            className={styles.navAuth}
-            ghostClassName={`${styles.navLink} ${styles.navAuthGhost}`}
-            primaryClassName={`${styles.navLink} ${styles.navAuthPrimary}`}
-            userClassName={styles.navUser}
-          />
-        </div>
-      </nav>
+      <GlobalMarketTicker />
+      <GlobalNavBar />
 
       <div className={styles.pageTabs}>
         {TAB_LABELS.map((tab) => (
