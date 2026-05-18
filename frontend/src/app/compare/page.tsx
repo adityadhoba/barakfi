@@ -1,20 +1,11 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { DM_Serif_Display, Inter } from "next/font/google";
 import { getStocks } from "@/lib/api";
 import { CompareHtmlPage } from "@/components/compare-html-page";
-import { StockPageRouteShell } from "@/components/stock-page-route-shell";
-import overrideStyles from "./compare-overrides.module.css";
+import { DM_Serif_Display, Inter } from "next/font/google";
 
 export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Compare Stocks — BarakFi",
-  description:
-    "Compare Shariah compliance, key financial ratios, and market context side by side for Indian stocks.",
-  alternates: { canonical: "https://barakfi.in/compare" },
-};
 
 const compareSans = Inter({
   subsets: ["latin"],
@@ -27,6 +18,14 @@ const compareDisplay = DM_Serif_Display({
   weight: ["400"],
   variable: "--tools-font-display",
 });
+
+export const metadata: Metadata = {
+  title: "Compare Stocks — BarakFi",
+  description:
+    "Compare Shariah compliance, key financial ratios, and market context side by side for Indian stocks.",
+  alternates: { canonical: "https://barakfi.in/compare" },
+  robots: { index: false, follow: true },
+};
 
 export default async function ComparePage({
   searchParams,
@@ -55,11 +54,7 @@ export default async function ComparePage({
 
   return (
     <main className={`${compareSans.variable} ${compareDisplay.variable}`}>
-      <div className={overrideStyles.compareRoute}>
-        <StockPageRouteShell>
-          <CompareHtmlPage allStocks={stocks} initialSymbols={initialSymbols} mode="select" />
-        </StockPageRouteShell>
-      </div>
+      <CompareHtmlPage allStocks={stocks} initialSymbols={initialSymbols} mode="select" />
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
   getBulkScreeningResults,
@@ -21,6 +22,26 @@ import { screeningUiLabel } from "@/lib/screening-status";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const CRAWLER_UA_MARKERS = [
+  "googlebot",
+  "google-inspectiontool",
+  "bingbot",
+  "duckduckbot",
+  "slurp",
+  "yandexbot",
+  "baiduspider",
+  "facebookexternalhit",
+  "twitterbot",
+  "linkedinbot",
+  "applebot",
+  "petalbot",
+];
+
+async function isCrawlerRequest(): Promise<boolean> {
+  const ua = (await headers()).get("user-agent")?.toLowerCase() ?? "";
+  return CRAWLER_UA_MARKERS.some((marker) => ua.includes(marker));
+}
 
 type StockPageUsageState =
   | { kind: "anonymous"; access: null }
@@ -145,7 +166,8 @@ export default async function StockFullReportRoute({
   params: Promise<{ symbol: string }>;
 }) {
   const authState = await auth();
-  if (!authState.userId) {
+  const crawlerRequest = await isCrawlerRequest();
+  if (!authState.userId && !crawlerRequest) {
     const { symbol } = await params;
     const normalizedSymbol = decodeURIComponent(symbol).trim().toUpperCase();
     const redirectPath = `/stocks/${encodeURIComponent(normalizedSymbol)}/report`;
