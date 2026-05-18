@@ -31,34 +31,32 @@ export default async function CollectionDetailPage({ params }: Props) {
   if (!coll) notFound();
 
   return (
-    <main className="shellPage">
-      <div className={styles.container}>
-        <nav className={styles.breadcrumb}>
-          <Link href="/">Home</Link>
-          <span>/</span>
-          <Link href="/collections">Collections</Link>
-          <span>/</span>
-          <span>{coll.name}</span>
-        </nav>
-        <header className={styles.header}>
-          <span className={styles.icon}>{coll.icon}</span>
-          <h1 className={styles.title}>{coll.name}</h1>
-          <p className={styles.desc}>{coll.description}</p>
-          <span className={styles.count}>{coll.stocks.length} stocks</span>
-        </header>
-        <div className={styles.list}>
-          {coll.stocks.map((stock, i) => (
-            <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.row}>
-              <span className={styles.rowNum}>{i + 1}</span>
-              <div className={styles.rowBody}>
-                <span className={styles.rowSymbol}>{stock.symbol}</span>
-                <span className={styles.rowName}>{stock.name}</span>
-              </div>
-              <span className={styles.rowSector}>{stock.sector}</span>
-              <span className={styles.rowExchange}>{stock.exchange}</span>
-            </Link>
-          ))}
-        </div>
+    <main className={styles.container}>
+      <nav className={styles.breadcrumb}>
+        <Link href="/">Home</Link>
+        <span>/</span>
+        <Link href="/collections">Collections</Link>
+        <span>/</span>
+        <span>{coll.name}</span>
+      </nav>
+      <header className={styles.hero}>
+        <div className={styles.iconBadge}>{coll.icon}</div>
+        <h1 className={styles.title}>{coll.name}</h1>
+        <p className={styles.desc}>{coll.description}</p>
+        <span className={styles.count}>{coll.stocks.length} stocks</span>
+      </header>
+      <div className={styles.grid}>
+        {coll.stocks.map((stock, i) => (
+          <Link key={stock.symbol} href={`/stocks/${stock.symbol}`} className={styles.card}>
+            <span className={styles.cardNum}>{i + 1}</span>
+            <span className={styles.cardSymbol}>{stock.symbol}</span>
+            <span className={styles.cardName}>{stock.name}</span>
+            <div className={styles.cardFooter}>
+              <span className={styles.cardSector}>{stock.sector}</span>
+              <span className={styles.cardExchange}>{stock.exchange}</span>
+            </div>
+          </Link>
+        ))}
       </div>
     </main>
   );
