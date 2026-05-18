@@ -467,6 +467,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={sec}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setSectorFilter(sec)}
                   aria-selected={active}
@@ -490,6 +491,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={opt.key}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setMcapFilter(opt.key)}
                   aria-selected={active}
@@ -512,6 +514,7 @@ export function StockScreenerTable({ screenedStocks }: Props) {
                 <button
                   key={opt.key}
                   type="button"
+                  role="option"
                   className={`${styles.filterListItem} ${active ? styles.filterListItemActive : ""}`}
                   onClick={() => setIndexFilter(opt.key)}
                   aria-selected={active}

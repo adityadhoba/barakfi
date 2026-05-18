@@ -13,7 +13,6 @@ export function useScrollBounce() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let bouncing = false;
-    let lastY = window.scrollY;
 
     function triggerBounce(dir: "up" | "down") {
       if (bouncing) return;
@@ -37,7 +36,6 @@ export function useScrollBounce() {
     let touchStartY = 0;
     function onTouchStart(e: TouchEvent) {
       touchStartY = e.touches[0]?.clientY ?? 0;
-      lastY = window.scrollY;
     }
     function onTouchMove(e: TouchEvent) {
       const dy = (e.touches[0]?.clientY ?? 0) - touchStartY;
@@ -47,7 +45,6 @@ export function useScrollBounce() {
 
       if (atTop && dy > 30) triggerBounce("up");
       if (atBottom && dy < -30) triggerBounce("down");
-      lastY = window.scrollY;
     }
 
     window.addEventListener("wheel", onWheel, { passive: true });

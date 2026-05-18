@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
 import { getStocks } from "@/lib/api";
 import { CompareHtmlPage } from "@/components/compare-html-page";
 import { DM_Serif_Display, Inter } from "next/font/google";
@@ -33,13 +32,6 @@ export default async function ComparePage({
   searchParams: Promise<{ symbols?: string }>;
 }) {
   const authState = await auth();
-  if (!authState.userId) {
-    const { symbols } = await searchParams;
-    const redirectPath = symbols?.trim()
-      ? `/compare?symbols=${encodeURIComponent(symbols)}`
-      : "/compare";
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
-  }
 
   const { symbols: rawSymbols } = await searchParams;
   const initialSymbols = rawSymbols
@@ -54,7 +46,12 @@ export default async function ComparePage({
 
   return (
     <main className={`${compareSans.variable} ${compareDisplay.variable}`}>
-      <CompareHtmlPage allStocks={stocks} initialSymbols={initialSymbols} mode="select" />
+      <CompareHtmlPage
+        allStocks={stocks}
+        initialSymbols={initialSymbols}
+        mode="select"
+        userId={authState.userId ?? null}
+      />
     </main>
   );
 }

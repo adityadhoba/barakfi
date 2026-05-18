@@ -47,7 +47,7 @@ export default async function CompareResultsPage({
     const redirectPath = requestedQuery
       ? `/compare/results?symbols=${requestedQuery}`
       : "/compare/results";
-    redirect(`/sign-in?redirect_url=${encodeURIComponent(redirectPath)}`);
+    redirect(`/sign-in?redirect=${encodeURIComponent(redirectPath)}`);
   }
 
   const stocks = await getStocks();

@@ -3,11 +3,23 @@
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { RouteLocalAuth } from "@/components/route-local-auth";
+import { CompareHtmlPage } from "@/components/compare-html-page";
+import { type Stock } from "@/lib/api";
 import styles from "./tools.module.css";
 
 export type ToolTab = "purification" | "zakat" | "compare" | "request";
+
+const TICKER_ITEMS = [
+  { name: "NIFTY 50", value: "23,842.75", change: "+0.54%", positive: true },
+  { name: "SENSEX", value: "78,553.20", change: "+0.54%", positive: true },
+  { name: "NIFTY BANK", value: "51,236.80", change: "-0.17%", positive: false },
+  { name: "NIFTY IT", value: "33,156.40", change: "+0.75%", positive: true },
+  { name: "NIFTY PHARMA", value: "19,872.35", change: "+0.28%", positive: true },
+  { name: "NIFTY AUTO", value: "23,145.90", change: "-0.48%", positive: false },
+  { name: "NIFTY FMCG", value: "56,234.15", change: "+0.32%", positive: true },
+  { name: "INDIA VIX", value: "13.42", change: "-2.75%", positive: false },
+] as const;
 
 const TAB_LABELS: Array<{ id: ToolTab; label: string }> = [
   { id: "purification", label: "Purification Calculator" },
@@ -333,24 +345,8 @@ function ZakatPanel() {
   );
 }
 
-function CompareShortcutPanel() {
-  return (
-    <section className={styles.requestPageWrap}>
-      <header className={styles.toolHeader}>
-        <p className={styles.toolEyebrow}>Tools · Compare</p>
-        <h1 className={styles.toolTitle}>Compare Stocks</h1>
-        <p className={styles.toolDesc}>Open the dedicated compare workspace for side-by-side Shariah screening and monthly credit-based compare sessions.</p>
-      </header>
-      <div className={styles.requestCard}>
-        <div className={styles.requestCopy}>
-          Compare now lives in a dedicated page to keep performance and usage tracking accurate.
-        </div>
-        <div className={styles.limitActions}>
-          <Link href="/compare" className={styles.btnPrimary}>Open Compare</Link>
-        </div>
-      </div>
-    </section>
-  );
+function ComparePanel({ stocks }: { stocks: Stock[] }) {
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" />;
 }
 
 function RequestPanel() {
@@ -422,7 +418,7 @@ function RequestPanel() {
         {!isSignedIn ? (
           <div className={styles.signInPrompt}>
             <p>You need to sign in before submitting a request so we can track it for your account.</p>
-            <Link href="/sign-in?redirect_url=/tools" className={styles.btnPrimaryLink}>Sign in to request coverage</Link>
+            <Link href="/sign-in?redirect=%2Ftools" className={styles.btnPrimaryLink}>Sign in to request coverage</Link>
           </div>
         ) : (
           <form className={styles.requestFields} onSubmit={onSubmit}>
@@ -471,12 +467,23 @@ function RequestPanel() {
   );
 }
 
-export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
-  const router = useRouter();
+export function ToolsPageClient({ initialTab, stocks = [] }: { initialTab?: ToolTab; stocks?: Stock[] }) {
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
     <main className={styles.pageRoot}>
+      <div className={styles.localTicker} aria-label="Market ticker">
+        <div className={styles.localTickerTrack}>
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, index) => (
+            <span className={styles.localTickerItem} key={`${item.name}-${index}`}>
+              <b>{item.name}</b>
+              {item.value}
+              <span className={item.positive ? styles.tickerUp : styles.tickerDown}>{item.change}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
       <nav className={styles.nav} aria-label="Tools navigation">
         <Link className={styles.logo} href="/">
           Barak<span className={styles.logoAccent}>Fi</span>
@@ -503,14 +510,7 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
             key={tab.id}
             type="button"
             className={`${styles.pageTab} ${activeTab === tab.id ? styles.pageTabActive : ""}`}
-            onClick={() => {
-              if (tab.id === "compare") {
-                setActiveTab("compare");
-                router.push("/compare");
-                return;
-              }
-              setActiveTab(tab.id);
-            }}
+            onClick={() => setActiveTab(tab.id)}
           >
             {tab.label}
           </button>
@@ -520,7 +520,7 @@ export function ToolsPageClient({ initialTab }: { initialTab?: ToolTab }) {
       <div className={styles.pageWrap}>
         {activeTab === "purification" ? <PurificationPanel /> : null}
         {activeTab === "zakat" ? <ZakatPanel /> : null}
-        {activeTab === "compare" ? <CompareShortcutPanel /> : null}
+        {activeTab === "compare" ? <ComparePanel stocks={stocks} /> : null}
         {activeTab === "request" ? <RequestPanel /> : null}
 
         <div className={styles.disclaimerBar}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/logo";
@@ -60,7 +61,9 @@ export function GlobalAppChrome() {
 
         <TopbarAuthDeferred />
       </SiteHeader>
-      <BottomNav />
+      <Suspense fallback={null}>
+        <BottomNav />
+      </Suspense>
       <TopbarScroll />
     </>
   );

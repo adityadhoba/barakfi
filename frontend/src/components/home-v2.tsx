@@ -17,6 +17,18 @@ const dmSerif = DM_Serif_Display({ subsets: ["latin"], weight: "400" });
 
 type HomeStockRow = TrendingStock & { status?: string };
 
+// Fallback market indices when API is down
+const FALLBACK_INDICES = [
+  { name: "NIFTY 50", value: 23450.5, change: 156.25, change_percent: 0.67, source: "market" as const, as_of: "" },
+  { name: "SENSEX", value: 77890.25, change: 342.1, change_percent: 0.44, source: "market" as const, as_of: "" },
+  { name: "NIFTY BANK", value: 52100.0, change: 210.5, change_percent: 0.41, source: "market" as const, as_of: "" },
+  { name: "NIFTY IT", value: 41250.75, change: 125.3, change_percent: 0.30, source: "market" as const, as_of: "" },
+  { name: "NIFTY MNC", value: 28900.5, change: 95.2, change_percent: 0.33, source: "market" as const, as_of: "" },
+  { name: "NIFTY PHARMA", value: 20100.25, change: 45.1, change_percent: 0.22, source: "market" as const, as_of: "" },
+  { name: "NIFTY PSU", value: 8250.75, change: -12.3, change_percent: -0.15, source: "market" as const, as_of: "" },
+  { name: "NIFTY INFRA", value: 12500.5, change: 32.75, change_percent: 0.26, source: "market" as const, as_of: "" },
+];
+
 function formatMcap(v: number, currency: string = "INR") {
   if (!Number.isFinite(v) || v <= 0) return "—";
   if (currency === "INR") {
@@ -89,29 +101,18 @@ export async function HomeV2() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
-  const defaultTickerData = [
-    { name: "NIFTY 50", value: 24850.5, change: 1, change_percent: 0.85, source: "index", as_of: "" },
-    { name: "SENSEX", value: 81245.0, change: 1, change_percent: 0.72, source: "index", as_of: "" },
-    { name: "NIFTY IT", value: 42380.5, change: -1, change_percent: -0.45, source: "index", as_of: "" },
-    { name: "NIFTY BANK", value: 51580.0, change: 1, change_percent: 0.95, source: "index", as_of: "" },
-    { name: "NIFTY AUTO", value: 15920.5, change: 1, change_percent: 1.2, source: "index", as_of: "" },
-    { name: "NIFTY PHARMA", value: 19340.0, change: -1, change_percent: -0.3, source: "index", as_of: "" },
-    { name: "NIFTY FMCG", value: 55670.5, change: 1, change_percent: 0.6, source: "index", as_of: "" },
-    { name: "NIFTY ENERGY", value: 28450.0, change: 1, change_percent: 0.55, source: "index", as_of: "" },
-  ];
-
   const tickerItems = indices.length > 0
     ? indices
-    : (featuredWithStatus.length > 0
-        ? featuredWithStatus.slice(0, 8).map((s, idx) => ({
-            name: s.symbol,
-            value: s.price,
-            change: idx % 2 === 0 ? 1 : -1,
-            change_percent: idx % 2 === 0 ? 0.7 : -0.4,
-            source: "stocks",
-            as_of: "",
-          }))
-        : defaultTickerData);
+    : featuredWithStatus.length
+      ? featuredWithStatus.slice(0, 8).map((s, idx) => ({
+          name: s.symbol,
+          value: s.price,
+          change: idx % 2 === 0 ? 1 : -1,
+          change_percent: idx % 2 === 0 ? 0.7 : -0.4,
+          source: "stocks",
+          as_of: "",
+        }))
+      : FALLBACK_INDICES;
 
   const trendingSymbols = featuredWithStatus.slice(0, 7).map((s) => s.symbol);
   const marqueeItems = [

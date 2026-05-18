@@ -3,6 +3,7 @@
 import { useDeferredValue, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { buildLoginUrl } from "@/lib/auth-redirect";
 import Link from "next/link";
 import styles from "./compare-table.module.css";
 import { StockLogo } from "./stock-logo";
@@ -453,9 +454,7 @@ export function CompareTable({
     const queryString = selectedSymbols.join(",");
 
     if (!userId) {
-      router.push(
-        `/sign-in?redirect_url=${encodeURIComponent(`/compare/results?symbols=${selectedSymbols.join(",")}`)}`,
-      );
+      router.push(buildLoginUrl(`/compare/results?symbols=${selectedSymbols.join(",")}`));
       return;
     }
 
