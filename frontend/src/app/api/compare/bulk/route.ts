@@ -11,9 +11,9 @@ type CompareUnlockResponse = {
   reason?: string | null;
   message?: string | null;
   cta?: string | null;
-  reports_used: number;
-  reports_limit: number;
-  reports_remaining: number;
+  reports_used?: number | null;
+  reports_limit?: number | null;
+  reports_remaining?: number | null;
 };
 
 function unwrapPayload<T>(body: unknown): T | null {
@@ -23,10 +23,42 @@ function unwrapPayload<T>(body: unknown): T | null {
   return (body as T) ?? null;
 }
 
+function toHeaderRecord(headers: HeadersInit): Record<string, string> {
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+  return headers;
+}
+
+async function fetchSingleScreenings(
+  symbols: string[],
+  headers: HeadersInit,
+): Promise<unknown[] | null> {
+  const headerRecord = toHeaderRecord(headers);
+  const settled = await Promise.all(
+    symbols.map(async (symbol) => {
+      const res = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}?exchange=NSE`, {
+        method: "GET",
+        headers: headerRecord,
+        cache: "no-store",
+      });
+      const body = (await res.json().catch(() => ({}))) as unknown;
+      if (!res.ok) return null;
+      return unwrapPayload<unknown>(body) ?? body;
+    }),
+  );
+
+  const filtered = settled.filter((item): item is unknown => item != null);
+  return filtered.length >= 2 ? filtered : null;
+}
+
 /**
  * Proxy POST /api/compare/bulk:
- * 1) reserves monthly report credits for compare symbols
- * 2) fetches comparison screening payload only if credits are available
+ * 1) tries to reserve monthly compare credits
+ * 2) fetches compare payload from stable screening endpoints
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -58,23 +90,36 @@ export async function POST(request: Request) {
   };
 
   try {
+    const headers = buildBackendHeaders({ token, actor, contentType: true });
+    let unlockPayload: CompareUnlockResponse | null = null;
+
     const unlockRes = await fetch(`${apiBaseUrl}/reports/compare/unlock`, {
       method: "POST",
-      headers: buildBackendHeaders({ token, actor, contentType: true }),
+      headers,
       cache: "no-store",
       body: JSON.stringify({ symbols }),
     });
 
     const unlockBody: unknown = await unlockRes.json().catch(() => ({}));
-    const unlockPayload = unwrapPayload<CompareUnlockResponse>(unlockBody);
+    unlockPayload = unwrapPayload<CompareUnlockResponse>(unlockBody);
 
-    if (!unlockRes.ok || !unlockPayload) {
-      return NextResponse.json(adaptBackendJsonForProxy(unlockBody, unlockRes.ok), {
-        status: unlockRes.status,
-      });
+    if (!unlockRes.ok) {
+      // Backward compatibility: some backend deployments may not have compare unlock yet.
+      if (unlockRes.status !== 404) {
+        return NextResponse.json(adaptBackendJsonForProxy(unlockBody, unlockRes.ok), {
+          status: unlockRes.status,
+        });
+      }
+      unlockPayload = {
+        allowed: true,
+        charged_count: 0,
+        reports_used: null,
+        reports_limit: null,
+        reports_remaining: null,
+      };
     }
 
-    if (!unlockPayload.allowed) {
+    if (unlockPayload && !unlockPayload.allowed) {
       return NextResponse.json(
         {
           status: "limit_exhausted",
@@ -93,38 +138,48 @@ export async function POST(request: Request) {
       );
     }
 
-    const compareHeaders: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-clerk-user-id": actor.authSubject,
-    };
-    if (actor.email) compareHeaders["x-actor-email"] = actor.email;
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    if (forwardedFor) compareHeaders["x-forwarded-for"] = forwardedFor;
-
-    const response = await fetch(`${apiBaseUrl}/compare/bulk`, {
+    // Prefer stable bulk screen endpoint to avoid compare/bulk path drift across API versions.
+    const screeningRes = await fetch(`${apiBaseUrl}/screen/bulk`, {
       method: "POST",
-      headers: compareHeaders,
+      headers,
       body: JSON.stringify(symbols),
       cache: "no-store",
     });
+    const screeningBody: unknown = await screeningRes.json().catch(() => ({}));
 
-    const responseBody: unknown = await response.json().catch(() => ({}));
+    let comparePayload = screeningRes.ok ? unwrapPayload<unknown[]>(screeningBody) ?? [] : null;
 
-    if (!response.ok) {
-      return NextResponse.json(adaptBackendJsonForProxy(responseBody, response.ok), {
-        status: response.status,
-      });
+    if (!comparePayload || comparePayload.length < 2) {
+      // Last-resort fallback for strict parsers / schema drift.
+      const perSymbol = await fetchSingleScreenings(symbols, headers);
+      if (perSymbol && perSymbol.length >= 2) {
+        comparePayload = perSymbol;
+      }
     }
 
-    const comparePayload = unwrapPayload<unknown[]>(responseBody) ?? [];
+    if (!comparePayload || comparePayload.length < 2) {
+      const detail =
+        !screeningRes.ok && screeningBody && typeof screeningBody === "object" && "detail" in (screeningBody as Record<string, unknown>)
+          ? String((screeningBody as { detail?: unknown }).detail ?? "")
+          : "";
+      return NextResponse.json(
+        {
+          detail: detail || "Unable to compare the selected stocks right now.",
+          reports_used: unlockPayload?.reports_used ?? null,
+          reports_limit: unlockPayload?.reports_limit ?? null,
+          reports_remaining: unlockPayload?.reports_remaining ?? null,
+        },
+        { status: screeningRes.ok ? 502 : screeningRes.status },
+      );
+    }
 
     return NextResponse.json({
       data: comparePayload,
       usage: {
-        charged_count: unlockPayload.charged_count,
-        reports_used: unlockPayload.reports_used,
-        reports_limit: unlockPayload.reports_limit,
-        reports_remaining: unlockPayload.reports_remaining,
+        charged_count: unlockPayload?.charged_count ?? 0,
+        reports_used: unlockPayload?.reports_used ?? null,
+        reports_limit: unlockPayload?.reports_limit ?? null,
+        reports_remaining: unlockPayload?.reports_remaining ?? null,
       },
     });
   } catch {
