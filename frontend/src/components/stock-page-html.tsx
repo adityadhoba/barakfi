@@ -546,7 +546,7 @@ export function StockPageHtml({
             <div className={styles.footerColHead}>Product</div>
             <Link href="/screener">Screener</Link>
             <Link href="/watchlist">Watchlist</Link>
-            <Link href="/compare">Compare</Link>
+            <Link href="/tools?tab=compare">Compare</Link>
           </div>
           <div className={styles.footerCol}>
             <div className={styles.footerColHead}>Learn</div>

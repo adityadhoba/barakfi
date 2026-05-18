@@ -219,7 +219,7 @@ export default async function AboutUsPage() {
             <div className={styles.fColH}>Product</div>
             <Link href="/screener">Screener</Link>
             <Link href="/watchlist">Watchlist</Link>
-            <Link href="/compare">Compare</Link>
+            <Link href="/tools?tab=compare">Compare</Link>
           </div>
           <div className={styles.fCol}>
             <div className={styles.fColH}>Learn</div>
