@@ -33,22 +33,56 @@ function toHeaderRecord(headers: HeadersInit): Record<string, string> {
   return headers;
 }
 
+function extractMovedSymbol(detail: string): string | null {
+  const match = detail.match(/moved\s+to\s+([A-Z0-9._-]+)/i);
+  return match?.[1]?.toUpperCase() ?? null;
+}
+
+async function fetchSingleScreening(
+  symbol: string,
+  headers: Record<string, string>,
+): Promise<unknown | null> {
+  const res = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}?exchange=NSE`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+  const body = (await res.json().catch(() => ({}))) as unknown;
+  if (res.ok) {
+    return unwrapPayload<unknown>(body) ?? body;
+  }
+
+  const detail =
+    body && typeof body === "object" && "detail" in (body as Record<string, unknown>)
+      ? String((body as { detail?: unknown }).detail ?? "")
+      : "";
+  const movedTo = extractMovedSymbol(detail);
+
+  if (res.status === 409 && movedTo && movedTo !== symbol.toUpperCase()) {
+    const retryRes = await fetch(
+      `${apiBaseUrl}/screen/${encodeURIComponent(movedTo)}?exchange=NSE`,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      },
+    );
+    const retryBody = (await retryRes.json().catch(() => ({}))) as unknown;
+    if (retryRes.ok) {
+      return unwrapPayload<unknown>(retryBody) ?? retryBody;
+    }
+  }
+
+  return null;
+}
+
 async function fetchSingleScreenings(
   symbols: string[],
   headers: HeadersInit,
 ): Promise<unknown[] | null> {
   const headerRecord = toHeaderRecord(headers);
   const settled = await Promise.all(
-    symbols.map(async (symbol) => {
-      const res = await fetch(`${apiBaseUrl}/screen/${encodeURIComponent(symbol)}?exchange=NSE`, {
-        method: "GET",
-        headers: headerRecord,
-        cache: "no-store",
-      });
-      const body = (await res.json().catch(() => ({}))) as unknown;
-      if (!res.ok) return null;
-      return unwrapPayload<unknown>(body) ?? body;
-    }),
+    symbols.map((symbol) => fetchSingleScreening(symbol, headerRecord)),
   );
 
   const filtered = settled.filter((item): item is unknown => item != null);
@@ -150,7 +184,7 @@ export async function POST(request: Request) {
     let comparePayload = screeningRes.ok ? unwrapPayload<unknown[]>(screeningBody) ?? [] : null;
 
     if (!comparePayload || comparePayload.length < 2) {
-      // Last-resort fallback for strict parsers / schema drift.
+      // Last-resort fallback for strict parsers / schema drift and renamed symbols.
       const perSymbol = await fetchSingleScreenings(symbols, headers);
       if (perSymbol && perSymbol.length >= 2) {
         comparePayload = perSymbol;
