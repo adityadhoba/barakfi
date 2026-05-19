@@ -22,12 +22,7 @@ export default async function WatchlistPage() {
     return <WatchlistHtmlPage signedIn={false} entries={[]} />;
   }
 
-  const actor = {
-    authSubject: clerkUser.id,
-    email: clerkUser.emailAddresses[0]?.emailAddress || null,
-  };
-
-  const watchlist = await getAuthenticatedWatchlist(token, actor).catch(() => []);
+  const watchlist = await getAuthenticatedWatchlist(token).catch(() => []);
   const symbols = watchlist.map((entry) => entry.stock.symbol);
   const screeningResults = symbols.length > 0 ? await getBulkScreeningResults(symbols).catch(() => []) : [];
   const screeningMap = new Map(screeningResults.map((result) => [result.symbol, result]));
