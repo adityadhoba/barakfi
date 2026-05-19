@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}/watchlist`, {
+    const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
       method: "GET",
       headers: buildBackendHeaders({ token }),
       cache: "no-store",
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const response = await fetch(`${apiBaseUrl}/watchlist`, {
+    const response = await fetch(`${apiBaseUrl}/me/watchlist`, {
       method: "POST",
       headers: buildBackendHeaders({
         token,
