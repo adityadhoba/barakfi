@@ -351,7 +351,7 @@ function ComparePanel({ stocks }: { stocks: Stock[] }) {
   if (!isLoaded) {
     return <div className={styles.loadingState}>Loading...</div>;
   }
-  return <CompareHtmlPage allStocks={stocks} initialSymbols={["TCS", "RELIANCE", "HDFCBANK"]} mode="results" userId={userId ?? null} />;
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" userId={userId ?? null} />;
 }
 
 function RequestPanel() {
