@@ -46,6 +46,8 @@ export function getChromeRouteFlags(pathname: string): ChromeRouteFlags {
     isAbout ||
     isAccount ||
     isExplore ||
+    isTools ||
+    isCompare ||
     isWatchlist ||
     isTrending ||
     isMethodology ||
