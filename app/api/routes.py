@@ -841,7 +841,7 @@ def screen_stock(
     }
     if not _stock_has_compliance_override(db, stock.id):
         screening_cache.set(ckey, out, SCREENING_CACHE_TTL_SECONDS)
-    return out
+    return helpers.serialize_datetime_objects(out)
 
 
 def _screen_stocks_bulk_impl(symbols: list[str], db: Session) -> list[dict]:
@@ -1097,7 +1097,8 @@ def screen_stocks_bulk(
     Performance:
         ~50-500ms for 100 stocks (vs 15+ seconds for 100 individual requests)
     """
-    return _screen_stocks_bulk_impl(symbols, db)
+    results = _screen_stocks_bulk_impl(symbols, db)
+    return helpers.serialize_datetime_objects(results)
 
 
 @router.post("/bulk-screen", response_model=list[ScreeningResult])
@@ -1107,7 +1108,8 @@ def bulk_screen(
     _: None = Depends(enforce_screening_budget),
 ):
     """Alias for POST /screen/bulk — warms per-symbol screening cache."""
-    return _screen_stocks_bulk_impl(symbols, db)
+    results = _screen_stocks_bulk_impl(symbols, db)
+    return helpers.serialize_datetime_objects(results)
 
 
 @router.post("/compare/bulk", response_model=list[ScreeningResult])
@@ -1136,7 +1138,8 @@ def compare_bulk_screen(
         db.rollback()
         logger.exception("[compare/bulk] failed to log compare screening access: %s", exc)
 
-    return _screen_stocks_bulk_impl(symbols, db)
+    results = _screen_stocks_bulk_impl(symbols, db)
+    return helpers.serialize_datetime_objects(results)
 
 
 @router.get("/screen/{symbol}/multi")
