@@ -24,6 +24,11 @@ type CompareLimit = {
   reports_remaining?: number;
 };
 
+function formatPct(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${(value * 100).toFixed(2)}%`;
+}
+
 function statusClass(status: string | null) {
   if (status === "HALAL") return styles.badgeCompliant;
   if (status === "CAUTIOUS") return styles.badgeReview;
@@ -284,6 +289,62 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
               <tr>
                 <td className={styles.metricLabel}>P/E Ratio</td>
                 {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{stock.pe_ratio != null ? `${stock.pe_ratio.toFixed(1)}×` : "—"}</td>)}
+              </tr>
+              <tr className={styles.sectionDividerRow}><td colSpan={selected.length + 1}>Screening Ratios</td></tr>
+              <tr>
+                <td className={styles.metricLabel}>Debt / Market Cap</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.debt_to_market_cap_ratio)}</td>;
+                })}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Debt / 36M Avg Market Cap</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.debt_to_36m_avg_market_cap_ratio)}</td>;
+                })}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Interest Income Ratio</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.interest_income_ratio)}</td>;
+                })}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Non-Permissible Income Ratio</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.non_permissible_income_ratio)}</td>;
+                })}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Receivables / Market Cap</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.receivables_to_market_cap_ratio)}</td>;
+                })}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Cash & IB / Assets</td>
+                {selected.map((stock) => {
+                  const b = screening[stock.symbol]?.breakdown;
+                  return <td key={stock.symbol} className={styles.metricVal}>{formatPct(b?.cash_and_interest_bearing_to_assets_ratio)}</td>;
+                })}
+              </tr>
+              <tr className={styles.sectionDividerRow}><td colSpan={selected.length + 1}>Fundamentals</td></tr>
+              <tr>
+                <td className={styles.metricLabel}>Revenue</td>
+                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{formatMoney(stock.revenue, resolveDisplayCurrency(stock.exchange, stock.currency))}</td>)}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Total Debt</td>
+                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{formatMoney(stock.debt, resolveDisplayCurrency(stock.exchange, stock.currency))}</td>)}
+              </tr>
+              <tr>
+                <td className={styles.metricLabel}>Total Assets</td>
+                {selected.map((stock) => <td key={stock.symbol} className={styles.metricVal}>{formatMoney(stock.total_assets, resolveDisplayCurrency(stock.exchange, stock.currency))}</td>)}
               </tr>
             </tbody>
           </table>
