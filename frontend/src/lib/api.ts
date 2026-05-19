@@ -1384,7 +1384,7 @@ export async function getAuthenticatedUniversePreview(
  */
 export async function getAuthenticatedWatchlist(token: string, actor?: BackendActor | null) {
   const response = await fetch("/api/watchlist", {
-    headers: buildBackendHeaders({ token, actor }),
+    headers: buildBackendHeaders({ token }),
     cache: "no-store",
   });
 
