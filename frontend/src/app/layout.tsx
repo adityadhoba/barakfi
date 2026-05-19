@@ -188,6 +188,23 @@ const breadcrumbSchema = {
   ],
 };
 
+const themeBootScript = `
+(() => {
+  try {
+    const stored = localStorage.getItem("hi-theme");
+    const valid = stored === "dark" || stored === "light" || stored === "system";
+    const prefDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const resolved =
+      stored === "system"
+        ? (prefDark ? "dark" : "light")
+        : (valid ? stored : "dark");
+    document.documentElement.setAttribute("data-theme", resolved);
+  } catch {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -203,8 +220,9 @@ export default function RootLayout({
     process.env.NEXT_PUBLIC_CLERK_AFTER_SIGN_OUT_URL || "/";
 
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={inter.variable} data-theme="dark">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         <link rel="preconnect" href="https://img.logo.dev" crossOrigin="" />
         <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
