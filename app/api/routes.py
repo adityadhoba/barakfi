@@ -1430,7 +1430,7 @@ def screen_stock_manual(
         if app_user:
             monthly_usage = _get_or_create_monthly_usage(db, app_user.id, _usage_month_for())
             plan = _plan_for_user(db, app_user)
-            monthly_limit = int(plan.report_limit or 50)
+            monthly_limit = int(plan.max_reports_per_month or 50)
             if int(monthly_usage.reports_used or 0) >= monthly_limit:
                 raise HTTPException(
                     status_code=429,
