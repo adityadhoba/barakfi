@@ -17,10 +17,7 @@ export async function GET() {
   try {
     const response = await fetch(`${apiBaseUrl}/watchlist`, {
       method: "GET",
-      headers: buildBackendHeaders({
-        token,
-        actor: { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress },
-      }),
+      headers: buildBackendHeaders({ token }),
       cache: "no-store",
     });
 
@@ -59,7 +56,6 @@ export async function POST(request: Request) {
       method: "POST",
       headers: buildBackendHeaders({
         token,
-        actor: { authSubject: clerkUser.id, email: clerkUser.emailAddresses[0]?.emailAddress },
         contentType: true,
       }),
       body: JSON.stringify(body),

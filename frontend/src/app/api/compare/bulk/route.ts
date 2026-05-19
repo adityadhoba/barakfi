@@ -112,19 +112,13 @@ export async function POST(request: Request) {
 
   const authState = await auth();
   const token = await authState.getToken();
-  const clerkUser = await currentUser();
 
-  if (!token || !clerkUser) {
+  if (!token) {
     return NextResponse.json({ detail: "Sign in to compare stocks." }, { status: 401 });
   }
 
-  const actor = {
-    authSubject: clerkUser.id,
-    email: clerkUser.primaryEmailAddress?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress ?? null,
-  };
-
   try {
-    const headers = buildBackendHeaders({ token, actor, contentType: true });
+    const headers = buildBackendHeaders({ token, contentType: true });
     let unlockPayload: CompareUnlockResponse | null = null;
 
     const unlockRes = await fetch(`${apiBaseUrl}/reports/compare/unlock`, {
