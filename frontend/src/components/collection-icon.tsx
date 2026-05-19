@@ -1,10 +1,8 @@
-import styles from "./home-dashboard.module.css";
-
 type Props = { slug: string; className?: string };
 
 /** SVG icons mapped by collection slug (organic style, not emoji). */
 export function CollectionIcon({ slug, className }: Props) {
-  const cn = className || styles.collectionIconSvg;
+  const cn = className || "collection-icon-svg";
   switch (slug) {
     case "halal-blue-chips-india":
       return (
