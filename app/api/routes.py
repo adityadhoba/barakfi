@@ -1014,7 +1014,7 @@ def screener_snapshot(db: Session = Depends(get_db)):
             and isinstance(cached_snapshot.get("stocks"), list)
             and isinstance(cached_snapshot.get("count"), int)
         ):
-            return JSONResponse(content=cached_snapshot, headers=response_headers)
+            return JSONResponse(content=helpers.serialize_datetime_objects(cached_snapshot), headers=response_headers)
 
         stocks = (
             db.query(Stock)
@@ -1063,7 +1063,7 @@ def screener_snapshot(db: Session = Depends(get_db)):
             screening_cache.set(snapshot_cache_key, payload, snapshot_ttl_seconds)
 
         return JSONResponse(
-            content=payload,
+            content=helpers.serialize_datetime_objects(payload),
             headers=response_headers,
         )
     except HTTPException:

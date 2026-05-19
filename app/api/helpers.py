@@ -3,6 +3,7 @@ Shared helper functions used across API route modules.
 """
 
 import math
+from datetime import datetime
 
 from fastapi import HTTPException
 from sqlalchemy import func
@@ -33,6 +34,17 @@ from app.services.halal_service import (
     screening_score_for_manual_override,
 )
 from app.services.portfolio_live_prices import build_live_last_price_by_symbol
+
+
+def serialize_datetime_objects(obj):
+  """Recursively convert datetime objects to ISO format strings for JSON serialization."""
+  if isinstance(obj, datetime):
+    return obj.isoformat()
+  elif isinstance(obj, dict):
+    return {k: serialize_datetime_objects(v) for k, v in obj.items()}
+  elif isinstance(obj, (list, tuple)):
+    return [serialize_datetime_objects(item) for item in obj]
+  return obj
 
 
 def _effective_price_for_holding(
