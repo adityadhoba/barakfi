@@ -8,8 +8,6 @@ import { MobileNavProvider } from "@/components/mobile-nav-context";
 import { ToastProvider } from "@/components/toast";
 import { NavProgress } from "@/components/nav-progress";
 import { ScreeningProvider } from "@/contexts/screening-context";
-import { HideTopbarSearchOnHome } from "@/components/hide-topbar-search-on-home";
-import { GlobalAppChrome } from "@/components/global-app-chrome";
 import "./globals.css";
 import "./shell.css";
 
@@ -232,9 +230,7 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <NavProgress />
             </Suspense>
-            <HideTopbarSearchOnHome />
             <a className="skipToContent" href="#main-content">Skip to content</a>
-            <GlobalAppChrome />
             <ToastProvider>
               <ScreeningProvider>
               <Suspense fallback={null}>
