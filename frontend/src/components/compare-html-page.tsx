@@ -287,7 +287,6 @@ export function CompareHtmlPage({ allStocks, initialSymbols = [], mode = "select
               </tr>
             </tbody>
           </table>
-          <div className={styles.compareLinkRow}><Link className={styles.btnOutlineLink} href={`/compare/results?symbols=${selected.map((stock) => stock.symbol).join(",")}`}>Open full compare →</Link></div>
         </div>
       ) : (!limitState && !error && !loading) ? (
         <div className={styles.compareEmpty}>
