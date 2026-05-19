@@ -345,13 +345,19 @@ function ZakatPanel() {
   );
 }
 
-function ComparePanel({ stocks }: { stocks: Stock[] }) {
+function ComparePanel({
+  stocks,
+  initialSymbols,
+}: {
+  stocks: Stock[];
+  initialSymbols: string[];
+}) {
   const { isLoaded, userId } = useAuth();
   // Don't render until auth state is loaded, to avoid showing gating message for authenticated users
   if (!isLoaded) {
     return <div className={styles.loadingState}>Loading...</div>;
   }
-  return <CompareHtmlPage allStocks={stocks} initialSymbols={["TCS", "RELIANCE", "HDFCBANK"]} mode="results" userId={userId ?? null} />;
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={initialSymbols} mode="select" userId={userId ?? null} />;
 }
 
 function RequestPanel() {
@@ -472,7 +478,15 @@ function RequestPanel() {
   );
 }
 
-export function ToolsPageClient({ initialTab, stocks = [] }: { initialTab?: ToolTab; stocks?: Stock[] }) {
+export function ToolsPageClient({
+  initialTab,
+  initialCompareSymbols = [],
+  stocks = [],
+}: {
+  initialTab?: ToolTab;
+  initialCompareSymbols?: string[];
+  stocks?: Stock[];
+}) {
   const [activeTab, setActiveTab] = useState<ToolTab>(initialTab ?? "purification");
 
   return (
@@ -525,7 +539,7 @@ export function ToolsPageClient({ initialTab, stocks = [] }: { initialTab?: Tool
       <div className={styles.pageWrap}>
         {activeTab === "purification" ? <PurificationPanel /> : null}
         {activeTab === "zakat" ? <ZakatPanel /> : null}
-        {activeTab === "compare" ? <ComparePanel stocks={stocks} /> : null}
+        {activeTab === "compare" ? <ComparePanel stocks={stocks} initialSymbols={initialCompareSymbols} /> : null}
         {activeTab === "request" ? <RequestPanel /> : null}
 
         <div className={styles.disclaimerBar}>

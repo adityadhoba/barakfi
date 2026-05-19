@@ -39,14 +39,19 @@ function resolveInitialTab(rawTab: string | undefined): ToolTab {
 export default async function ToolsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ tab?: string }> | { tab?: string };
+  searchParams?: Promise<{ tab?: string; symbols?: string }> | { tab?: string; symbols?: string };
 }) {
   const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : searchParams;
   const initialTab = resolveInitialTab(resolvedSearchParams?.tab);
+  const initialCompareSymbols = (resolvedSearchParams?.symbols || "")
+    .split(",")
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean)
+    .slice(0, 3);
   const stocks = await getStocks({ limit: 500, orderBy: "market_cap_desc", revalidateSeconds: 600 }).catch(() => []);
   return (
     <div className={`${toolsSans.variable} ${toolsDisplay.variable}`}>
-      <ToolsPageClient initialTab={initialTab} stocks={stocks} />
+      <ToolsPageClient initialTab={initialTab} initialCompareSymbols={initialCompareSymbols} stocks={stocks} />
     </div>
   );
 }

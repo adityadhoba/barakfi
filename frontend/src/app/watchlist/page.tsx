@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getAuthenticatedWatchlist, getBulkScreeningResults } from "@/lib/api";
+import { buildBackendHeaders } from "@/lib/backend-auth";
+import { getPublicApiBaseUrl, unwrapBackendEnvelope } from "@/lib/api-base";
 import { WatchlistHtmlPage } from "@/components/watchlist-html-page";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +24,23 @@ export default async function WatchlistPage() {
     return <WatchlistHtmlPage signedIn={false} entries={[]} />;
   }
 
-  const watchlist = await getAuthenticatedWatchlist(token).catch(() => []);
+  // Fetch directly from backend on the server route.
+  // Internal /api/watchlist proxy depends on browser cookie auth and can return
+  // empty for server-to-server calls even when the user is signed in.
+  const watchlist = await (async () => {
+    try {
+      const response = await fetch(`${getPublicApiBaseUrl()}/me/watchlist`, {
+        method: "GET",
+        headers: buildBackendHeaders({ token }),
+        cache: "no-store",
+      });
+      if (!response.ok) return [];
+      const body = await response.json().catch(() => []);
+      return unwrapBackendEnvelope(body) as Awaited<ReturnType<typeof getAuthenticatedWatchlist>>;
+    } catch {
+      return [];
+    }
+  })();
   const symbols = watchlist.map((entry) => entry.stock.symbol);
   const screeningResults = symbols.length > 0 ? await getBulkScreeningResults(symbols).catch(() => []) : [];
   const screeningMap = new Map(screeningResults.map((result) => [result.symbol, result]));
