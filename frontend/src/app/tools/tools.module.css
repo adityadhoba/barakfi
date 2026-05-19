@@ -2469,3 +2469,12 @@
     font-size: 12px;
   }
 }
+
+.loadingState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--tools-text-secondary);
+  font-size: 14px;
+}

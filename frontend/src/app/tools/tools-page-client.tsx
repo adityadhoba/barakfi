@@ -346,8 +346,12 @@ function ZakatPanel() {
 }
 
 function ComparePanel({ stocks }: { stocks: Stock[] }) {
-  const { userId } = useAuth();
-  return <CompareHtmlPage allStocks={stocks} initialSymbols={[]} mode="select" userId={userId ?? null} />;
+  const { isLoaded, userId } = useAuth();
+  // Don't render until auth state is loaded, to avoid showing gating message for authenticated users
+  if (!isLoaded) {
+    return <div className={styles.loadingState}>Loading...</div>;
+  }
+  return <CompareHtmlPage allStocks={stocks} initialSymbols={["TCS", "RELIANCE", "HDFCBANK"]} mode="results" userId={userId ?? null} />;
 }
 
 function RequestPanel() {
